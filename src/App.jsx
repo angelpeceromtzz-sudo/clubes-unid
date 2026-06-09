@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ClubCard } from './components/ClubCard';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -106,8 +106,19 @@ const CLUBES_INICIALES = [
   }
 ];
 
-function VistaDetalle({ club, onVolver }) {
+function VistaDetalle({ club, onVolver, tema }) {
   const lleno = club.cupoActual >= club.cupoMaximo;
+  const c = {
+    card: tema.text === "text-slate-200"
+      ? "bg-[#0e162c] border-slate-700/50"
+      : "bg-white border-slate-200",
+    title: tema.text === "text-slate-200" ? "text-white" : "text-slate-900",
+    desc: tema.text === "text-slate-200" ? "text-slate-400" : "text-slate-600",
+    divider: tema.text === "text-slate-200" ? "bg-slate-800" : "bg-slate-200",
+    label: tema.text === "text-slate-200" ? "text-slate-500" : "text-slate-400",
+    price: tema.text === "text-slate-200" ? "text-white" : "text-slate-900",
+    lugares: tema.text === "text-slate-200" ? "text-slate-200" : "text-slate-600",
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
@@ -121,7 +132,7 @@ function VistaDetalle({ club, onVolver }) {
         Volver al catálogo
       </button>
 
-      <div className="rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 bg-[#0e162c]">
+      <div className={`rounded-2xl overflow-hidden shadow-2xl border ${c.card}`}>
         <div className="h-64 md:h-80 overflow-hidden">
           <img
             src={club.imagen}
@@ -135,19 +146,19 @@ function VistaDetalle({ club, onVolver }) {
               {club.categoria}
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-black text-white mb-4">
+          <h1 className={`text-3xl md:text-4xl font-black mb-4 ${c.title}`}>
             {club.nombre}
           </h1>
-          <p className="text-slate-400 text-base leading-relaxed mb-6">
+          <p className={`text-base leading-relaxed mb-6 ${c.desc}`}>
             {club.descripcion}
           </p>
-          <div className="h-px bg-slate-800 mb-6" />
+          <div className={`h-px mb-6 ${c.divider}`} />
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 block">
+              <span className={`text-[10px] uppercase tracking-wider font-bold block ${c.label}`}>
                 Costo Mensual
               </span>
-              <span className="text-2xl font-black text-white">
+              <span className={`text-2xl font-black ${c.price}`}>
                 {club.precio === 0 ? (
                   <span className="text-amber-400 uppercase text-sm tracking-wide">Gratis</span>
                 ) : (
@@ -156,10 +167,10 @@ function VistaDetalle({ club, onVolver }) {
               </span>
             </div>
             <div className="text-right">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 block">
+              <span className={`text-[10px] uppercase tracking-wider font-bold block ${c.label}`}>
                 Lugares Disponibles
               </span>
-              <span className={`text-lg font-black ${lleno ? 'text-red-400' : 'text-slate-200'}`}>
+              <span className={`text-lg font-black ${lleno ? 'text-red-400' : c.lugares}`}>
                 {club.cupoActual} / {club.cupoMaximo}
               </span>
             </div>
@@ -174,8 +185,15 @@ function App() {
   const [clubes] = useState(CLUBES_INICIALES);
   const [clubSeleccionado, setClubSeleccionado] = useState(null);
   const [categoriaActiva, setCategoriaActiva] = useState("Todos");
-  const [modoOscuro, setModoOscuro] = useState(true);
+  const [modoOscuro, setModoOscuro] = useState(() => {
+    const guardado = localStorage.getItem('theme');
+    return guardado !== null ? guardado === 'dark' : true;
+  });
   const [menuAbierto, setMenuAbierto] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('theme', modoOscuro ? 'dark' : 'light');
+  }, [modoOscuro]);
 
   const clubesFiltrados =
     categoriaActiva === "Todos"
@@ -218,26 +236,6 @@ function App() {
         logoText: "text-slate-900",
       };
 
-  if (clubSeleccionado) {
-    return (
-      <div className={`min-h-screen font-sans transition-colors duration-300 ${tema.bg} ${tema.text}`}>
-        <Navbar
-          categoriaActiva={categoriaActiva}
-          setCategoriaActiva={setCategoriaActiva}
-          modoOscuro={modoOscuro}
-          setModoOscuro={setModoOscuro}
-          menuAbierto={menuAbierto}
-          setMenuAbierto={setMenuAbierto}
-          tema={tema}
-        />
-        <VistaDetalle
-          club={clubSeleccionado}
-          onVolver={() => setClubSeleccionado(null)}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className={`min-h-screen font-sans transition-colors duration-300 ${tema.bg} ${tema.text}`}>
 
@@ -249,35 +247,46 @@ function App() {
         menuAbierto={menuAbierto}
         setMenuAbierto={setMenuAbierto}
         tema={tema}
+        onLogoClick={() => setClubSeleccionado(null)}
       />
 
-      <Hero />
+      {clubSeleccionado ? (
+        <VistaDetalle
+          club={clubSeleccionado}
+          onVolver={() => setClubSeleccionado(null)}
+          tema={tema}
+        />
+      ) : (
+        <>
+          <Hero />
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
+          <main className="max-w-7xl mx-auto px-6 py-12">
 
-        <div className="mb-10">
-          <h2 className={`text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>Explorar Clubes Disponibles</h2>
-          <p className={`text-sm mt-1 transition-colors duration-300 ${tema.subtitle}`}>Catálogo oficial UNID</p>
-        </div>
+            <div className="mb-10">
+              <h2 className={`text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>Explorar Clubes Disponibles</h2>
+              <p className={`text-sm mt-1 transition-colors duration-300 ${tema.subtitle}`}>Catálogo oficial UNID</p>
+            </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {clubesFiltrados.map((club) => (
-            <ClubCard
-              key={club.id}
-              nombre={club.nombre}
-              descripcion={club.descripcion}
-              precio={club.precio}
-              categoria={club.categoria}
-              cupoMaximo={club.cupoMaximo}
-              cupoActual={club.cupoActual}
-              imagen={club.imagen}
-              onClick={() => setClubSeleccionado(club)}
-              modoOscuro={modoOscuro}
-            />
-          ))}
-        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {clubesFiltrados.map((club) => (
+                <ClubCard
+                  key={club.id}
+                  nombre={club.nombre}
+                  descripcion={club.descripcion}
+                  precio={club.precio}
+                  categoria={club.categoria}
+                  cupoMaximo={club.cupoMaximo}
+                  cupoActual={club.cupoActual}
+                  imagen={club.imagen}
+                  onClick={() => setClubSeleccionado(club)}
+                  modoOscuro={modoOscuro}
+                />
+              ))}
+            </div>
 
-      </main>
+          </main>
+        </>
+      )}
     </div>
   );
 }

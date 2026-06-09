@@ -1,10 +1,10 @@
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
 
-export function Navbar({ categoriaActiva, setCategoriaActiva, modoOscuro, setModoOscuro, menuAbierto, setMenuAbierto, tema }) {
+export function Navbar({ categoriaActiva, setCategoriaActiva, modoOscuro, setModoOscuro, menuAbierto, setMenuAbierto, tema, onLogoClick }) {
   return (
     <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors duration-300 ${tema.headerBg} ${tema.headerBorder}`}>
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={onLogoClick}>
           <svg viewBox="0 0 100 100" className="h-10 w-10 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M35 45 L20 20 L40 35 L50 25 L60 35 L80 20 L65 45 Q75 50 80 60 L85 75 L70 80 L65 70 L60 85 L50 75 L40 85 L35 70 L30 80 L15 75 L20 60 Q25 50 35 45Z" fill="#FBBF24" />
             <circle cx="38" cy="52" r="4.5" fill="#0e162c" />
