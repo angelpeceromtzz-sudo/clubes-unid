@@ -1,5 +1,7 @@
 // Servicio de API — abstrae las llamadas HTTP al backend
-const API_BASE = '/api';
+const API_BASE = import.meta.env.MODE === 'production'
+  ? 'https://clubes-unid.onrender.com/api'
+  : '/api';
 
 // Recupera el token JWT desde localStorage
 function getToken() {
