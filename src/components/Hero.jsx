@@ -1,5 +1,7 @@
+// Sección principal del héroe con carrusel de imágenes
 import { useState, useEffect, useRef } from 'react';
 
+// Diapositivas del carrusel con imágenes de Unsplash
 const SLIDES = [
   {
     imagen: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=1470&auto=format&fit=crop",
@@ -27,11 +29,13 @@ const SLIDES = [
   },
 ];
 
+// Carrusel de imágenes con transición automática cada 8 segundos
 export function Hero() {
   const [slideActual, setSlideActual] = useState(0);
   const total = SLIDES.length;
   const temporizadorRef = useRef(null);
 
+  // Reinicia el temporizador del carrusel
   function reiniciarTemporizador() {
     clearInterval(temporizadorRef.current);
     temporizadorRef.current = setInterval(() => {
@@ -49,6 +53,7 @@ export function Hero() {
     reiniciarTemporizador();
   }
 
+  // Inicia el carrusel automático al montar el componente
   useEffect(() => {
     temporizadorRef.current = setInterval(() => {
       setSlideActual((prev) => (prev + 1) % SLIDES.length);
@@ -106,6 +111,7 @@ export function Hero() {
           </div>
         ))}
 
+        {/* Botones de navegación del carrusel */}
         <button
           onClick={anterior}
           className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
@@ -129,3 +135,5 @@ export function Hero() {
     </section>
   );
 }
+
+// ✦ A
