@@ -1,5 +1,6 @@
 // Barra de navegación superior con filtros, perfil y menú desplegable
 import { useEffect, useRef, useState } from 'react';
+import logoLobo from '../assets/logo-lobo.svg';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
 
@@ -64,7 +65,7 @@ export function Navbar({
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 md:grid md:grid-cols-3">
         {/* Logo y nombre de la institución */}
         <div className="flex items-center gap-2 cursor-pointer md:justify-self-start" onClick={onLogoClick}>
-          <img src="/src/assets/logo-lobo.svg" alt="Logo" className="w-10 h-10" />
+          <img src={logoLobo} alt="Logo" className="w-10 h-10" />
           <div>
             <span className={`text-base sm:text-lg font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
               UNID
