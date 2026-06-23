@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { registrarHistorial } from '../lib/audit.js';
 
 const router = Router();
 
@@ -102,6 +103,17 @@ router.put('/:id/estatus', authenticate, requireRole(3), async (req, res) => {
       [id_estatus_club]
     );
 
+    const estatusMap = { 1: 'Activo', 2: 'Próximamente', 3: 'Inactivo' };
+    registrarHistorial({
+      idAdmin: req.user.id,
+      adminNombre: req.user.nombre_completo,
+      accion: 'cambio_estatus_club',
+      descripcion: `${req.user.nombre_completo} cambió el estatus del club ID ${id} a ${estatusMap[id_estatus_club] || 'desconocido'}`,
+      entidadTipo: 'club',
+      entidadId: parseInt(id),
+      detalles: { id_estatus_club_nuevo: id_estatus_club },
+    });
+
     res.json({
       ...result.rows[0],
       estatus: estatusResult.rows[0]?.nombre_estatus || 'desconocido',
@@ -133,6 +145,81 @@ router.get('/:id/miembros', authenticate, async (req, res) => {
   }
 });
 
-export default router;
+// Crea un nuevo club (solo admin)
+router.post('/', authenticate, requireRole(3), async (req, res) => {
+  try {
+    const { nombre_club, categoria, cupo_maximo } = req.body;
 
-// ✦ A
+    if (!nombre_club || !categoria || !cupo_maximo) {
+      return res.status(400).json({ error: 'Nombre, categoría y cupo máximo son obligatorios' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO clubes (nombre_club, categoria, cupo_maximo, id_estatus_club)
+       VALUES ($1, $2, $3, 1)
+       RETURNING id_club, nombre_club, categoria, cupo_maximo, id_estatus_club`,
+      [nombre_club, categoria, parseInt(cupo_maximo, 10)],
+    );
+
+    registrarHistorial({
+      idAdmin: req.user.id,
+      adminNombre: req.user.nombre_completo,
+      accion: 'crear_club',
+      descripcion: `${req.user.nombre_completo} creó el club "${nombre_club}"`,
+      entidadTipo: 'club',
+      entidadId: result.rows[0].id_club,
+      detalles: { nombre_club, categoria, cupo_maximo },
+    });
+
+    res.status(201).json({ ...result.rows[0], estatus: 'activo', cupo_actual: 0 });
+  } catch (err) {
+    console.error('Error al crear club:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Actualiza los datos de un club (solo admin)
+router.put('/:id', authenticate, requireRole(3), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre_club, categoria, cupo_maximo } = req.body;
+
+    if (!nombre_club || !categoria || !cupo_maximo) {
+      return res.status(400).json({ error: 'Nombre, categoría y cupo máximo son obligatorios' });
+    }
+
+    const result = await pool.query(
+      `UPDATE clubes
+       SET nombre_club = $1, categoria = $2, cupo_maximo = $3
+       WHERE id_club = $4
+       RETURNING id_club, nombre_club, categoria, cupo_maximo, id_estatus_club`,
+      [nombre_club, categoria, parseInt(cupo_maximo, 10), id],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Club no encontrado' });
+    }
+
+    const estatusResult = await pool.query(
+      'SELECT nombre_estatus FROM cat_estatus_clubes WHERE id_estatus_club = $1',
+      [result.rows[0].id_estatus_club],
+    );
+
+    registrarHistorial({
+      idAdmin: req.user.id,
+      adminNombre: req.user.nombre_completo,
+      accion: 'actualizar_club',
+      descripcion: `${req.user.nombre_completo} actualizó los datos del club ID ${id}`,
+      entidadTipo: 'club',
+      entidadId: parseInt(id),
+      detalles: { nombre_club, categoria, cupo_maximo },
+    });
+
+    res.json({ ...result.rows[0], estatus: estatusResult.rows[0]?.nombre_estatus || 'activo' });
+  } catch (err) {
+    console.error('Error al actualizar club:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+export default router;
