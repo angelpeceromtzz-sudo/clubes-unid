@@ -1,0 +1,171 @@
+import { useState } from 'react';
+import { useNotificaciones } from '../contexts/NotificationContext';
+
+export function NotificacionForm({ audienciaFija, clubId, clubNombre, clubes, onSuccess, tema, modoOscuro }) {
+  const { crearNotificacion } = useNotificaciones();
+  const [titulo, setTitulo] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const [audiencia, setAudiencia] = useState(audienciaFija || 'global');
+  const [clubSeleccionado, setClubSeleccionado] = useState(clubId || '');
+  const [enviando, setEnviando] = useState(false);
+  const [busquedaClub, setBusquedaClub] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
+  const [mensajeError, setMensajeError] = useState('');
+
+  const AUDIENCIAS = [
+    { value: 'global', label: 'Global (Todos los usuarios)' },
+    { value: 'presidentes', label: 'Solo Presidentes' },
+    { value: 'alumnos', label: 'Solo Alumnos' },
+    { value: 'club', label: 'Club en Específico' },
+  ];
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!titulo.trim() || !mensaje.trim()) return;
+    if (audiencia === 'club' && !audienciaFija && !clubSeleccionado) return;
+    setEnviando(true);
+    setMensajeExito('');
+    setMensajeError('');
+    try {
+      const audienciaFinal = audienciaFija || audiencia;
+      const clubIdFinal = audienciaFinal === 'club'
+        ? (audienciaFija ? clubId : Number(clubSeleccionado))
+        : undefined;
+      await crearNotificacion(titulo.trim(), mensaje.trim(), audienciaFinal, clubIdFinal);
+      setTitulo('');
+      setMensaje('');
+      setMensajeExito('Anuncio publicado correctamente');
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      setMensajeError(err?.message || 'Error al publicar el anuncio');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  const inputClass = `w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-400/50 ${
+    modoOscuro
+      ? 'bg-[#0e162c] border-slate-700 text-slate-200 placeholder-slate-500'
+      : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
+  }`;
+
+  const labelClass = 'text-xs font-bold uppercase tracking-wider text-slate-500';
+
+  const clubesActivos = (clubes || []).filter((c) => c.id_estatus_club === 1);
+  const clubesFiltrados = busquedaClub.trim()
+    ? clubesActivos.filter((c) =>
+        c.nombre_club.toLowerCase().includes(busquedaClub.toLowerCase().trim())
+      )
+    : clubesActivos;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className={labelClass}>Título del anuncio</label>
+        <input
+          type="text"
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          placeholder="Ej: Horario de entrenamiento"
+          className={inputClass}
+          maxLength={200}
+          required
+        />
+      </div>
+
+      <div>
+        <label className={labelClass}>Mensaje</label>
+        <textarea
+          value={mensaje}
+          onChange={(e) => setMensaje(e.target.value)}
+          placeholder="Escribe el contenido del anuncio..."
+          rows={4}
+          className={`${inputClass} resize-none`}
+          required
+        />
+      </div>
+
+      {!audienciaFija && (
+        <div>
+          <label className={labelClass}>Audiencia destino</label>
+          <select
+            value={audiencia}
+            onChange={(e) => { setAudiencia(e.target.value); setClubSeleccionado(''); }}
+            className={inputClass}
+          >
+            {AUDIENCIAS.map((a) => (
+              <option key={a.value} value={a.value}>{a.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {audiencia === 'club' && !audienciaFija && (
+        <div className="space-y-3">
+          <label className={labelClass}>Seleccionar Club</label>
+
+          {/* Barra de búsqueda de clubes */}
+          <div className="relative">
+            <svg xmlns="http://www.w3.org/2000/svg" className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={busquedaClub}
+              onChange={(e) => setBusquedaClub(e.target.value)}
+              placeholder="Buscar club..."
+              className={`${inputClass} pl-10`}
+            />
+          </div>
+
+          <select
+            value={clubSeleccionado}
+            onChange={(e) => setClubSeleccionado(e.target.value)}
+            className={inputClass}
+          >
+            <option value="">— Selecciona un club —</option>
+            {clubesFiltrados.length > 0 ? (
+              clubesFiltrados.map((c) => (
+                <option key={c.id_club} value={c.id_club}>{c.nombre_club}</option>
+              ))
+            ) : (
+              <option disabled>— Sin resultados —</option>
+            )}
+          </select>
+        </div>
+      )}
+
+      {audienciaFija === 'club' && clubNombre && (
+        <div className={`text-xs font-medium ${modoOscuro ? 'text-amber-400' : 'text-amber-600'}`}>
+          Este anuncio se enviará automáticamente a todos los miembros de: {clubNombre}
+        </div>
+      )}
+
+      {mensajeError && (
+        <div className="flex items-start gap-2.5 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm font-medium text-red-400">{mensajeError}</p>
+        </div>
+      )}
+
+      {mensajeExito && (
+        <div className="flex items-start gap-2.5 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm font-medium text-emerald-400">{mensajeExito}</p>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={enviando || !titulo.trim() || !mensaje.trim() || (audiencia === 'club' && !audienciaFija && !clubSeleccionado)}
+        className="w-full bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl px-8 py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {enviando ? 'Enviando...' : 'Publicar Anuncio'}
+      </button>
+    </form>
+  );
+}

@@ -27,7 +27,7 @@ function badgeClasses(categoria, modoOscuro) {
 
 // Página de detalle de un club con información completa
 export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) {
-  const { isAuthenticated, isAdmin, tieneInscripcionActiva } = useAuth();
+  const { isAuthenticated, isAdmin, tieneInscripcionActiva, clubesPostulados } = useAuth();
   const [showForm, setShowForm] = useState(false);
 
   const cupoActual = parseInt(club.cupo_actual) || 0;
@@ -48,7 +48,20 @@ export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) 
   function handleBotonClick() {
     if (!isAuthenticated) {
       onLoginClick();
-    } else if (!tieneInscripcionActiva && !isAdmin) {
+    } else if (isAdmin) {
+      return;
+    } else if (tieneInscripcionActiva) {
+      alert("Ya eres miembro activo de un club.");
+    } 
+    // 2. Usamos la lista para ver si YA SE POSTULÓ A ESTE CLUB EN ESPECÍFICO
+    else if (clubesPostulados.includes(club.id_club)) {
+      alert("Ya enviaste una solicitud para este club. No puedes duplicarla.");
+    } 
+    // 3. Usamos la lista para contar cuántas lleva (el .length)
+    else if (clubesPostulados.length >= 3) {
+      alert("Ya tienes 3 postulaciones en proceso. Espera una respuesta.");
+    } 
+    else {
       setShowForm(true);
     }
   }

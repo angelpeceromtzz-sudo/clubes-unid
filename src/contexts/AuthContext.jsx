@@ -1,13 +1,11 @@
-/* eslint-disable react-refresh/only-export-components */
-// Contexto de autenticación — provee estado de sesión a toda la app
-import { createContext, useContext, useState, useCallback } from 'react';
+
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { api, getSession, setSession, clearSession } from '../services/api';
+import { msalInstance, loginRequest } from '../services/authConfig';
 
 const AuthContext = createContext(null);
 
-// Proveedor que envuelve la app y comparte estado de autenticación
 export function AuthProvider({ children }) {
-  // Inicializa el usuario desde la sesión guardada en localStorage
   const [user, setUser] = useState(() => {
     const session = getSession();
     return session ? session.user : null;
@@ -15,7 +13,93 @@ export function AuthProvider({ children }) {
 
   const [tieneInscripcionActiva, setTieneInscripcionActiva] = useState(false);
 
-  // Refresca el estado de inscripción activa desde la API
+  const [clubesPostulados, setClubesPostulados] = useState([]);
+
+  const fetchMisFormularios = useCallback(async () => {
+    try {
+      const clubs = await api.getMisFormularios();
+      setClubesPostulados(clubs);
+    } catch {
+      setClubesPostulados([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function init() {
+      console.log('[MSAL] Ejecutando verificación de redirección...');
+
+      try {
+        await msalInstance.initialize();
+        console.log('[MSAL] Instancia inicializada correctamente');
+
+        const response = await msalInstance.handleRedirectPromise();
+        console.log('[MSAL] Respuesta encontrada:', response);
+
+        if (cancelled) return;
+
+        if (response?.accessToken) {
+          const data = await api.loginMicrosoft(response.accessToken);
+          if (cancelled) return;
+          setSession({ token: data.token, user: data.user });
+          setUser(data.user);
+          try {
+            const insc = await api.getInscripcionActiva();
+            if (!cancelled) setTieneInscripcionActiva(!!insc);
+          } catch {
+            if (!cancelled) setTieneInscripcionActiva(false);
+          }
+          if (!cancelled && data.user.id_rol === 1) await fetchMisFormularios();
+
+          window.history.replaceState({}, document.title, window.location.pathname);
+          console.log('[MSAL] Login completado, URL limpia');
+          return;
+        }
+
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length > 0 && !getSession()) {
+          console.log('[MSAL] Intentando adquisición silenciosa con cuenta cacheada');
+          const silent = await msalInstance.acquireTokenSilent({
+            ...loginRequest,
+            account: accounts[0],
+          });
+          if (cancelled || !silent?.accessToken) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return;
+          }
+          const data = await api.loginMicrosoft(silent.accessToken);
+          if (cancelled) return;
+          setSession({ token: data.token, user: data.user });
+          setUser(data.user);
+          try {
+            const insc = await api.getInscripcionActiva();
+            if (!cancelled) setTieneInscripcionActiva(!!insc);
+          } catch {
+            if (!cancelled) setTieneInscripcionActiva(false);
+          }
+          if (!cancelled && data.user.id_rol === 1) await fetchMisFormularios();
+          window.history.replaceState({}, document.title, window.location.pathname);
+          console.log('[MSAL] Login silencioso completado, URL limpia');
+          return;
+        }
+
+        const sesion = getSession();
+        if (!sesion) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          if (!cancelled && sesion.user.id_rol === 1) await fetchMisFormularios();
+        }
+      } catch (err) {
+        console.error('[MSAL] Error en handleRedirectPromise:', err);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+
+    init();
+    return () => { cancelled = true; };
+  }, []);
+
   const refreshInscripcionActiva = useCallback(async () => {
     try {
       const insc = await api.getInscripcionActiva();
@@ -25,7 +109,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Inicia sesión: llama a la API, guarda el token y actualiza el estado
   const login = useCallback(async (correo, password) => {
     try {
       const data = await api.login(correo, password);
@@ -37,17 +120,36 @@ export function AuthProvider({ children }) {
       } catch {
         setTieneInscripcionActiva(false);
       }
+      if (data.user.id_rol === 1) await fetchMisFormularios();
       return { ok: true };
     } catch (err) {
       return { ok: false, error: err.message };
     }
-  }, []);
+  }, [fetchMisFormularios]);
 
-  // Cierra sesión: limpia estado y localStorage
+  const loginMicrosoft = useCallback(async (accessToken) => {
+    try {
+      const data = await api.loginMicrosoft(accessToken);
+      setSession({ token: data.token, user: data.user });
+      setUser(data.user);
+      try {
+        const insc = await api.getInscripcionActiva();
+        setTieneInscripcionActiva(!!insc);
+      } catch {
+        setTieneInscripcionActiva(false);
+      }
+      if (data.user.id_rol === 1) await fetchMisFormularios();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }, [fetchMisFormularios]);
+
   const logout = useCallback(() => {
     setUser(null);
     setTieneInscripcionActiva(false);
     clearSession();
+    window.history.replaceState({}, document.title, window.location.pathname);
   }, []);
 
   const isAuthenticated = !!user;
@@ -62,7 +164,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Obtiene datos completos del dashboard (club, avisos, rol)
   const fetchDashboardData = useCallback(async () => {
     try {
       const inscripcion = await api.getInscripcionActiva();
@@ -83,14 +184,18 @@ export function AuthProvider({ children }) {
       value={{
         user,
         login,
+        loginMicrosoft,
         logout,
         isAuthenticated,
         isAdmin,
         isPresidente,
         tieneInscripcionActiva,
+        clubesPostulados,
+        setClubesPostulados,
         refreshInscripcionActiva,
         fetchInscripcionActiva,
         fetchDashboardData,
+        fetchMisFormularios,
       }}
     >
       {children}
@@ -98,11 +203,8 @@ export function AuthProvider({ children }) {
   );
 }
 
-// Hook para consumir el contexto de autenticación
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider');
   return ctx;
 }
-
-// ✦ A

@@ -14,7 +14,7 @@ export function SuccessModal({ onClose }) {
           ¡Formulario enviado con éxito!
         </h2>
         <p className="text-sm text-slate-400 leading-relaxed">
-          Te avisaremos y te daremos más información detallada a tu correo institucional y a tu número de teléfono.
+          ¡Revisa tus Formularios pendientes!.
         </p>
 
         <button

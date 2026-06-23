@@ -1,5 +1,6 @@
 // Barra de navegación superior con filtros, perfil y menú desplegable
 import { useEffect, useRef, useState } from 'react';
+import { useNotificaciones } from '../contexts/NotificationContext';
 import logoLobo from '../assets/logo-lobo.svg';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
@@ -45,13 +46,8 @@ export function Navbar({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const { notificaciones, noLeidas, marcarComoLeida } = useNotificaciones();
   const [showNotificaciones, setShowNotificaciones] = useState(false);
-  const [notificaciones, setNotificaciones] = useState([
-    { id: 1, mensaje: 'Bienvenido a Clubes UNID', leida: false },
-    { id: 2, mensaje: 'Nuevo club disponible: Club de Robótica', leida: false },
-    { id: 3, mensaje: 'Tu inscripción está siendo procesada', leida: false },
-  ]);
-  const notifNoLeidas = notificaciones.filter((n) => !n.leida).length;
 
   return (
     <>
@@ -77,7 +73,9 @@ export function Navbar({
         </div>
 
         {/* Filtros de categoría o botón de volver al catálogo */}
-        {mostrarFiltros ? (
+        {user && (user.id_rol === 2 || user.id_rol === 3) ? (
+          <div className="hidden md:block md:justify-self-center" />
+        ) : mostrarFiltros ? (
           <nav className={`hidden md:inline-flex items-center transition-colors duration-300 md:justify-self-center ${tema.navPill}`}>
             {CATEGORIAS.map((cat) => (
               <button
@@ -107,7 +105,21 @@ export function Navbar({
         <div className="relative flex items-center gap-4 md:justify-self-end" ref={dropdownRef}>
           {/* Desktop: perfil de usuario autenticado */}
           {user && (
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3">
+              <button
+                onClick={() => { setShowNotificaciones((prev) => !prev); setMenuAbierto(false); }}
+                className={`relative ${tema.iconColor} hover:text-amber-400 transition-colors`}
+                aria-label="Notificaciones"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {noLeidas > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                    {noLeidas}
+                  </span>
+                )}
+              </button>
               <button onClick={onDashboardClick} className={`${tema.iconColor} hover:text-amber-400 transition-colors`} title="Dashboard">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -130,7 +142,7 @@ export function Navbar({
             </div>
           )}
 
-          {/* Notificaciones (solo mobile) */}
+          {/* Notificaciones (mobile) */}
           <div className="relative flex md:hidden">
             <button
               onClick={() => { setShowNotificaciones((prev) => !prev); setMenuAbierto(false); }}
@@ -140,44 +152,76 @@ export function Navbar({
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              {notifNoLeidas > 0 && (
+              {noLeidas > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
-                  {notifNoLeidas}
+                  {noLeidas}
                 </span>
               )}
             </button>
-            {showNotificaciones && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowNotificaciones(false)} />
-                <div
-                  className="absolute right-0 top-12 z-50 w-72 rounded-xl border border-slate-700 shadow-2xl py-2 px-1 bg-[#0e162c]"
-                  style={{ animation: 'dropdownIn 0.2s ease-out' }}
-                >
-                  <p className="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Notificaciones</p>
+          </div>
+
+          {/* Popover de notificaciones universal */}
+          {showNotificaciones && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowNotificaciones(false)} />
+              <div
+                className="absolute right-0 top-12 z-50 w-80 rounded-xl border shadow-2xl py-3 px-2 max-h-[70vh] overflow-y-auto transition-colors duration-300"
+                style={{ animation: 'dropdownIn 0.2s ease-out' }}
+              >
+                <div className={`rounded-xl ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'} ${tema.dropdownBorder}`}>
+                  <p className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Notificaciones {noLeidas > 0 && `(${noLeidas} sin leer)`}
+                  </p>
+                  <div className={`h-px ${tema.headerBorder} mx-3`} />
                   {notificaciones.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-slate-500">No hay notificaciones</p>
+                    <p className={`px-4 py-6 text-sm text-center ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
+                      No hay notificaciones
+                    </p>
                   ) : (
                     notificaciones.map((notif) => (
                       <button
-                        key={notif.id}
+                        key={notif.id_notificacion}
                         onClick={() => {
-                          setNotificaciones((prev) =>
-                            prev.map((n) => (n.id === notif.id ? { ...n, leida: true } : n))
-                          );
+                          if (!notif.leido) marcarComoLeida(notif.id_notificacion);
                         }}
-                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-200 rounded-lg hover:bg-slate-700/50 flex items-start gap-3 ${
-                          notif.leida ? 'text-slate-500' : 'text-slate-200 font-medium'
-                        }`}
+                        className={`w-full text-left px-4 py-3 transition-colors duration-200 rounded-lg flex flex-col gap-1.5 ${
+                          modoOscuro
+                            ? 'hover:bg-slate-700/50'
+                            : 'hover:bg-slate-100'
+                        } ${notif.leido ? 'opacity-60' : ''}`}
                       >
-                        <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${notif.leida ? 'bg-transparent' : 'bg-amber-400'}`} />
-                        <span>{notif.mensaje}</span>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className={`text-sm font-semibold leading-tight ${notif.leido ? 'text-slate-500' : modoOscuro ? 'text-slate-100' : 'text-slate-800'}`}>
+                            {notif.titulo}
+                          </span>
+                          {!notif.leido && (
+                            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 mt-1.5" />
+                          )}
+                        </div>
+                        <p className={`text-xs leading-relaxed line-clamp-2 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {notif.mensaje}
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider ${
+                            notif.emisor_rol === 'admin'
+                              ? 'text-purple-400'
+                              : 'text-amber-400'
+                          }`}>
+                            {notif.emisor_rol === 'admin' ? '📢 Aviso Institucional' : `🏀 ${notif.club_nombre || 'Club'}`}
+                          </span>
+                          <span className={`text-[10px] ${modoOscuro ? 'text-slate-600' : 'text-slate-400'}`}>
+                            {new Date(notif.fecha_creacion).toLocaleDateString('es-MX', {
+                              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
                       </button>
                     ))
                   )}
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
 
           {/* Hamburguesa universal: visible en mobile siempre, en desktop solo si NO hay sesión */}
           <button

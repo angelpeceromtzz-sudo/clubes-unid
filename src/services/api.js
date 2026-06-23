@@ -37,7 +37,6 @@ export function getSession() {
   }
 }
 
-// Petición HTTP genérica con autenticación incluida
 async function request(endpoint, options = {}) {
   const token = getToken();
   const headers = { 'Content-Type': 'application/json', ...options.headers };
@@ -51,21 +50,35 @@ async function request(endpoint, options = {}) {
     headers,
   });
 
-  const data = await res.json();
+  let data;
+  const contentType = res.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    data = await res.json();
+  } else {
+    const text = await res.text();
+    console.error(`[API] Respuesta no-JSON desde ${endpoint}:`, text.slice(0, 500));
+    throw new Error(`El servidor respondió con HTML/text (status ${res.status}). Revisa la consola.`);
+  }
 
   if (!res.ok) {
-    throw new Error(data.error || 'Error en la solicitud');
+    throw new Error(data.error || `Error ${res.status} en la solicitud`);
   }
 
   return data;
 }
 
-// Métodos de API organizados por recurso
 export const api = {
-  login: (correo, password) =>
-    request('/auth/login', {
+  login: (correo, contrasena) =>
+    request('/auth/login-local', {
       method: 'POST',
-      body: JSON.stringify({ correo, password }),
+      body: JSON.stringify({ correo, contrasena }),
+    }),
+
+  loginMicrosoft: (accessToken) =>
+    request('/auth/login-microsoft', {
+      method: 'POST',
+      body: JSON.stringify({ accessToken }),
     }),
 
   getClubes: () => request('/clubes'),
@@ -76,6 +89,24 @@ export const api = {
     request(`/clubes/${id}/estatus`, {
       method: 'PUT',
       body: JSON.stringify({ id_estatus_club }),
+    }),
+
+  createClub: (data) =>
+    request('/clubes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateClub: (id, data) =>
+    request(`/clubes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  asignarClubAPresidente: (userId, clubId) =>
+    request(`/usuarios/${userId}/asignar-club`, {
+      method: 'PUT',
+      body: JSON.stringify({ id_club: clubId }),
     }),
 
   getUsuarios: () => request('/usuarios'),
@@ -109,6 +140,37 @@ export const api = {
 
   removeFromClub: (userId) =>
     request(`/inscripciones/${userId}`, { method: 'DELETE' }),
+
+  getMisFormularios: () => request('/formularios'),
+
+  getSolicitudesPendientes: (clubId) => request(`/formularios/pendientes/${clubId}`),
+
+  actualizarEstatusSolicitud: (id, status) =>
+    request(`/formularios/${id}/estatus`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    }),
+
+  getMe: () => request('/auth/me'),
+
+  createFormulario: (data) =>
+    request('/formularios', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getNotificaciones: () => request('/notificaciones'),
+
+  createNotificacion: (titulo, mensaje, audiencia, id_club) =>
+    request('/notificaciones', {
+      method: 'POST',
+      body: JSON.stringify({ titulo, mensaje, audiencia, id_club }),
+    }),
+
+  marcarNotificacionLeida: (id) =>
+    request(`/notificaciones/${id}/leer`, { method: 'POST' }),
+
+  getHistorial: () => request('/historial'),
 };
 
 // ✦ A
