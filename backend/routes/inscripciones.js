@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { registrarHistorial } from '../lib/audit.js';
 
 const router = Router();
 
@@ -106,6 +107,15 @@ router.delete('/:userId', authenticate, requireRole(3), async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'El usuario no tiene una inscripción activa' });
     }
+
+    registrarHistorial({
+      idAdmin: req.user.id,
+      adminNombre: req.user.nombre_completo,
+      accion: 'baja_usuario',
+      descripcion: `${req.user.nombre_completo} dio de baja al usuario ID ${userId} del club`,
+      entidadTipo: 'usuario',
+      entidadId: parseInt(userId),
+    });
 
     res.json({ message: 'Usuario dado de baja del club exitosamente' });
   } catch (err) {

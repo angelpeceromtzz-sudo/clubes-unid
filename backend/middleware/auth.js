@@ -1,7 +1,11 @@
 // Middleware de autenticación JWT y autorización por roles
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'clubes-unid-jwt-secret-2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET no está definido en las variables de entorno');
+  process.exit(1);
+}
 
 // Verifica que el token JWT sea válido y decodifica el usuario
 export function authenticate(req, res, next) {
