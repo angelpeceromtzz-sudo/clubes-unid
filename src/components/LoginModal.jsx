@@ -1,6 +1,7 @@
-// Modal de inicio de sesión con autenticación JWT
+// Modal de inicio de sesión con autenticación JWT y Microsoft
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { BotonMicrosoft } from './BotonMicrosoft';
 
 // Componente de inicio de sesión con validación de campos
 export function LoginModal({ onClose }) {
@@ -87,6 +88,17 @@ export function LoginModal({ onClose }) {
               {loading ? 'Ingresando...' : 'Ingresar'}
             </button>
           </form>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-700/50" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-[#0e162c] px-3 text-slate-500 font-medium">O continúa con</span>
+            </div>
+          </div>
+
+          <BotonMicrosoft onSuccess={onClose} />
 
           <div className="mt-6 pt-5 border-t border-slate-700/50">
             <p className="text-xs text-slate-500 font-medium mb-3 text-center">Cuentas de prueba</p>

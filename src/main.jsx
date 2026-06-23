@@ -1,16 +1,24 @@
-// Punto de entrada de la aplicación — monta React en el DOM
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import { AuthProvider } from './contexts/AuthContext'
-import App from './App.jsx'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { MsalProvider } from '@azure/msal-react';
+import { msalInstance } from './services/authConfig';
+import './index.css';
+import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import App from './App.jsx';
 
-// Renderiza la app envuelta en AuthProvider para compartir estado de autenticación
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <MsalProvider instance={msalInstance}>
+      <AuthProvider>
+        <BrowserRouter>
+          <NotificationProvider>
+            <App />
+          </NotificationProvider>
+        </BrowserRouter>
+      </AuthProvider>
+    </MsalProvider>
   </StrictMode>,
 )
 
