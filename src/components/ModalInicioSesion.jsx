@@ -1,18 +1,15 @@
-// Modal de inicio de sesión con autenticación JWT y Microsoft
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAutenticacion } from '../contexts/AuthContext';
 import { BotonMicrosoft } from './BotonMicrosoft';
 
-// Componente de inicio de sesión con validación de campos
-export function LoginModal({ onClose }) {
-  const { login } = useAuth();
+export function ModalInicioSesion({ onClose }) {
+  const { iniciarSesion } = useAutenticacion();
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [cargando, setCargando] = useState(false);
 
-  // Envía credenciales al servidor para autenticar
-  async function handleSubmit(e) {
+  async function manejarEnvio(e) {
     e.preventDefault();
     setError('');
 
@@ -21,9 +18,9 @@ export function LoginModal({ onClose }) {
       return;
     }
 
-    setLoading(true);
-    const result = await login(correo.trim(), password);
-    setLoading(false);
+    setCargando(true);
+    const result = await iniciarSesion(correo.trim(), password);
+    setCargando(false);
 
     if (!result.ok) {
       setError(result.error);
@@ -49,7 +46,7 @@ export function LoginModal({ onClose }) {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={manejarEnvio} className="space-y-5">
             <div>
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5">
                 Correo Institucional
@@ -82,10 +79,10 @@ export function LoginModal({ onClose }) {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={cargando}
               className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98]"
             >
-              {loading ? 'Ingresando...' : 'Ingresar'}
+              {cargando ? 'Ingresando...' : 'Ingresar'}
             </button>
           </form>
 
@@ -114,5 +111,3 @@ export function LoginModal({ onClose }) {
     </>
   );
 }
-
-// ✦ A

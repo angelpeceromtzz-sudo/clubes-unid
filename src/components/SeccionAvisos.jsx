@@ -1,31 +1,31 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
-export function AvisosSection({ club, esPresidente, tema, modoOscuro }) {
+export function SeccionAvisos({ club, esPresidente, tema, modoOscuro }) {
   const [avisos, setAvisos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [nuevoTitulo, setNuevoTitulo] = useState('');
   const [nuevoContenido, setNuevoContenido] = useState('');
-  const [pubError, setPubError] = useState('');
+  const [errorPublicacion, setErrorPublicacion] = useState('');
 
   useEffect(() => {
-    let mounted = true;
-    async function load() {
+    let montado = true;
+    async function cargar() {
       try {
         const data = await api.getAvisos(club.id_club);
-        if (mounted) setAvisos(data);
+        if (montado) setAvisos(data);
       } catch {
-        if (mounted) setAvisos([]);
+        if (montado) setAvisos([]);
       } finally {
-        if (mounted) setLoading(false);
+        if (montado) setCargando(false);
       }
     }
-    load();
-    return () => { mounted = false; };
+    cargar();
+    return () => { montado = false; };
   }, [club.id_club]);
 
-  async function refreshAvisos() {
+  async function refrescarAvisos() {
     try {
       const data = await api.getAvisos(club.id_club);
       setAvisos(data);
@@ -34,33 +34,33 @@ export function AvisosSection({ club, esPresidente, tema, modoOscuro }) {
     }
   }
 
-  async function handlePublicar(e) {
+  async function manejarPublicar(e) {
     e.preventDefault();
-    setPubError('');
+    setErrorPublicacion('');
     if (!nuevoTitulo.trim() || !nuevoContenido.trim()) return;
 
     try {
       await api.createAviso(club.id_club, nuevoTitulo, nuevoContenido);
-      await refreshAvisos();
+      await refrescarAvisos();
       setNuevoTitulo('');
       setNuevoContenido('');
-      setShowForm(false);
+      setMostrarFormulario(false);
     } catch (err) {
-      setPubError(err.message);
+      setErrorPublicacion(err.message);
     }
   }
 
-  async function handleEliminar(id) {
+  async function manejarEliminar(id) {
     try {
       await api.deleteAviso(id);
-      await refreshAvisos();
+      await refrescarAvisos();
     } catch (err) {
       console.error('Error al eliminar aviso:', err);
     }
   }
 
-  const isDark = modoOscuro;
-  const cardCls = isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
+  const esOscuro = modoOscuro;
+  const cardCls = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
 
   return (
     <div>
@@ -70,31 +70,31 @@ export function AvisosSection({ club, esPresidente, tema, modoOscuro }) {
         </h3>
         {esPresidente && (
           <button
-            onClick={() => setShowForm((p) => !p)}
+            onClick={() => setMostrarFormulario((p) => !p)}
             className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-4 py-2 transition-all duration-200 cursor-pointer active:scale-95"
           >
-            {showForm ? 'Cancelar' : 'Nuevo Aviso'}
+            {mostrarFormulario ? 'Cancelar' : 'Nuevo Aviso'}
           </button>
         )}
       </div>
 
-      {showForm && (
-        <form onSubmit={handlePublicar} className={`${cardCls} rounded-xl p-5 mb-5 space-y-3`}>
+      {mostrarFormulario && (
+        <form onSubmit={manejarPublicar} className={`${cardCls} rounded-xl p-5 mb-5 space-y-3`}>
           <input
             type="text"
             value={nuevoTitulo}
             onChange={(e) => setNuevoTitulo(e.target.value)}
             placeholder="Título del aviso"
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 ${isDark ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400'}`}
+            className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 ${esOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400'}`}
           />
           <textarea
             value={nuevoContenido}
             onChange={(e) => setNuevoContenido(e.target.value)}
             placeholder="Contenido del aviso"
             rows={3}
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 resize-none ${isDark ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400'}`}
+            className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 resize-none ${esOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400'}`}
           />
-          {pubError && <p className="text-red-400 text-xs font-medium">{pubError}</p>}
+          {errorPublicacion && <p className="text-red-400 text-xs font-medium">{errorPublicacion}</p>}
           <button
             type="submit"
             className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-2.5 transition-all duration-200 cursor-pointer active:scale-95"
@@ -104,7 +104,7 @@ export function AvisosSection({ club, esPresidente, tema, modoOscuro }) {
         </form>
       )}
 
-      {loading ? (
+      {cargando ? (
         <div className="flex justify-center py-8">
           <div className="animate-spin w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full" />
         </div>
@@ -126,7 +126,7 @@ export function AvisosSection({ club, esPresidente, tema, modoOscuro }) {
                 </div>
                 {esPresidente && (
                   <button
-                    onClick={() => handleEliminar(aviso.id_aviso)}
+                    onClick={() => manejarEliminar(aviso.id_aviso)}
                     className="text-red-400 hover:text-red-300 transition-colors cursor-pointer shrink-0"
                     title="Eliminar aviso"
                   >
@@ -136,7 +136,7 @@ export function AvisosSection({ club, esPresidente, tema, modoOscuro }) {
                   </button>
                 )}
               </div>
-              <p className={`text-sm mt-3 leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <p className={`text-sm mt-3 leading-relaxed ${esOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
                 {aviso.contenido}
               </p>
             </div>

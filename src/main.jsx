@@ -4,22 +4,20 @@ import { BrowserRouter } from 'react-router-dom';
 import { MsalProvider } from '@azure/msal-react';
 import { msalInstance } from './services/authConfig';
 import './index.css';
-import { AuthProvider } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
+import { ProveedorAutenticacion } from './contexts/AuthContext';
+import { ProveedorNotificacion } from './contexts/NotificationContext';
 import App from './App.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <MsalProvider instance={msalInstance}>
-      <AuthProvider>
+      <ProveedorAutenticacion>
         <BrowserRouter>
-          <NotificationProvider>
+          <ProveedorNotificacion>
             <App />
-          </NotificationProvider>
+          </ProveedorNotificacion>
         </BrowserRouter>
-      </AuthProvider>
+      </ProveedorAutenticacion>
     </MsalProvider>
   </StrictMode>,
 )
-
-// ✦ A

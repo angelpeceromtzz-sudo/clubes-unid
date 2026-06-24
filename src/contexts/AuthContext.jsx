@@ -3,19 +3,19 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import { api, getSession, setSession, clearSession } from '../services/api';
 import { msalInstance, loginRequest } from '../services/authConfig';
 
-const AuthContext = createContext(null);
+const ContextoAutenticacion = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const session = getSession();
-    return session ? session.user : null;
+export function ProveedorAutenticacion({ children: hijos }) {
+  const [usuario, setUsuario] = useState(() => {
+    const sesion = getSession();
+    return sesion ? sesion.user : null;
   });
 
   const [tieneInscripcionActiva, setTieneInscripcionActiva] = useState(false);
 
   const [clubesPostulados, setClubesPostulados] = useState([]);
 
-  const fetchMisFormularios = useCallback(async () => {
+  const obtenerMisFormularios = useCallback(async () => {
     try {
       const clubs = await api.getMisFormularios();
       setClubesPostulados(clubs);
@@ -25,60 +25,60 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelado = false;
 
-    async function init() {
+    async function inicializar() {
       console.log('[MSAL] Ejecutando verificación de redirección...');
 
       try {
         await msalInstance.initialize();
         console.log('[MSAL] Instancia inicializada correctamente');
 
-        const response = await msalInstance.handleRedirectPromise();
-        console.log('[MSAL] Respuesta encontrada:', response);
+        const respuesta = await msalInstance.handleRedirectPromise();
+        console.log('[MSAL] Respuesta encontrada:', respuesta);
 
-        if (cancelled) return;
+        if (cancelado) return;
 
-        if (response?.accessToken) {
-          const data = await api.loginMicrosoft(response.accessToken);
-          if (cancelled) return;
+        if (respuesta?.accessToken) {
+          const data = await api.loginMicrosoft(respuesta.accessToken);
+          if (cancelado) return;
           setSession({ token: data.token, user: data.user });
-          setUser(data.user);
+          setUsuario(data.user);
           try {
             const insc = await api.getInscripcionActiva();
-            if (!cancelled) setTieneInscripcionActiva(!!insc);
+            if (!cancelado) setTieneInscripcionActiva(!!insc);
           } catch {
-            if (!cancelled) setTieneInscripcionActiva(false);
+            if (!cancelado) setTieneInscripcionActiva(false);
           }
-          if (!cancelled && data.user.id_rol === 1) await fetchMisFormularios();
+          if (!cancelado && data.user.id_rol === 1) await obtenerMisFormularios();
 
           window.history.replaceState({}, document.title, window.location.pathname);
           console.log('[MSAL] Login completado, URL limpia');
           return;
         }
 
-        const accounts = msalInstance.getAllAccounts();
-        if (accounts.length > 0 && !getSession()) {
+        const cuentas = msalInstance.getAllAccounts();
+        if (cuentas.length > 0 && !getSession()) {
           console.log('[MSAL] Intentando adquisición silenciosa con cuenta cacheada');
-          const silent = await msalInstance.acquireTokenSilent({
+          const silencioso = await msalInstance.acquireTokenSilent({
             ...loginRequest,
-            account: accounts[0],
+            account: cuentas[0],
           });
-          if (cancelled || !silent?.accessToken) {
+          if (cancelado || !silencioso?.accessToken) {
             window.history.replaceState({}, document.title, window.location.pathname);
             return;
           }
-          const data = await api.loginMicrosoft(silent.accessToken);
-          if (cancelled) return;
+          const data = await api.loginMicrosoft(silencioso.accessToken);
+          if (cancelado) return;
           setSession({ token: data.token, user: data.user });
-          setUser(data.user);
+          setUsuario(data.user);
           try {
             const insc = await api.getInscripcionActiva();
-            if (!cancelled) setTieneInscripcionActiva(!!insc);
+            if (!cancelado) setTieneInscripcionActiva(!!insc);
           } catch {
-            if (!cancelled) setTieneInscripcionActiva(false);
+            if (!cancelado) setTieneInscripcionActiva(false);
           }
-          if (!cancelled && data.user.id_rol === 1) await fetchMisFormularios();
+          if (!cancelado && data.user.id_rol === 1) await obtenerMisFormularios();
           window.history.replaceState({}, document.title, window.location.pathname);
           console.log('[MSAL] Login silencioso completado, URL limpia');
           return;
@@ -88,7 +88,7 @@ export function AuthProvider({ children }) {
         if (!sesion) {
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
-          if (!cancelled && sesion.user.id_rol === 1) await fetchMisFormularios();
+          if (!cancelado && sesion.user.id_rol === 1) await obtenerMisFormularios();
         }
       } catch (err) {
         console.error('[MSAL] Error en handleRedirectPromise:', err);
@@ -96,11 +96,11 @@ export function AuthProvider({ children }) {
       }
     }
 
-    init();
-    return () => { cancelled = true; };
+    inicializar();
+    return () => { cancelado = true; };
   }, []);
 
-  const refreshInscripcionActiva = useCallback(async () => {
+  const refrescarInscripcionActiva = useCallback(async () => {
     try {
       const insc = await api.getInscripcionActiva();
       setTieneInscripcionActiva(!!insc);
@@ -109,54 +109,60 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = useCallback(async (correo, password) => {
+  const iniciarSesion = useCallback(async (correo, password) => {
     try {
       const data = await api.login(correo, password);
       setSession({ token: data.token, user: data.user });
-      setUser(data.user);
+      setUsuario(data.user);
       try {
         const insc = await api.getInscripcionActiva();
         setTieneInscripcionActiva(!!insc);
       } catch {
         setTieneInscripcionActiva(false);
       }
-      if (data.user.id_rol === 1) await fetchMisFormularios();
+      if (data.user.id_rol === 1) await obtenerMisFormularios();
       return { ok: true };
     } catch (err) {
       return { ok: false, error: err.message };
     }
-  }, [fetchMisFormularios]);
+  }, [obtenerMisFormularios]);
 
-  const loginMicrosoft = useCallback(async (accessToken) => {
+  const iniciarSesionMicrosoft = useCallback(async (accessToken) => {
     try {
       const data = await api.loginMicrosoft(accessToken);
       setSession({ token: data.token, user: data.user });
-      setUser(data.user);
+      setUsuario(data.user);
       try {
         const insc = await api.getInscripcionActiva();
         setTieneInscripcionActiva(!!insc);
       } catch {
         setTieneInscripcionActiva(false);
       }
-      if (data.user.id_rol === 1) await fetchMisFormularios();
+      if (data.user.id_rol === 1) await obtenerMisFormularios();
       return { ok: true };
     } catch (err) {
       return { ok: false, error: err.message };
     }
-  }, [fetchMisFormularios]);
+  }, [obtenerMisFormularios]);
 
-  const logout = useCallback(() => {
-    setUser(null);
+  const cerrarSesion = useCallback(() => {
+    setUsuario(null);
     setTieneInscripcionActiva(false);
+    setClubesPostulados([]);
     clearSession();
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('msal.')) {
+        localStorage.removeItem(key);
+      }
+    }
     window.history.replaceState({}, document.title, window.location.pathname);
   }, []);
 
-  const isAuthenticated = !!user;
-  const isAdmin = user?.id_rol === 3;
-  const isPresidente = user?.id_rol === 2;
+  const estaAutenticado = !!usuario;
+  const esAdmin = usuario?.id_rol === 3;
+  const esPresidente = usuario?.id_rol === 2;
 
-  const fetchInscripcionActiva = useCallback(async () => {
+  const obtenerInscripcionActiva = useCallback(async () => {
     try {
       return await api.getInscripcionActiva();
     } catch {
@@ -164,47 +170,47 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const fetchDashboardData = useCallback(async () => {
+  const obtenerDatosPanel = useCallback(async () => {
     try {
       const inscripcion = await api.getInscripcionActiva();
       if (!inscripcion) return null;
 
       const club = await api.getClub(inscripcion.id_club);
       const avisos = await api.getAvisos(inscripcion.id_club);
-      const esPresidente = club.id_presidente === user?.id;
+      const esPresidente = club.id_presidente === usuario?.id;
 
       return { club, avisos, esPresidente, inscripcion };
     } catch {
       return null;
     }
-  }, [user]);
+  }, [usuario]);
 
   return (
-    <AuthContext.Provider
+    <ContextoAutenticacion.Provider
       value={{
-        user,
-        login,
-        loginMicrosoft,
-        logout,
-        isAuthenticated,
-        isAdmin,
-        isPresidente,
+        usuario,
+        iniciarSesion,
+        iniciarSesionMicrosoft,
+        cerrarSesion,
+        estaAutenticado,
+        esAdmin,
+        esPresidente,
         tieneInscripcionActiva,
         clubesPostulados,
-        setClubesPostulados,
-        refreshInscripcionActiva,
-        fetchInscripcionActiva,
-        fetchDashboardData,
-        fetchMisFormularios,
+        actualizarClubesPostulados: setClubesPostulados,
+        refrescarInscripcionActiva,
+        obtenerInscripcionActiva,
+        obtenerDatosPanel,
+        obtenerMisFormularios,
       }}
     >
-      {children}
-    </AuthContext.Provider>
+      {hijos}
+    </ContextoAutenticacion.Provider>
   );
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider');
+export function useAutenticacion() {
+  const ctx = useContext(ContextoAutenticacion);
+  if (!ctx) throw new Error('useAutenticacion debe usarse dentro de ProveedorAutenticacion');
   return ctx;
 }

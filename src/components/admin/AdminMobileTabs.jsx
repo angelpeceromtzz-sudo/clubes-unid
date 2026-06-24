@@ -1,9 +1,9 @@
-import { NAV_ITEMS_ADMIN } from './navItems';
+import { ELEMENTOS_NAV_ADMIN } from './navItems';
 
-export function AdminMobileTabs({ vistaActiva, onVistaChange, isDark }) {
+export function PestanasMovilAdmin({ vistaActiva, onVistaChange, isDark }) {
   return (
     <div className="md:hidden flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
-      {NAV_ITEMS_ADMIN.map((item) => (
+      {ELEMENTOS_NAV_ADMIN.map((item) => (
         <button
           key={item.key}
           onClick={() => onVistaChange(item.key)}

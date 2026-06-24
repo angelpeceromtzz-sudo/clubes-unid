@@ -1,10 +1,8 @@
-// Vista detallada de un club con información, horarios y botón de inscripción
 import { useState } from 'react';
-import { InscripcionForm } from './InscripcionForm';
-import { useAuth } from '../contexts/AuthContext';
+import { FormularioInscripcion } from './FormularioInscripcion';
+import { useAutenticacion } from '../contexts/AuthContext';
 
-// Colores para los badges según la categoría del club
-const BADGE_COLORS = {
+const COLORES_BADGE = {
   Deportes: (dark) =>
     dark
       ? "text-amber-300 bg-amber-400/10 border-amber-400/20"
@@ -19,24 +17,21 @@ const BADGE_COLORS = {
       : "text-green-700 bg-green-100 border-green-200",
 };
 
-// Retorna las clases CSS del badge según la categoría
-function badgeClasses(categoria, modoOscuro) {
-  const fn = BADGE_COLORS[categoria];
-  return fn ? fn(modoOscuro) : BADGE_COLORS.Deportes(modoOscuro);
+function clasesBadge(categoria, modoOscuro) {
+  const fn = COLORES_BADGE[categoria];
+  return fn ? fn(modoOscuro) : COLORES_BADGE.Deportes(modoOscuro);
 }
 
-// Página de detalle de un club con información completa
 export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) {
-  const { isAuthenticated, isAdmin, tieneInscripcionActiva, clubesPostulados } = useAuth();
-  const [showForm, setShowForm] = useState(false);
+  const { estaAutenticado, esAdmin, tieneInscripcionActiva, clubesPostulados } = useAutenticacion();
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   const cupoActual = parseInt(club.cupo_actual) || 0;
   const lleno = cupoActual >= club.cupo_maximo;
   const disponibles = club.cupo_maximo - cupoActual;
-  const isProximamente = club.id_estatus_club === 2;
-  const isInactivo = club.id_estatus_club === 3;
+  const esProximamente = club.id_estatus_club === 2;
+  const esInactivo = club.id_estatus_club === 3;
 
-  // Clases según el tema (oscuro/claro)
   const c = {
     bg: tema.text === "text-slate-200" ? "bg-[#0e162c] border-slate-700/50" : "bg-white border-slate-200",
     text: tema.text === "text-slate-200" ? "text-slate-300" : "text-slate-600",
@@ -44,39 +39,32 @@ export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) 
     sidebar: tema.text === "text-slate-200" ? "bg-[#0e162c] border-slate-700/50" : "bg-white border-slate-200 shadow-lg",
   };
 
-  // Maneja el clic en el botón de inscripción
-  function handleBotonClick() {
-    if (!isAuthenticated) {
+  function manejarClickBoton() {
+    if (!estaAutenticado) {
       onLoginClick();
-    } else if (isAdmin) {
+    } else if (esAdmin) {
       return;
     } else if (tieneInscripcionActiva) {
       alert("Ya eres miembro activo de un club.");
-    } 
-    // 2. Usamos la lista para ver si YA SE POSTULÓ A ESTE CLUB EN ESPECÍFICO
-    else if (clubesPostulados.includes(club.id_club)) {
+    } else if (clubesPostulados.includes(club.id_club)) {
       alert("Ya enviaste una solicitud para este club. No puedes duplicarla.");
-    } 
-    // 3. Usamos la lista para contar cuántas lleva (el .length)
-    else if (clubesPostulados.length >= 3) {
+    } else if (clubesPostulados.length >= 3) {
       alert("Ya tienes 3 postulaciones en proceso. Espera una respuesta.");
-    } 
-    else {
-      setShowForm(true);
+    } else {
+      setMostrarFormulario(true);
     }
   }
 
-  // Determina el texto del botón según el estado del usuario y el club
-  function getBotonTexto() {
-    if (isProximamente) return null;
-    if (isInactivo) return null;
-    if (!isAuthenticated) return 'INICIA SESIÓN PARA INSCRIBIRTE';
-    if (isAdmin) return null;
+  function obtenerTextoBoton() {
+    if (esProximamente) return null;
+    if (esInactivo) return null;
+    if (!estaAutenticado) return 'INICIA SESIÓN PARA INSCRIBIRTE';
+    if (esAdmin) return null;
     if (tieneInscripcionActiva) return null;
     return 'INSCRIBIRME AHORA';
   }
 
-  const botonTexto = getBotonTexto();
+  const botonTexto = obtenerTextoBoton();
 
   return (
     <>
@@ -92,26 +80,25 @@ export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) 
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
-          {/* Columna principal: imagen, descripción, lugar y horarios */}
           <div className="md:col-span-2 space-y-6">
             <div className="overflow-hidden rounded-2xl">
               <img
                 src={club.imagen_portada || club.imagen}
                 alt={club.nombre_club}
-                className={`w-full h-full object-cover ${isProximamente ? 'opacity-60' : ''}`}
+                className={`w-full h-full object-cover ${esProximamente ? 'opacity-60' : ''}`}
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${badgeClasses(club.categoria, modoOscuro)}`}>
+              <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(club.categoria, modoOscuro)}`}>
                 {club.categoria}
               </span>
-              {isProximamente && (
+              {esProximamente && (
                 <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border text-slate-500 border-slate-500/30 bg-slate-500/10">
                   Próximamente
                 </span>
               )}
-              {isInactivo && (
+              {esInactivo && (
                 <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border text-red-400 border-red-400/30 bg-red-400/10">
                   Inactivo
                 </span>
@@ -160,14 +147,13 @@ export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) 
             )}
           </div>
 
-          {/* Sidebar: información y botón de acción */}
           <div>
             <div className={`md:sticky md:top-6 rounded-2xl border p-6 space-y-5 transition-colors duration-300 ${c.sidebar}`}>
               <div>
                 <h3 className={`text-lg font-bold ${c.title}`}>
                   {club.nombre_club}
                 </h3>
-                <span className={`inline-block mt-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${badgeClasses(club.categoria, modoOscuro)}`}>
+                <span className={`inline-block mt-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(club.categoria, modoOscuro)}`}>
                   {club.categoria}
                 </span>
               </div>
@@ -179,7 +165,7 @@ export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) 
                   Lugares Disponibles
                 </span>
                 <p className={`text-2xl font-black mt-1 ${lleno ? 'text-red-400' : c.title}`}>
-                  {isProximamente || isInactivo ? (
+                  {esProximamente || esInactivo ? (
                     '—'
                   ) : disponibles > 0 ? (
                     <>{cupoActual} de {club.cupo_maximo} lugares</>
@@ -191,9 +177,9 @@ export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) 
 
               {botonTexto && (
                 <button
-                  onClick={handleBotonClick}
+                  onClick={manejarClickBoton}
                   className={`w-full font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                    !isAuthenticated
+                    !estaAutenticado
                       ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
                       : 'bg-amber-400 hover:bg-amber-500 text-[#0e162c]'
                   }`}
@@ -202,13 +188,13 @@ export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) 
                 </button>
               )}
 
-              {isAdmin && isAuthenticated && (
+              {esAdmin && estaAutenticado && (
                 <p className="text-sm text-slate-500 font-medium text-center">
                   Los administradores no pueden inscribirse a clubes.
                 </p>
               )}
 
-              {isAuthenticated && tieneInscripcionActiva && !isAdmin && (
+              {estaAutenticado && tieneInscripcionActiva && !esAdmin && (
                 <p className="text-sm text-amber-400 font-medium text-center">
                   Ya estás inscrito en un club.
                 </p>
@@ -218,14 +204,12 @@ export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) 
         </div>
       </div>
 
-      {showForm && (
-        <InscripcionForm
+      {mostrarFormulario && (
+        <FormularioInscripcion
           club={club}
-          onClose={() => setShowForm(false)}
+          onClose={() => setMostrarFormulario(false)}
         />
       )}
     </>
   );
 }
-
-// ✦ A

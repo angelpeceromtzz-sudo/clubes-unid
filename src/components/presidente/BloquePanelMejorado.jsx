@@ -1,14 +1,10 @@
 import { useState } from 'react';
 
-export function BloquePanelMejorado({ titulo, turno, alumnos, isDark }) {
+export function PanelBloqueMejorado({ titulo, alumnos, isDark }) {
   const [editando, setEditando] = useState(false);
   const [lugar, setLugar] = useState('');
   const [hora, setHora] = useState('');
   const [asistencia, setAsistencia] = useState({});
-
-  const badgeColor = turno === 'Vespertino'
-    ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
-    : 'bg-amber-500/20 text-amber-400 border-amber-500/30';
 
   return (
     <div className={`${isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'} rounded-2xl border overflow-hidden`}>
@@ -17,7 +13,7 @@ export function BloquePanelMejorado({ titulo, turno, alumnos, isDark }) {
           <h3 className={`text-base font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
             {titulo}
           </h3>
-          <span className={`text-xs font-bold px-3 py-1 rounded-full border ${badgeColor}`}>
+          <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-600/30 text-slate-300 border border-slate-600/50">
             {alumnos.length} Alumno{alumnos.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -59,13 +55,12 @@ export function BloquePanelMejorado({ titulo, turno, alumnos, isDark }) {
           ) : (
             <>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-lg shrink-0"></span>
-                <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>
-                  {lugar || <span className="text-slate-500 italic">No especificado</span>}
+                <span className={`${lugar ? (isDark ? 'text-slate-300' : 'text-slate-700') : 'text-slate-500 italic'}`}>
+                  {lugar || 'No especificado'}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-lg shrink-0">⏰</span>
+                <span>⏰</span>
                 <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>
                   {hora || <span className="text-slate-500 italic">No especificado</span>}
                 </span>
@@ -80,7 +75,7 @@ export function BloquePanelMejorado({ titulo, turno, alumnos, isDark }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             <p className="text-sm font-medium">Sin alumnos asignados</p>
-            <p className="text-xs mt-0.5">Los alumnos aceptados aparecerán aquí</p>
+            <p className="text-xs mt-0.5">Los alumnos con bloque asignado aparecerán aquí</p>
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -98,13 +93,6 @@ export function BloquePanelMejorado({ titulo, turno, alumnos, isDark }) {
                   </p>
                   <p className="text-xs text-slate-500 font-mono">{alumno.matricula}</p>
                 </div>
-                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                  alumno.turno === 'Vespertino'
-                    ? 'bg-indigo-500/20 text-indigo-400'
-                    : 'bg-amber-500/20 text-amber-400'
-                }`}>
-                  {alumno.turno === 'Vespertino' ? 'Vesp.' : 'Mat.'}
-                </span>
                 <div
                   onClick={() => setAsistencia((prev) => ({ ...prev, [alumno.id_formulario]: !prev[alumno.id_formulario] }))}
                   className={`w-5 h-5 rounded border-2 cursor-pointer transition-colors shrink-0 ${

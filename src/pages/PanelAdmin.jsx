@@ -1,35 +1,35 @@
-import { useAuth } from '../contexts/AuthContext';
-import { ProtectedRoute } from '../components/ProtectedRoute';
-import { NotificacionForm } from '../components/NotificacionForm';
-import { useAdminDashboard } from '../hooks/useAdminDashboard';
-import { AdminSidebar } from '../components/admin/AdminSidebar';
-import { AdminMobileTabs } from '../components/admin/AdminMobileTabs';
-import { FeedbackAlert } from '../components/admin/FeedbackAlert';
-import { StatsCards } from '../components/admin/StatsCards';
-import { UserSearchBar } from '../components/admin/UserSearchBar';
-import { UserTable } from '../components/admin/UserTable';
-import { ClubTable } from '../components/admin/ClubTable';
-import { ClubFormModal } from '../components/admin/ClubFormModal';
-import { HistorialTable } from '../components/admin/HistorialTable';
+import { useAutenticacion } from '../contexts/AuthContext';
+import { RutaProtegida } from '../components/RutaProtegida';
+import { FormularioNotificacion } from '../components/FormularioNotificacion';
+import { usePanelAdmin } from '../hooks/usePanelAdmin';
+import { BarraLateralAdmin } from '../components/admin/AdminSidebar';
+import { PestanasMovilAdmin } from '../components/admin/AdminMobileTabs';
+import { AlertaRetroalimentacion } from '../components/admin/FeedbackAlert';
+import { TarjetasEstadisticas } from '../components/admin/StatsCards';
+import { BarraBusquedaUsuarios } from '../components/admin/UserSearchBar';
+import { TablaUsuarios } from '../components/admin/UserTable';
+import { TablaClubes } from '../components/admin/ClubTable';
+import { ModalFormularioClub } from '../components/admin/ClubFormModal';
+import { TablaHistorial } from '../components/admin/HistorialTable';
 
-export function DashboardAdmin({ tema, modoOscuro }) {
-  const { user } = useAuth();
-  const d = useAdminDashboard(user, tema, modoOscuro);
+export function PanelAdmin({ tema, modoOscuro }) {
+  const { usuario } = useAutenticacion();
+  const d = usePanelAdmin(usuario, tema, modoOscuro);
 
   if (d.loading) {
     return (
-      <ProtectedRoute requiereAdmin>
+      <RutaProtegida requiereAdmin>
         <div className="flex justify-center py-32">
           <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" />
         </div>
-      </ProtectedRoute>
+      </RutaProtegida>
     );
   }
 
   return (
-    <ProtectedRoute requiereAdmin>
+    <RutaProtegida requiereAdmin>
       <div className="flex min-h-[calc(100vh-4rem)]">
-        <AdminSidebar
+        <BarraLateralAdmin
           vistaActiva={d.vistaActiva}
           onVistaChange={d.setVistaActiva}
           user={d.user}
@@ -41,7 +41,7 @@ export function DashboardAdmin({ tema, modoOscuro }) {
         />
 
         <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <AdminMobileTabs
+          <PestanasMovilAdmin
             vistaActiva={d.vistaActiva}
             onVistaChange={d.setVistaActiva}
             isDark={d.isDark}
@@ -54,10 +54,10 @@ export function DashboardAdmin({ tema, modoOscuro }) {
             </p>
           </div>
 
-          <FeedbackAlert feedback={d.feedback} errorFeedback={d.errorFeedback} />
+          <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
 
           {d.vistaActiva === 'resumen' && (
-            <StatsCards
+            <TarjetasEstadisticas
               cardCls={d.cardCls}
               tema={d.tema}
               totalAlumnos={d.totalAlumnos}
@@ -68,8 +68,8 @@ export function DashboardAdmin({ tema, modoOscuro }) {
 
           {d.vistaActiva === 'usuarios' && (
             <div>
-              <UserSearchBar busqueda={d.busqueda} onChange={d.setBusqueda} isDark={d.isDark} />
-              <UserTable
+              <BarraBusquedaUsuarios busqueda={d.busqueda} onChange={d.setBusqueda} isDark={d.isDark} />
+              <TablaUsuarios
                 usuarios={d.usuarios}
                 busqueda={d.busqueda}
                 isDark={d.isDark}
@@ -89,7 +89,7 @@ export function DashboardAdmin({ tema, modoOscuro }) {
           )}
 
           {d.vistaActiva === 'clubes' && (
-            <ClubTable
+            <TablaClubes
               clubes={d.clubes}
               isDark={d.isDark}
               tableBg={d.tableBg}
@@ -113,7 +113,7 @@ export function DashboardAdmin({ tema, modoOscuro }) {
                 <p className={`text-sm mb-6 ${tema.subtitle}`}>
                   Redacta un anuncio y selecciona la audiencia destino.
                 </p>
-                <NotificacionForm
+                <FormularioNotificacion
                   tema={tema}
                   modoOscuro={modoOscuro}
                   clubes={d.clubes}
@@ -124,7 +124,7 @@ export function DashboardAdmin({ tema, modoOscuro }) {
           )}
 
           {d.vistaActiva === 'historial' && (
-            <HistorialTable
+            <TablaHistorial
               historial={d.historial}
               historialLoading={d.historialLoading}
               isDark={d.isDark}
@@ -136,7 +136,7 @@ export function DashboardAdmin({ tema, modoOscuro }) {
             />
           )}
 
-          <ClubFormModal
+          <ModalFormularioClub
             show={d.showModalCrear}
             editandoClub={d.editandoClub}
             formClub={d.formClub}
@@ -153,6 +153,6 @@ export function DashboardAdmin({ tema, modoOscuro }) {
           />
         </main>
       </div>
-    </ProtectedRoute>
+    </RutaProtegida>
   );
 }
