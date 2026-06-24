@@ -1,9 +1,9 @@
-import { NAV_ITEMS_PRESIDENTE } from '../admin/navItems';
+import { ELEMENTOS_NAV_PRESIDENTE } from '../admin/navItems';
 
-export function PresidenteMobileTabs({ vistaActiva, onVistaChange, isDark }) {
+export function PestanasMovilPresidente({ vistaActiva, onVistaChange, isDark }) {
   return (
     <div className="md:hidden flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
-      {NAV_ITEMS_PRESIDENTE.map((item) => (
+      {ELEMENTOS_NAV_PRESIDENTE.map((item) => (
         <button
           key={item.key}
           onClick={() => onVistaChange(item.key)}

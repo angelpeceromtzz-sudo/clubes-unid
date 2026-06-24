@@ -1,6 +1,6 @@
-export function MiembrosSection({ miembros, club, tema, modoOscuro }) {
-  const isDark = modoOscuro;
-  const cardCls = isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
+export function SeccionMiembros({ miembros, club, tema, modoOscuro }) {
+  const esOscuro = modoOscuro;
+  const cardCls = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
 
   return (
     <div>

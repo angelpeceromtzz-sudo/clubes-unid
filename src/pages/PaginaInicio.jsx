@@ -1,29 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { ClubCard } from '../components/ClubCard';
-import { Hero } from '../components/Hero';
+import { useAutenticacion } from '../contexts/AuthContext';
+import { TarjetaClub } from '../components/TarjetaClub';
+import { Heroe } from '../components/Heroe';
 import { DetalleClub } from '../components/DetalleClub';
 import { api } from '../services/api';
 
-export function HomePage({ clubes, clubesLoading, tema, modoOscuro, onLoginClick }) {
-  const { isAuthenticated, isAdmin, isPresidente, tieneInscripcionActiva } = useAuth();
+export function PaginaInicio({ clubes, clubesLoading, tema, modoOscuro, onLoginClick, onClubDetalleChange }) {
+  const { estaAutenticado, esAdmin, esPresidente, tieneInscripcionActiva } = useAutenticacion();
   const navigate = useNavigate();
   const [clubSeleccionado, setClubSeleccionado] = useState(null);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      if (isAdmin) {
+    if (estaAutenticado) {
+      if (esAdmin) {
         navigate('/admin/dashboard', { replace: true });
-      } else if (isPresidente) {
+      } else if (esPresidente) {
         navigate('/presidente/dashboard', { replace: true });
       } else if (tieneInscripcionActiva) {
         navigate('/dashboard', { replace: true });
       }
     }
-  }, [isAuthenticated, isAdmin, isPresidente, tieneInscripcionActiva, navigate]);
+  }, [estaAutenticado, esAdmin, esPresidente, tieneInscripcionActiva, navigate]);
 
-  if (isAuthenticated && (isAdmin || isPresidente || tieneInscripcionActiva)) {
+  if (estaAutenticado && (esAdmin || esPresidente || tieneInscripcionActiva)) {
     return null;
   }
 
@@ -31,7 +31,10 @@ export function HomePage({ clubes, clubesLoading, tema, modoOscuro, onLoginClick
     return (
       <DetalleClub
         club={clubSeleccionado}
-        onVolver={() => setClubSeleccionado(null)}
+        onVolver={() => {
+          setClubSeleccionado(null);
+          onClubDetalleChange?.(false);
+        }}
         tema={tema}
         modoOscuro={modoOscuro}
         onLoginClick={onLoginClick}
@@ -41,7 +44,7 @@ export function HomePage({ clubes, clubesLoading, tema, modoOscuro, onLoginClick
 
   return (
     <>
-      <Hero />
+      <Heroe />
       <main id="catalogo" className="max-w-7xl mx-auto px-6 py-12 pb-20 md:pb-12">
         <div className="mb-10">
           <h2 className={`text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>
@@ -52,7 +55,7 @@ export function HomePage({ clubes, clubesLoading, tema, modoOscuro, onLoginClick
           </p>
         </div>
 
-        {!isAuthenticated && (
+        {!estaAutenticado && (
           <div className="mb-8 bg-amber-400/10 border border-amber-400/20 rounded-xl px-5 py-3">
             <p className="text-sm text-amber-400 font-medium">
               Inicia sesión para inscribirte en un club.
@@ -71,7 +74,7 @@ export function HomePage({ clubes, clubesLoading, tema, modoOscuro, onLoginClick
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {clubes.map((club) => (
-              <ClubCard
+              <TarjetaClub
                 key={club.id_club}
                 id={club.id_club}
                 nombre={club.nombre_club}
@@ -80,7 +83,10 @@ export function HomePage({ clubes, clubesLoading, tema, modoOscuro, onLoginClick
                 cupoMaximo={club.cupo_maximo}
                 cupoActual={parseInt(club.cupo_actual) || 0}
                 imagen={club.imagen_portada || club.imagen}
-                onClick={() => setClubSeleccionado(club)}
+                onClick={() => {
+                  setClubSeleccionado(club);
+                  onClubDetalleChange?.(true);
+                }}
                 modoOscuro={modoOscuro}
                 idEstatusClub={club.id_estatus_club}
                 estatus={club.estatus}

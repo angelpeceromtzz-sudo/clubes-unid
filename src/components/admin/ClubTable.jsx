@@ -1,4 +1,4 @@
-export function ClubTable({
+export function TablaClubes({
   clubes,
   isDark,
   tableBg,

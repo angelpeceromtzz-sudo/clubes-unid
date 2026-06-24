@@ -1,11 +1,9 @@
-// Pie de página con información institucional y redes sociales
-export function Footer({ tema }) {
+export function PiePagina({ tema }) {
   return (
     <footer className={`border-t transition-colors duration-300 ${tema.headerBorder} ${tema.bg}`}>
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
 
-          {/* Marca y descripción */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center text-white font-black text-sm">
@@ -23,7 +21,6 @@ export function Footer({ tema }) {
             </p>
           </div>
 
-          {/* Enlaces por categoría */}
           <div>
             <h3 className={`text-xs font-black uppercase tracking-widest mb-4 ${tema.title}`}>Categorías</h3>
             <ul className="space-y-2">
@@ -37,7 +34,6 @@ export function Footer({ tema }) {
             </ul>
           </div>
 
-          {/* Información de contacto */}
           <div>
             <h3 className={`text-xs font-black uppercase tracking-widest mb-4 ${tema.title}`}>Contacto</h3>
             <ul className="space-y-2">
@@ -47,7 +43,6 @@ export function Footer({ tema }) {
             </ul>
           </div>
 
-          {/* Redes sociales */}
           <div>
             <h3 className={`text-xs font-black uppercase tracking-widest mb-4 ${tema.title}`}>Síguenos</h3>
             <div className="flex gap-3">
@@ -69,7 +64,6 @@ export function Footer({ tema }) {
 
         </div>
 
-        {/* Copyright */}
         <div className={`mt-10 pt-6 border-t transition-colors duration-300 ${tema.headerBorder}`}>
           <p className={`text-[10px] text-center font-medium ${tema.subtitle}`}>
             &copy; {new Date().getFullYear()} UNID &mdash; Universidad Hispanoamericana de Oriente. Todos los derechos reservados.
@@ -79,5 +73,3 @@ export function Footer({ tema }) {
     </footer>
   );
 }
-
-// ✦ A

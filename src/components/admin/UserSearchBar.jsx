@@ -1,4 +1,4 @@
-export function UserSearchBar({ busqueda, onChange, isDark }) {
+export function BarraBusquedaUsuarios({ busqueda, onChange, isDark }) {
   return (
     <div className="relative mb-4">
       <svg xmlns="http://www.w3.org/2000/svg" className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
