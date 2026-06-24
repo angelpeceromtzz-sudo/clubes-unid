@@ -1,4 +1,4 @@
-export function UserTable({
+export function TablaUsuarios({
   usuarios,
   busqueda,
   isDark,

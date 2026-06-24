@@ -1,4 +1,4 @@
-export function HistorialTable({
+export function TablaHistorial({
   historial,
   historialLoading,
   isDark,

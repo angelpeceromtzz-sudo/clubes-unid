@@ -1,45 +1,37 @@
-// Sección principal del héroe con carrusel de imágenes
 import { useState, useEffect, useRef } from 'react';
 
-// Diapositivas del carrusel con imágenes de Unsplash
-const SLIDES = [
+const DIAPOSITIVAS = [
   {
     imagen: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=1470&auto=format&fit=crop",
-    gradiente: "to-l from-black/90 via-black/40 to-transparent",
     alineacion: "right",
     logro: "Bienvenidos a la manada"
   },
   {
     imagen: "https://images.unsplash.com/photo-1526470608269-f658cec19927?q=80&w=1470&auto=format&fit=crop",
-    gradiente: "to-r from-black/90 via-black/40 to-transparent",
     alineacion: "left",
     logro: "Gala Cultural — Auditorio Principal"
   },
   {
     imagen: "https://images.unsplash.com/photo-1529543544282-eaaf510c6c15?q=80&w=1470&auto=format&fit=crop",
-    gradiente: "to-l from-black/90 via-black/40 to-transparent",
     alineacion: "right",
     logro: "Exposición Anual de Artes Plásticas"
   },
   {
     imagen: "https://images.unsplash.com/photo-1575361204480-a430a8e7eae0?q=80&w=1471&auto=format&fit=crop",
-    gradiente: "to-r from-black/90 via-black/40 to-transparent",
     alineacion: "left",
     logro: "Torneo Nacional de Esports 2025"
   },
 ];
 
-// Carrusel de imágenes con transición automática cada 8 segundos
-export function Hero() {
+export function Heroe() {
   const [slideActual, setSlideActual] = useState(0);
-  const total = SLIDES.length;
+  const total = DIAPOSITIVAS.length;
   const temporizadorRef = useRef(null);
 
-  // Reinicia el temporizador del carrusel
   function reiniciarTemporizador() {
     clearInterval(temporizadorRef.current);
     temporizadorRef.current = setInterval(() => {
-      setSlideActual((prev) => (prev + 1) % SLIDES.length);
+      setSlideActual((prev) => (prev + 1) % DIAPOSITIVAS.length);
     }, 8000);
   }
 
@@ -53,10 +45,9 @@ export function Hero() {
     reiniciarTemporizador();
   }
 
-  // Inicia el carrusel automático al montar el componente
   useEffect(() => {
     temporizadorRef.current = setInterval(() => {
-      setSlideActual((prev) => (prev + 1) % SLIDES.length);
+      setSlideActual((prev) => (prev + 1) % DIAPOSITIVAS.length);
     }, 8000);
     return () => clearInterval(temporizadorRef.current);
   }, []);
@@ -65,13 +56,11 @@ export function Hero() {
     <section className="w-full">
       <div className="group relative w-full overflow-hidden h-70 sm:h-88 md:h-104 lg:h-120">
 
-        {SLIDES.map((slide, index) => (
+        {DIAPOSITIVAS.map((slide, index) => (
           <div
             key={index}
             className={`absolute inset-0 transition-all duration-700 ease-in-out ${
-              index === slideActual
-                ? 'opacity-100'
-                : 'opacity-0 pointer-events-none'
+              index === slideActual ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
             <div
@@ -79,13 +68,18 @@ export function Hero() {
               style={{ backgroundImage: `url(${slide.imagen})` }}
             />
 
-            <div className={`absolute inset-0 bg-gradient-${slide.gradiente}`} />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: slide.alineacion === 'right'
+                  ? 'linear-gradient(to left, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)'
+                  : 'linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)'
+              }}
+            />
 
             <div
               className={`relative z-10 h-full flex flex-col justify-center px-8 md:px-16 lg:px-24 ${
-                slide.alineacion === 'right'
-                  ? 'items-end text-right'
-                  : 'items-start text-left'
+                slide.alineacion === 'right' ? 'items-end text-right' : 'items-start text-left'
               }`}
             >
               <span className="inline-block text-[10px] md:text-xs uppercase tracking-widest font-bold text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/30 mb-4">
@@ -113,7 +107,6 @@ export function Hero() {
           </div>
         ))}
 
-        {/* Botones de navegación del carrusel */}
         <button
           onClick={anterior}
           className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
@@ -137,5 +130,3 @@ export function Hero() {
     </section>
   );
 }
-
-// ✦ A

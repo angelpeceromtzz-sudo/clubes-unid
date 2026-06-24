@@ -1,4 +1,4 @@
-export function StatsCards({ cardCls, tema, totalAlumnos, clubesActivos, totalInscripciones }) {
+export function TarjetasEstadisticas({ cardCls, tema, totalAlumnos, clubesActivos, totalInscripciones }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
       <div className={`${cardCls} rounded-2xl p-6`}>

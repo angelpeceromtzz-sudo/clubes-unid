@@ -1,6 +1,6 @@
-import { NAV_ITEMS_ADMIN } from './navItems';
+import { ELEMENTOS_NAV_ADMIN } from './navItems';
 
-export function AdminSidebar({ vistaActiva, onVistaChange, user, isDark, sbBg, sbItemBase, sbItemActive, sbItemInactive }) {
+export function BarraLateralAdmin({ vistaActiva, onVistaChange, user, isDark, sbBg, sbItemBase, sbItemActive, sbItemInactive }) {
   return (
     <aside className={`hidden md:flex w-64 shrink-0 flex-col border-r ${sbBg} print:hidden`}>
       <div className="p-5 border-b border-slate-800">
@@ -12,7 +12,7 @@ export function AdminSidebar({ vistaActiva, onVistaChange, user, isDark, sbBg, s
         </p>
       </div>
       <nav className="p-3 space-y-1">
-        {NAV_ITEMS_ADMIN.map((item) => (
+        {ELEMENTOS_NAV_ADMIN.map((item) => (
           <button
             key={item.key}
             onClick={() => onVistaChange(item.key)}

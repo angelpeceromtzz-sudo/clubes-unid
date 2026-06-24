@@ -1,28 +1,28 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { BloquePanelMejorado } from './BloquePanelMejorado';
+import { PanelBloqueMejorado } from './BloquePanelMejorado';
 
-export function BloquesHorariosSection({ club, tema, modoOscuro }) {
+export function SeccionBloquesHorarios({ club, tema, modoOscuro }) {
   const [solicitudes, setSolicitudes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
-    async function load() {
+    let montado = true;
+    async function cargar() {
       try {
         const data = await api.getSolicitudesPendientes(club.id_club);
-        if (mounted) setSolicitudes(data);
+        if (montado) setSolicitudes(data);
       } catch {
-        if (mounted) setSolicitudes([]);
+        if (montado) setSolicitudes([]);
       } finally {
-        if (mounted) setLoading(false);
+        if (montado) setCargando(false);
       }
     }
-    load();
-    return () => { mounted = false; };
+    cargar();
+    return () => { montado = false; };
   }, [club.id_club]);
 
-  if (loading) {
+  if (cargando) {
     return (
       <div className="flex justify-center py-16">
         <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" />
@@ -30,8 +30,8 @@ export function BloquesHorariosSection({ club, tema, modoOscuro }) {
     );
   }
 
-  const bloqueA = solicitudes.filter((s) => s.status === 'Aceptado' && s.bloque_asignado === 'A');
-  const bloqueB = solicitudes.filter((s) => s.status === 'Aceptado' && s.bloque_asignado === 'B');
+  const bloqueA = solicitudes.filter((s) => s.bloque_asignado === 'A');
+  const bloqueB = solicitudes.filter((s) => s.bloque_asignado === 'B');
 
   return (
     <div className="space-y-8">
@@ -42,15 +42,13 @@ export function BloquesHorariosSection({ club, tema, modoOscuro }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <BloquePanelMejorado
-          titulo="Bloque A — Vespertino"
-          turno="Vespertino"
+        <PanelBloqueMejorado
+          titulo="Bloque A"
           alumnos={bloqueA}
           isDark={modoOscuro}
         />
-        <BloquePanelMejorado
-          titulo="Bloque B — Matutino"
-          turno="Matutino"
+        <PanelBloqueMejorado
+          titulo="Bloque B"
           alumnos={bloqueB}
           isDark={modoOscuro}
         />

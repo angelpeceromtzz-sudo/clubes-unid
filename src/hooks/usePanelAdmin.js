@@ -1,25 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 
-export function useAdminDashboard(user, tema, modoOscuro) {
+export function usePanelAdmin(usuario, tema, modoOscuro) {
   const [vistaActiva, setVistaActiva] = useState('resumen');
   const [usuarios, setUsuarios] = useState([]);
   const [clubes, setClubes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [cargando, setCargando] = useState(true);
   const [asignando, setAsignando] = useState({});
-  const [showModalCrear, setShowModalCrear] = useState(false);
+  const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
   const [editandoClub, setEditandoClub] = useState(null);
-  const [formClub, setFormClub] = useState({ nombre_club: '', categoria: '', cupo_maximo: '' });
+  const [formularioClub, setFormularioClub] = useState({ nombre_club: '', categoria: '', cupo_maximo: '' });
   const [enviando, setEnviando] = useState(false);
-  const [modalError, setModalError] = useState('');
+  const [errorModal, setErrorModal] = useState('');
   const [feedback, setFeedback] = useState('');
   const [errorFeedback, setErrorFeedback] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [historial, setHistorial] = useState([]);
-  const [historialLoading, setHistorialLoading] = useState(false);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
   useEffect(() => {
-    async function load() {
+    async function cargar() {
       try {
         const [u, c] = await Promise.all([
           api.getUsuarios(),
@@ -31,17 +31,17 @@ export function useAdminDashboard(user, tema, modoOscuro) {
         setUsuarios([]);
         setClubes([]);
       } finally {
-        setLoading(false);
+        setCargando(false);
       }
     }
-    load();
+    cargar();
   }, []);
 
-  const isDark = modoOscuro;
+  const esOscuro = modoOscuro;
 
   const totalAlumnos = usuarios.filter((u) => u.id_rol === 1).length;
   const clubesActivos = clubes.filter((c) => c.id_estatus_club === 1).length;
-  const clubesActivosList = clubes.filter((c) => c.id_estatus_club === 1);
+  const clubesActivosLista = clubes.filter((c) => c.id_estatus_club === 1);
 
   const totalInscripciones = usuarios.filter((u) => u.nombre_club).length;
 
@@ -57,56 +57,56 @@ export function useAdminDashboard(user, tema, modoOscuro) {
       : usuarios;
   })();
 
-  const cardCls = isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
-  const tableBg = isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
-  const thCls = isDark ? 'text-slate-500' : 'text-slate-600';
-  const tdCls = isDark ? 'text-slate-400' : 'text-slate-600';
-  const tdTitle = isDark ? 'text-white' : 'text-slate-900';
-  const sbBg = isDark ? 'bg-[#0a1128] border-slate-800' : 'bg-slate-900 border-slate-700';
+  const cardCls = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
+  const tableBg = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
+  const thCls = esOscuro ? 'text-slate-500' : 'text-slate-600';
+  const tdCls = esOscuro ? 'text-slate-400' : 'text-slate-600';
+  const tdTitle = esOscuro ? 'text-white' : 'text-slate-900';
+  const sbBg = esOscuro ? 'bg-[#0a1128] border-slate-800' : 'bg-slate-900 border-slate-700';
   const sbItemBase = 'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer';
   const sbItemActive = 'bg-amber-400/20 text-amber-400 border border-amber-400/30';
-  const sbItemInactive = isDark ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-400 hover:text-white hover:bg-slate-800/50';
+  const sbItemInactive = esOscuro ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-400 hover:text-white hover:bg-slate-800/50';
   const selectCls = `text-xs font-bold rounded-lg px-3 py-1.5 border cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/50 disabled:opacity-40 disabled:cursor-not-allowed ${
-    isDark ? 'bg-[#18223f] border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700'
+    esOscuro ? 'bg-[#18223f] border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700'
   }`;
   const inputCls = `w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 ${
-    isDark ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400'
+    esOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400'
   }`;
   const labelCls = 'block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5';
 
-  const handleRoleChange = useCallback(async (userId, newRoleId) => {
+  const manejarCambioRol = useCallback(async (userId, nuevoRolId) => {
     try {
-      await api.updateUserRol(userId, newRoleId);
-      const updated = await api.getUsuarios();
-      setUsuarios(updated);
+      await api.updateUserRol(userId, nuevoRolId);
+      const actualizados = await api.getUsuarios();
+      setUsuarios(actualizados);
     } catch (err) {
       setErrorFeedback(err.message);
     }
   }, []);
 
-  const handleRemoveFromClub = useCallback(async (userId) => {
+  const manejarDarBaja = useCallback(async (userId) => {
     if (!window.confirm('¿Estás seguro de dar de baja a este alumno de su club?')) return;
     try {
       await api.removeFromClub(userId);
-      const updated = await api.getUsuarios();
-      setUsuarios(updated);
+      const actualizados = await api.getUsuarios();
+      setUsuarios(actualizados);
     } catch (err) {
       setErrorFeedback(err.message);
     }
   }, []);
 
-  const handleAsignarClub = useCallback(async (userId, clubId) => {
+  const manejarAsignarClub = useCallback(async (userId, clubId) => {
     setAsignando((prev) => ({ ...prev, [userId]: true }));
     try {
-      const result = await api.asignarClubAPresidente(userId, clubId || null);
-      const [updatedUsers, updatedClubes] = await Promise.all([
+      const resultado = await api.asignarClubAPresidente(userId, clubId || null);
+      const [usuariosActualizados, clubesActualizados] = await Promise.all([
         api.getUsuarios(),
         api.getClubes(),
       ]);
-      setUsuarios(updatedUsers);
-      setClubes(updatedClubes);
-      if (result.nombre_club) {
-        setFeedback(`Presidente asignado a "${result.nombre_club}" correctamente`);
+      setUsuarios(usuariosActualizados);
+      setClubes(clubesActualizados);
+      if (resultado.nombre_club) {
+        setFeedback(`Presidente asignado a "${resultado.nombre_club}" correctamente`);
       } else {
         setFeedback('Presidente desasignado del club correctamente');
       }
@@ -117,75 +117,75 @@ export function useAdminDashboard(user, tema, modoOscuro) {
     }
   }, []);
 
-  const handleStatusChange = useCallback(async (clubId, newStatusId) => {
+  const manejarCambioEstatus = useCallback(async (clubId, nuevoEstatusId) => {
     try {
-      await api.updateClubEstatus(clubId, newStatusId);
-      const updated = await api.getClubes();
-      setClubes(updated);
+      await api.updateClubEstatus(clubId, nuevoEstatusId);
+      const actualizados = await api.getClubes();
+      setClubes(actualizados);
     } catch (err) {
       setErrorFeedback(err.message);
     }
   }, []);
 
   const abrirModalCrear = useCallback(() => {
-    setFormClub({ nombre_club: '', categoria: '', cupo_maximo: '' });
+    setFormularioClub({ nombre_club: '', categoria: '', cupo_maximo: '' });
     setEditandoClub(null);
-    setModalError('');
-    setShowModalCrear(true);
+    setErrorModal('');
+    setMostrarModalCrear(true);
   }, []);
 
   const abrirModalEditar = useCallback((club) => {
-    setFormClub({
+    setFormularioClub({
       nombre_club: club.nombre_club,
       categoria: club.categoria,
       cupo_maximo: String(club.cupo_maximo),
     });
     setEditandoClub(club);
-    setModalError('');
-    setShowModalCrear(true);
+    setErrorModal('');
+    setMostrarModalCrear(true);
   }, []);
 
   const cerrarModal = useCallback(() => {
-    setShowModalCrear(false);
+    setMostrarModalCrear(false);
   }, []);
 
   const guardarClub = useCallback(async (e) => {
     e.preventDefault();
-    setModalError('');
-    if (!formClub.nombre_club.trim() || !formClub.categoria.trim() || !formClub.cupo_maximo) {
-      setModalError('Todos los campos son obligatorios');
+    setErrorModal('');
+    if (!formularioClub.nombre_club.trim() || !formularioClub.categoria.trim() || !formularioClub.cupo_maximo) {
+      setErrorModal('Todos los campos son obligatorios');
       return;
     }
     setEnviando(true);
     try {
       if (editandoClub) {
         await api.updateClub(editandoClub.id_club, {
-          nombre_club: formClub.nombre_club,
-          categoria: formClub.categoria,
-          cupo_maximo: Number(formClub.cupo_maximo),
+          nombre_club: formularioClub.nombre_club,
+          categoria: formularioClub.categoria,
+          cupo_maximo: Number(formularioClub.cupo_maximo),
         });
         setFeedback('Club actualizado correctamente');
       } else {
         await api.createClub({
-          nombre_club: formClub.nombre_club,
-          categoria: formClub.categoria,
-          cupo_maximo: Number(formClub.cupo_maximo),
+          nombre_club: formularioClub.nombre_club,
+          categoria: formularioClub.categoria,
+          cupo_maximo: Number(formularioClub.cupo_maximo),
         });
         setFeedback('Club creado correctamente');
       }
-      const updated = await api.getClubes();
-      setClubes(updated);
-      setShowModalCrear(false);
+      const actualizados = await api.getClubes();
+      setClubes(actualizados);
+      setMostrarModalCrear(false);
     } catch (err) {
-      setModalError(err.message);
+      setErrorModal(err.message);
     } finally {
       setEnviando(false);
     }
-  }, [formClub, editandoClub]);
+  }, [formularioClub, editandoClub]);
 
-  const handleClubFormChange = useCallback((e) => {
+  const manejarCambioFormularioClub = useCallback((e) => {
     const { name, value } = e.target;
-    setFormClub((prev) => ({ ...prev, [name]: value }));
+    setFormularioClub((prev) => ({ ...prev, [name]: value }));
   }, []);
 
   useEffect(() => {
@@ -203,11 +203,11 @@ export function useAdminDashboard(user, tema, modoOscuro) {
   }, [errorFeedback]);
 
   const cargarHistorial = useCallback(() => {
-    setHistorialLoading(true);
+    setCargandoHistorial(true);
     api.getHistorial()
       .then(setHistorial)
       .catch(() => setHistorial([]))
-      .finally(() => setHistorialLoading(false));
+      .finally(() => setCargandoHistorial(false));
   }, []);
 
   useEffect(() => {
@@ -221,13 +221,13 @@ export function useAdminDashboard(user, tema, modoOscuro) {
     setVistaActiva,
     usuarios,
     clubes,
-    loading,
+    loading: cargando,
     asignando,
-    showModalCrear,
+    showModalCrear: mostrarModalCrear,
     editandoClub,
-    formClub,
+    formClub: formularioClub,
     enviando,
-    modalError,
+    modalError: errorModal,
     feedback,
     setFeedback,
     errorFeedback,
@@ -235,11 +235,11 @@ export function useAdminDashboard(user, tema, modoOscuro) {
     setBusqueda,
     filtrados,
     historial,
-    historialLoading,
-    isDark,
+    historialLoading: cargandoHistorial,
+    isDark: esOscuro,
     totalAlumnos,
     clubesActivos,
-    clubesActivosList,
+    clubesActivosList: clubesActivosLista,
     totalInscripciones,
     cardCls,
     tableBg,
@@ -254,16 +254,16 @@ export function useAdminDashboard(user, tema, modoOscuro) {
     inputCls,
     labelCls,
     tema,
-    user,
-    handleRoleChange,
-    handleRemoveFromClub,
-    handleAsignarClub,
-    handleStatusChange,
+    user: usuario,
+    handleRoleChange: manejarCambioRol,
+    handleRemoveFromClub: manejarDarBaja,
+    handleAsignarClub: manejarAsignarClub,
+    handleStatusChange: manejarCambioEstatus,
     abrirModalCrear,
     abrirModalEditar,
     cerrarModal,
     guardarClub,
-    handleClubFormChange,
+    handleClubFormChange: manejarCambioFormularioClub,
     cargarHistorial,
   };
 }

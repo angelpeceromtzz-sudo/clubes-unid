@@ -1,12 +1,10 @@
-// Barra de navegación superior con filtros, perfil y menú desplegable
 import { useEffect, useRef, useState } from 'react';
 import { useNotificaciones } from '../contexts/NotificationContext';
 import logoLobo from '../assets/logo-lobo.svg';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
 
-// Componente de navegación principal de la aplicación
-export function Navbar({
+export function BarraNavegacion({
   categoriaActiva, setCategoriaActiva, modoOscuro, setModoOscuro,
   menuAbierto, setMenuAbierto, tema, onLogoClick,
   user, onLoginClick, onLogout, onDashboardClick,
@@ -14,40 +12,37 @@ export function Navbar({
 }) {
   const dropdownRef = useRef(null);
 
-  // Cierra el menú desplegable al hacer clic fuera
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setMenuAbierto(false);
       }
     }
-
     if (menuAbierto) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuAbierto, setMenuAbierto]);
 
-  const [showHeader, setShowHeader] = useState(true);
-  const lastScrollY = useRef(0);
+  const [mostrarHeader, setMostrarHeader] = useState(true);
+  const ultimoScrollY = useRef(0);
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
-        setShowHeader(false);
+      if (currentScrollY > ultimoScrollY.current && currentScrollY > 80) {
+        setMostrarHeader(false);
       } else {
-        setShowHeader(true);
+        setMostrarHeader(true);
       }
-      lastScrollY.current = currentScrollY;
+      ultimoScrollY.current = currentScrollY;
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const { notificaciones, noLeidas, marcarComoLeida } = useNotificaciones();
-  const [showNotificaciones, setShowNotificaciones] = useState(false);
+  const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
 
   return (
     <>
@@ -57,9 +52,8 @@ export function Navbar({
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
-      <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-transform duration-300 ${tema.headerBg} ${tema.headerBorder} ${showHeader ? 'max-md:translate-y-0' : 'max-md:-translate-y-full'}`}>
+      <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-transform duration-300 ${tema.headerBg} ${tema.headerBorder} ${mostrarHeader ? 'max-md:translate-y-0' : 'max-md:-translate-y-full'}`}>
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 md:grid md:grid-cols-3">
-        {/* Logo y nombre de la institución */}
         <div className="flex items-center gap-2 cursor-pointer md:justify-self-start" onClick={onLogoClick}>
           <img src={logoLobo} alt="Logo" className="w-10 h-10" />
           <div>
@@ -72,7 +66,6 @@ export function Navbar({
           </div>
         </div>
 
-        {/* Filtros de categoría o botón de volver al catálogo */}
         {user && (user.id_rol === 2 || user.id_rol === 3) ? (
           <div className="hidden md:block md:justify-self-center" />
         ) : mostrarFiltros ? (
@@ -92,7 +85,7 @@ export function Navbar({
         ) : (
           <button
             onClick={onVolverCatalogo}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95 md:justify-self-center"
+            className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95 md:justify-self-center"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7 7l-7-7 7-7" />
@@ -101,13 +94,11 @@ export function Navbar({
           </button>
         )}
 
-        {/* Perfil de usuario, notificaciones y menú desplegable */}
         <div className="relative flex items-center gap-4 md:justify-self-end" ref={dropdownRef}>
-          {/* Desktop: perfil de usuario autenticado */}
           {user && (
             <div className="hidden md:flex items-center gap-3">
               <button
-                onClick={() => { setShowNotificaciones((prev) => !prev); setMenuAbierto(false); }}
+                onClick={() => { setMostrarNotificaciones((prev) => !prev); setMenuAbierto(false); }}
                 className={`relative ${tema.iconColor} hover:text-amber-400 transition-colors`}
                 aria-label="Notificaciones"
               >
@@ -135,17 +126,16 @@ export function Navbar({
                 <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-sm">
                   {user.nombre_completo.charAt(0)}
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${menuAbierto ? "rotate-180" : ""} ${tema.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${menuAbierto ? 'rotate-180' : ''} ${tema.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
             </div>
           )}
 
-          {/* Notificaciones (mobile) */}
           <div className="relative flex md:hidden">
             <button
-              onClick={() => { setShowNotificaciones((prev) => !prev); setMenuAbierto(false); }}
+              onClick={() => { setMostrarNotificaciones((prev) => !prev); setMenuAbierto(false); }}
               className="relative p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 text-white hover:text-amber-400"
               aria-label="Notificaciones"
             >
@@ -160,10 +150,9 @@ export function Navbar({
             </button>
           </div>
 
-          {/* Popover de notificaciones universal */}
-          {showNotificaciones && (
+          {mostrarNotificaciones && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowNotificaciones(false)} />
+              <div className="fixed inset-0 z-40" onClick={() => setMostrarNotificaciones(false)} />
               <div
                 className="absolute right-0 top-12 z-50 w-80 rounded-xl border shadow-2xl py-3 px-2 max-h-[70vh] overflow-y-auto transition-colors duration-300"
                 style={{ animation: 'dropdownIn 0.2s ease-out' }}
@@ -185,9 +174,7 @@ export function Navbar({
                           if (!notif.leido) marcarComoLeida(notif.id_notificacion);
                         }}
                         className={`w-full text-left px-4 py-3 transition-colors duration-200 rounded-lg flex flex-col gap-1.5 ${
-                          modoOscuro
-                            ? 'hover:bg-slate-700/50'
-                            : 'hover:bg-slate-100'
+                          modoOscuro ? 'hover:bg-slate-700/50' : 'hover:bg-slate-100'
                         } ${notif.leido ? 'opacity-60' : ''}`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -203,9 +190,7 @@ export function Navbar({
                         </p>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider ${
-                            notif.emisor_rol === 'admin'
-                              ? 'text-purple-400'
-                              : 'text-amber-400'
+                            notif.emisor_rol === 'admin' ? 'text-purple-400' : 'text-amber-400'
                           }`}>
                             {notif.emisor_rol === 'admin' ? '📢 Aviso Institucional' : `🏀 ${notif.club_nombre || 'Club'}`}
                           </span>
@@ -223,9 +208,8 @@ export function Navbar({
             </>
           )}
 
-          {/* Hamburguesa universal: visible en mobile siempre, en desktop solo si NO hay sesión */}
           <button
-            onClick={() => { setMenuAbierto((prev) => !prev); setShowNotificaciones(false); }}
+            onClick={() => { setMenuAbierto((prev) => !prev); setMostrarNotificaciones(false); }}
             className={`p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${tema.iconColor} hover:text-amber-400 hover:bg-slate-700/50 ${user ? 'md:hidden' : ''}`}
             aria-label="Menú"
           >
@@ -238,7 +222,6 @@ export function Navbar({
             </svg>
           </button>
 
-          {/* Menú desplegable */}
           {menuAbierto && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuAbierto(false)} />
@@ -328,5 +311,3 @@ export function Navbar({
     </>
   );
 }
-
-// ✦ A

@@ -1,19 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
-import { Navbar } from './components/Navbar';
-import { Footer } from './components/Footer';
-import { LoginModal } from './components/LoginModal';
-import { MobileBottomNav } from './components/MobileBottomNav';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { DashboardAlumno } from './pages/DashboardAlumno';
-import { DashboardPresidente } from './pages/DashboardPresidente';
-import { DashboardAdmin } from './pages/DashboardAdmin';
-import { HomePage } from './pages/HomePage';
+import { useAutenticacion } from './contexts/AuthContext';
+import { BarraNavegacion } from './components/BarraNavegacion';
+import { PiePagina } from './components/PiePagina';
+import { ModalInicioSesion } from './components/ModalInicioSesion';
+import { NavegacionInferiorMovil } from './components/NavegacionInferiorMovil';
+import { RutaProtegida } from './components/RutaProtegida';
+import { PanelAlumno } from './pages/PanelAlumno';
+import { PanelPresidente } from './pages/PanelPresidente';
+import { PanelAdmin } from './pages/PanelAdmin';
+import { PaginaInicio } from './pages/PaginaInicio';
 import { api, getSession } from './services/api';
 
 function App() {
-  const { isAuthenticated, isAdmin, user, logout, refreshInscripcionActiva, tieneInscripcionActiva } = useAuth();
+  const { estaAutenticado, esAdmin, esPresidente, usuario, cerrarSesion, refrescarInscripcionActiva, tieneInscripcionActiva } = useAutenticacion();
   const navigate = useNavigate();
   const location = useLocation();
   const [clubes, setClubes] = useState([]);
@@ -25,6 +25,7 @@ function App() {
   });
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [clubDetalleVisible, setClubDetalleVisible] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('theme', modoOscuro ? 'dark' : 'light');
@@ -44,9 +45,9 @@ function App() {
     loadClubes();
     const session = getSession();
     if (session?.user) {
-      refreshInscripcionActiva();
+      refrescarInscripcionActiva();
     }
-  }, [refreshInscripcionActiva]);
+  }, [refrescarInscripcionActiva]);
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
@@ -66,7 +67,7 @@ function App() {
   }, [navigate]);
 
   function handleLogout() {
-    logout();
+    cerrarSesion();
     navigate('/');
     setMenuAbierto(false);
   }
@@ -80,6 +81,7 @@ function App() {
 
   const tema = modoOscuro
     ? {
+        isDark: true,
         bg: 'bg-[#0b111e]',
         text: 'text-slate-200',
         headerBg: 'bg-[#0b111e]/80',
@@ -97,6 +99,7 @@ function App() {
         logoText: 'text-white',
       }
     : {
+        isDark: false,
         bg: 'bg-slate-50',
         text: 'text-slate-800',
         headerBg: 'bg-white/80',
@@ -114,12 +117,18 @@ function App() {
         logoText: 'text-slate-900',
       };
 
-  const mostrarFiltros = location.pathname === '/';
+  useEffect(() => {
+    if (location.pathname !== '/') {
+      setClubDetalleVisible(false);
+    }
+  }, [location.pathname]);
+
+  const mostrarFiltros = location.pathname === '/' && !clubDetalleVisible;
 
   function irADashboard() {
-    if (isAdmin) {
+    if (esAdmin) {
       navigate('/admin/dashboard');
-    } else if (isPresidente) {
+    } else if (esPresidente) {
       navigate('/presidente/dashboard');
     } else {
       navigate('/dashboard');
@@ -133,7 +142,7 @@ function App() {
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-300 ${tema.bg} ${tema.text}`}>
-      <Navbar
+      <BarraNavegacion
         categoriaActiva={categoriaActiva}
         setCategoriaActiva={setCategoriaActiva}
         modoOscuro={modoOscuro}
@@ -142,7 +151,7 @@ function App() {
         setMenuAbierto={setMenuAbierto}
         tema={tema}
         onLogoClick={irACatalogo}
-        user={user}
+        user={usuario}
         onLoginClick={() => setShowLogin(true)}
         onLogout={handleLogout}
         onDashboardClick={irADashboard}
@@ -151,46 +160,45 @@ function App() {
       />
 
       {showLogin && (
-        <LoginModal onClose={handleLoginSuccess} />
+        <ModalInicioSesion onClose={handleLoginSuccess} />
       )}
 
       <Routes>
         <Route path="/" element={
-          <HomePage
+          <PaginaInicio
             clubes={clubesFiltrados}
             clubesLoading={clubesLoading}
             tema={tema}
             modoOscuro={modoOscuro}
             onLoginClick={() => setShowLogin(true)}
+            onClubDetalleChange={setClubDetalleVisible}
           />
         } />
         <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <DashboardAlumno tema={tema} modoOscuro={modoOscuro} />
-          </ProtectedRoute>
+          <RutaProtegida>
+            <PanelAlumno tema={tema} modoOscuro={modoOscuro} />
+          </RutaProtegida>
         } />
         <Route path="/presidente/dashboard" element={
-          <ProtectedRoute requierePresidente>
-            <DashboardPresidente tema={tema} modoOscuro={modoOscuro} />
-          </ProtectedRoute>
+          <RutaProtegida requierePresidente>
+            <PanelPresidente tema={tema} modoOscuro={modoOscuro} />
+          </RutaProtegida>
         } />
         <Route path="/admin/dashboard" element={
-          <ProtectedRoute requiereAdmin>
-            <DashboardAdmin tema={tema} modoOscuro={modoOscuro} />
-          </ProtectedRoute>
+          <RutaProtegida requiereAdmin>
+            <PanelAdmin tema={tema} modoOscuro={modoOscuro} />
+          </RutaProtegida>
         } />
       </Routes>
 
-      <MobileBottomNav
-        isAuthenticated={isAuthenticated}
+      <NavegacionInferiorMovil
+        estaAutenticado={estaAutenticado}
         tieneInscripcionActiva={tieneInscripcionActiva}
         onLoginClick={() => setShowLogin(true)}
       />
-      {location.pathname === '/' && <Footer tema={tema} />}
+      {location.pathname === '/' && <PiePagina tema={tema} />}
     </div>
   );
 }
 
 export default App;
-
-// ✦ A
