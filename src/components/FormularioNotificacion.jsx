@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNotificaciones } from '../contexts/NotificationContext';
 
-export function NotificacionForm({ audienciaFija, clubId, clubNombre, clubes, onSuccess, tema, modoOscuro }) {
+export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess, tema, modoOscuro }) {
   const { crearNotificacion } = useNotificaciones();
   const [titulo, setTitulo] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -19,7 +19,7 @@ export function NotificacionForm({ audienciaFija, clubId, clubNombre, clubes, on
     { value: 'club', label: 'Club en Específico' },
   ];
 
-  async function handleSubmit(e) {
+  async function manejarEnvio(e) {
     e.preventDefault();
     if (!titulo.trim() || !mensaje.trim()) return;
     if (audiencia === 'club' && !audienciaFija && !clubSeleccionado) return;
@@ -59,7 +59,7 @@ export function NotificacionForm({ audienciaFija, clubId, clubNombre, clubes, on
     : clubesActivos;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={manejarEnvio} className="space-y-4">
       <div>
         <label className={labelClass}>Título del anuncio</label>
         <input
@@ -104,7 +104,6 @@ export function NotificacionForm({ audienciaFija, clubId, clubNombre, clubes, on
         <div className="space-y-3">
           <label className={labelClass}>Seleccionar Club</label>
 
-          {/* Barra de búsqueda de clubes */}
           <div className="relative">
             <svg xmlns="http://www.w3.org/2000/svg" className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

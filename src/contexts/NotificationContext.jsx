@@ -1,18 +1,18 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from './AuthContext';
+import { useAutenticacion } from './AuthContext';
 import { api } from '../services/api';
 
-const NotificationContext = createContext(null);
+const ContextoNotificacion = createContext(null);
 
-const POLL_INTERVAL = 30000;
+const INTERVALO_POLL = 30000;
 
-export function NotificationProvider({ children }) {
-  const { isAuthenticated, user } = useAuth();
+export function ProveedorNotificacion({ children: hijos }) {
+  const { estaAutenticado, usuario } = useAutenticacion();
   const [notificaciones, setNotificaciones] = useState([]);
-  const intervalRef = useRef(null);
+  const refIntervalo = useRef(null);
 
-  const fetchNotificaciones = useCallback(async () => {
-    if (!isAuthenticated) {
+  const obtenerNotificaciones = useCallback(async () => {
+    if (!estaAutenticado) {
       setNotificaciones([]);
       return;
     }
@@ -20,24 +20,24 @@ export function NotificationProvider({ children }) {
       const data = await api.getNotificaciones();
       setNotificaciones(data);
     } catch {
-      if (intervalRef.current) {
+      if (refIntervalo.current) {
         setNotificaciones([]);
       }
     }
-  }, [isAuthenticated]);
+  }, [estaAutenticado]);
 
   useEffect(() => {
-    fetchNotificaciones();
-    if (isAuthenticated) {
-      intervalRef.current = setInterval(fetchNotificaciones, POLL_INTERVAL);
+    obtenerNotificaciones();
+    if (estaAutenticado) {
+      refIntervalo.current = setInterval(obtenerNotificaciones, INTERVALO_POLL);
     }
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      if (refIntervalo.current) {
+        clearInterval(refIntervalo.current);
+        refIntervalo.current = null;
       }
     };
-  }, [isAuthenticated, fetchNotificaciones]);
+  }, [estaAutenticado, obtenerNotificaciones]);
 
   const noLeidas = notificaciones.filter((n) => !n.leido).length;
 
@@ -53,27 +53,27 @@ export function NotificationProvider({ children }) {
 
   const crearNotificacion = useCallback(async (titulo, mensaje, audiencia, id_club) => {
     const data = await api.createNotificacion(titulo, mensaje, audiencia, id_club);
-    fetchNotificaciones().catch(() => {});
+    obtenerNotificaciones().catch(() => {});
     return data;
-  }, [fetchNotificaciones]);
+  }, [obtenerNotificaciones]);
 
   return (
-    <NotificationContext.Provider
+    <ContextoNotificacion.Provider
       value={{
         notificaciones,
         noLeidas,
         marcarComoLeida,
         crearNotificacion,
-        fetchNotificaciones,
+        fetchNotificaciones: obtenerNotificaciones,
       }}
     >
-      {children}
-    </NotificationContext.Provider>
+      {hijos}
+    </ContextoNotificacion.Provider>
   );
 }
 
 export function useNotificaciones() {
-  const ctx = useContext(NotificationContext);
-  if (!ctx) throw new Error('useNotificaciones debe usarse dentro de NotificationProvider');
+  const ctx = useContext(ContextoNotificacion);
+  if (!ctx) throw new Error('useNotificaciones debe usarse dentro de ProveedorNotificacion');
   return ctx;
 }

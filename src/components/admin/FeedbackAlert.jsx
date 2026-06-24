@@ -1,4 +1,4 @@
-export function FeedbackAlert({ feedback, errorFeedback }) {
+export function AlertaRetroalimentacion({ feedback, errorFeedback }) {
   return (
     <>
       {feedback && (

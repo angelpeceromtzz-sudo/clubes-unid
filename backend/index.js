@@ -16,6 +16,7 @@ import avisosRoutes from './routes/avisos.js';
 import formulariosRoutes from './routes/formularios.js';
 import notificacionesRoutes from './routes/notificaciones.js';
 import historialRoutes from './routes/historial.js';
+import convocatoriasRoutes from './routes/convocatorias.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -38,6 +39,7 @@ app.use('/api/formularios', formulariosRoutes);
 app.use('/api/avisos', avisosRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/historial', historialRoutes);
+app.use('/api/convocatorias', convocatoriasRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

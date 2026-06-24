@@ -1,6 +1,6 @@
-export function InfoClub({ club, tema, modoOscuro }) {
-  const isDark = modoOscuro;
-  const cardCls = isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
+export function InformacionClub({ club, tema, modoOscuro }) {
+  const esOscuro = modoOscuro;
+  const cardCls = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
 
   return (
     <div className={`${cardCls} rounded-2xl p-6`}>
@@ -31,7 +31,7 @@ export function InfoClub({ club, tema, modoOscuro }) {
           <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">Horarios</p>
           <div className="space-y-1.5">
             {club.horarios.map((h, i) => (
-              <div key={i} className={`flex items-center gap-2 text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <div key={i} className={`flex items-center gap-2 text-sm ${esOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
                 <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
                 <strong className={tema.title}>{h.dia}:</strong> {h.horario}
               </div>

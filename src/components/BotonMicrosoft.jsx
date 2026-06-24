@@ -7,7 +7,7 @@ export function BotonMicrosoft({ onSuccess }) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
-  function handleClick() {
+  function manejarClick() {
     setError('');
     setCargando(true);
     instance.loginRedirect(loginRequest).catch((err) => {
@@ -19,7 +19,7 @@ export function BotonMicrosoft({ onSuccess }) {
   return (
     <div className="space-y-3">
       <button
-        onClick={handleClick}
+        onClick={manejarClick}
         disabled={cargando}
         className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-800 font-semibold text-sm rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98] shadow-sm border border-gray-200"
       >

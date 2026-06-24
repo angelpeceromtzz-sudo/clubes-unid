@@ -1,4 +1,4 @@
-export function ClubFormModal({
+export function ModalFormularioClub({
   show,
   editandoClub,
   formClub,

@@ -1,8 +1,8 @@
-import { ProtectedRoute } from '../ProtectedRoute';
+import { RutaProtegida } from '../RutaProtegida';
 
-export function EmptyState({ tema }) {
+export function EstadoVacio({ tema }) {
   return (
-    <ProtectedRoute>
+    <RutaProtegida>
       <div className="max-w-lg mx-auto px-6 py-20 text-center">
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-10">
           <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
@@ -21,6 +21,6 @@ export function EmptyState({ tema }) {
           </p>
         </div>
       </div>
-    </ProtectedRoute>
+    </RutaProtegida>
   );
 }

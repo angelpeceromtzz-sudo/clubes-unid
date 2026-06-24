@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { SuccessModal } from './SuccessModal';
+import { ModalExito } from './ModalExito';
 import { api } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
-
+import { useAutenticacion } from '../contexts/AuthContext';
 
 const CARRERAS = [
   'Ingeniería en Software y Sist.',
@@ -16,11 +15,11 @@ const CARRERAS = [
 
 const TURNOS = ['Matutino', 'Vespertino'];
 
-export function InscripcionForm({ club, onClose }) {
-  const { user, clubesPostulados, setClubesPostulados, refreshInscripcionActiva } = useAuth();
-  const [form, setForm] = useState({
+export function FormularioInscripcion({ club, onClose }) {
+  const { usuario, clubesPostulados, actualizarClubesPostulados, refrescarInscripcionActiva } = useAutenticacion();
+  const [formulario, setFormulario] = useState({
     id_club: club.id_club || club.id,
-    nombre_completo: user?.nombre_completo || '',
+    nombre_completo: usuario?.nombre_completo || '',
     matricula: '',
     carrera: '',
     cuatrimestre: '',
@@ -29,74 +28,74 @@ export function InscripcionForm({ club, onClose }) {
     motivo_ingreso: '',
     experiencia_previa: '',
   });
-  const idDelClubActual = club.id_club || club.id;
-  const yaPostuladoEsteClub = clubesPostulados.includes(idDelClubActual);
+  const idClubActual = club.id_club || club.id;
+  const yaPostulado = clubesPostulados.includes(idClubActual);
   const limiteAlcanzado = clubesPostulados.length >= 3;
-  const bloqueado = yaPostuladoEsteClub || limiteAlcanzado;
+  const bloqueado = yaPostulado || limiteAlcanzado;
 
-  const [errors, setErrors] = useState({});
+  const [errores, setErrores] = useState({});
   const [enviado, setEnviado] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [apiError, setApiError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [errorApi, setErrorApi] = useState('');
 
   function validar() {
     const errs = {};
-    if (!form.nombre_completo.trim()) errs.nombre_completo = 'El nombre es obligatorio';
+    if (!formulario.nombre_completo.trim()) errs.nombre_completo = 'El nombre es obligatorio';
 
-    if (!form.matricula) {
+    if (!formulario.matricula) {
       errs.matricula = 'La matrícula es obligatoria';
-    } else if (!/^\d+$/.test(form.matricula)) {
+    } else if (!/^\d+$/.test(formulario.matricula)) {
       errs.matricula = 'La matrícula debe contener solo números';
     }
 
-    if (!form.carrera) errs.carrera = 'Selecciona una carrera';
-    if (!form.cuatrimestre) {
+    if (!formulario.carrera) errs.carrera = 'Selecciona una carrera';
+    if (!formulario.cuatrimestre) {
       errs.cuatrimestre = 'El cuatrimestre es obligatorio';
-    } else if (parseInt(form.cuatrimestre) < 1) {
+    } else if (parseInt(formulario.cuatrimestre) < 1) {
       errs.cuatrimestre = 'El cuatrimestre debe ser mayor a 0';
     }
-    if (!form.turno) errs.turno = 'Selecciona un turno';
+    if (!formulario.turno) errs.turno = 'Selecciona un turno';
 
-    if (!form.telefono_contacto) {
+    if (!formulario.telefono_contacto) {
       errs.telefono_contacto = 'El teléfono de contacto es obligatorio';
-    } else if (!/^\d{10}$/.test(form.telefono_contacto)) {
+    } else if (!/^\d{10}$/.test(formulario.telefono_contacto)) {
       errs.telefono_contacto = 'El teléfono debe ser de 10 dígitos numéricos';
     }
-    if (!form.motivo_ingreso.trim()) errs.motivo_ingreso = 'Indica por qué quieres unirte';
+    if (!formulario.motivo_ingreso.trim()) errs.motivo_ingreso = 'Indica por qué quieres unirte';
     return errs;
   }
 
-  function handleChange(e) {
+  function manejarCambio(e) {
     const { name, value } = e.target;
 
     if (name === 'matricula' || name === 'telefono_contacto') {
       if (!/^\d*$/.test(value)) return;
     }
 
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    setFormulario((prev) => ({ ...prev, [name]: value }));
+    if (errores[name]) setErrores((prev) => ({ ...prev, [name]: '' }));
   }
 
-  async function handleSubmit(e) {
+  async function manejarEnvio(e) {
     e.preventDefault();
-    setApiError('');
+    setErrorApi('');
     const errs = validar();
-    setErrors(errs);
+    setErrores(errs);
     if (Object.keys(errs).length > 0) return;
 
-    setSubmitting(true);
+    setEnviando(true);
     try {
       await api.createFormulario({
-        ...form,
-        cuatrimestre: parseInt(form.cuatrimestre, 10),
+        ...formulario,
+        cuatrimestre: parseInt(formulario.cuatrimestre, 10),
       });
-      await refreshInscripcionActiva();
-      setClubesPostulados((prev) => [...prev, idDelClubActual]);
+      await refrescarInscripcionActiva();
+      actualizarClubesPostulados((prev) => [...prev, idClubActual]);
       setEnviado(true);
     } catch (err) {
-      setApiError(err.message);
+      setErrorApi(err.message);
     } finally {
-      setSubmitting(false);
+      setEnviando(false);
     }
   }
 
@@ -133,7 +132,7 @@ export function InscripcionForm({ club, onClose }) {
             </div>
           )}
 
-          {yaPostuladoEsteClub && !limiteAlcanzado && (
+          {yaPostulado && !limiteAlcanzado && (
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
               <p className="text-amber-400 text-sm font-semibold">
                 Ya te has postulado a este club anteriormente.
@@ -141,75 +140,75 @@ export function InscripcionForm({ club, onClose }) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={manejarEnvio} className="space-y-4">
             <div>
               <label className={labelCls}>Nombre Completo <span className="text-red-400">*</span></label>
-              <input type="text" name="nombre_completo" value={form.nombre_completo} onChange={handleChange} placeholder="Tu nombre completo" className={inputCls} />
-              {errors.nombre_completo && <p className={errorCls}>{errors.nombre_completo}</p>}
+              <input type="text" name="nombre_completo" value={formulario.nombre_completo} onChange={manejarCambio} placeholder="Tu nombre completo" className={inputCls} />
+              {errores.nombre_completo && <p className={errorCls}>{errores.nombre_completo}</p>}
             </div>
 
             <div>
               <label className={labelCls}>Matrícula <span className="text-red-400">*</span></label>
-              <input type="text" name="matricula" inputMode="numeric" maxLength={15} value={form.matricula} onChange={handleChange} placeholder="Ej: 00906641" className={inputCls} />
-              {errors.matricula && <p className={errorCls}>{errors.matricula}</p>}
+              <input type="text" name="matricula" inputMode="numeric" maxLength={15} value={formulario.matricula} onChange={manejarCambio} placeholder="Ej: 00906641" className={inputCls} />
+              {errores.matricula && <p className={errorCls}>{errores.matricula}</p>}
             </div>
 
             <div>
               <label className={labelCls}>Carrera <span className="text-red-400">*</span></label>
-              <select name="carrera" value={form.carrera} onChange={handleChange} className={selectCls}>
+              <select name="carrera" value={formulario.carrera} onChange={manejarCambio} className={selectCls}>
                 <option value="" disabled>Selecciona tu carrera</option>
                 {CARRERAS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              {errors.carrera && <p className={errorCls}>{errors.carrera}</p>}
+              {errores.carrera && <p className={errorCls}>{errores.carrera}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Cuatrimestre <span className="text-red-400">*</span></label>
-                <input type="number" name="cuatrimestre" value={form.cuatrimestre} onChange={handleChange} min="1" placeholder="Ej: 3" className={inputCls} />
-                {errors.cuatrimestre && <p className={errorCls}>{errors.cuatrimestre}</p>}
+                <input type="number" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} min="1" placeholder="Ej: 3" className={inputCls} />
+                {errores.cuatrimestre && <p className={errorCls}>{errores.cuatrimestre}</p>}
               </div>
               <div>
                 <label className={labelCls}>Turno <span className="text-red-400">*</span></label>
-                <select name="turno" value={form.turno} onChange={handleChange} className={selectCls}>
+                <select name="turno" value={formulario.turno} onChange={manejarCambio} className={selectCls}>
                   <option value="" disabled>Selecciona</option>
                   {TURNOS.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
-                {errors.turno && <p className={errorCls}>{errors.turno}</p>}
+                {errores.turno && <p className={errorCls}>{errores.turno}</p>}
               </div>
             </div>
 
             <div>
               <label className={labelCls}>Teléfono de Contacto <span className="text-red-400">*</span></label>
-              <input type="tel" name="telefono_contacto" inputMode="numeric" maxLength={10} value={form.telefono_contacto} onChange={handleChange} placeholder="+52 981 123 4567" className={inputCls} />
-              {errors.telefono_contacto && <p className={errorCls}>{errors.telefono_contacto}</p>}
+              <input type="tel" name="telefono_contacto" inputMode="numeric" maxLength={10} value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" className={inputCls} />
+              {errores.telefono_contacto && <p className={errorCls}>{errores.telefono_contacto}</p>}
             </div>
 
             <div>
               <label className={labelCls}>¿Por qué quieres unirte? <span className="text-red-400">*</span></label>
-              <textarea name="motivo_ingreso" value={form.motivo_ingreso} onChange={handleChange} rows={3} placeholder="Cuéntanos tus motivaciones..." className={`${inputCls} resize-none`} />
-              {errors.motivo_ingreso && <p className={errorCls}>{errors.motivo_ingreso}</p>}
+              <textarea name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} rows={3} placeholder="Cuéntanos tus motivaciones..." className={`${inputCls} resize-none`} />
+              {errores.motivo_ingreso && <p className={errorCls}>{errores.motivo_ingreso}</p>}
             </div>
 
             <div>
               <label className={labelCls}>Experiencia Previa</label>
-              <textarea name="experiencia_previa" value={form.experiencia_previa} onChange={handleChange} rows={2} placeholder="¿Has participado en algo similar antes?" className={`${inputCls} resize-none`} />
+              <textarea name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} rows={2} placeholder="¿Has participado en algo similar antes?" className={`${inputCls} resize-none`} />
             </div>
 
-            {apiError && <p className="text-red-400 text-sm font-medium">{apiError}</p>}
+            {errorApi && <p className="text-red-400 text-sm font-medium">{errorApi}</p>}
 
             <button
               type="submit"
-              disabled={submitting || bloqueado}
+              disabled={enviando || bloqueado}
               className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] mt-2"
             >
-              {submitting ? 'Enviando formulario...' : 'Enviar Formulario'}
+              {enviando ? 'Enviando formulario...' : 'Enviar Formulario'}
             </button>
           </form>
         </div>
       </div>
 
-      {enviado && <SuccessModal onClose={onClose} />}
+      {enviado && <ModalExito onClose={onClose} />}
     </>
   );
 }

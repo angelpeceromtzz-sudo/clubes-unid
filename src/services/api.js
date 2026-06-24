@@ -171,6 +171,25 @@ export const api = {
     request(`/notificaciones/${id}/leer`, { method: 'POST' }),
 
   getHistorial: () => request('/historial'),
+
+  getMisPostulaciones: () => request('/formularios/mis-postulaciones'),
+
+  getConvocatorias: (clubId) => request(`/convocatorias/${clubId}`),
+
+  createConvocatoria: (data) =>
+    request('/convocatorias', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteConvocatoria: (id) =>
+    request(`/convocatorias/${id}`, { method: 'DELETE' }),
+
+  asignarBloque: (formularioId, bloque) =>
+    request(`/formularios/${formularioId}/bloque`, {
+      method: 'PUT',
+      body: JSON.stringify({ bloque }),
+    }),
 };
 
 // ✦ A
