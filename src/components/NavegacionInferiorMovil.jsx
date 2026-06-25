@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 
-export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiva, onLoginClick }) {
+export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiva, onLoginClick, onInicioClick }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { esAdmin, esPresidente } = useAutenticacion();
@@ -18,7 +18,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-slate-800 md:hidden safe-area-bottom">
       <div className="flex items-center justify-around py-2 px-4">
         <button
-          onClick={() => navigate('/')}
+          onClick={() => { onInicioClick?.(); navigate('/'); }}
           className={`flex flex-col items-center gap-0.5 transition-colors duration-200 ${!enPanel ? 'text-amber-400' : 'text-white'}`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

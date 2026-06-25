@@ -26,6 +26,7 @@ function App() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [clubDetalleVisible, setClubDetalleVisible] = useState(false);
+  const [catalogoKey, setCatalogoKey] = useState(0);
 
   useEffect(() => {
     localStorage.setItem('theme', modoOscuro ? 'dark' : 'light');
@@ -137,7 +138,11 @@ function App() {
   }
 
   function irACatalogo() {
+    if (clubDetalleVisible) {
+      setCatalogoKey(k => k + 1);
+    }
     navigate('/');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   return (
@@ -165,7 +170,7 @@ function App() {
 
       <Routes>
         <Route path="/" element={
-          <PaginaInicio
+          <PaginaInicio key={catalogoKey}
             clubes={clubesFiltrados}
             clubesLoading={clubesLoading}
             tema={tema}
@@ -195,6 +200,7 @@ function App() {
         estaAutenticado={estaAutenticado}
         tieneInscripcionActiva={tieneInscripcionActiva}
         onLoginClick={() => setShowLogin(true)}
+        onInicioClick={irACatalogo}
       />
       {location.pathname === '/' && <PiePagina tema={tema} />}
     </div>
