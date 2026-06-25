@@ -19,8 +19,7 @@ const SIGUIENTE_ESTATUS = {
   'Aceptado': ['Rechazado'],
 };
 
-function TarjetaSolicitud({ solicitud, onCambiarEstatus, onAsignarBloque, accionando }) {
-  const [motivoAbierto, setMotivoAbierto] = useState(false);
+function TarjetaSolicitud({ solicitud, onCambiarEstatus, onAsignarBloque, accionando, motivoAbierto, onToggleMotivo }) {
   const cargando = accionando[solicitud.id_formulario];
   const estatusActual = solicitud.status;
   const colorEstatus = COLORES_ESTATUS[estatusActual] || 'bg-slate-500/20 text-slate-400 border-slate-500/30';
@@ -79,7 +78,7 @@ function TarjetaSolicitud({ solicitud, onCambiarEstatus, onAsignarBloque, accion
           </div>
 
           <button
-            onClick={() => setMotivoAbierto((p) => !p)}
+            onClick={onToggleMotivo}
             className="mt-2 text-[11px] uppercase tracking-wider text-amber-400 hover:text-amber-300 font-bold transition-colors cursor-pointer"
           >
             {motivoAbierto ? 'Ocultar motivo' : 'Ver motivo de ingreso'}
@@ -190,6 +189,11 @@ export function SolicitudesPresidente({ club, tema, modoOscuro }) {
   const [accionando, setAccionando] = useState({});
   const [error, setError] = useState('');
   const [errorGlobal, setErrorGlobal] = useState('');
+  const [motivosAbiertos, setMotivosAbiertos] = useState({});
+
+  function toggleMotivo(id) {
+    setMotivosAbiertos((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
 
   useEffect(() => {
     let montado = true;
@@ -282,16 +286,21 @@ export function SolicitudesPresidente({ club, tema, modoOscuro }) {
                 {items.length}
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {items.map((solicitud) => (
-                <TarjetaSolicitud
-                  key={solicitud.id_formulario}
-                  solicitud={solicitud}
-                  onCambiarEstatus={manejarCambioEstatus}
-                  onAsignarBloque={manejarAsignarBloque}
-                  accionando={accionando}
-                />
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              {items.map((solicitud, i) => {
+                const cardKey = solicitud.id_formulario ?? `solicitud-${i}`;
+                return (
+                  <TarjetaSolicitud
+                    key={cardKey}
+                    solicitud={solicitud}
+                    onCambiarEstatus={manejarCambioEstatus}
+                    onAsignarBloque={manejarAsignarBloque}
+                    accionando={accionando}
+                    motivoAbierto={!!motivosAbiertos[cardKey]}
+                    onToggleMotivo={() => toggleMotivo(cardKey)}
+                  />
+                );
+              })}
             </div>
           </div>
         );

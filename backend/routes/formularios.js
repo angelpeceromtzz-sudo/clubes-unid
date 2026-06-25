@@ -17,6 +17,29 @@ const ESTATUS_FLUJO = {
   'Aceptado': ['Rechazado'],
 };
 
+// DEBUG: endpoint sin auth para inspeccionar datos reales (SOLO LOCAL)
+router.get('/debug-postulaciones', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT f.id_formulario, f.id_club, f.id_alumno, f.bloque_asignado, f.status,
+              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
+              f.fecha_envio, c.nombre_club, c.categoria,
+              c.imagen_portada
+       FROM formularios f
+       JOIN clubes c ON c.id_club = f.id_club
+       ORDER BY f.id_alumno, f.fecha_envio DESC`
+    );
+    res.json({
+      total: result.rows.length,
+      ids: result.rows.map(r => r.id_formulario),
+      nombres: result.rows.map(r => r.nombre_club),
+      rows: result.rows,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Devuelve los id_club a los que el alumno ya envió formulario
 router.get('/', authenticate, requireRole(1), async (req, res) => {
   try {

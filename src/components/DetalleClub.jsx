@@ -69,16 +69,6 @@ export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) 
   return (
     <>
       <div className="max-w-7xl mx-auto px-6 py-8 pb-20 md:pb-8">
-        <button
-          onClick={onVolver}
-          className="inline-flex items-center gap-2 text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer group"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7 7l-7-7 7-7" />
-          </svg>
-          Volver al catálogo
-        </button>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
           <div className="md:col-span-2 space-y-6">
             <div className="overflow-hidden rounded-2xl">

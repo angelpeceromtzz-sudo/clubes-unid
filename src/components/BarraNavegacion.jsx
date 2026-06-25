@@ -11,6 +11,11 @@ export function BarraNavegacion({
   mostrarFiltros = true, onVolverCatalogo,
 }) {
   const dropdownRef = useRef(null);
+  const notificacionesRef = useRef(null);
+
+  const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
+
+  const { notificaciones, noLeidas, marcarComoLeida } = useNotificaciones();
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -23,6 +28,22 @@ export function BarraNavegacion({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuAbierto, setMenuAbierto]);
+
+  useEffect(() => {
+    function handleClickOutsideNotificaciones(e) {
+      if (
+        notificacionesRef.current &&
+        !notificacionesRef.current.contains(e.target) &&
+        !e.target.closest('[aria-label="Notificaciones"]')
+      ) {
+        setMostrarNotificaciones(false);
+      }
+    }
+    if (mostrarNotificaciones) {
+      document.addEventListener('mousedown', handleClickOutsideNotificaciones);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutsideNotificaciones);
+  }, [mostrarNotificaciones, setMostrarNotificaciones]);
 
   const [mostrarHeader, setMostrarHeader] = useState(true);
   const ultimoScrollY = useRef(0);
@@ -41,9 +62,6 @@ export function BarraNavegacion({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const { notificaciones, noLeidas, marcarComoLeida } = useNotificaciones();
-  const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
-
   return (
     <>
       <style>{`
@@ -54,15 +72,31 @@ export function BarraNavegacion({
       `}</style>
       <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-transform duration-300 ${tema.headerBg} ${tema.headerBorder} ${mostrarHeader ? 'max-md:translate-y-0' : 'max-md:-translate-y-full'}`}>
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 md:grid md:grid-cols-3">
-        <div className="flex items-center gap-2 cursor-pointer md:justify-self-start" onClick={onLogoClick}>
-          <img src={logoLobo} alt="Logo" className="w-10 h-10" />
-          <div>
-            <span className={`text-base sm:text-lg font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
-              UNID
-            </span>
-            <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-amber-400 font-bold leading-tight">
-              Clubs Lobos Rojos
-            </p>
+        <div className="flex items-center gap-2 md:justify-self-start">
+          {!mostrarFiltros && (
+            <button
+              onClick={onLogoClick}
+              className="flex md:hidden items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7 7l-7-7 7-7" />
+              </svg>
+              Volver
+            </button>
+          )}
+          <div
+            className={`flex items-center gap-2 cursor-pointer ${!mostrarFiltros ? 'hidden md:flex' : ''}`}
+            onClick={onLogoClick}
+          >
+            <img src={logoLobo} alt="Logo" className="w-10 h-10" />
+            <div>
+              <span className={`text-base sm:text-lg font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
+                UNID
+              </span>
+              <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-amber-400 font-bold leading-tight">
+                Clubs Lobos Rojos
+              </p>
+            </div>
           </div>
         </div>
 
@@ -151,12 +185,11 @@ export function BarraNavegacion({
           </div>
 
           {mostrarNotificaciones && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setMostrarNotificaciones(false)} />
-              <div
-                className="absolute right-0 top-12 z-50 w-80 rounded-xl border shadow-2xl py-3 px-2 max-h-[70vh] overflow-y-auto transition-colors duration-300"
-                style={{ animation: 'dropdownIn 0.2s ease-out' }}
-              >
+            <div
+              ref={notificacionesRef}
+              className={`absolute right-0 top-12 z-50 w-80 rounded-xl shadow-2xl py-3 px-2 max-h-[70vh] overflow-y-auto transition-colors duration-300 ${tema.dropdownBorder}`}
+              style={{ animation: 'dropdownIn 0.2s ease-out' }}
+            >
                 <div className={`rounded-xl ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'} ${tema.dropdownBorder}`}>
                   <p className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
                     Notificaciones {noLeidas > 0 && `(${noLeidas} sin leer)`}
@@ -205,7 +238,6 @@ export function BarraNavegacion({
                   )}
                 </div>
               </div>
-            </>
           )}
 
           <button
