@@ -1,31 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { TarjetaClub } from '../components/TarjetaClub';
 import { Heroe } from '../components/Heroe';
 import { DetalleClub } from '../components/DetalleClub';
-import { api } from '../services/api';
 
 export function PaginaInicio({ clubes, clubesLoading, tema, modoOscuro, onLoginClick, onClubDetalleChange }) {
-  const { estaAutenticado, esAdmin, esPresidente, tieneInscripcionActiva } = useAutenticacion();
-  const navigate = useNavigate();
+  const { estaAutenticado } = useAutenticacion();
   const [clubSeleccionado, setClubSeleccionado] = useState(null);
 
   useEffect(() => {
-    if (estaAutenticado) {
-      if (esAdmin) {
-        navigate('/admin/dashboard', { replace: true });
-      } else if (esPresidente) {
-        navigate('/presidente/dashboard', { replace: true });
-      } else if (tieneInscripcionActiva) {
-        navigate('/dashboard', { replace: true });
-      }
-    }
-  }, [estaAutenticado, esAdmin, esPresidente, tieneInscripcionActiva, navigate]);
-
-  if (estaAutenticado && (esAdmin || esPresidente || tieneInscripcionActiva)) {
-    return null;
-  }
+    onClubDetalleChange?.(clubSeleccionado !== null);
+  }, [clubSeleccionado, onClubDetalleChange]);
 
   if (clubSeleccionado) {
     return (
@@ -33,7 +18,6 @@ export function PaginaInicio({ clubes, clubesLoading, tema, modoOscuro, onLoginC
         club={clubSeleccionado}
         onVolver={() => {
           setClubSeleccionado(null);
-          onClubDetalleChange?.(false);
         }}
         tema={tema}
         modoOscuro={modoOscuro}
@@ -85,7 +69,6 @@ export function PaginaInicio({ clubes, clubesLoading, tema, modoOscuro, onLoginC
                 imagen={club.imagen_portada || club.imagen}
                 onClick={() => {
                   setClubSeleccionado(club);
-                  onClubDetalleChange?.(true);
                 }}
                 modoOscuro={modoOscuro}
                 idEstatusClub={club.id_estatus_club}
