@@ -96,7 +96,19 @@ export function TablaUsuarios({
                     <div className="flex items-center gap-2">
                       <select
                         value={u.nombre_club ? String(clubesActivosList.find((c) => c.nombre_club === u.nombre_club)?.id_club || '') : ''}
-                        onChange={(e) => onAsignarClub(u.id_usuario, e.target.value ? Number(e.target.value) : null)}
+                        onChange={(e) => {
+                          const clubId = e.target.value ? Number(e.target.value) : null;
+                          const clubSeleccionado = clubesActivosList.find((c) => c.id_club === clubId);
+                          const clubActual = clubesActivosList.find((c) => c.nombre_club === u.nombre_club);
+                          const presidenteReemplazado = clubSeleccionado?.id_presidente && clubSeleccionado.id_presidente !== u.id_usuario;
+                          if (presidenteReemplazado) {
+                            const nombrePresidente = usuarios.find((u2) => u2.id_usuario === clubSeleccionado.id_presidente)?.nombre_completo || 'otro usuario';
+                            if (!window.confirm(`El club "${clubSeleccionado.nombre_club}" ya tiene un presidente asignado (${nombrePresidente}). ¿Estás seguro de que deseas reemplazarlo?`)) {
+                              return;
+                            }
+                          }
+                          onAsignarClub(u.id_usuario, clubId);
+                        }}
                         disabled={asignando[u.id_usuario] || u.id_usuario === currentUser.id}
                         className={selectCls}
                         title={u.id_usuario === currentUser.id ? 'No puedes asignarte un club a ti mismo' : ''}

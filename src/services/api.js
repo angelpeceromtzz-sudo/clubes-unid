@@ -69,6 +69,8 @@ async function request(endpoint, options = {}) {
 }
 
 export const api = {
+  get: (endpoint) => request(endpoint),
+
   login: (correo, contrasena) =>
     request('/auth/login-local', {
       method: 'POST',
@@ -176,6 +178,25 @@ export const api = {
 
   getConvocatorias: (clubId) => request(`/convocatorias/${clubId}`),
 
+  getVistaPrevia: (clubId) => request(`/convocatorias/preview/${clubId}`),
+
+  generarConvocatorias: (id_club) =>
+    request('/convocatorias/generar', {
+      method: 'POST',
+      body: JSON.stringify({ id_club }),
+    }),
+
+  actualizarConvocatoria: (id, data) =>
+    request(`/convocatorias/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  enviarConvocatoria: (id) =>
+    request(`/convocatorias/${id}/enviar`, {
+      method: 'POST',
+    }),
+
   createConvocatoria: (data) =>
     request('/convocatorias', {
       method: 'POST',
@@ -189,6 +210,24 @@ export const api = {
     request(`/formularios/${formularioId}/bloque`, {
       method: 'PUT',
       body: JSON.stringify({ bloque }),
+    }),
+
+  seleccionarOfertas: (id_club, aceptados) =>
+    request('/formularios/seleccionar', {
+      method: 'POST',
+      body: JSON.stringify({ id_club, aceptados }),
+    }),
+
+  enviarOfertas: (id_club, aprobados) =>
+    request('/convocatorias/ofertas', {
+      method: 'POST',
+      body: JSON.stringify({ id_club, aprobados }),
+    }),
+
+  responderOferta: (id_formulario, decision) =>
+    request(`/ofertas/${id_formulario}/respuesta`, {
+      method: 'PUT',
+      body: JSON.stringify({ decision }),
     }),
 };
 

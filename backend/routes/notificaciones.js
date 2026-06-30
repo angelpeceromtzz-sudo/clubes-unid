@@ -39,8 +39,12 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN clubes c ON c.id_club = n.id_club
        LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
        WHERE ($2 = 3)
-          OR ($2 = 2 AND (n.audiencia IN ('global', 'presidentes') OR (n.audiencia = 'club' AND n.id_club = $3)))
-           OR ($2 = 1 AND (n.audiencia IN ('global', 'alumnos') OR (n.audiencia = 'club' AND n.id_club = $4)))
+          OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL)
+                       OR (n.audiencia = 'club' AND n.id_club = $3)
+                       OR n.id_destinatario = $1))
+          OR ($2 = 1 AND ((n.audiencia IN ('global', 'alumnos') AND n.id_destinatario IS NULL)
+                       OR (n.audiencia = 'club' AND n.id_club = $4)
+                       OR n.id_destinatario = $1))
        ORDER BY n.fecha_creacion DESC
        LIMIT 100`,
       [userId, roleId, clubIdPresidente, clubIdAlumno]

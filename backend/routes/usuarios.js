@@ -1,4 +1,3 @@
-// Rutas de usuarios — solo accesibles por administradores
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
@@ -6,8 +5,8 @@ import { registrarHistorial } from '../lib/audit.js';
 
 const router = Router();
 
-// Lista todos los usuarios (solo admin)
-router.get('/', authenticate, requireRole(3), async (req, res) => {
+// Lista todos los usuarios (admin y servicios escolares)
+router.get('/', authenticate, requireRole(3, 4), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
@@ -32,7 +31,7 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
     const { id } = req.params;
     const { id_rol } = req.body;
 
-    if (![1, 2, 3].includes(id_rol)) {
+    if (![1, 2, 3, 4].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
 
@@ -53,6 +52,19 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
       return res.status(403).json({ error: 'No puedes modificar el rol de otro administrador' });
     }
 
+    // Si el usuario deja de ser presidente, limpiar su relación con el club
+    if (targetUser.rows[0].id_rol === 2 && id_rol !== 2) {
+      await pool.query(
+        'UPDATE clubes SET id_presidente = NULL WHERE id_presidente = $1',
+        [id],
+      );
+      await pool.query(
+        `UPDATE inscripciones SET id_estatus_inscripcion = 2, fecha_baja = NOW()
+         WHERE id_usuario = $1 AND id_estatus_inscripcion = 1`,
+        [id],
+      );
+    }
+
     const result = await pool.query(
       `UPDATE usuarios SET id_rol = $1 WHERE id_usuario = $2
        RETURNING id_usuario, nombre_completo, correo_institucional, id_rol`,
@@ -68,7 +80,7 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
       [id_rol]
     );
 
-    const roles = { 1: 'Alumno', 2: 'Presidente', 3: 'Admin' };
+    const roles = { 1: 'Alumno', 2: 'Presidente', 3: 'Admin', 4: 'Servicios Escolares' };
     registrarHistorial({
       idAdmin: req.user.id,
       adminNombre: req.user.nombre_completo,
@@ -110,12 +122,23 @@ router.put('/:id/asignar-club', authenticate, requireRole(3), async (req, res) =
 
     if (id_club) {
       const club = await pool.query(
-        'SELECT id_club FROM clubes WHERE id_club = $1',
+        'SELECT id_club, id_presidente FROM clubes WHERE id_club = $1',
         [id_club],
       );
 
       if (club.rows.length === 0) {
         return res.status(404).json({ error: 'El club no existe' });
+      }
+
+      const presidenteAnterior = club.rows[0].id_presidente;
+
+      // Limpia la inscripción del presidente anterior en este club
+      if (presidenteAnterior && Number(presidenteAnterior) !== Number(id)) {
+        await pool.query(
+          `UPDATE inscripciones SET id_estatus_inscripcion = 2, fecha_baja = NOW()
+           WHERE id_usuario = $1 AND id_club = $2 AND id_estatus_inscripcion = 1`,
+          [presidenteAnterior, id_club],
+        );
       }
 
       await pool.query(

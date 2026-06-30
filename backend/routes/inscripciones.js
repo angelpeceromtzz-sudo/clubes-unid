@@ -1,4 +1,3 @@
-// Rutas de inscripciones — gestión de inscripciones a clubes
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';

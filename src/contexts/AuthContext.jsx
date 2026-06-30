@@ -161,6 +161,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
   const estaAutenticado = !!usuario;
   const esAdmin = usuario?.id_rol === 3;
   const esPresidente = usuario?.id_rol === 2;
+  const esServiciosEscolares = usuario?.id_rol === 4;
 
   const obtenerInscripcionActiva = useCallback(async () => {
     try {
@@ -195,6 +196,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
         estaAutenticado,
         esAdmin,
         esPresidente,
+        esServiciosEscolares,
         tieneInscripcionActiva,
         clubesPostulados,
         actualizarClubesPostulados: setClubesPostulados,
