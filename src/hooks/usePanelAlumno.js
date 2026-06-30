@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { api } from '../services/api';
 
@@ -9,40 +9,40 @@ export function usePanelAlumno(tema, modoOscuro) {
   const [postulaciones, setPostulaciones] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
-    async function cargar() {
-      const d = await obtenerDatosPanel();
-      setDatos(d);
-      if (d?.club) {
-        try {
-          const m = await api.getMiembros(d.club.id_club);
-          setMiembros(m);
-        } catch {
-          setMiembros([]);
-        }
-      }
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    const d = await obtenerDatosPanel();
+    setDatos(d);
+    if (d?.club) {
       try {
-        const p = await api.getMisPostulaciones();
-        setPostulaciones(p);
+        const m = await api.getMiembros(d.club.id_club);
+        setMiembros(m);
       } catch {
-        setPostulaciones([]);
+        setMiembros([]);
       }
-      setCargando(false);
     }
-    cargar();
+    try {
+      const p = await api.getMisPostulaciones();
+      setPostulaciones(p);
+    } catch {
+      setPostulaciones([]);
+    }
+    setCargando(false);
   }, [obtenerDatosPanel]);
 
-  const esOscuro = modoOscuro;
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
 
   return {
     user: usuario,
     data: datos,
     club: datos?.club || null,
-    esPresidente: datos?.esPresidente || false,
     miembros,
     postulaciones,
     loading: cargando,
-    isDark: esOscuro,
+    isDark: modoOscuro,
     tema,
+    recargar: cargar,
   };
 }

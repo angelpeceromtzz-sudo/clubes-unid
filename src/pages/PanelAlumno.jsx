@@ -1,3 +1,5 @@
+import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { RutaProtegida } from '../components/RutaProtegida';
 import { InformacionClub } from '../components/InformacionClub';
@@ -5,11 +7,40 @@ import { SeccionAvisos } from '../components/SeccionAvisos';
 import { SeccionMiembros } from '../components/SeccionMiembros';
 import { SeccionPostulaciones } from '../components/SeccionPostulaciones';
 import { usePanelAlumno } from '../hooks/usePanelAlumno';
-import { SolicitudesPresidente } from '../components/SolicitudesPresidente';
 
 export function PanelAlumno({ tema, modoOscuro }) {
-  const { usuario } = useAutenticacion();
+  const navigate = useNavigate();
+  const { usuario, esPresidente, esAdmin, esServiciosEscolares } = useAutenticacion();
   const d = usePanelAlumno(tema, modoOscuro);
+  const [dismissMiembroBanner, setDismissMiembroBanner] = useState(() => {
+    try { return localStorage.getItem('dismiss_miembro_banner') === 'true'; } catch { return false; }
+  });
+
+  function descartarBanner() {
+    setDismissMiembroBanner(true);
+    try { localStorage.setItem('dismiss_miembro_banner', 'true'); } catch {}
+  }
+
+  if (esPresidente) {
+    navigate('/presidente/dashboard', { replace: true });
+    return null;
+  }
+
+  if (esAdmin) {
+    navigate('/admin/dashboard', { replace: true });
+    return null;
+  }
+
+  if (esServiciosEscolares) {
+    navigate('/escolares/dashboard', { replace: true });
+    return null;
+  }
+
+  const esMiembroOficial = !!d.club;
+
+  const recargarPostulaciones = useCallback(() => {
+    d.recargar();
+  }, [d]);
 
   if (d.loading) {
     return (
@@ -39,38 +70,58 @@ export function PanelAlumno({ tema, modoOscuro }) {
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="mb-8">
           <h1 className={`text-3xl font-black ${tema.title}`}>
-            {d.esPresidente ? 'Panel de Presidente' : 'Mi Panel'}
+            {esMiembroOficial ? `Mi Club` : `Mis Postulaciones`}
           </h1>
           <p className={`text-sm mt-1 ${tema.subtitle}`}>
             Bienvenido, {d.user.nombre_completo}
-            {d.esPresidente && (
-              <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-400 font-bold">
-                · Presidente de {d.club.nombre_club}
-              </span>
-            )}
           </p>
         </div>
 
-        {d.esPresidente && (
+        {!esMiembroOficial && d.postulaciones.length > 0 && (
           <div className="mb-10">
-            <SolicitudesPresidente club={d.club} tema={tema} modoOscuro={modoOscuro} />
-          </div>
-        )}
-
-        {!d.esPresidente && d.postulaciones.length > 0 && (
-          <div className="mb-10">
-            <SeccionPostulaciones postulaciones={d.postulaciones} tema={tema} />
+            <SeccionPostulaciones
+              postulaciones={d.postulaciones}
+              tema={tema}
+              onPostulacionesChange={recargarPostulaciones}
+            />
           </div>
         )}
 
         {d.club && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <InformacionClub club={d.club} tema={tema} modoOscuro={modoOscuro} />
-              <SeccionAvisos club={d.club} esPresidente={d.esPresidente} tema={tema} modoOscuro={modoOscuro} />
-            </div>
-            <div className="space-y-8">
-              <SeccionMiembros miembros={d.miembros} club={d.club} tema={tema} modoOscuro={modoOscuro} />
+          <div className="mt-10">
+            {!dismissMiembroBanner && (
+              <div className={`relative rounded-2xl p-6 border mb-8 ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'}`}>
+                <button
+                  onClick={descartarBanner}
+                  className={`absolute top-3 right-3 p-1 rounded-full transition-colors cursor-pointer ${modoOscuro ? 'hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-300' : 'hover:bg-emerald-200 text-slate-500 hover:text-emerald-700'}`}
+                  title="No mostrar más"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🎉</span>
+                  <div>
+                    <h2 className={`text-lg font-black uppercase tracking-wider ${modoOscuro ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                      Miembro de {d.club.nombre_club}
+                    </h2>
+                    <p className={`text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Eres miembro oficial de este club
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-8">
+                <InformacionClub club={d.club} tema={tema} modoOscuro={modoOscuro} />
+                <SeccionAvisos club={d.club} esPresidente={false} tema={tema} modoOscuro={modoOscuro} />
+              </div>
+              <div className="space-y-8">
+                <SeccionMiembros miembros={d.miembros} club={d.club} tema={tema} modoOscuro={modoOscuro} />
+              </div>
             </div>
           </div>
         )}

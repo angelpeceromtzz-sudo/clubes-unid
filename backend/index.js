@@ -1,4 +1,3 @@
-// Punto de entrada del servidor Express — configura middlewares y rutas
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -14,14 +13,15 @@ import clubesRoutes from './routes/clubes.js';
 import inscripcionesRoutes from './routes/inscripciones.js';
 import avisosRoutes from './routes/avisos.js';
 import formulariosRoutes from './routes/formularios.js';
+import ofertasRoutes from './routes/ofertas.js';
 import notificacionesRoutes from './routes/notificaciones.js';
 import historialRoutes from './routes/historial.js';
 import convocatoriasRoutes from './routes/convocatorias.js';
+import estadisticasRoutes from './routes/estadisticas.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Middlewares globales
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
@@ -30,7 +30,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/clubes', clubesRoutes);
@@ -40,20 +39,17 @@ app.use('/api/avisos', avisosRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/historial', historialRoutes);
 app.use('/api/convocatorias', convocatoriasRoutes);
+app.use('/api/estadisticas', estadisticasRoutes);
+app.use('/api/ofertas', ofertasRoutes);
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Catch-all 404: cualquier ruta no definida responde JSON, nunca HTML
 app.use('/api', (req, res) => {
-  res.status(404).json({ error: `Ruta no encontrada: ${req.method} ${req.originalUrl}` });
+  res.status(404).json({ error: `Ruta no encontrada: ${req.method} ${req.path}` });
 });
 
-// Inicia el servidor
 app.listen(PORT, () => {
   console.log(`Servidor de Clubs UNID corriendo en puerto ${PORT}`);
 });
-
-// ✦ A
