@@ -1,1 +1,17 @@
 @import "tailwindcss";
+
+@media print {
+  nav, aside, button {
+    display: none !important;
+  }
+  #lista-asistencia-print {
+    display: block !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}

@@ -5,16 +5,20 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 const router = Router();
 
 const LIMITE_POSTULACIONES = 3;
+const DIAS_VIGENCIA_OFERTA = 3;
 
-const ESTATUS_VALIDOS = ['Pendiente', 'En revisión', 'Preseleccionado', 'Convocado', 'Admitido', 'Rechazado'];
+const ESTATUS_VALIDOS = [
+  'En revisión', 'Preseleccionado', 'Convocado',
+  'Oferta enviada', 'Miembro oficial', 'Rechazado',
+];
+
 const ESTATUS_FLUJO = {
-  'Pendiente': ['En revisión', 'Rechazado'],
   'En revisión': ['Preseleccionado', 'Rechazado'],
   'Preseleccionado': ['Convocado', 'Rechazado'],
-  'Convocado': ['Admitido', 'Rechazado'],
-  'Admitido': [],
+  'Convocado': ['Oferta enviada', 'Rechazado'],
+  'Oferta enviada': [],
+  'Miembro oficial': [],
   'Rechazado': [],
-  'Aceptado': ['Rechazado'],
 };
 
 // DEBUG: endpoint sin auth para inspeccionar datos reales (SOLO LOCAL)
@@ -23,7 +27,8 @@ router.get('/debug-postulaciones', async (req, res) => {
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_club, f.id_alumno, f.bloque_asignado, f.status,
               f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
-              f.fecha_envio, c.nombre_club, c.categoria,
+              f.fecha_envio, f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta,
+              c.nombre_club, c.categoria,
               c.imagen_portada
        FROM formularios f
        JOIN clubes c ON c.id_club = f.id_club
@@ -31,8 +36,6 @@ router.get('/debug-postulaciones', async (req, res) => {
     );
     res.json({
       total: result.rows.length,
-      ids: result.rows.map(r => r.id_formulario),
-      nombres: result.rows.map(r => r.nombre_club),
       rows: result.rows,
     });
   } catch (err) {
@@ -57,24 +60,39 @@ router.get('/', authenticate, requireRole(1), async (req, res) => {
 // Devuelve todas las postulaciones del alumno con datos completos
 router.get('/mis-postulaciones', authenticate, requireRole(1), async (req, res) => {
   try {
+    // 1. Expiracion on-read: marcar ofertas vencidas (>72h)
+    await pool.query(
+      `UPDATE formularios
+       SET status = 'Rechazado', motivo_rechazo = 'Oferta expirada (72h)'
+       WHERE id_alumno = $1
+         AND status = 'Oferta enviada'
+         AND fecha_expiracion < NOW()`,
+      [req.user.id],
+    );
+
+    // 2. Obtener postulaciones completas
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_club, f.bloque_asignado, f.status,
               f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
-              f.fecha_envio, c.nombre_club, c.categoria,
+              f.fecha_envio, f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta,
+              c.nombre_club, c.categoria,
               c.imagen_portada,
+              (SELECT row_to_json(datos) FROM (
+                SELECT cv.id_convocatoria, cv.bloque, cv.fecha, cv.hora, cv.lugar
+                FROM convocatorias cv WHERE cv.id_convocatoria = f.id_convocatoria
+              ) AS datos) AS convocatoria,
               (SELECT json_agg(json_build_object(
-                'id_convocatoria', cv.id_convocatoria,
-                'fecha', cv.fecha,
-                'hora', cv.hora,
-                'lugar', cv.lugar,
-                'descripcion', cv.descripcion
-              )) FROM convocatorias cv WHERE cv.id_formulario = f.id_formulario) AS convocatorias
+                'status_anterior', hp.status_anterior,
+                'status_nuevo', hp.status_nuevo,
+                'fecha_cambio', hp.fecha_cambio
+              ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
        FROM formularios f
        JOIN clubes c ON c.id_club = f.id_club
        WHERE f.id_alumno = $1
        ORDER BY f.fecha_envio DESC`,
       [req.user.id],
     );
+
     res.json(result.rows);
   } catch (err) {
     console.error('Error al obtener postulaciones:', err);
@@ -194,12 +212,18 @@ router.get('/pendientes/:id_club', authenticate, requireRole(2), async (req, res
     }
 
     const result = await pool.query(
-      `SELECT id_formulario, id_alumno, id_club, fecha_envio, bloque_asignado,
-              nombre_completo, matricula, carrera, cuatrimestre, turno,
-              telefono_contacto, motivo_ingreso, experiencia_previa, status
-       FROM formularios
-       WHERE id_club = $1
-       ORDER BY fecha_envio DESC`,
+      `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
+              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
+              f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
+              f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta
+       FROM formularios f
+       WHERE f.id_club = $1
+         AND f.status NOT IN ('Miembro oficial', 'Rechazado')
+         AND f.id_alumno NOT IN (
+           SELECT id_usuario FROM inscripciones
+           WHERE id_club = $1 AND id_estatus_inscripcion = 1
+         )
+       ORDER BY f.fecha_envio DESC`,
       [id_club],
     );
 
@@ -210,7 +234,7 @@ router.get('/pendientes/:id_club', authenticate, requireRole(2), async (req, res
   }
 });
 
-// Actualiza el estatus de un formulario (nuevo flujo de estatus)
+// Actualiza el estatus de un formulario (presidente — transiciones individuales)
 router.put('/:id/estatus', authenticate, requireRole(2), async (req, res) => {
   try {
     const { id } = req.params;
@@ -245,99 +269,53 @@ router.put('/:id/estatus', authenticate, requireRole(2), async (req, res) => {
       });
     }
 
-    const result = await pool.query(
-      'UPDATE formularios SET status = $1 WHERE id_formulario = $2 RETURNING *',
-      [status, id],
-    );
+    if (status === 'Rechazado') {
+      await pool.query(
+        `UPDATE formularios
+         SET status = $1,
+             motivo_rechazo = 'Rechazado por el presidente'
+         WHERE id_formulario = $2`,
+        [status, id],
+      );
+    } else {
+      await pool.query(
+        'UPDATE formularios SET status = $1 WHERE id_formulario = $2',
+        [status, id],
+      );
+    }
 
-    // Crear notificación personal para el alumno
+    // Notificación personal
     try {
       const mensajesNotificacion = {
-        'En revisión': `Tu postulación en "${form.nombre_club}" está siendo revisada por el presidente.`,
-        'Preseleccionado': `¡Felicidades! Has sido preseleccionado en "${form.nombre_club}". Pronto recibirás más información.`,
-        'Convocado': `Has sido convocado a una reunión/entrevista para "${form.nombre_club}". Revisa los detalles en tus postulaciones.`,
-        'Admitido': `¡Felicidades! Has sido admitido en "${form.nombre_club}". Bienvenido al club.`,
-        'Rechazado': `Tu postulación en "${form.nombre_club}" ha sido rechazada. No te desanimes, hay más oportunidades.`,
+        'Preseleccionado': `Has sido preseleccionado en "${form.nombre_club}". Pronto recibirás una convocatoria.`,
+        'Rechazado': `Tu postulación en "${form.nombre_club}" ha sido rechazada.`,
       };
 
       if (mensajesNotificacion[status]) {
         await pool.query(
-          `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club)
-           VALUES ($1, $2, $3, 'alumnos', NULL)`,
+          `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
+           VALUES ($1, $2, $3, 'alumnos', $4, $5)`,
           [
             req.user.id,
             `Estatus actualizado: ${status}`,
             mensajesNotificacion[status],
+            form.id_club,
+            form.id_alumno,
           ],
         );
       }
     } catch (notifErr) {
-      console.error('Error al crear notificación de cambio de estatus:', notifErr);
+      console.error('Error al crear notificación:', notifErr);
     }
 
-    // Si es Admitido, crear automáticamente la inscripción
-    if (status === 'Admitido') {
-      try {
-        const inscripcionActiva = await pool.query(
-          `SELECT id_inscripcion FROM inscripciones
-           WHERE id_usuario = $1 AND id_estatus_inscripcion = 1
-           LIMIT 1`,
-          [form.id_alumno],
-        );
-
-        if (inscripcionActiva.rows.length === 0) {
-          await pool.query(
-            `INSERT INTO inscripciones (id_usuario, id_club, id_estatus_inscripcion)
-             VALUES ($1, $2, 1)`,
-            [form.id_alumno, form.id_club],
-          );
-        }
-      } catch (inscErr) {
-        console.error('Error al crear inscripción automática:', inscErr);
-      }
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Error al actualizar estatus del formulario:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
-// Asignar manualmente un bloque a un formulario (presidente)
-router.put('/:id/bloque', authenticate, requireRole(2), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { bloque } = req.body;
-
-    if (!['A', 'B', 'E'].includes(bloque)) {
-      return res.status(400).json({ error: 'Bloque inválido. Debe ser A, B o E' });
-    }
-
-    const formulario = await pool.query(
-      `SELECT f.*, c.id_presidente
-       FROM formularios f
-       JOIN clubes c ON c.id_club = f.id_club
-       WHERE f.id_formulario = $1`,
+    const actualizado = await pool.query(
+      'SELECT * FROM formularios WHERE id_formulario = $1',
       [id],
     );
 
-    if (formulario.rows.length === 0) {
-      return res.status(404).json({ error: 'El formulario no existe' });
-    }
-
-    if (formulario.rows[0].id_presidente !== req.user.id) {
-      return res.status(403).json({ error: 'No eres el presidente de este club' });
-    }
-
-    const result = await pool.query(
-      'UPDATE formularios SET bloque_asignado = $1 WHERE id_formulario = $2 RETURNING *',
-      [bloque, id],
-    );
-
-    res.json(result.rows[0]);
+    res.json(actualizado.rows[0]);
   } catch (err) {
-    console.error('Error al asignar bloque:', err);
+    console.error('Error al actualizar estatus del formulario:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

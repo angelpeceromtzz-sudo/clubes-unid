@@ -62,10 +62,10 @@ export function usePanelAdmin(usuario, tema, modoOscuro) {
   const thCls = esOscuro ? 'text-slate-500' : 'text-slate-600';
   const tdCls = esOscuro ? 'text-slate-400' : 'text-slate-600';
   const tdTitle = esOscuro ? 'text-white' : 'text-slate-900';
-  const sbBg = esOscuro ? 'bg-[#0a1128] border-slate-800' : 'bg-slate-900 border-slate-700';
+  const sbBg = esOscuro ? 'bg-[#0a1128] border-slate-800' : 'bg-white border-slate-200 shadow-sm';
   const sbItemBase = 'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer';
   const sbItemActive = 'bg-amber-400/20 text-amber-400 border border-amber-400/30';
-  const sbItemInactive = esOscuro ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-400 hover:text-white hover:bg-slate-800/50';
+  const sbItemInactive = esOscuro ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100';
   const selectCls = `text-xs font-bold rounded-lg px-3 py-1.5 border cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/50 disabled:opacity-40 disabled:cursor-not-allowed ${
     esOscuro ? 'bg-[#18223f] border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700'
   }`;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNotificaciones } from '../contexts/NotificationContext';
+import { useClickOutside } from '../hooks/useClickOutside';
 import logoLobo from '../assets/logo-lobo.svg';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
@@ -17,33 +18,8 @@ export function BarraNavegacion({
 
   const { notificaciones, noLeidas, marcarComoLeida } = useNotificaciones();
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setMenuAbierto(false);
-      }
-    }
-    if (menuAbierto) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [menuAbierto, setMenuAbierto]);
-
-  useEffect(() => {
-    function handleClickOutsideNotificaciones(e) {
-      if (
-        notificacionesRef.current &&
-        !notificacionesRef.current.contains(e.target) &&
-        !e.target.closest('[aria-label="Notificaciones"]')
-      ) {
-        setMostrarNotificaciones(false);
-      }
-    }
-    if (mostrarNotificaciones) {
-      document.addEventListener('mousedown', handleClickOutsideNotificaciones);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutsideNotificaciones);
-  }, [mostrarNotificaciones, setMostrarNotificaciones]);
+  useClickOutside(dropdownRef, menuAbierto, () => setMenuAbierto(false));
+  useClickOutside(notificacionesRef, mostrarNotificaciones, () => setMostrarNotificaciones(false), '[aria-label="Notificaciones"]');
 
   const [mostrarHeader, setMostrarHeader] = useState(true);
   const ultimoScrollY = useRef(0);
@@ -100,7 +76,7 @@ export function BarraNavegacion({
           </div>
         </div>
 
-        {user && (user.id_rol === 2 || user.id_rol === 3) ? (
+            {user && (user.id_rol === 2 || user.id_rol === 3 || user.id_rol === 4) ? (
           <div className="hidden md:block md:justify-self-center" />
         ) : mostrarFiltros ? (
           <nav className={`hidden md:inline-flex items-center transition-colors duration-300 md:justify-self-center ${tema.navPill}`}>

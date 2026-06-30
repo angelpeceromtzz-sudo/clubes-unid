@@ -1,4 +1,3 @@
-// Middleware de autenticación JWT y autorización por roles
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -7,15 +6,15 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-// Verifica que el token JWT sea válido y decodifica el usuario
 export function authenticate(req, res, next) {
   const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
+  const token = header?.startsWith('Bearer ') ? header.split(' ')[1] : null;
+
+  if (!token) {
     return res.status(401).json({ error: 'Token no proporcionado' });
   }
 
   try {
-    const token = header.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
@@ -24,7 +23,6 @@ export function authenticate(req, res, next) {
   }
 }
 
-// Verifica que el usuario tenga uno de los roles permitidos
 export function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.id_rol)) {
@@ -33,5 +31,3 @@ export function requireRole(...roles) {
     next();
   };
 }
-
-// ✦ A

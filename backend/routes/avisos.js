@@ -1,4 +1,3 @@
-// Rutas de avisos — CRUD de avisos por club
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate } from '../middleware/auth.js';
@@ -100,5 +99,3 @@ router.delete('/:id', authenticate, async (req, res) => {
 });
 
 export default router;
-
-// ✦ A

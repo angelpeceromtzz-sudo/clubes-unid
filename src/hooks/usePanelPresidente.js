@@ -16,7 +16,7 @@ export function usePanelPresidente(usuario, tema, modoOscuro) {
 
         if (!montado) return;
 
-        if (!perfil.id_club) {
+        if (!perfil.id_club || perfil.id_presidente !== perfil.id_usuario) {
           setEstado({ club: null, miembros: [], loading: false, error: '' });
           return;
         }
