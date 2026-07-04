@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ModalExito } from './ModalExito';
 import { api } from '../services/api';
 import { useAutenticacion } from '../contexts/AuthContext';
+import { Icono } from './ui/Icono';
 
 const CARRERAS = [
   'Ingeniería en Software y Sist.',
@@ -118,9 +119,7 @@ export function FormularioInscripcion({ club, onClose }) {
               onClick={onClose}
               className="text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
             </button>
           </div>
 

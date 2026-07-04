@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import { Icono } from '../ui/Icono';
 
 function BloqueCard({ convocatoria, isDark, onActualizar, onEnviar, onImprimir }) {
   const [editando, setEditando] = useState(false);
@@ -256,9 +257,7 @@ export function SeccionConvocatorias({ club, tema, modoOscuro }) {
 
       {convocatorias.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
+          <Icono nombre="calendar" className="h-12 w-12 mb-3 opacity-30" strokeWidth={1.5} />
           <p className="text-sm font-medium">No hay convocatorias activas</p>
           <p className="text-xs mt-0.5">Preselecciona alumnos desde la sección "Formularios" y genera las convocatorias para que aparezcan aquí.</p>
         </div>

@@ -1,4 +1,5 @@
 import { clasesBadge } from '../constants/colores';
+import { Icono } from './ui/Icono';
 
 export function TarjetaClub({
   nombre, descripcion, categoria, cupoMaximo, cupoActual,
@@ -70,9 +71,7 @@ export function TarjetaClub({
           {!esProximamente && (
             <span className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1">
               Ver más
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
+              <Icono nombre="chevron-right" strokeWidth={2} className="h-3.5 w-3.5" />
             </span>
           )}
         </div>

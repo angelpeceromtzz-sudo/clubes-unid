@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import { Icono } from '../ui/Icono';
 
 export function SeleccionFinal({ club, tema, modoOscuro }) {
   const [convocados, setConvocados] = useState([]);
@@ -70,9 +71,7 @@ export function SeleccionFinal({ club, tema, modoOscuro }) {
     return (
       <div className={`rounded-2xl p-8 border text-center ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'}`}>
         <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <Icono nombre="check-circle" className="h-8 w-8 text-emerald-400" strokeWidth={2} />
         </div>
         <h3 className={`text-lg font-black uppercase tracking-wider mb-2 ${modoOscuro ? 'text-emerald-300' : 'text-emerald-700'}`}>
           Ofertas enviadas
@@ -104,9 +103,7 @@ export function SeleccionFinal({ club, tema, modoOscuro }) {
 
       {convocados.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
+          <Icono nombre="users" className="h-12 w-12 mb-3 opacity-30" strokeWidth={1.5} />
           <p className="text-sm font-medium">No hay alumnos convocados</p>
           <p className="text-xs mt-0.5">Los alumnos aparecerán aquí una vez que hayan sido convocados a evaluación presencial.</p>
         </div>
@@ -147,9 +144,7 @@ export function SeleccionFinal({ club, tema, modoOscuro }) {
                       }`}
                     >
                       {esAprobado && (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <Icono nombre="check" className="h-4 w-4 text-white" strokeWidth={3} />
                       )}
                     </div>
                     <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xs shrink-0">
@@ -184,9 +179,7 @@ export function SeleccionFinal({ club, tema, modoOscuro }) {
                 <span className="animate-spin w-5 h-5 border-2 border-[#0e162c] border-t-transparent rounded-full" />
               ) : (
                 <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <Icono nombre="check-circle" className="h-5 w-5" strokeWidth={2.5} />
                   Enviar ofertas ({aprobados.length})
                 </>
               )}

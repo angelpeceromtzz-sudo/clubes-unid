@@ -1,3 +1,5 @@
+import { Icono } from '../ui/Icono';
+
 export function TablaUsuarios({
   usuarios,
   busqueda,
@@ -27,9 +29,7 @@ export function TablaUsuarios({
   if (q && filtrados.length === 0) {
     return (
       <div className={`${tableBg} rounded-2xl py-16 px-4 text-center`}>
-        <svg xmlns="http://www.w3.org/2000/svg" className={`h-10 w-10 mx-auto mb-3 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
+        <Icono nombre="search" strokeWidth={2} className={`h-10 w-10 mx-auto mb-3 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} />
         <p className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
           No se encontraron usuarios que coincidan con la búsqueda.
         </p>
@@ -82,9 +82,7 @@ export function TablaUsuarios({
                               className="p-1 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors cursor-pointer active:scale-90"
                               title="Dar de baja del club"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
+                              <Icono nombre="close" strokeWidth={2} className="h-4 w-4" />
                             </button>
                           )}
                         </>
