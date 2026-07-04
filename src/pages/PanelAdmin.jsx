@@ -3,8 +3,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { FormularioNotificacion } from '../components/formularios/FormularioNotificacion';
 import { usePanelAdmin } from '../hooks/usePanelAdmin';
-import { BarraLateralAdmin } from '../components/admin/AdminSidebar';
-import { PestanasMovilAdmin } from '../components/admin/AdminMobileTabs';
+import { BarraLateralPorRol } from '../components/layout/BarraLateralPorRol';
+import { PestanasMovilPorRol } from '../components/layout/PestanasMovilPorRol';
+import { ELEMENTOS_NAV_ADMIN } from '../components/admin/navItems';
 import { AlertaRetroalimentacion } from '../components/admin/FeedbackAlert';
 import { TarjetasEstadisticas } from '../components/admin/StatsCards';
 import { BarraBusquedaUsuarios } from '../components/admin/UserSearchBar';
@@ -31,14 +32,17 @@ export function PanelAdmin() {
   return (
     <RutaProtegida requiereAdmin>
       <div className="flex min-h-[calc(100vh-4rem)]">
-        <BarraLateralAdmin
+        <BarraLateralPorRol
+          tituloRol="Administrador"
+          elementosNav={ELEMENTOS_NAV_ADMIN}
           vistaActiva={d.vistaActiva}
           onVistaChange={d.setVistaActiva}
-          user={d.user}
+          usuario={d.user}
         />
 
         <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <PestanasMovilAdmin
+          <PestanasMovilPorRol
+            elementosNav={ELEMENTOS_NAV_ADMIN}
             vistaActiva={d.vistaActiva}
             onVistaChange={d.setVistaActiva}
           />

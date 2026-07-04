@@ -6,8 +6,9 @@ import { InformacionClub } from '../components/clubes/InformacionClub';
 import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
 import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
 import { usePanelPresidente } from '../hooks/usePanelPresidente';
-import { BarraLateralPresidente } from '../components/presidente/PresidenteSidebar';
-import { PestanasMovilPresidente } from '../components/presidente/PresidenteMobileTabs';
+import { BarraLateralPorRol } from '../components/layout/BarraLateralPorRol';
+import { PestanasMovilPorRol } from '../components/layout/PestanasMovilPorRol';
+import { ELEMENTOS_NAV_PRESIDENTE } from '../components/admin/navItems';
 import { EstadoVacio } from '../components/presidente/EmptyState';
 import { SolicitudesPresidente } from '../components/presidente/SolicitudesPresidente';
 import { SeccionConvocatorias } from '../components/presidente/SeccionConvocatorias';
@@ -47,15 +48,18 @@ export function PanelPresidente() {
   return (
     <RutaProtegida>
       <div className="flex min-h-[calc(100vh-4rem)]">
-        <BarraLateralPresidente
+        <BarraLateralPorRol
+          tituloRol="Presidente"
+          elementosNav={ELEMENTOS_NAV_PRESIDENTE}
           vistaActiva={d.vistaActiva}
           onVistaChange={d.setVistaActiva}
-          user={d.user}
-          club={d.club}
+          usuario={d.user}
+          subtitulo={d.club.nombre_club}
         />
 
         <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <PestanasMovilPresidente
+          <PestanasMovilPorRol
+            elementosNav={ELEMENTOS_NAV_PRESIDENTE}
             vistaActiva={d.vistaActiva}
             onVistaChange={d.setVistaActiva}
           />
