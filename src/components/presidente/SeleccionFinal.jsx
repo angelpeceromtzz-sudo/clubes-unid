@@ -4,8 +4,8 @@ import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
-import { ErrorAlerta } from '../ui/ErrorAlerta';
 import { AvatarInicial } from '../ui/AvatarInicial';
+import { Alerta } from '../ui/Alerta';
 import { Badge } from '../ui/Badge';
 import { EncabezadoPagina } from '../ui/EncabezadoPagina';
 import { PantallaCompletado } from '../ui/PantallaCompletado';
@@ -84,7 +84,7 @@ export function SeleccionFinal({ club }) {
         subtitulo="Marca a los alumnos que aprobaron la evaluación presencial. Al enviar, recibirán una oferta de ingreso."
       />
 
-      <ErrorAlerta mensaje={error} />
+      {error && <Alerta tipo="error" mensaje={error} />}
 
       {convocados.length === 0 ? (
         <EmptyState icono="users" titulo="No hay alumnos convocados" descripcion="Los alumnos aparecerán aquí una vez que hayan sido convocados a evaluación presencial." />

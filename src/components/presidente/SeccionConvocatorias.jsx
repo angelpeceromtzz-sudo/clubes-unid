@@ -4,8 +4,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { BloqueCard } from './BloqueCard';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
-import { ErrorAlerta } from '../ui/ErrorAlerta';
 import { EncabezadoPagina } from '../ui/EncabezadoPagina';
+import { Alerta } from '../ui/Alerta';
 
 export function SeccionConvocatorias({ club }) {
   const { tema } = useTheme();
@@ -72,7 +72,7 @@ export function SeccionConvocatorias({ club }) {
         subtitulo="Gestiona los bloques de evaluación presencial: asigna fecha, hora y lugar, envía notificaciones e imprime listas de asistencia."
       />
 
-      <ErrorAlerta mensaje={error} />
+      {error && <Alerta tipo="error" mensaje={error} />}
 
       {convocatorias.length === 0 ? (
         <EmptyState icono="calendar" titulo="No hay convocatorias activas" descripcion="Preselecciona alumnos desde la sección Formularios y genera las convocatorias para que aparezcan aquí" />

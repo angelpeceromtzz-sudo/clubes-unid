@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Badge } from './Badge';
+import { Badge } from '../ui/Badge';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
+import { Th, Td } from '../ui/TableCells';
 
 export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clubesDetalle, cargando }) {
   const { modoOscuro } = useTheme();
@@ -71,12 +72,12 @@ export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clu
           <table className="w-full text-sm">
             <thead>
               <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                <th className={`text-left py-3 px-3 font-bold text-xs uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>Nombre</th>
-                <th className={`text-left py-3 px-3 font-bold text-xs uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>Matrícula</th>
-                <th className={`text-left py-3 px-3 font-bold text-xs uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>Carrera</th>
-                <th className={`text-left py-3 px-3 font-bold text-xs uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>Turno</th>
-                <th className={`text-left py-3 px-3 font-bold text-xs uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>Club</th>
-                <th className={`text-left py-3 px-3 font-bold text-xs uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>Estado</th>
+                <Th>Nombre</Th>
+                <Th>Matrícula</Th>
+                <Th>Carrera</Th>
+                <Th>Turno</Th>
+                <Th>Club</Th>
+                <Th>Estado</Th>
               </tr>
             </thead>
             <tbody>
@@ -85,14 +86,14 @@ export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clu
               )}
               {padron.map(f => (
                 <tr key={`${f.id_formulario}-${f.id_club}`} className={`border-b ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/20' : 'border-slate-100 hover:bg-slate-50'} transition-colors`}>
-                  <td className="py-3 px-3 font-medium">{f.nombre_completo}</td>
-                  <td className="py-3 px-3 font-mono text-xs">{f.matricula}</td>
-                  <td className={`py-3 px-3 ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>{f.carrera}</td>
-                  <td className={`py-3 px-3 ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>{f.turno}</td>
-                  <td className={`py-3 px-3 ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>{f.nombre_club}</td>
-                  <td className="py-3 px-3"><Badge texto={f.status} color={
+                  <Td className="font-medium">{f.nombre_completo}</Td>
+                  <Td className="font-mono text-xs">{f.matricula}</Td>
+                  <Td>{f.carrera}</Td>
+                  <Td>{f.turno}</Td>
+                  <Td>{f.nombre_club}</Td>
+                  <Td><Badge texto={f.status} color={
                     f.status === 'Miembro oficial' || f.status === 'Oferta emitida' ? 'emerald' : f.status === 'Rechazado' || f.status === 'Oferta rechazada' ? 'red' : f.status === 'Postulado' ? 'amber' : 'blue'
-                  } /></td>
+                  } /></Td>
                 </tr>
               ))}
             </tbody>

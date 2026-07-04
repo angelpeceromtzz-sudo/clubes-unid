@@ -3,9 +3,9 @@ import { api } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
-import { ErrorAlerta } from '../ui/ErrorAlerta';
 import { ListaSolicitudes } from './ListaSolicitudes';
 import { EncabezadoPagina } from '../ui/EncabezadoPagina';
+import { Alerta } from '../ui/Alerta';
 import { VistaPreviaConvocatorias } from './VistaPreviaConvocatorias';
 
 export function SolicitudesPresidente({ club }) {
@@ -101,7 +101,7 @@ export function SolicitudesPresidente({ club }) {
 
   return (
     <div className="space-y-8">
-      <ErrorAlerta mensaje={error} />
+      {error && <Alerta tipo="error" mensaje={error} />}
 
       <EncabezadoPagina
         titulo="Formularios"
