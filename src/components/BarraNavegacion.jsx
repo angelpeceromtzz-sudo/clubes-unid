@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNotificaciones } from '../contexts/NotificationContext';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { useTheme } from '../contexts/ThemeContext';
 import logoLobo from '../assets/logo-lobo.svg';
 import { Icono } from './ui/Icono';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
 
 export function BarraNavegacion({
-  categoriaActiva, setCategoriaActiva, modoOscuro, setModoOscuro,
-  menuAbierto, setMenuAbierto, tema, onLogoClick,
+  categoriaActiva, setCategoriaActiva,
+  menuAbierto, setMenuAbierto, onLogoClick,
   user, onLoginClick, onLogout, onDashboardClick,
   mostrarFiltros = true, onVolverCatalogo,
 }) {
@@ -17,6 +18,7 @@ export function BarraNavegacion({
 
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
 
+  const { modoOscuro, setModoOscuro, tema } = useTheme();
   const { notificaciones, noLeidas, marcarComoLeida } = useNotificaciones();
 
   useClickOutside(dropdownRef, menuAbierto, () => setMenuAbierto(false));

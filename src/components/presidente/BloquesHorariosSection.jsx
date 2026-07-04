@@ -3,6 +3,7 @@ import { api } from '../../services/api';
 import { PanelBloqueMejorado } from './BloquePanelMejorado';
 import { ModalConfirmarSeleccion } from './ModalConfirmarSeleccion';
 import { Icono } from '../ui/Icono';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const COLORES_ESTATUS = {
   'Pendiente': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
@@ -18,7 +19,8 @@ const COLORES_ESTATUS = {
   'Rechazado': 'bg-red-500/20 text-red-400 border-red-500/30',
 };
 
-export function SeccionBloquesHorarios({ club, tema, modoOscuro }) {
+export function SeccionBloquesHorarios({ club }) {
+  const { tema, modoOscuro } = useTheme();
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [seleccionados, setSeleccionados] = useState([]);

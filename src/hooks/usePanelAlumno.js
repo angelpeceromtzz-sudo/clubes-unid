@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { api } from '../services/api';
 
-export function usePanelAlumno(tema, modoOscuro) {
+export function usePanelAlumno() {
   const { usuario, obtenerDatosPanel } = useAutenticacion();
   const [datos, setDatos] = useState(null);
   const [miembros, setMiembros] = useState([]);

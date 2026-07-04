@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Icono } from '../ui/Icono';
+import { useTheme } from '../../contexts/ThemeContext';
 
-export function SeleccionFinal({ club, tema, modoOscuro }) {
+export function SeleccionFinal({ club }) {
+  const { tema, modoOscuro } = useTheme();
   const [convocados, setConvocados] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');

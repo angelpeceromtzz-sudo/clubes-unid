@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 
-export function usePanelAdmin(usuario, tema, modoOscuro) {
+export function usePanelAdmin(usuario) {
+  const { esOscuro, cardCls, tableBg, thCls, tdCls, tdTitle, sbBg, sbItemBase, sbItemActive, sbItemInactive, selectCls, inputCls, labelCls, tema } = useTheme();
   const [vistaActiva, setVistaActiva] = useState('resumen');
   const [usuarios, setUsuarios] = useState([]);
   const [clubes, setClubes] = useState([]);
@@ -37,8 +39,6 @@ export function usePanelAdmin(usuario, tema, modoOscuro) {
     cargar();
   }, []);
 
-  const esOscuro = modoOscuro;
-
   const totalAlumnos = usuarios.filter((u) => u.id_rol === 1).length;
   const clubesActivos = clubes.filter((c) => c.id_estatus_club === 1).length;
   const clubesActivosLista = clubes.filter((c) => c.id_estatus_club === 1);
@@ -56,23 +56,6 @@ export function usePanelAdmin(usuario, tema, modoOscuro) {
         )
       : usuarios;
   })();
-
-  const cardCls = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
-  const tableBg = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
-  const thCls = esOscuro ? 'text-slate-500' : 'text-slate-600';
-  const tdCls = esOscuro ? 'text-slate-400' : 'text-slate-600';
-  const tdTitle = esOscuro ? 'text-white' : 'text-slate-900';
-  const sbBg = esOscuro ? 'bg-[#0a1128] border-slate-800' : 'bg-white border-slate-200 shadow-sm';
-  const sbItemBase = 'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer';
-  const sbItemActive = 'bg-amber-400/20 text-amber-400 border border-amber-400/30';
-  const sbItemInactive = esOscuro ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100';
-  const selectCls = `text-xs font-bold rounded-lg px-3 py-1.5 border cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/50 disabled:opacity-40 disabled:cursor-not-allowed ${
-    esOscuro ? 'bg-[#18223f] border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-300 text-slate-700'
-  }`;
-  const inputCls = `w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 ${
-    esOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400'
-  }`;
-  const labelCls = 'block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5';
 
   const manejarCambioRol = useCallback(async (userId, nuevoRolId) => {
     try {

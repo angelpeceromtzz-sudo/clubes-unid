@@ -1,4 +1,5 @@
 import { useAutenticacion } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/RutaProtegida';
 import { FormularioNotificacion } from '../components/FormularioNotificacion';
 import { InformacionClub } from '../components/InformacionClub';
@@ -12,9 +13,10 @@ import { SolicitudesPresidente } from '../components/SolicitudesPresidente';
 import { SeccionConvocatorias } from '../components/presidente/SeccionConvocatorias';
 import { SeleccionFinal } from '../components/presidente/SeleccionFinal';
 
-export function PanelPresidente({ tema, modoOscuro }) {
+export function PanelPresidente() {
   const { usuario } = useAutenticacion();
-  const d = usePanelPresidente(usuario, tema, modoOscuro);
+  const { tema, modoOscuro, esOscuro, sbBg, sbItemBase, sbItemActive, sbItemInactive } = useTheme();
+  const d = usePanelPresidente(usuario);
 
   if (d.loading) {
     return (
@@ -39,13 +41,8 @@ export function PanelPresidente({ tema, modoOscuro }) {
   }
 
   if (!d.club) {
-    return <EstadoVacio tema={tema} />;
+    return <EstadoVacio />;
   }
-
-  const sbBg = d.isDark ? 'bg-[#0a1128] border-slate-800' : 'bg-white border-slate-200 shadow-sm';
-  const sbItemBase = 'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer';
-  const sbItemActive = 'bg-amber-400/20 text-amber-400 border border-amber-400/30';
-  const sbItemInactive = d.isDark ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100';
 
   return (
     <RutaProtegida>
@@ -55,18 +52,12 @@ export function PanelPresidente({ tema, modoOscuro }) {
           onVistaChange={d.setVistaActiva}
           user={d.user}
           club={d.club}
-          isDark={d.isDark}
-          sbBg={sbBg}
-          sbItemBase={sbItemBase}
-          sbItemActive={sbItemActive}
-          sbItemInactive={sbItemInactive}
         />
 
         <main className="flex-1 p-4 md:p-8 overflow-auto">
           <PestanasMovilPresidente
             vistaActiva={d.vistaActiva}
             onVistaChange={d.setVistaActiva}
-            isDark={d.isDark}
           />
 
           <div className="mb-6 md:mb-8">
@@ -84,8 +75,8 @@ export function PanelPresidente({ tema, modoOscuro }) {
           {d.vistaActiva === 'mi-club' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
-                <InformacionClub club={d.club} tema={tema} modoOscuro={modoOscuro} />
-                <SeccionAvisos club={d.club} esPresidente={true} tema={tema} modoOscuro={modoOscuro} />
+                <InformacionClub club={d.club} />
+                <SeccionAvisos club={d.club} esPresidente={true} />
                 <div className={`rounded-2xl p-6 ${d.isDark ? 'bg-[#0e162c] border border-slate-700/50' : 'bg-white border border-slate-200 shadow-sm'}`}>
                   <h3 className={`text-lg font-black uppercase tracking-wider mb-2 ${tema.title}`}>
                     Enviar Anuncio a Miembros
@@ -97,27 +88,25 @@ export function PanelPresidente({ tema, modoOscuro }) {
                     audienciaFija="club"
                     clubId={d.club.id_club}
                     clubNombre={d.club.nombre_club}
-                    tema={tema}
-                    modoOscuro={modoOscuro}
                   />
                 </div>
               </div>
               <div className="space-y-8">
-                <SeccionMiembros miembros={d.miembros} club={d.club} tema={tema} modoOscuro={modoOscuro} />
+                <SeccionMiembros miembros={d.miembros} club={d.club} />
               </div>
             </div>
           )}
 
           {d.vistaActiva === 'solicitudes' && (
-            <SolicitudesPresidente club={d.club} tema={tema} modoOscuro={modoOscuro} />
+            <SolicitudesPresidente club={d.club} />
           )}
 
           {d.vistaActiva === 'convocatorias' && (
-            <SeccionConvocatorias club={d.club} tema={tema} modoOscuro={modoOscuro} />
+            <SeccionConvocatorias club={d.club} />
           )}
 
           {d.vistaActiva === 'seleccion-final' && (
-            <SeleccionFinal club={d.club} tema={tema} modoOscuro={modoOscuro} />
+            <SeleccionFinal club={d.club} />
           )}
         </main>
       </div>

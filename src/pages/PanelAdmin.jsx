@@ -1,4 +1,5 @@
 import { useAutenticacion } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/RutaProtegida';
 import { FormularioNotificacion } from '../components/FormularioNotificacion';
 import { usePanelAdmin } from '../hooks/usePanelAdmin';
@@ -12,9 +13,10 @@ import { TablaClubes } from '../components/admin/ClubTable';
 import { ModalFormularioClub } from '../components/admin/ClubFormModal';
 import { TablaHistorial } from '../components/admin/HistorialTable';
 
-export function PanelAdmin({ tema, modoOscuro }) {
+export function PanelAdmin() {
   const { usuario } = useAutenticacion();
-  const d = usePanelAdmin(usuario, tema, modoOscuro);
+  const { tema, modoOscuro, esOscuro, cardCls, tableBg, thCls, tdCls, tdTitle, selectCls, inputCls, labelCls, sbBg, sbItemBase, sbItemActive, sbItemInactive } = useTheme();
+  const d = usePanelAdmin(usuario);
 
   if (d.loading) {
     return (
@@ -33,18 +35,12 @@ export function PanelAdmin({ tema, modoOscuro }) {
           vistaActiva={d.vistaActiva}
           onVistaChange={d.setVistaActiva}
           user={d.user}
-          isDark={d.isDark}
-          sbBg={d.sbBg}
-          sbItemBase={d.sbItemBase}
-          sbItemActive={d.sbItemActive}
-          sbItemInactive={d.sbItemInactive}
         />
 
         <main className="flex-1 p-4 md:p-8 overflow-auto">
           <PestanasMovilAdmin
             vistaActiva={d.vistaActiva}
             onVistaChange={d.setVistaActiva}
-            isDark={d.isDark}
           />
 
           <div className="mb-6 md:mb-8">
@@ -58,8 +54,6 @@ export function PanelAdmin({ tema, modoOscuro }) {
 
           {d.vistaActiva === 'resumen' && (
             <TarjetasEstadisticas
-              cardCls={d.cardCls}
-              tema={d.tema}
               totalAlumnos={d.totalAlumnos}
               clubesActivos={d.clubesActivos}
               totalInscripciones={d.totalInscripciones}
@@ -68,16 +62,10 @@ export function PanelAdmin({ tema, modoOscuro }) {
 
           {d.vistaActiva === 'usuarios' && (
             <div>
-              <BarraBusquedaUsuarios busqueda={d.busqueda} onChange={d.setBusqueda} isDark={d.isDark} />
+              <BarraBusquedaUsuarios busqueda={d.busqueda} onChange={d.setBusqueda} />
               <TablaUsuarios
                 usuarios={d.usuarios}
                 busqueda={d.busqueda}
-                isDark={d.isDark}
-                tableBg={d.tableBg}
-                thCls={d.thCls}
-                tdCls={d.tdCls}
-                tdTitle={d.tdTitle}
-                selectCls={d.selectCls}
                 currentUser={d.user}
                 clubesActivosList={d.clubesActivosList}
                 asignando={d.asignando}
@@ -91,13 +79,6 @@ export function PanelAdmin({ tema, modoOscuro }) {
           {d.vistaActiva === 'clubes' && (
             <TablaClubes
               clubes={d.clubes}
-              isDark={d.isDark}
-              tableBg={d.tableBg}
-              thCls={d.thCls}
-              tdCls={d.tdCls}
-              tdTitle={d.tdTitle}
-              selectCls={d.selectCls}
-              tema={d.tema}
               onStatusChange={d.handleStatusChange}
               onEditar={d.abrirModalEditar}
               onCrear={d.abrirModalCrear}
@@ -114,8 +95,6 @@ export function PanelAdmin({ tema, modoOscuro }) {
                   Redacta un anuncio y selecciona la audiencia destino.
                 </p>
                 <FormularioNotificacion
-                  tema={tema}
-                  modoOscuro={modoOscuro}
                   clubes={d.clubes}
                   onSuccess={() => d.setFeedback('Anuncio publicado correctamente')}
                 />
@@ -127,11 +106,6 @@ export function PanelAdmin({ tema, modoOscuro }) {
             <TablaHistorial
               historial={d.historial}
               historialLoading={d.historialLoading}
-              isDark={d.isDark}
-              tableBg={d.tableBg}
-              thCls={d.thCls}
-              tdCls={d.tdCls}
-              tdTitle={d.tdTitle}
               onRefresh={d.cargarHistorial}
             />
           )}
@@ -142,11 +116,6 @@ export function PanelAdmin({ tema, modoOscuro }) {
             formClub={d.formClub}
             enviando={d.enviando}
             modalError={d.modalError}
-            isDark={d.isDark}
-            cardCls={d.cardCls}
-            inputCls={d.inputCls}
-            labelCls={d.labelCls}
-            tema={d.tema}
             onClose={d.cerrarModal}
             onSave={d.guardarClub}
             onFormChange={d.handleClubFormChange}

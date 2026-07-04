@@ -1,13 +1,15 @@
 import { ELEMENTOS_NAV_PRESIDENTE } from '../admin/navItems';
+import { useTheme } from '../../contexts/ThemeContext';
 
-export function BarraLateralPresidente({ vistaActiva, onVistaChange, user, club, isDark, sbBg, sbItemBase, sbItemActive, sbItemInactive }) {
+export function BarraLateralPresidente({ vistaActiva, onVistaChange, user, club }) {
+  const { modoOscuro, sbBg, sbItemBase, sbItemActive, sbItemInactive } = useTheme();
   return (
     <aside className={`hidden md:flex w-64 shrink-0 flex-col border-r ${sbBg} print:hidden`}>
-      <div className={`p-5 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-        <p className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+      <div className={`p-5 border-b ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
+        <p className={`text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-500' : 'text-slate-500'}`}>
           Presidente
         </p>
-        <p className={`text-sm font-bold mt-0.5 truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+        <p className={`text-sm font-bold mt-0.5 truncate ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
           {user.nombre_completo}
         </p>
         <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider mt-1">

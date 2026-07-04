@@ -1,17 +1,19 @@
-import { ELEMENTOS_NAV_SERVICIOS_ESCOLARES } from '../admin/navItems';
+import { ELEMENTOS_NAV_RECTORIA } from '../admin/navItems';
 import { useAutenticacion } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
-export function BarraLateralServiciosEscolares({ vistaActiva, onCambiarVista, tema }) {
+export function BarraLateralRectoria({ vistaActiva, onCambiarVista }) {
   const { usuario } = useAutenticacion();
+  const { modoOscuro, sbBg, sbItemBase, sbItemActive, sbItemInactive, tema } = useTheme();
 
   return (
     <aside className={`hidden md:flex flex-col w-64 shrink-0 border-r ${tema.headerBorder} ${tema.headerBg}`}>
       <div className={`px-6 py-5 border-b ${tema.headerBorder}`}>
-        <p className={`text-xs font-bold uppercase tracking-widest ${tema.subtitle}`}>Servicios Escolares</p>
+        <p className={`text-xs font-bold uppercase tracking-widest ${tema.subtitle}`}>Rectoría</p>
         <p className={`text-sm font-semibold mt-0.5 ${tema.text}`}>{usuario?.nombre_completo}</p>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {ELEMENTOS_NAV_SERVICIOS_ESCOLARES.map((item) => (
+        {ELEMENTOS_NAV_RECTORIA.map((item) => (
           <button
             key={item.key}
             onClick={() => onCambiarVista(item.key)}

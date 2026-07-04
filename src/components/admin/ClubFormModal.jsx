@@ -1,4 +1,5 @@
 import { Icono } from '../ui/Icono';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export function ModalFormularioClub({
   show,
@@ -6,15 +7,11 @@ export function ModalFormularioClub({
   formClub,
   enviando,
   modalError,
-  isDark,
-  cardCls,
-  inputCls,
-  labelCls,
-  tema,
   onClose,
   onSave,
   onFormChange,
 }) {
+  const { modoOscuro, cardCls, inputCls, labelCls, tema } = useTheme();
   if (!show) return null;
 
   return (
@@ -60,7 +57,7 @@ export function ModalFormularioClub({
               type="button"
               onClick={onClose}
               className={`flex-1 font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${
-                isDark ? 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white' : 'bg-slate-200 text-slate-600 border border-slate-300'
+                modoOscuro ? 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white' : 'bg-slate-200 text-slate-600 border border-slate-300'
               }`}
             >
               Cancelar

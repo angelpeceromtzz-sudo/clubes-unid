@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNotificaciones } from '../contexts/NotificationContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Icono } from './ui/Icono';
 
-export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess, tema, modoOscuro }) {
+export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess }) {
+  const { modoOscuro } = useTheme();
   const { crearNotificacion } = useNotificaciones();
   const [titulo, setTitulo] = useState('');
   const [mensaje, setMensaje] = useState('');

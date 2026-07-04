@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/RutaProtegida';
 import { Icono } from '../components/ui/Icono';
 import { InformacionClub } from '../components/InformacionClub';
@@ -9,10 +10,11 @@ import { SeccionMiembros } from '../components/SeccionMiembros';
 import { SeccionPostulaciones } from '../components/SeccionPostulaciones';
 import { usePanelAlumno } from '../hooks/usePanelAlumno';
 
-export function PanelAlumno({ tema, modoOscuro }) {
+export function PanelAlumno() {
   const navigate = useNavigate();
   const { usuario, esPresidente, esAdmin, esRectoria } = useAutenticacion();
-  const d = usePanelAlumno(tema, modoOscuro);
+  const { tema, modoOscuro } = useTheme();
+  const d = usePanelAlumno();
   const [dismissMiembroBanner, setDismissMiembroBanner] = useState(() => {
     try { return localStorage.getItem('dismiss_miembro_banner') === 'true'; } catch { return false; }
   });
@@ -82,7 +84,6 @@ export function PanelAlumno({ tema, modoOscuro }) {
           <div className="mb-10">
             <SeccionPostulaciones
               postulaciones={d.postulaciones}
-              tema={tema}
               onPostulacionesChange={recargarPostulaciones}
             />
           </div>
@@ -115,11 +116,11 @@ export function PanelAlumno({ tema, modoOscuro }) {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
-                <InformacionClub club={d.club} tema={tema} modoOscuro={modoOscuro} />
-                <SeccionAvisos club={d.club} esPresidente={false} tema={tema} modoOscuro={modoOscuro} />
+                <InformacionClub club={d.club} />
+                <SeccionAvisos club={d.club} esPresidente={false} />
               </div>
               <div className="space-y-8">
-                <SeccionMiembros miembros={d.miembros} club={d.club} tema={tema} modoOscuro={modoOscuro} />
+                <SeccionMiembros miembros={d.miembros} club={d.club} />
               </div>
             </div>
           </div>

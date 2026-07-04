@@ -1,4 +1,7 @@
-export function InformacionClub({ club, tema, modoOscuro }) {
+import { useTheme } from '../contexts/ThemeContext';
+
+export function InformacionClub({ club }) {
+  const { tema, modoOscuro } = useTheme();
   const esOscuro = modoOscuro;
   const cardCls = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
 

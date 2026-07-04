@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
-import { useTema } from './hooks/useTema';
+import { useTheme } from './contexts/ThemeContext';
 import { BarraNavegacion } from './components/BarraNavegacion';
 import { PiePagina } from './components/PiePagina';
 import { ModalInicioSesion } from './components/ModalInicioSesion';
@@ -10,13 +10,13 @@ import { RutaProtegida } from './components/RutaProtegida';
 import { PanelAlumno } from './pages/PanelAlumno';
 import { PanelPresidente } from './pages/PanelPresidente';
 import { PanelAdmin } from './pages/PanelAdmin';
-import { PanelServiciosEscolares } from './pages/PanelServiciosEscolares';
+import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { api, getSession } from './services/api';
 
 function App() {
-  const { estaAutenticado, esAdmin, esPresidente, esServiciosEscolares, usuario, cerrarSesion, refrescarInscripcionActiva, tieneInscripcionActiva } = useAutenticacion();
-  const { modoOscuro, setModoOscuro, tema } = useTema();
+  const { estaAutenticado, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, refrescarInscripcionActiva, tieneInscripcionActiva } = useAutenticacion();
+  const { modoOscuro, setModoOscuro, tema } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [clubes, setClubes] = useState([]);
@@ -54,7 +54,7 @@ function App() {
       if (sesion?.user) {
         const { id_rol } = sesion.user;
         if (id_rol === 4) {
-          navigate('/escolares/dashboard', { replace: true });
+          navigate('/rectoria/dashboard', { replace: true });
         } else if (id_rol === 3) {
           navigate('/admin/dashboard', { replace: true });
         } else if (id_rol === 2) {
@@ -85,7 +85,7 @@ function App() {
     if (session?.user) {
       const { id_rol } = session.user;
       if (id_rol === 4) {
-        navigate('/escolares/dashboard', { replace: true });
+        navigate('/rectoria/dashboard', { replace: true });
       } else if (id_rol === 3) {
         navigate('/admin/dashboard', { replace: true });
       } else if (id_rol === 2) {
@@ -124,8 +124,8 @@ function App() {
       navigate('/admin/dashboard');
     } else if (esPresidente) {
       navigate('/presidente/dashboard');
-    } else if (esServiciosEscolares) {
-      navigate('/escolares/dashboard');
+    } else if (esRectoria) {
+      navigate('/rectoria/dashboard');
     } else {
       navigate('/dashboard');
     }
@@ -145,11 +145,8 @@ function App() {
       <BarraNavegacion
         categoriaActiva={categoriaActiva}
         setCategoriaActiva={setCategoriaActiva}
-        modoOscuro={modoOscuro}
-        setModoOscuro={setModoOscuro}
         menuAbierto={menuAbierto}
         setMenuAbierto={setMenuAbierto}
-        tema={tema}
         onLogoClick={irACatalogo}
         user={usuario}
         onLoginClick={() => setShowLogin(true)}
@@ -160,7 +157,7 @@ function App() {
       />
 
       {showLogin && (
-        <ModalInicioSesion onClose={handleLoginSuccess} modoOscuro={modoOscuro} />
+        <ModalInicioSesion onClose={handleLoginSuccess} />
       )}
 
       <Routes>
@@ -168,30 +165,28 @@ function App() {
           <PaginaInicio key={catalogoKey}
             clubes={clubesFiltrados}
             clubesLoading={clubesLoading}
-            tema={tema}
-            modoOscuro={modoOscuro}
             onLoginClick={() => setShowLogin(true)}
             onClubDetalleChange={setClubDetalleVisible}
           />
         } />
         <Route path="/dashboard" element={
           <RutaProtegida>
-            <PanelAlumno tema={tema} modoOscuro={modoOscuro} />
+            <PanelAlumno />
           </RutaProtegida>
         } />
         <Route path="/presidente/dashboard" element={
           <RutaProtegida requierePresidente>
-            <PanelPresidente tema={tema} modoOscuro={modoOscuro} />
+            <PanelPresidente />
           </RutaProtegida>
         } />
         <Route path="/admin/dashboard" element={
           <RutaProtegida requiereAdmin>
-            <PanelAdmin tema={tema} modoOscuro={modoOscuro} />
+            <PanelAdmin />
           </RutaProtegida>
         } />
-        <Route path="/escolares/dashboard" element={
-          <RutaProtegida requiereServiciosEscolares>
-            <PanelServiciosEscolares tema={tema} modoOscuro={modoOscuro} />
+        <Route path="/rectoria/dashboard" element={
+          <RutaProtegida requiereRectoria>
+            <PanelRectoria />
           </RutaProtegida>
         } />
       </Routes>
@@ -202,7 +197,7 @@ function App() {
         onLoginClick={() => setShowLogin(true)}
         onInicioClick={irACatalogo}
       />
-      {location.pathname === '/' && <PiePagina tema={tema} />}
+      {location.pathname === '/' && <PiePagina />}
     </div>
   );
 }

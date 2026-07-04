@@ -1,4 +1,7 @@
-export function PiePagina({ tema }) {
+import { useTheme } from '../contexts/ThemeContext';
+
+export function PiePagina() {
+  const { tema } = useTheme();
   return (
     <footer className={`border-t transition-colors duration-300 ${tema.headerBorder} ${tema.bg}`}>
       <div className="max-w-7xl mx-auto px-6 py-12">

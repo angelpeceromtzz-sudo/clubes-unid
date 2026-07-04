@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 
-export function usePanelPresidente(usuario, tema, modoOscuro) {
+export function usePanelPresidente(usuario) {
+  const { esOscuro, tema } = useTheme();
   const [vistaActiva, setVistaActiva] = useState('mi-club');
   const [estado, setEstado] = useState({ club: null, miembros: [], loading: true, error: '' });
-
-  const esOscuro = modoOscuro;
 
   useEffect(() => {
     let montado = true;

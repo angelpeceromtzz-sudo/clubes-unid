@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 import { Icono } from './ui/Icono';
 
 const COLORES_ESTATUS = {
@@ -113,7 +114,8 @@ function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, accionando 
   );
 }
 
-export function SolicitudesPresidente({ club, tema, modoOscuro }) {
+export function SolicitudesPresidente({ club }) {
+  const { tema, modoOscuro } = useTheme();
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [accionando, setAccionando] = useState({});
