@@ -1,20 +1,22 @@
+import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
 import { ModalBase } from '../ui/ModalBase';
 
 export function ModalExito({ onClose }) {
+  const { tema } = useTheme();
   return (
     <ModalBase show={true} onClose={onClose} maxWidth="max-w-md">
-        <div className="w-16 h-16 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center mx-auto mb-5">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-5">
           <Icono nombre="check" strokeWidth={2} className="h-6 w-6 text-emerald-400" />
         </div>
 
-        <h2 className="text-xl font-black text-white mb-3">
+        <h2 className={`text-xl font-black mb-3 ${tema.title}`}>
           ¡Formulario enviado con éxito!
         </h2>
-        <p className="text-sm text-slate-400 leading-relaxed">
+        <p className={`text-sm leading-relaxed ${tema.subtitle}`}>
           Tu postulación ha sido recibida. Puedes dar seguimiento desde la sección <strong className="text-amber-400">"Mis Postulaciones"</strong> en tu panel.
         </p>
-        <p className="text-xs text-slate-500 mt-2">
+        <p className={`text-xs mt-2 ${tema.isDark ? 'text-slate-500' : 'text-slate-500'}`}>
           El presidente del club revisará tu solicitud y notificará cualquier cambio en tu estatus.
         </p>
 

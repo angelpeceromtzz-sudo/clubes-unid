@@ -38,7 +38,7 @@ router.get('/', authenticate, async (req, res) => {
        JOIN cat_roles r ON r.id_rol = u.id_rol
        LEFT JOIN clubes c ON c.id_club = n.id_club
        LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
-       WHERE ($2 = 3)
+       WHERE ($2 IN (3, 4))
           OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL)
                        OR (n.audiencia = 'club' AND n.id_club = $3)
                        OR n.id_destinatario = $1))
@@ -126,6 +126,61 @@ router.post('/:id/leer', authenticate, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Error al marcar notificacion como leida:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Marcar todas las notificaciones como leídas
+router.post('/leer-todas', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const notifs = await pool.query(
+      `SELECT n.id_notificacion
+       FROM notificaciones n
+       LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
+       WHERE nl.id_notificacion IS NULL`,
+      [userId]
+    );
+
+    for (const row of notifs.rows) {
+      await pool.query(
+        'INSERT INTO notificaciones_leidas (id_notificacion, id_usuario) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [row.id_notificacion, userId]
+      );
+    }
+
+    res.json({ ok: true, marcadas: notifs.rows.length });
+  } catch (err) {
+    console.error('Error al marcar todas como leidas:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Eliminar una notificación (solo admin o destinatario)
+router.delete('/:id', authenticate, async (req, res) => {
+  try {
+    const notifId = parseInt(req.params.id);
+    const userId = req.user.id;
+    const roleId = req.user.id_rol;
+
+    const notif = await pool.query(
+      'SELECT id_notificacion, id_emisor, id_destinatario FROM notificaciones WHERE id_notificacion = $1',
+      [notifId]
+    );
+
+    if (notif.rows.length === 0) {
+      return res.status(404).json({ error: 'Notificación no encontrada' });
+    }
+
+    if (roleId !== 3 && notif.rows[0].id_destinatario !== userId) {
+      return res.status(403).json({ error: 'No tienes permiso para eliminar esta notificación' });
+    }
+
+    await pool.query('DELETE FROM notificaciones WHERE id_notificacion = $1', [notifId]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error al eliminar notificacion:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

@@ -69,7 +69,7 @@ function App() {
   }
 
   return (
-    <div className={`min-h-screen font-sans transition-colors duration-300 ${tema.bg} ${tema.text}`}>
+    <div className={`min-h-screen font-sans transition-colors duration-300 pb-16 md:pb-0 ${tema.bg} ${tema.text}`}>
       <BarraNavegacion
         categoriaActiva={categoriaActiva}
         setCategoriaActiva={setCategoriaActiva}

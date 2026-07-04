@@ -14,6 +14,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
   const [clubSeleccionado, setClubSeleccionado] = useState(clubId || '');
   const [enviando, setEnviando] = useState(false);
   const [busquedaClub, setBusquedaClub] = useState('');
+  const [listaAbierta, setListaAbierta] = useState(false);
   const [mensajeExito, setMensajeExito] = useState('');
   const [mensajeError, setMensajeError] = useState('');
 
@@ -74,7 +75,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
           <label className={labelClass}>Audiencia destino</label>
           <select
             value={audiencia}
-            onChange={(e) => { setAudiencia(e.target.value); setClubSeleccionado(''); }}
+            onChange={(e) => { setAudiencia(e.target.value); setClubSeleccionado(''); setListaAbierta(false); }}
             className={inputClass}
           >
             {AUDIENCIAS.map((a) => (
@@ -88,31 +89,70 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
         <div className="space-y-3">
           <label className={labelClass}>Seleccionar Club</label>
 
-          <div className="relative">
-            <Icono nombre="search" strokeWidth={2} className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} />
-            <input
-              type="text"
-              value={busquedaClub}
-              onChange={(e) => setBusquedaClub(e.target.value)}
-              placeholder="Buscar club..."
-              className={`${inputClass} pl-10`}
-            />
-          </div>
+          {clubSeleccionado && !listaAbierta ? (
+            <button
+              type="button"
+              onClick={() => { setListaAbierta(true); setBusquedaClub(''); }}
+              className={`flex items-center gap-2 w-full rounded-xl border px-4 py-3 text-sm transition-colors ${
+                modoOscuro ? 'bg-amber-400/10 border-amber-400/30 text-amber-400 hover:bg-amber-400/20' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+              }`}
+            >
+              <Icono nombre="check-circle" strokeWidth={2} className="h-4 w-4 shrink-0" />
+              <span className="flex-1 text-left font-medium">
+                {clubesActivos.find((c) => String(c.id_club) === clubSeleccionado)?.nombre_club || 'Club seleccionado'}
+              </span>
+              <Icono nombre="edit" strokeWidth={2} className="h-3.5 w-3.5 shrink-0 opacity-60" />
+            </button>
+          ) : (
+            <>
+              <div className="relative">
+                <Icono nombre="search" strokeWidth={2} className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} />
+                <input
+                  type="text"
+                  value={busquedaClub}
+                  onChange={(e) => setBusquedaClub(e.target.value)}
+                  placeholder="Buscar club..."
+                  className={`${inputClass} pl-10`}
+                />
+              </div>
 
-          <select
-            value={clubSeleccionado}
-            onChange={(e) => setClubSeleccionado(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">— Selecciona un club —</option>
-            {clubesFiltrados.length > 0 ? (
-              clubesFiltrados.map((c) => (
-                <option key={c.id_club} value={c.id_club}>{c.nombre_club}</option>
-              ))
-            ) : (
-              <option disabled>— Sin resultados —</option>
-            )}
-          </select>
+              <div className={`max-h-48 overflow-y-auto rounded-xl border ${modoOscuro ? 'border-slate-700' : 'border-slate-200'}`}>
+                <button
+                  type="button"
+                  onClick={() => { setClubSeleccionado(''); setListaAbierta(false); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    !clubSeleccionado
+                      ? modoOscuro ? 'bg-amber-400/10 text-amber-400' : 'bg-amber-50 text-amber-700'
+                      : modoOscuro ? 'text-slate-400 hover:bg-slate-800/50' : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  — Ninguno —
+                </button>
+                {clubesFiltrados.length > 0 ? (
+                  clubesFiltrados.map((c) => (
+                    <button
+                      key={c.id_club}
+                      type="button"
+                      onClick={() => { setClubSeleccionado(String(c.id_club)); setListaAbierta(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-t ${
+                        modoOscuro ? 'border-slate-700/50' : 'border-slate-100'
+                      } ${
+                        clubSeleccionado === String(c.id_club)
+                          ? modoOscuro ? 'bg-amber-400/10 text-amber-400' : 'bg-amber-50 text-amber-700'
+                          : modoOscuro ? 'text-slate-300 hover:bg-slate-800/50' : 'text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {c.nombre_club}
+                    </button>
+                  ))
+                ) : (
+                  <div className={`px-4 py-3 text-sm text-center ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
+                    — Sin resultados —
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 

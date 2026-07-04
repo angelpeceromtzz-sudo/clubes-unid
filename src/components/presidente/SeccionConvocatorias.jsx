@@ -66,6 +66,9 @@ export function SeccionConvocatorias({ club }) {
     return <Spinner />;
   }
 
+  const totalAlumnosActivos = convocatorias.reduce((sum, c) => sum + (c.alumnos?.length || 0), 0);
+  const flujoCompletado = convocatorias.length > 0 && totalAlumnosActivos === 0;
+
   return (
     <div className="space-y-6">
       <EncabezadoPagina
@@ -75,11 +78,17 @@ export function SeccionConvocatorias({ club }) {
 
       {error && <Alerta tipo="error" mensaje={error} />}
 
-      {convocatorias.length === 0 ? (
+      {flujoCompletado ? (
+        <EmptyState
+          icono="check-circle"
+          titulo="Proceso de convocatorias completado"
+          descripcion="Todos los alumnos han sido evaluados. Las ofertas han sido enviadas o los alumnos han sido notificados. Puedes revisar el estado en la sección de Selección Final."
+        />
+      ) : convocatorias.length === 0 ? (
         <EmptyState icono="calendar" titulo="No hay convocatorias activas" descripcion="Preselecciona alumnos desde la sección Formularios y genera las convocatorias para que aparezcan aquí" />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {convocatorias.map((c) => (
+          {convocatorias.filter((c) => (c.alumnos?.length || 0) > 0).map((c) => (
             <BloqueCard
               key={c.id_convocatoria}
               convocatoria={c}

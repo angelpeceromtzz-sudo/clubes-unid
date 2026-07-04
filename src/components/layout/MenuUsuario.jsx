@@ -3,7 +3,7 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
 
-export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClick, onLogout, onLoginClick }) {
+export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClick, onLogout, onLoginClick, onAyuda }) {
   const { modoOscuro, setModoOscuro, tema } = useTheme();
   const dropdownRef = useRef(null);
 
@@ -30,7 +30,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
 
       <button
         onClick={() => { setMenuAbierto((prev) => !prev); }}
-        className={`p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${tema.iconColor} hover:text-amber-400 hover:bg-slate-700/50 ${user ? 'md:hidden' : ''}`}
+        className={`p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${tema.iconColor} hover:text-amber-400 ${modoOscuro ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'} ${user ? 'md:hidden' : ''}`}
         aria-label="Menú"
       >
         {menuAbierto ? (
@@ -70,6 +70,14 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                 </button>
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
+                  onClick={() => { onAyuda(); setMenuAbierto(false); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                >
+                  <Icono nombre="help" className="h-4 w-4" strokeWidth={2} />
+                  Ayuda
+                </button>
+                <div className={`h-px ${tema.headerBorder} mx-3`} />
+                <button
                   onClick={() => { onLogout(); setMenuAbierto(false); }}
                   className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                 >
@@ -100,7 +108,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                 </button>
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
-                  onClick={() => { setMenuAbierto(false); }}
+                  onClick={() => { onAyuda(); setMenuAbierto(false); }}
                   className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                 >
                   <Icono nombre="help" className="h-4 w-4" strokeWidth={2} />

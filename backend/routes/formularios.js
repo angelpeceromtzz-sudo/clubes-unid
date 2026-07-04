@@ -320,4 +320,107 @@ router.put('/:id/estatus', authenticate, requireRole(2), async (req, res) => {
   }
 });
 
+// Asignar bloque a un formulario (presidente)
+router.put('/:id/bloque', authenticate, requireRole(2), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { bloque } = req.body;
+
+    if (!bloque || !/^[A-Z]$/.test(bloque)) {
+      return res.status(400).json({ error: 'Bloque inválido. Debe ser una letra A-Z.' });
+    }
+
+    const formulario = await pool.query(
+      `SELECT f.*, c.id_presidente
+       FROM formularios f
+       JOIN clubes c ON c.id_club = f.id_club
+       WHERE f.id_formulario = $1`,
+      [id],
+    );
+
+    if (formulario.rows.length === 0) {
+      return res.status(404).json({ error: 'El formulario no existe' });
+    }
+
+    if (formulario.rows[0].id_presidente !== req.user.id) {
+      return res.status(403).json({ error: 'No eres el presidente de este club' });
+    }
+
+    const result = await pool.query(
+      `UPDATE formularios SET bloque_asignado = $1 WHERE id_formulario = $2 RETURNING *`,
+      [bloque, id],
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al asignar bloque:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Seleccionar ofertas finales para alumnos aprobados
+router.post('/seleccionar', authenticate, requireRole(2), async (req, res) => {
+  try {
+    const { id_club, aceptados } = req.body;
+    if (!id_club || !Array.isArray(aceptados)) {
+      return res.status(400).json({ error: 'id_club y aceptados[] son obligatorios' });
+    }
+
+    const club = await pool.query(
+      'SELECT id_presidente, nombre_club FROM clubes WHERE id_club = $1',
+      [id_club],
+    );
+    if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado' });
+    if (club.rows[0].id_presidente !== req.user.id) return res.status(403).json({ error: 'No eres el presidente' });
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const convocados = await client.query(
+        `SELECT id_formulario, id_alumno, nombre_completo
+         FROM formularios
+         WHERE id_club = $1 AND status = 'Convocado'`,
+        [id_club],
+      );
+
+      let seleccionados = 0;
+      for (const form of convocados.rows) {
+        if (aceptados.includes(form.id_formulario)) {
+          await client.query(
+            `UPDATE formularios SET status = 'Oferta enviada', fecha_oferta = NOW(),
+                fecha_expiracion = NOW() + INTERVAL '3 days'
+             WHERE id_formulario = $1`,
+            [form.id_formulario],
+          );
+          seleccionados++;
+        } else {
+          await client.query(
+            `UPDATE formularios SET status = 'Rechazado',
+                motivo_rechazo = 'No seleccionado en la evaluación final'
+             WHERE id_formulario = $1`,
+            [form.id_formulario],
+          );
+        }
+      }
+
+      await client.query('COMMIT');
+      res.json({
+        mensaje: `Selección finalizada: ${seleccionados} alumno(s) recibirán oferta`,
+        total: convocados.rows.length,
+        seleccionados,
+        rechazados: convocados.rows.length - seleccionados,
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error en selección:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 export default router;

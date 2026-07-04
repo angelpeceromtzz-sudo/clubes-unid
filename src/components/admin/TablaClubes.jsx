@@ -23,7 +23,8 @@ export function TablaClubes({
         </button>
       </div>
 
-      <div className={`${tableBg} rounded-2xl overflow-hidden`}>
+      {/* Desktop - tabla */}
+      <div className={`${tableBg} rounded-2xl overflow-hidden hidden md:block`}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -80,6 +81,48 @@ export function TablaClubes({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile - tarjetas */}
+      <div className="space-y-2 md:hidden">
+        {clubes.map((c) => (
+          <div key={c.id_club} className={`rounded-xl border p-3 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-[10px] font-mono ${tdCls}`}>#{c.id_club}</span>
+              <Badge texto={c.estatus} color={c.id_estatus_club === 1 ? 'emerald' : c.id_estatus_club === 2 ? 'amber' : 'red'} size="sm" />
+            </div>
+            <p className={`text-sm font-semibold mb-1 ${tdTitle}`}>{c.nombre_club}</p>
+            <div className="flex items-center gap-3 mb-3">
+              <span className={`text-xs ${tdCls}`}>{c.categoria}</span>
+              <span className={`text-xs ${tdCls}`}>Cupo: {c.cupo_maximo}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={c.id_estatus_club}
+                onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
+                className={selectCls}
+              >
+                <option value={1}>Activo</option>
+                <option value={2}>Próximamente</option>
+                <option value={3}>Inactivo</option>
+              </select>
+              <button
+                onClick={() => onEditar(c)}
+                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1"
+                title="Editar club"
+              >
+                <Icono nombre="edit" strokeWidth={2} className="h-4 w-4" />
+                Editar
+              </button>
+              <button
+                onClick={() => onStatusChange(c.id_club, 3)}
+                className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1.5 rounded-lg border border-red-400/30 bg-red-400/10 cursor-pointer active:scale-95"
+              >
+                Dar de Baja
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -57,6 +57,22 @@ export function ProveedorNotificacion({ children: hijos }) {
     return data;
   }, [obtenerNotificaciones]);
 
+  const marcarTodasLeidas = useCallback(async () => {
+    try {
+      await api.marcarTodasNotificacionesLeidas();
+      setNotificaciones((prev) => prev.map((n) => ({ ...n, leido: true })));
+    } catch {
+    }
+  }, []);
+
+  const eliminarNotificacion = useCallback(async (id) => {
+    try {
+      await api.eliminarNotificacion(id);
+      setNotificaciones((prev) => prev.filter((n) => n.id_notificacion !== id));
+    } catch {
+    }
+  }, []);
+
   return (
     <ContextoNotificacion.Provider
       value={{
@@ -65,6 +81,8 @@ export function ProveedorNotificacion({ children: hijos }) {
         marcarComoLeida,
         crearNotificacion,
         fetchNotificaciones: obtenerNotificaciones,
+        marcarTodasLeidas,
+        eliminarNotificacion,
       }}
     >
       {hijos}

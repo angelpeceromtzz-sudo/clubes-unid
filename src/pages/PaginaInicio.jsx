@@ -1,5 +1,5 @@
 /* Página de inicio con catálogo de clubes, hero y detalle expandible. Muestra alerta si no hay sesión iniciada. */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { TarjetaClub } from '../components/clubes/TarjetaClub';
@@ -7,6 +7,7 @@ import { Heroe } from '../components/clubes/Heroe';
 import { DetalleClub } from '../components/clubes/DetalleClub';
 import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';
+import { Icono } from '../components/ui/Icono';
 
 export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetalleChange }) {
   const { estaAutenticado } = useAutenticacion();
@@ -16,6 +17,21 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetall
   useEffect(() => {
     onClubDetalleChange?.(clubSeleccionado !== null);
   }, [clubSeleccionado, onClubDetalleChange]);
+
+  const clubesPorCategoria = useMemo(() => {
+    const map = {};
+    for (const club of clubes) {
+      if (club.id_estatus_club === 2) {
+        if (!map['Próximamente']) map['Próximamente'] = [];
+        map['Próximamente'].push(club);
+        continue;
+      }
+      const cat = club.categoria || 'General';
+      if (!map[cat]) map[cat] = [];
+      map[cat].push(club);
+    }
+    return map;
+  }, [clubes]);
 
   if (clubSeleccionado) {
     return (
@@ -32,7 +48,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetall
   return (
     <>
       <Heroe />
-      <main id="catalogo" className="max-w-7xl mx-auto px-6 py-12 pb-20 md:pb-12">
+      <main id="catalogo" className="max-w-7xl mx-auto px-6 py-12 pb-24 md:pb-12">
         <div className="mb-10">
           <h2 className={`text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>
             Explorar Clubes Disponibles
@@ -53,25 +69,61 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetall
             No hay clubes disponibles en esta categoría.
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {clubes.map((club) => (
-              <TarjetaClub
-                key={club.id_club}
-                id={club.id_club}
-                nombre={club.nombre_club}
-                descripcion={club.descripcion}
-                categoria={club.categoria}
-                cupoMaximo={club.cupo_maximo}
-                cupoActual={parseInt(club.cupo_actual) || 0}
-                imagen={club.imagen_portada || club.imagen}
-                onClick={() => {
-                  setClubSeleccionado(club);
-                }}
-                idEstatusClub={club.id_estatus_club}
-                estatus={club.estatus}
-              />
-            ))}
-          </div>
+          <>
+            {/* Desktop: grid layout */}
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {clubes.map((club) => (
+                <TarjetaClub
+                  key={club.id_club}
+                  nombre={club.nombre_club}
+                  descripcion={club.descripcion}
+                  categoria={club.categoria}
+                  cupoMaximo={club.cupo_maximo}
+                  cupoActual={parseInt(club.cupo_actual) || 0}
+                  imagen={club.imagen_portada || club.imagen}
+                  onClick={() => setClubSeleccionado(club)}
+                  idEstatusClub={club.id_estatus_club}
+                  estatus={club.estatus}
+                />
+              ))}
+            </div>
+
+            {/* Mobile: Netflix-style rows por categoria */}
+            <div className="md:hidden space-y-8">
+              {Object.entries(clubesPorCategoria).map(([categoria, clubs]) => (
+                <section key={categoria}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className={`text-sm font-black uppercase tracking-wider ${tema.title}`}>
+                      {categoria}
+                    </h3>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      modoOscuro ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'
+                    }`}>
+                      {clubs.length}
+                    </span>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <style>{`.nf-scroll::-webkit-scrollbar { display: none; }`}</style>
+                    {clubs.map((club) => (
+                      <div key={club.id_club} className="nf-scroll shrink-0 w-64">
+                        <TarjetaClub
+                          nombre={club.nombre_club}
+                          descripcion={club.descripcion}
+                          categoria={club.categoria}
+                          cupoMaximo={club.cupo_maximo}
+                          cupoActual={parseInt(club.cupo_actual) || 0}
+                          imagen={club.imagen_portada || club.imagen}
+                          onClick={() => setClubSeleccionado(club)}
+                          idEstatusClub={club.id_estatus_club}
+                          estatus={club.estatus}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </>
         )}
       </main>
     </>

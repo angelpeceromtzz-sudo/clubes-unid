@@ -1,4 +1,12 @@
+import { useTheme } from '../../../contexts/ThemeContext';
+
 export function BloqueEditForm({ form, guardando, onFormChange, onGuardar, onCancelar }) {
+  const { modoOscuro } = useTheme();
+
+  const inputCls = modoOscuro
+    ? 'w-full bg-[#18223f] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50'
+    : 'w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400/50';
+
   return (
     <div className="space-y-3 mb-4">
       <div>
@@ -7,7 +15,7 @@ export function BloqueEditForm({ form, guardando, onFormChange, onGuardar, onCan
           type="date"
           value={form.fecha}
           onChange={(e) => onFormChange('fecha', e.target.value)}
-          className="w-full bg-[#18223f] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+          className={inputCls}
         />
       </div>
       <div>
@@ -16,7 +24,7 @@ export function BloqueEditForm({ form, guardando, onFormChange, onGuardar, onCan
           type="time"
           value={form.hora}
           onChange={(e) => onFormChange('hora', e.target.value)}
-          className="w-full bg-[#18223f] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+          className={inputCls}
         />
       </div>
       <div>
@@ -26,14 +34,16 @@ export function BloqueEditForm({ form, guardando, onFormChange, onGuardar, onCan
           value={form.lugar}
           onChange={(e) => onFormChange('lugar', e.target.value)}
           placeholder="Edificio, salón, etc."
-          className="w-full bg-[#18223f] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+          className={`${inputCls} placeholder-slate-500`}
         />
       </div>
       <div className="flex gap-2">
         <button
           onClick={onCancelar}
           disabled={guardando}
-          className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-800 rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 disabled:opacity-40"
+          className={`flex-1 border rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 disabled:opacity-40 ${
+            modoOscuro ? 'border-slate-600 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+          }`}
         >
           Cancelar
         </button>

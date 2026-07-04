@@ -90,7 +90,7 @@ export function Heroe() {
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold italic uppercase text-white max-w-2xl leading-tight">
                 ¡ÚNETE A LOS{' '}
-                <span className="text-[#FBBF24]">LOBOS ROJOS</span>!
+                <span className="text-amber-400">LOBOS ROJOS</span>!
               </h1>
 
               <p className="text-gray-200 text-base md:text-lg lg:text-xl font-medium tracking-wide max-w-xl mt-3 leading-relaxed">
@@ -99,7 +99,7 @@ export function Heroe() {
 
               <button
                 onClick={() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' })}
-                className="mt-6 inline-flex items-center gap-2 bg-[#FBBF24] text-[#0e162c] font-extrabold text-sm md:text-base px-6 py-3 md:px-8 md:py-3.5 rounded-xl shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer">
+                className="mt-6 inline-flex items-center gap-2 bg-amber-400 text-[#0e162c] font-extrabold text-sm md:text-base px-6 py-3 md:px-8 md:py-3.5 rounded-xl shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer">
                 <span>Explorar Clubes</span>
                 <Icono nombre="arrow-right" strokeWidth={2} className="h-4 w-4 md:h-5 md:w-5" />
               </button>

@@ -5,6 +5,7 @@ import logoLobo from '../../assets/logo-lobo.svg';
 import { Icono } from '../ui/Icono';
 import { BadgeNotificaciones } from './BadgeNotificaciones';
 import { MenuUsuario } from './MenuUsuario';
+import { ModalBase } from '../ui/ModalBase';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
 
@@ -14,9 +15,10 @@ export function BarraNavegacion({
   user, onLoginClick, onLogout, onDashboardClick,
   mostrarFiltros = true, onVolverCatalogo,
 }) {
-  const { tema } = useTheme();
+  const { tema, modoOscuro } = useTheme();
 
   const [mostrarHeader, setMostrarHeader] = useState(true);
+  const [mostrarAyuda, setMostrarAyuda] = useState(false);
   const ultimoScrollY = useRef(0);
 
   useEffect(() => {
@@ -69,9 +71,7 @@ export function BarraNavegacion({
           </div>
         </div>
 
-        {user && (user.id_rol === 2 || user.id_rol === 3 || user.id_rol === 4) ? (
-          <div className="hidden md:block md:justify-self-center" />
-        ) : mostrarFiltros ? (
+        {mostrarFiltros ? (
           <nav className={`hidden md:inline-flex items-center transition-colors duration-300 md:justify-self-center ${tema.navPill}`}>
             {CATEGORIAS.map((cat) => (
               <button
@@ -114,10 +114,34 @@ export function BarraNavegacion({
             onDashboardClick={onDashboardClick}
             onLogout={onLogout}
             onLoginClick={onLoginClick}
+            onAyuda={() => setMostrarAyuda(true)}
           />
         </div>
       </div>
     </header>
+
+    <ModalBase show={mostrarAyuda} onClose={() => setMostrarAyuda(false)} maxWidth="max-w-md">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>Ayuda</h3>
+        <button onClick={() => setMostrarAyuda(false)} className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>
+          <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
+        </button>
+      </div>
+      <div className={`space-y-4 text-sm leading-relaxed ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
+        <p>
+          <strong className="text-amber-400">Clubs UNID</strong> es la plataforma de registro y gestión de clubs universitarios.
+        </p>
+        <div className={`space-y-2 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p><span className="text-amber-400 font-bold">•</span> Explora el catálogo y postúlate a hasta 3 clubs.</p>
+          <p><span className="text-amber-400 font-bold">•</span> Sigue el estado de tus postulaciones en tu panel.</p>
+          <p><span className="text-amber-400 font-bold">•</span> Si eres presidente, gestiona solicitudes y convocatorias desde el dashboard.</p>
+          <p><span className="text-amber-400 font-bold">•</span> Si eres administrador, gestiona usuarios, clubs y roles.</p>
+        </div>
+        <p className={`text-xs pt-2 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
+          ¿Dudas o reportes? Contacta al administrador del sistema.
+        </p>
+      </div>
+    </ModalBase>
     </>
   );
 }

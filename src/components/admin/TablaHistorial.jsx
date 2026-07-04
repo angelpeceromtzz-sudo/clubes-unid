@@ -34,54 +34,95 @@ export function TablaHistorial({
           </p>
         </div>
       ) : (
-        <div className={`${tableBg} rounded-2xl overflow-hidden`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                  <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Fecha</th>
-                  <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Administrador</th>
-                  <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acción</th>
-                  <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Descripción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historial.map((h) => (
-                  <tr key={h.id_historial} className={`border-b transition-colors ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
-                    <td className={`px-5 py-4 whitespace-nowrap font-mono text-xs ${tdCls}`}>
+        <>
+          {/* Versión escritorio - tabla */}
+          <div className={`${tableBg} rounded-2xl overflow-hidden hidden md:block`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
+                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Fecha</th>
+                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Administrador</th>
+                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acción</th>
+                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Descripción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historial.map((h) => (
+                    <tr key={h.id_historial} className={`border-b transition-colors ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
+                      <td className={`px-5 py-4 whitespace-nowrap font-mono text-xs ${tdCls}`}>
+                        {new Date(h.fecha).toLocaleString('es-MX', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit',
+                        })}
+                      </td>
+                      <td className={`px-5 py-4 font-medium ${tdTitle}`}>{h.admin_nombre}</td>
+                      <td className="px-5 py-4">
+                        <Badge texto={{
+                          cambio_rol: 'Cambio de Rol',
+                          asignar_club: 'Asignar Club',
+                          desasignar_club: 'Desasignar Club',
+                          crear_club: 'Crear Club',
+                          actualizar_club: 'Actualizar Club',
+                          cambio_estatus_club: 'Cambio Estatus',
+                          enviar_anuncio: 'Enviar Anuncio',
+                          baja_usuario: 'Dar de Baja',
+                        }[h.accion] || h.accion} size="md" color={
+                          h.accion === 'cambio_rol' || h.accion === 'cambio_estatus_club'
+                            ? 'amber'
+                            : h.accion === 'crear_club' || h.accion === 'enviar_anuncio'
+                            ? 'emerald'
+                            : h.accion === 'baja_usuario' || h.accion === 'desasignar_club'
+                            ? 'red'
+                            : 'blue'
+                        } />
+                      </td>
+                      <td className={`px-5 py-4 ${tdCls} max-w-md break-words`}>{h.descripcion}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Versión móvil - tarjetas */}
+          <div className="space-y-2 md:hidden">
+            {historial.map((h) => {
+              const textoAccion = {
+                cambio_rol: 'Cambio de Rol',
+                asignar_club: 'Asignar Club',
+                desasignar_club: 'Desasignar Club',
+                crear_club: 'Crear Club',
+                actualizar_club: 'Actualizar Club',
+                cambio_estatus_club: 'Cambio Estatus',
+                enviar_anuncio: 'Enviar Anuncio',
+                baja_usuario: 'Dar de Baja',
+              }[h.accion] || h.accion;
+              const colorAccion = h.accion === 'cambio_rol' || h.accion === 'cambio_estatus_club'
+                ? 'amber'
+                : h.accion === 'crear_club' || h.accion === 'enviar_anuncio'
+                ? 'emerald'
+                : h.accion === 'baja_usuario' || h.accion === 'desasignar_club'
+                ? 'red'
+                : 'blue';
+              return (
+                <div key={h.id_historial} className={`rounded-xl border p-3 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge texto={textoAccion} size="sm" color={colorAccion} />
+                    <span className={`text-[10px] font-mono ${tdCls}`}>
                       {new Date(h.fecha).toLocaleString('es-MX', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit',
                       })}
-                    </td>
-                    <td className={`px-5 py-4 font-medium ${tdTitle}`}>{h.admin_nombre}</td>
-                    <td className="px-5 py-4">
-                      <Badge texto={{
-                        cambio_rol: 'Cambio de Rol',
-                        asignar_club: 'Asignar Club',
-                        desasignar_club: 'Desasignar Club',
-                        crear_club: 'Crear Club',
-                        actualizar_club: 'Actualizar Club',
-                        cambio_estatus_club: 'Cambio Estatus',
-                        enviar_anuncio: 'Enviar Anuncio',
-                        baja_usuario: 'Dar de Baja',
-                      }[h.accion] || h.accion} size="md" color={
-                        h.accion === 'cambio_rol' || h.accion === 'cambio_estatus_club'
-                          ? 'amber'
-                          : h.accion === 'crear_club' || h.accion === 'enviar_anuncio'
-                          ? 'emerald'
-                          : h.accion === 'baja_usuario' || h.accion === 'desasignar_club'
-                          ? 'red'
-                          : 'blue'
-                      } />
-                    </td>
-                    <td className={`px-5 py-4 ${tdCls} max-w-xs truncate`}>{h.descripcion}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </span>
+                  </div>
+                  <p className={`text-xs font-medium mb-1 ${tdTitle}`}>{h.admin_nombre}</p>
+                  <p className={`text-[11px] leading-relaxed ${tdCls}`}>{h.descripcion}</p>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
