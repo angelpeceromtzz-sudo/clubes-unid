@@ -1,3 +1,5 @@
+/* Modal base con overlay, cierre al hacer clic fuera y ancho configurable (max-w-*).
+   Controlado por props `show` y `onClose`. */
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function ModalBase({ show, onClose, maxWidth = 'max-w-lg', children }) {

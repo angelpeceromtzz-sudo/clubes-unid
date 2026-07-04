@@ -1,3 +1,4 @@
+/* Etiqueta tipo badge con colores predefinidos (amber, emerald, red, blue, etc.) y tamaños sm/md. */
 const COLORES = {
   amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
   emerald: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',

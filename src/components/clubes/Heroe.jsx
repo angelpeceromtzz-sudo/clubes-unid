@@ -1,3 +1,4 @@
+/* Hero con carrusel de diapositivas (imágenes de fondo, gradiente, título y CTA para explorar clubes). */
 import { useState, useEffect, useRef } from 'react';
 import { Icono } from '../ui/Icono';
 

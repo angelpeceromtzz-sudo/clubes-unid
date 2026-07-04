@@ -1,3 +1,4 @@
+/* Hook del panel de administración: gestiona estado de usuarios, clubes, feedback, historial y modales. */
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';

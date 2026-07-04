@@ -1,3 +1,4 @@
+/* Resumen estadístico para rectoría: tarjetas de métricas y barras de ocupación por club. */
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { TarjetaStat } from '../ui/TarjetaStat';

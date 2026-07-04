@@ -1,3 +1,4 @@
+/* Tabla de historial de acciones del administrador con fecha, admin, acción y descripción. */
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Badge } from '../ui/Badge';

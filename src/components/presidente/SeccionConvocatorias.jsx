@@ -1,3 +1,4 @@
+/* Sección de convocatorias del presidente: gestiona bloques y horarios del club. */
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';

@@ -1,7 +1,7 @@
 import { Badge } from '../ui/Badge';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
-import { Th, Td } from '../ui/TableCells';
+import { Th, Td } from '../ui/CeldasTabla';
 
 export function SeccionClubes({ clubesDetalle, cargando }) {
   const { modoOscuro } = useTheme();

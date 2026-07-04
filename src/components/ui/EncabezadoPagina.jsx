@@ -1,3 +1,4 @@
+/* Encabezado de página con título, subtítulo opcional y un área para acciones (botones). */
 export function EncabezadoPagina({ titulo, subtitulo, accion }) {
   return (
     <div className="flex items-center justify-between gap-4">

@@ -1,3 +1,4 @@
+/* Campo de texto/textarea reutilizable con label, validación de error y soporte para tema oscuro/claro. */
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function CampoTexto({ label, name, placeholder, value, onChange, type = 'text', disabled, error, required }) {

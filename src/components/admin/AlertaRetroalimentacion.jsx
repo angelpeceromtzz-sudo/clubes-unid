@@ -1,3 +1,4 @@
+/* Muestra alertas de éxito o error según los props feedback/errorFeedback. */
 import { Alerta } from '../ui/Alerta';
 
 export function AlertaRetroalimentacion({ feedback, errorFeedback }) {

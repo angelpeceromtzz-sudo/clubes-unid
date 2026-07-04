@@ -1,3 +1,4 @@
+/* Select reutilizable con label, placeholder, opciones (string[] u objetos {value, label}) y validación de error. */
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function CampoSelect({ label, name, value, onChange, opciones, placeholder, required, error }) {

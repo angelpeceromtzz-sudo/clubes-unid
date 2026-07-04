@@ -1,3 +1,5 @@
+/* Alerta contextual con variantes de color (error, success, warning, info).
+   Muestra un icono y mensaje; soporta children para contenido adicional. */
 import { Icono } from './Icono';
 
 const CONFIG = {

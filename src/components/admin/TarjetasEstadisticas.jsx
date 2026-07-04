@@ -1,3 +1,4 @@
+/* Tarjetas de resumen con totales de alumnos, clubes activos e inscripciones. */
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function TarjetasEstadisticas({ totalAlumnos, clubesActivos, totalInscripciones }) {

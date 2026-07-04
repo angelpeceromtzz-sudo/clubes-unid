@@ -1,3 +1,4 @@
+/* Tarjeta de estadística con título, valor numérico, icono SVG inline y color de fondo/borde. */
 export function TarjetaStat({ titulo, valor, icono, color }) {
   return (
     <div className={`rounded-xl border p-5 ${color} transition-all duration-200`}>

@@ -1,3 +1,4 @@
+/* Hook que redirige al usuario a su dashboard correspondiente tras el inicio de sesión. */
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';

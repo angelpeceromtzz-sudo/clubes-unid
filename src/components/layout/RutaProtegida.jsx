@@ -1,3 +1,4 @@
+/* Componente de protección de rutas. Redirige a "/" si el usuario no está autenticado o no tiene el rol requerido. */
 import { Navigate } from 'react-router-dom';
 import { useAutenticacion } from '../../contexts/AuthContext';
 

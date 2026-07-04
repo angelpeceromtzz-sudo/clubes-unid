@@ -1,3 +1,4 @@
+/* Estado vacío con icono, título y descripción. Se usa cuando no hay datos que mostrar. */
 import { Icono } from './Icono';
 
 export function EmptyState({ icono = 'users', titulo, descripcion }) {

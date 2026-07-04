@@ -1,3 +1,4 @@
+/* Lista de asistencia por club: selector de club y tabla de alumnos con fecha/hora. */
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 

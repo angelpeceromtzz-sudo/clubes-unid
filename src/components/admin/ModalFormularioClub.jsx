@@ -1,3 +1,4 @@
+/* Modal para crear o editar un club: formulario con nombre, categoría y cupo máximo. */
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 import { BotonAccion } from '../ui/BotonAccion';

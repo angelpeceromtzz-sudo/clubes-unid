@@ -1,3 +1,4 @@
+/* Vista de selección final del presidente: ofertar cupo a alumnos preseleccionados. */
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';

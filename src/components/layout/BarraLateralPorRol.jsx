@@ -1,3 +1,5 @@
+/* Barra lateral con el nombre del usuario, rol y navegación por pestañas.
+   Se oculta en impresión y en móvil (hidden md:flex). */
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function BarraLateralPorRol({ tituloRol, elementosNav, vistaActiva, onVistaChange, usuario, subtitulo }) {

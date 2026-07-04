@@ -1,3 +1,4 @@
+/* Barra de búsqueda para filtrar usuarios por ID, nombre o correo. */
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 

@@ -1,3 +1,4 @@
+/* Muestra la información general de un club: descripción, categoría y horarios. */
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function InformacionClub({ club }) {

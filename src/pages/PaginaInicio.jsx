@@ -1,3 +1,4 @@
+/* Página de inicio con catálogo de clubes, hero y detalle expandible. Muestra alerta si no hay sesión iniciada. */
 import { useState, useEffect } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';

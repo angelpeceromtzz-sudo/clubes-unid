@@ -1,3 +1,4 @@
+/* Vista detalle de un club con sidebar, información, horarios, lugar y formulario de inscripción. */
 import { useState } from 'react';
 import { FormularioInscripcion } from '../formularios/FormularioInscripcion';
 import { useAutenticacion } from '../../contexts/AuthContext';
