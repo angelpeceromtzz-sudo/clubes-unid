@@ -9,6 +9,7 @@ import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
 import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
 import { SeccionPostulaciones } from '../components/presidente/SeccionPostulaciones';
 import { usePanelAlumno } from '../hooks/usePanelAlumno';
+import { Spinner } from '../components/ui/Spinner';
 
 export function PanelAlumno() {
   const navigate = useNavigate();
@@ -46,11 +47,7 @@ export function PanelAlumno() {
   }, [d]);
 
   if (d.loading) {
-    return (
-      <div className="flex justify-center py-32">
-        <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" />
-      </div>
-    );
+    return <Spinner className="py-32" />;
   }
 
   if (!d.club && d.postulaciones.length === 0) {

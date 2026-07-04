@@ -3,6 +3,7 @@ import { ModalExito } from '../modals/ModalExito';
 import { api } from '../../services/api';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { Icono } from '../ui/Icono';
+import { ErrorAlerta } from '../ui/ErrorAlerta';
 
 const CARRERAS = [
   'Ingeniería en Software y Sist.',
@@ -194,7 +195,7 @@ export function FormularioInscripcion({ club, onClose }) {
               <textarea name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} rows={2} placeholder="¿Has participado en algo similar antes?" className={`${inputCls} resize-none`} />
             </div>
 
-            {errorApi && <p className="text-red-400 text-sm font-medium">{errorApi}</p>}
+            <ErrorAlerta mensaje={errorApi} />
 
             <button
               type="submit"

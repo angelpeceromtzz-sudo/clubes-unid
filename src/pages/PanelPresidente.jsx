@@ -13,6 +13,7 @@ import { EstadoVacio } from '../components/presidente/EmptyState';
 import { SolicitudesPresidente } from '../components/presidente/SolicitudesPresidente';
 import { SeccionConvocatorias } from '../components/presidente/SeccionConvocatorias';
 import { SeleccionFinal } from '../components/presidente/SeleccionFinal';
+import { Spinner } from '../components/ui/Spinner';
 
 export function PanelPresidente() {
   const { usuario } = useAutenticacion();
@@ -22,9 +23,7 @@ export function PanelPresidente() {
   if (d.loading) {
     return (
       <RutaProtegida>
-        <div className="flex justify-center py-32">
-          <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" />
-        </div>
+        <Spinner className="py-32" />
       </RutaProtegida>
     );
   }

@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { TarjetaClub } from '../components/clubes/TarjetaClub';
 import { Heroe } from '../components/clubes/Heroe';
 import { DetalleClub } from '../components/clubes/DetalleClub';
+import { Spinner } from '../components/ui/Spinner';
 
 export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetalleChange }) {
   const { estaAutenticado } = useAutenticacion();
@@ -48,9 +49,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetall
         )}
 
         {clubesLoading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" />
-          </div>
+          <Spinner className="py-20" />
         ) : clubes.length === 0 ? (
           <p className={`text-center py-20 text-lg ${tema.subtitle}`}>
             No hay clubes disponibles en esta categoría.

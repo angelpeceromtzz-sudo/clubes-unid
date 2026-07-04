@@ -1,10 +1,11 @@
 import { Badge } from './Badge';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Spinner } from '../ui/Spinner';
 
 export function SeccionClubes({ clubesDetalle, cargando }) {
   const { modoOscuro } = useTheme();
   if (cargando) {
-    return <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" /></div>;
+    return <Spinner className="py-20" />;
   }
 
   const estatusColor = (estatus) => {

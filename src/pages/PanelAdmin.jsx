@@ -13,6 +13,7 @@ import { TablaUsuarios } from '../components/admin/UserTable';
 import { TablaClubes } from '../components/admin/ClubTable';
 import { ModalFormularioClub } from '../components/admin/ClubFormModal';
 import { TablaHistorial } from '../components/admin/HistorialTable';
+import { Spinner } from '../components/ui/Spinner';
 
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
@@ -22,9 +23,7 @@ export function PanelAdmin() {
   if (d.loading) {
     return (
       <RutaProtegida requiereAdmin>
-        <div className="flex justify-center py-32">
-          <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" />
-        </div>
+        <Spinner className="py-32" />
       </RutaProtegida>
     );
   }
