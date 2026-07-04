@@ -1,3 +1,4 @@
+/* Tarjeta de club en el catálogo: imagen, categoría, nombre, descripción, cupo. Soporta estado "próximamente". */
 import { clasesBadge } from '../../constants/colores';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';

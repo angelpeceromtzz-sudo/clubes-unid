@@ -1,3 +1,4 @@
+/* Tabla de gestión de usuarios: filtro, cambio de rol, asignación/desasignación de club. */
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Badge } from '../ui/Badge';

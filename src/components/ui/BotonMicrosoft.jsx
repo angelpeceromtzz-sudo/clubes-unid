@@ -1,3 +1,4 @@
+/* Botón de inicio de sesión con Microsoft (MSAL). Muestra estado de carga y errores. */
 import { useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '../../services/authConfig';

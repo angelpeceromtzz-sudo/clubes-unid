@@ -1,3 +1,4 @@
+/* Barra de navegación superior con logo, categorías (filtro), acciones de usuario y badge de notificaciones. Se oculta al hacer scroll hacia abajo en móvil. */
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import logoLobo from '../../assets/logo-lobo.svg';

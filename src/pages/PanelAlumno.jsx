@@ -1,3 +1,4 @@
+/* Panel del alumno: muestra su club (si es miembro) o sus postulaciones. Redirige según rol. */
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';

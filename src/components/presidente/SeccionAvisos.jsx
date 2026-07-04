@@ -1,3 +1,4 @@
+/* Sección de avisos del club: lista y crea publicaciones visibles para los miembros. */
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';

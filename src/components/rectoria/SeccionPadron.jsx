@@ -1,8 +1,9 @@
+/* Padrón de alumnos filtrable por club, carrera o nombre con tabla de resultados. */
 import { useState } from 'react';
 import { Badge } from '../ui/Badge';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
-import { Th, Td } from '../ui/TableCells';
+import { Th, Td } from '../ui/CeldasTabla';
 
 export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clubesDetalle, cargando }) {
   const { modoOscuro } = useTheme();

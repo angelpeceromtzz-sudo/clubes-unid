@@ -1,3 +1,4 @@
+/* Hook para cargar y filtrar clubes del catálogo por categoría desde la API. */
 import { useState, useEffect } from 'react';
 import { api, getSession } from '../services/api';
 import { useAutenticacion } from '../contexts/AuthContext';

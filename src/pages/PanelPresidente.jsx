@@ -1,3 +1,4 @@
+/* Panel del presidente de club: información del club, solicitudes, convocatorias y selección final. */
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
@@ -7,7 +8,7 @@ import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
 import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
 import { usePanelPresidente } from '../hooks/usePanelPresidente';
 import { NavegacionPanel } from '../components/layout/NavegacionPanel';
-import { ELEMENTOS_NAV_PRESIDENTE } from '../components/admin/navItems';
+import { ELEMENTOS_NAV_PRESIDENTE } from '../components/admin/elementosNavegacion';
 import { EstadoVacio } from '../components/presidente/EmptyState';
 import { SolicitudesPresidente } from '../components/presidente/SolicitudesPresidente';
 import { SeccionConvocatorias } from '../components/presidente/SeccionConvocatorias';

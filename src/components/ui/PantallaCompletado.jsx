@@ -1,3 +1,4 @@
+/* Pantalla de éxito/completado con icono, título, descripción y botón de volver. */
 import { Icono } from './Icono';
 import { BotonAccion } from './BotonAccion';
 

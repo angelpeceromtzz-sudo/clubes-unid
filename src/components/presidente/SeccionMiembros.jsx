@@ -1,3 +1,4 @@
+/* Lista de miembros del club con avatar inicial, nombre y rol. */
 import { useTheme } from '../../contexts/ThemeContext';
 import { AvatarInicial } from '../ui/AvatarInicial';
 

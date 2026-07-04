@@ -1,3 +1,4 @@
+/* Hook del panel de alumno: carga el club del usuario y sus postulaciones activas. */
 import { useState, useEffect, useCallback } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { api } from '../services/api';

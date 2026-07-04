@@ -1,3 +1,4 @@
+/* Hook del panel de presidente: carga datos del club, miembros y maneja navegación entre vistas. */
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';

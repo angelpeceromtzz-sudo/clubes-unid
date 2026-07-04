@@ -1,3 +1,4 @@
+/* Indicador de carga animado (spinner circular). Soporta tamaños sm, md, lg y color personalizado. */
 const TAMANOS = {
   sm: { wrap: 'py-4', icon: 'w-4 h-4 border-2' },
   md: { wrap: 'py-8', icon: 'w-6 h-6 border-[3px]' },

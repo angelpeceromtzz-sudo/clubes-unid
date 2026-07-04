@@ -1,3 +1,4 @@
+/* Avatar circular con la inicial del nombre. Colores y tamaños configurables. */
 const TAMANOS = {
   sm: 'w-8 h-8 text-xs',
   md: 'w-10 h-10 text-sm',

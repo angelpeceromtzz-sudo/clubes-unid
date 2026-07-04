@@ -1,3 +1,4 @@
+/* Navegación inferior fija para móvil con acceso a inicio, panel del club y perfil/inicio de sesión. */
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { Icono } from '../ui/Icono';

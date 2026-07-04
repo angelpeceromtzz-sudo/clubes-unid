@@ -1,3 +1,4 @@
+/* Barra de progreso que muestra ocupación (ej. cupo de club). Calcula porcentaje y color según umbrales (50%, 80%). */
 export function BarraOcupacion({ nombre, maximo, ocupado, maxOcupado, modoOscuro }) {
   const pct = maximo > 0 ? Math.round((ocupado / maximo) * 100) : 0;
   const anchoRelativo = maxOcupado > 0 ? Math.round((ocupado / maxOcupado) * 100) : 0;

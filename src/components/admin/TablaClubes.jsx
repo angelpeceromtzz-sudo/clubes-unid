@@ -1,3 +1,4 @@
+/* Tabla de gestión de clubes: cambiar estatus, editar, dar de baja o crear nuevo club. */
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Badge } from '../ui/Badge';

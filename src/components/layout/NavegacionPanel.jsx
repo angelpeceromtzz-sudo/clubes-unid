@@ -1,3 +1,5 @@
+/* Panel de navegación con sidebar fijo en escritorio y tabs horizontales en móvil.
+   Renderiza `children` como contenido principal sincronizado con `vistaActiva`. */
 export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, children }) {
   return (
     <div className="flex min-h-screen">

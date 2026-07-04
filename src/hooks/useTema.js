@@ -1,3 +1,4 @@
+/* Hook para alternar entre modo oscuro y claro. Persiste la preferencia en localStorage. */
 import { useState, useEffect } from 'react';
 
 export function useTema() {

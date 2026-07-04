@@ -1,3 +1,4 @@
+/* Hook del panel de rectoría: carga estadísticas, detalle de clubes, padrón y asistencia. */
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 

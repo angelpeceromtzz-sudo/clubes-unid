@@ -1,3 +1,4 @@
+/* Mapa de iconos SVG basado en Heroicons. Recibe un nombre clave y renderiza el SVG correspondiente. */
 const ICONOS = {
   check: 'M5 13l4 4L19 7',
   close: 'M6 18L18 6M6 6l12 12',

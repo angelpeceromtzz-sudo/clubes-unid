@@ -1,17 +1,18 @@
+/* Panel de administración: gestiona usuarios, clubes, anuncios e historial mediante NavegacionPanel. */
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { FormularioNotificacion } from '../components/formularios/FormularioNotificacion';
 import { usePanelAdmin } from '../hooks/usePanelAdmin';
 import { NavegacionPanel } from '../components/layout/NavegacionPanel';
-import { ELEMENTOS_NAV_ADMIN } from '../components/admin/navItems';
-import { AlertaRetroalimentacion } from '../components/admin/FeedbackAlert';
-import { TarjetasEstadisticas } from '../components/admin/StatsCards';
-import { BarraBusquedaUsuarios } from '../components/admin/UserSearchBar';
-import { TablaUsuarios } from '../components/admin/UserTable';
-import { TablaClubes } from '../components/admin/ClubTable';
-import { ModalFormularioClub } from '../components/admin/ClubFormModal';
-import { TablaHistorial } from '../components/admin/HistorialTable';
+import { ELEMENTOS_NAV_ADMIN } from '../components/admin/elementosNavegacion';
+import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
+import { TarjetasEstadisticas } from '../components/admin/TarjetasEstadisticas';
+import { BarraBusquedaUsuarios } from '../components/admin/BarraBusquedaUsuarios';
+import { TablaUsuarios } from '../components/admin/TablaUsuarios';
+import { TablaClubes } from '../components/admin/TablaClubes';
+import { ModalFormularioClub } from '../components/admin/ModalFormularioClub';
+import { TablaHistorial } from '../components/admin/TablaHistorial';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 

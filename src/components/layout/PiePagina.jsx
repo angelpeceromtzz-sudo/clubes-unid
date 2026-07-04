@@ -1,3 +1,4 @@
+/* Pie de página con información de la universidad, categorías, contacto y redes sociales. */
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function PiePagina() {
