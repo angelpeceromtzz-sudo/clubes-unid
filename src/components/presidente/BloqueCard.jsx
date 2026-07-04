@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Badge } from '../ui/Badge';
+import { Spinner } from '../ui/Spinner';
+import { BotonAccion } from '../ui/BotonAccion';
+import { BloqueEditForm } from './bloques-horarios/BloqueEditForm';
 
 function BloqueHeader({ bloque, totalAlumnos, enviada }) {
   const { modoOscuro } = useTheme();
@@ -16,64 +20,7 @@ function BloqueHeader({ bloque, totalAlumnos, enviada }) {
           <p className="text-xs text-slate-500">{totalAlumnos} alumno{totalAlumnos !== 1 ? 's' : ''}</p>
         </div>
       </div>
-      {enviada && (
-        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-          Enviada
-        </span>
-      )}
-    </div>
-  );
-}
-
-function BloqueEditForm({ form, guardando, onFormChange, onGuardar, onCancelar }) {
-  return (
-    <div className="space-y-3 mb-4">
-      <div>
-        <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Fecha</label>
-        <input
-          type="date"
-          value={form.fecha}
-          onChange={(e) => onFormChange('fecha', e.target.value)}
-          className="w-full bg-[#18223f] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-        />
-      </div>
-      <div>
-        <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Hora</label>
-        <input
-          type="time"
-          value={form.hora}
-          onChange={(e) => onFormChange('hora', e.target.value)}
-          className="w-full bg-[#18223f] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-        />
-      </div>
-      <div>
-        <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Lugar</label>
-        <input
-          type="text"
-          value={form.lugar}
-          onChange={(e) => onFormChange('lugar', e.target.value)}
-          placeholder="Edificio, salón, etc."
-          className="w-full bg-[#18223f] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-        />
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={onCancelar}
-          disabled={guardando}
-          className="flex-1 border border-slate-600 text-slate-300 hover:bg-slate-800 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40"
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={onGuardar}
-          disabled={guardando}
-          className="flex-1 bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-bold text-xs uppercase tracking-wider rounded-xl px-4 py-2 transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center gap-1"
-        >
-          {guardando ? (
-            <span className="animate-spin w-3.5 h-3.5 border-2 border-[#0e162c] border-t-transparent rounded-full" />
-          ) : 'Guardar'}
-        </button>
-      </div>
+      {enviada && <Badge texto="Enviada" color="emerald" />}
     </div>
   );
 }
@@ -122,7 +69,7 @@ function BloqueActions({ editando, guardando, enviando, completo, onToggleEdit, 
         className="flex-1 border border-indigo-500/40 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1"
       >
         {enviando ? (
-          <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
+          <Spinner size="sm" color="border-current" className="!py-0" />
         ) : 'Enviar convocatoria'}
       </button>
       <button

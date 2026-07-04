@@ -5,6 +5,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
 import { ErrorAlerta } from '../ui/ErrorAlerta';
+import { AvatarInicial } from '../ui/AvatarInicial';
+import { Badge } from '../ui/Badge';
+import { EncabezadoPagina } from '../ui/EncabezadoPagina';
+import { PantallaCompletado } from '../ui/PantallaCompletado';
 
 export function SeleccionFinal({ club }) {
   const { tema, modoOscuro } = useTheme();
@@ -69,32 +73,16 @@ export function SeleccionFinal({ club }) {
   }
 
   if (completado) {
-    return (
-      <div className={`rounded-2xl p-8 border text-center ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'}`}>
-        <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-          <Icono nombre="check-circle" className="h-8 w-8 text-emerald-400" strokeWidth={2} />
-        </div>
-        <h3 className={`text-lg font-black uppercase tracking-wider mb-2 ${modoOscuro ? 'text-emerald-300' : 'text-emerald-700'}`}>
-          Ofertas enviadas
-        </h3>
-        <p className={`text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-          {aprobados.length} alumno{aprobados.length !== 1 ? 's' : ''} recibirá{aprobados.length === 1 ? '' : 'n'} oferta{aprobados.length !== 1 ? 's' : ''} de ingreso.
-          {rechazados.length > 0 && ` ${rechazados.length} alumno${rechazados.length !== 1 ? 's' : ''} notificado${rechazados.length !== 1 ? 's' : ''} como no seleccionado${rechazados.length !== 1 ? 's' : ''}.`}
-        </p>
-      </div>
-    );
+    const descripcion = `${aprobados.length} alumno${aprobados.length !== 1 ? 's' : ''} recibirá${aprobados.length === 1 ? '' : 'n'} oferta${aprobados.length !== 1 ? 's' : ''} de ingreso.${rechazados.length > 0 ? ` ${rechazados.length} alumno${rechazados.length !== 1 ? 's' : ''} notificado${rechazados.length !== 1 ? 's' : ''} como no seleccionado${rechazados.length !== 1 ? 's' : ''}.` : ''}`;
+    return <PantallaCompletado icono="check-circle" titulo="Ofertas enviadas" descripcion={descripcion} />;
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className={`text-xl font-black uppercase tracking-wider mb-1 ${tema.title}`}>
-          Selección Final
-        </h2>
-        <p className={`text-sm ${tema.subtitle}`}>
-          Marca a los alumnos que aprobaron la evaluación presencial. Al enviar, recibirán una oferta de ingreso.
-        </p>
-      </div>
+      <EncabezadoPagina
+        titulo="Selección Final"
+        subtitulo="Marca a los alumnos que aprobaron la evaluación presencial. Al enviar, recibirán una oferta de ingreso."
+      />
 
       <ErrorAlerta mensaje={error} />
 
@@ -140,22 +128,14 @@ export function SeleccionFinal({ club }) {
                         <Icono nombre="check" className="h-4 w-4 text-white" strokeWidth={3} />
                       )}
                     </div>
-                    <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xs shrink-0">
-                      {alumno.nombre_completo.charAt(0)}
-                    </div>
+                    <AvatarInicial nombre={alumno.nombre_completo} color="amber" />
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-semibold truncate ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
                         {alumno.nombre_completo}
                       </p>
                       <p className="text-xs text-slate-500 font-mono">{alumno.matricula} · {alumno.carrera}</p>
                     </div>
-                    <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                      esAprobado
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    }`}>
-                      {esAprobado ? 'Aprobado' : 'Rechazado'}
-                    </span>
+                    <Badge texto={esAprobado ? 'Aprobado' : 'Rechazado'} color={esAprobado ? 'emerald' : 'red'} />
                   </div>
                 </div>
               );
@@ -169,7 +149,7 @@ export function SeleccionFinal({ club }) {
               className="w-full bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl px-6 py-4 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {enviando ? (
-                <span className="animate-spin w-5 h-5 border-2 border-[#0e162c] border-t-transparent rounded-full" />
+                <Spinner size="sm" color="border-[#0e162c]" className="!py-0" />
               ) : (
                 <>
                   <Icono nombre="check-circle" className="h-5 w-5" strokeWidth={2.5} />

@@ -3,7 +3,9 @@ import { ModalExito } from '../modals/ModalExito';
 import { api } from '../../services/api';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { Icono } from '../ui/Icono';
-import { ErrorAlerta } from '../ui/ErrorAlerta';
+import { Alerta } from '../ui/Alerta';
+import { CampoTexto } from '../ui/CampoTexto';
+import { CampoSelect } from '../ui/CampoSelect';
 
 const CARRERAS = [
   'Ingeniería en Software y Sist.',
@@ -101,9 +103,6 @@ export function FormularioInscripcion({ club, onClose }) {
     }
   }
 
-  const inputCls =
-    'w-full bg-[#18223f] border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400 transition-all';
-  const selectCls = inputCls;
   const labelCls = 'block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5';
   const errorCls = 'text-red-400 text-xs mt-1 font-medium';
 
@@ -124,78 +123,29 @@ export function FormularioInscripcion({ club, onClose }) {
             </button>
           </div>
 
-          {limiteAlcanzado && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4">
-              <p className="text-red-400 text-sm font-semibold">
-                Has alcanzado el límite de 3 postulaciones. No puedes enviar más formularios.
-              </p>
-            </div>
-          )}
+          {limiteAlcanzado && <Alerta tipo="error" mensaje="Has alcanzado el límite de 3 postulaciones. No puedes enviar más formularios." />}
 
-          {yaPostulado && !limiteAlcanzado && (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
-              <p className="text-amber-400 text-sm font-semibold">
-                Ya te has postulado a este club anteriormente.
-              </p>
-            </div>
-          )}
+          {yaPostulado && !limiteAlcanzado && <Alerta tipo="warning" mensaje="Ya te has postulado a este club anteriormente." />}
 
           <form onSubmit={manejarEnvio} className="space-y-4">
-            <div>
-              <label className={labelCls}>Nombre Completo <span className="text-red-400">*</span></label>
-              <input type="text" name="nombre_completo" value={formulario.nombre_completo} onChange={manejarCambio} placeholder="Tu nombre completo" className={inputCls} />
-              {errores.nombre_completo && <p className={errorCls}>{errores.nombre_completo}</p>}
-            </div>
+            <CampoTexto label="Nombre Completo" name="nombre_completo" value={formulario.nombre_completo} onChange={manejarCambio} placeholder="Tu nombre completo" required error={errores.nombre_completo} />
 
-            <div>
-              <label className={labelCls}>Matrícula <span className="text-red-400">*</span></label>
-              <input type="text" name="matricula" inputMode="numeric" maxLength={15} value={formulario.matricula} onChange={manejarCambio} placeholder="Ej: 00906641" className={inputCls} />
-              {errores.matricula && <p className={errorCls}>{errores.matricula}</p>}
-            </div>
+            <CampoTexto label="Matrícula" name="matricula" value={formulario.matricula} onChange={manejarCambio} placeholder="Ej: 00906641" required error={errores.matricula} />
 
-            <div>
-              <label className={labelCls}>Carrera <span className="text-red-400">*</span></label>
-              <select name="carrera" value={formulario.carrera} onChange={manejarCambio} className={selectCls}>
-                <option value="" disabled>Selecciona tu carrera</option>
-                {CARRERAS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              {errores.carrera && <p className={errorCls}>{errores.carrera}</p>}
-            </div>
+            <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Cuatrimestre <span className="text-red-400">*</span></label>
-                <input type="number" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} min="1" placeholder="Ej: 3" className={inputCls} />
-                {errores.cuatrimestre && <p className={errorCls}>{errores.cuatrimestre}</p>}
-              </div>
-              <div>
-                <label className={labelCls}>Turno <span className="text-red-400">*</span></label>
-                <select name="turno" value={formulario.turno} onChange={manejarCambio} className={selectCls}>
-                  <option value="" disabled>Selecciona</option>
-                  {TURNOS.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                {errores.turno && <p className={errorCls}>{errores.turno}</p>}
-              </div>
+              <CampoTexto label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} type="number" placeholder="Ej: 3" required error={errores.cuatrimestre} />
+              <CampoSelect label="Turno" name="turno" value={formulario.turno} onChange={manejarCambio} opciones={TURNOS} placeholder="Selecciona" required error={errores.turno} />
             </div>
 
-            <div>
-              <label className={labelCls}>Teléfono de Contacto <span className="text-red-400">*</span></label>
-              <input type="tel" name="telefono_contacto" inputMode="numeric" maxLength={10} value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" className={inputCls} />
-              {errores.telefono_contacto && <p className={errorCls}>{errores.telefono_contacto}</p>}
-            </div>
+            <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} />
 
-            <div>
-              <label className={labelCls}>¿Por qué quieres unirte? <span className="text-red-400">*</span></label>
-              <textarea name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} rows={3} placeholder="Cuéntanos tus motivaciones..." className={`${inputCls} resize-none`} />
-              {errores.motivo_ingreso && <p className={errorCls}>{errores.motivo_ingreso}</p>}
-            </div>
+            <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} />
 
-            <div>
-              <label className={labelCls}>Experiencia Previa</label>
-              <textarea name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} rows={2} placeholder="¿Has participado en algo similar antes?" className={`${inputCls} resize-none`} />
-            </div>
+            <CampoTexto label="Experiencia Previa" name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} placeholder="¿Has participado en algo similar antes?" type="textarea" />
 
-            <ErrorAlerta mensaje={errorApi} />
+            <Alerta tipo="error" mensaje={errorApi} />
 
             <button
               type="submit"

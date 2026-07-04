@@ -6,18 +6,18 @@ import { InformacionClub } from '../components/clubes/InformacionClub';
 import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
 import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
 import { usePanelPresidente } from '../hooks/usePanelPresidente';
-import { BarraLateralPorRol } from '../components/layout/BarraLateralPorRol';
-import { PestanasMovilPorRol } from '../components/layout/PestanasMovilPorRol';
+import { NavegacionPanel } from '../components/layout/NavegacionPanel';
 import { ELEMENTOS_NAV_PRESIDENTE } from '../components/admin/navItems';
 import { EstadoVacio } from '../components/presidente/EmptyState';
 import { SolicitudesPresidente } from '../components/presidente/SolicitudesPresidente';
 import { SeccionConvocatorias } from '../components/presidente/SeccionConvocatorias';
 import { SeleccionFinal } from '../components/presidente/SeleccionFinal';
 import { Spinner } from '../components/ui/Spinner';
+import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 
 export function PanelPresidente() {
   const { usuario } = useAutenticacion();
-  const { tema, modoOscuro, esOscuro, sbBg, sbItemBase, sbItemActive, sbItemInactive } = useTheme();
+  const { tema } = useTheme();
   const d = usePanelPresidente(usuario);
 
   if (d.loading) {
@@ -46,33 +46,16 @@ export function PanelPresidente() {
 
   return (
     <RutaProtegida>
-      <div className="flex min-h-[calc(100vh-4rem)]">
-        <BarraLateralPorRol
-          tituloRol="Presidente"
-          elementosNav={ELEMENTOS_NAV_PRESIDENTE}
-          vistaActiva={d.vistaActiva}
-          onVistaChange={d.setVistaActiva}
-          usuario={d.user}
-          subtitulo={d.club.nombre_club}
-        />
-
-        <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <PestanasMovilPorRol
-            elementosNav={ELEMENTOS_NAV_PRESIDENTE}
-            vistaActiva={d.vistaActiva}
-            onVistaChange={d.setVistaActiva}
-          />
-
-          <div className="mb-6 md:mb-8">
-            <h1 className={`text-xl sm:text-2xl md:text-3xl font-black break-words whitespace-normal ${tema.title}`}>
-              Panel de Presidente
-            </h1>
-            <p className={`text-sm mt-1 ${tema.subtitle}`}>
-              Bienvenido, {d.user.nombre_completo}
-              <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-400 font-bold whitespace-nowrap">
-                · Presidente de {d.club.nombre_club}
-              </span>
-            </p>
+      <NavegacionPanel
+        elementosNav={ELEMENTOS_NAV_PRESIDENTE}
+        vistaActiva={d.vistaActiva}
+        onVistaChange={d.setVistaActiva}
+      >
+        <div className="mb-6 md:mb-8">
+            <EncabezadoPagina
+              titulo="Panel de Presidente"
+              subtitulo={`Bienvenido, ${d.user.nombre_completo} · Presidente de ${d.club.nombre_club}`}
+            />
           </div>
 
           {d.vistaActiva === 'mi-club' && (
@@ -111,8 +94,7 @@ export function PanelPresidente() {
           {d.vistaActiva === 'seleccion-final' && (
             <SeleccionFinal club={d.club} />
           )}
-        </main>
-      </div>
+      </NavegacionPanel>
     </RutaProtegida>
   );
 }

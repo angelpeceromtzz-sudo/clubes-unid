@@ -1,5 +1,7 @@
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Badge } from '../ui/Badge';
+import { Spinner } from '../ui/Spinner';
 
 export function TablaUsuarios({
   usuarios,
@@ -54,15 +56,9 @@ export function TablaUsuarios({
                 <td className={`px-5 py-4 font-medium ${tdTitle}`}>{u.nombre_completo}</td>
                 <td className={`px-5 py-4 ${tdCls}`}>{u.correo_institucional}</td>
                 <td className="px-5 py-4">
-                  <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full border ${
-                    u.id_rol === 3
-                      ? 'text-red-400 border-red-400/30 bg-red-400/10'
-                      : u.id_rol === 2
-                      ? 'text-amber-400 border-amber-400/30 bg-amber-400/10'
-                      : 'text-blue-400 border-blue-400/30 bg-blue-400/10'
-                  }`}>
-                    {u.rol}
-                  </span>
+                  <Badge texto={u.rol} color={
+                    u.id_rol === 3 ? 'red' : u.id_rol === 2 ? 'amber' : 'blue'
+                  } size="md" />
                 </td>
                 <td className="px-5 py-4">
                   {u.id_rol === 1 ? (
@@ -113,7 +109,7 @@ export function TablaUsuarios({
                         ))}
                       </select>
                       {asignando[u.id_usuario] && (
-                        <span className="animate-spin w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full" />
+                        <Spinner size="sm" color="border-amber-400" className="!py-0" />
                       )}
                     </div>
                   ) : (

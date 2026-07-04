@@ -1,4 +1,5 @@
 import { useTheme } from '../../contexts/ThemeContext';
+import { AvatarInicial } from '../ui/AvatarInicial';
 
 export function SeccionMiembros({ miembros, club }) {
   const { tema, modoOscuro } = useTheme();
@@ -14,9 +15,7 @@ export function SeccionMiembros({ miembros, club }) {
         {miembros.map((m) => (
           <div key={m.id_usuario || m.id} className={`${cardCls} rounded-xl px-5 py-3 flex items-center justify-between`}>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-sm">
-                {(m.nombre_completo || '').charAt(0)}
-              </div>
+              <AvatarInicial nombre={m.nombre_completo} color="amber" />
               <div>
                 <p className={`text-sm font-medium ${tema.title}`}>
                   {m.nombre_completo}

@@ -5,6 +5,7 @@ import { TarjetaClub } from '../components/clubes/TarjetaClub';
 import { Heroe } from '../components/clubes/Heroe';
 import { DetalleClub } from '../components/clubes/DetalleClub';
 import { Spinner } from '../components/ui/Spinner';
+import { Alerta } from '../components/ui/Alerta';
 
 export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetalleChange }) {
   const { estaAutenticado } = useAutenticacion();
@@ -41,11 +42,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetall
         </div>
 
         {!estaAutenticado && (
-          <div className="mb-8 bg-amber-400/10 border border-amber-400/20 rounded-xl px-5 py-3">
-            <p className="text-sm text-amber-400 font-medium">
-              Inicia sesión para inscribirte en un club.
-            </p>
-          </div>
+          <Alerta tipo="warning" mensaje="Inicia sesión para inscribirte en un club." className="mb-8" />
         )}
 
         {clubesLoading ? (

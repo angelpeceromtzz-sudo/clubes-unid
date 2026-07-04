@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNotificaciones } from '../../contexts/NotificationContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
+import { Alerta } from '../ui/Alerta';
+import { CampoTexto } from '../ui/CampoTexto';
 
 export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess }) {
   const { modoOscuro } = useTheme();
@@ -63,30 +65,9 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
 
   return (
     <form onSubmit={manejarEnvio} className="space-y-4">
-      <div>
-        <label className={labelClass}>Título del anuncio</label>
-        <input
-          type="text"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          placeholder="Ej: Horario de entrenamiento"
-          className={inputClass}
-          maxLength={200}
-          required
-        />
-      </div>
+      <CampoTexto label="Título del anuncio" name="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Horario de entrenamiento" required />
 
-      <div>
-        <label className={labelClass}>Mensaje</label>
-        <textarea
-          value={mensaje}
-          onChange={(e) => setMensaje(e.target.value)}
-          placeholder="Escribe el contenido del anuncio..."
-          rows={4}
-          className={`${inputClass} resize-none`}
-          required
-        />
-      </div>
+      <CampoTexto label="Mensaje" name="mensaje" value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Escribe el contenido del anuncio..." type="textarea" required />
 
       {!audienciaFija && (
         <div>
@@ -141,19 +122,9 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
         </div>
       )}
 
-      {mensajeError && (
-        <div className="flex items-start gap-2.5 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-          <Icono nombre="close" strokeWidth={2} className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm font-medium text-red-400">{mensajeError}</p>
-        </div>
-      )}
+      {mensajeError && <Alerta tipo="error" mensaje={mensajeError} />}
 
-      {mensajeExito && (
-        <div className="flex items-start gap-2.5 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-          <Icono nombre="check-circle" strokeWidth={2} className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-          <p className="text-sm font-medium text-emerald-400">{mensajeExito}</p>
-        </div>
-      )}
+      {mensajeExito && <Alerta tipo="success" mensaje={mensajeExito} />}
 
       <button
         type="submit"

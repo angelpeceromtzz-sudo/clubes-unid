@@ -1,16 +1,12 @@
 import { useState } from 'react';
 import { Icono } from '../ui/Icono';
-
-const COLORES_ESTATUS = {
-  'En revisión': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  'Preseleccionado': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  'Rechazado': 'bg-red-500/20 text-red-400 border-red-500/30',
-};
+import { AvatarInicial } from '../ui/AvatarInicial';
+import { Badge } from '../ui/Badge';
+import { Spinner } from '../ui/Spinner';
 
 export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, accionando }) {
   const cargando = accionando[solicitud.id_formulario];
   const estatusActual = solicitud.status;
-  const colorEstatus = COLORES_ESTATUS[estatusActual] || 'bg-slate-500/20 text-slate-400 border-slate-500/30';
   const [motivoAbierto, setMotivoAbierto] = useState(false);
 
   return (
@@ -18,9 +14,7 @@ export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, acci
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xs shrink-0">
-              {solicitud.nombre_completo.charAt(0)}
-            </div>
+            <AvatarInicial nombre={solicitud.nombre_completo} color="amber" />
             <div>
               <p className="text-white text-sm font-semibold truncate">{solicitud.nombre_completo}</p>
               <p className="text-slate-500 text-[11px] font-mono">{solicitud.matricula}</p>
@@ -47,9 +41,9 @@ export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, acci
           </div>
 
           <div className="flex items-center gap-2 mt-2">
-            <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${colorEstatus}`}>
-              {estatusActual}
-            </span>
+            <Badge texto={estatusActual} color={
+              estatusActual === 'En revisión' ? 'blue' : estatusActual === 'Preseleccionado' ? 'purple' : 'red'
+            } />
           </div>
 
           <button
@@ -80,7 +74,7 @@ export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, acci
               className="border border-purple-500/40 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               {cargando ? (
-                <span className="animate-spin w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full" />
+                <Spinner size="sm" color="border-current" className="!py-0" />
               ) : (
                 <Icono nombre="check-circle" strokeWidth={2} className="h-3.5 w-3.5" />
               )}
@@ -92,7 +86,7 @@ export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, acci
               className="border border-red-500/40 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               {cargando ? (
-                <span className="animate-spin w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full" />
+                <Spinner size="sm" color="border-current" className="!py-0" />
               ) : (
                 <Icono nombre="close" strokeWidth={2} className="h-3.5 w-3.5" />
               )}
@@ -102,9 +96,9 @@ export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, acci
         )}
         {estatusActual !== 'En revisión' && (
           <div className="shrink-0">
-            <span className={`text-[10px] uppercase font-bold px-2.5 py-1 rounded-full border ${colorEstatus}`}>
-              {estatusActual}
-            </span>
+            <Badge texto={estatusActual} size="md" color={
+              estatusActual === 'En revisión' ? 'blue' : estatusActual === 'Preseleccionado' ? 'purple' : 'red'
+            } />
           </div>
         )}
       </div>

@@ -3,8 +3,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { FormularioNotificacion } from '../components/formularios/FormularioNotificacion';
 import { usePanelAdmin } from '../hooks/usePanelAdmin';
-import { BarraLateralPorRol } from '../components/layout/BarraLateralPorRol';
-import { PestanasMovilPorRol } from '../components/layout/PestanasMovilPorRol';
+import { NavegacionPanel } from '../components/layout/NavegacionPanel';
 import { ELEMENTOS_NAV_ADMIN } from '../components/admin/navItems';
 import { AlertaRetroalimentacion } from '../components/admin/FeedbackAlert';
 import { TarjetasEstadisticas } from '../components/admin/StatsCards';
@@ -14,10 +13,11 @@ import { TablaClubes } from '../components/admin/ClubTable';
 import { ModalFormularioClub } from '../components/admin/ClubFormModal';
 import { TablaHistorial } from '../components/admin/HistorialTable';
 import { Spinner } from '../components/ui/Spinner';
+import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
-  const { tema, modoOscuro, esOscuro, cardCls, tableBg, thCls, tdCls, tdTitle, selectCls, inputCls, labelCls, sbBg, sbItemBase, sbItemActive, sbItemInactive } = useTheme();
+  const { tema } = useTheme();
   const d = usePanelAdmin(usuario);
 
   if (d.loading) {
@@ -30,27 +30,13 @@ export function PanelAdmin() {
 
   return (
     <RutaProtegida requiereAdmin>
-      <div className="flex min-h-[calc(100vh-4rem)]">
-        <BarraLateralPorRol
-          tituloRol="Administrador"
-          elementosNav={ELEMENTOS_NAV_ADMIN}
-          vistaActiva={d.vistaActiva}
-          onVistaChange={d.setVistaActiva}
-          usuario={d.user}
-        />
-
-        <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <PestanasMovilPorRol
-            elementosNav={ELEMENTOS_NAV_ADMIN}
-            vistaActiva={d.vistaActiva}
-            onVistaChange={d.setVistaActiva}
-          />
-
-          <div className="mb-6 md:mb-8">
-            <h1 className={`text-xl sm:text-2xl md:text-3xl font-black break-words whitespace-normal ${tema.title}`}>Panel de Administración</h1>
-            <p className={`text-sm mt-1 ${tema.subtitle}`}>
-              Bienvenido, {d.user.nombre_completo}
-            </p>
+      <NavegacionPanel
+        elementosNav={ELEMENTOS_NAV_ADMIN}
+        vistaActiva={d.vistaActiva}
+        onVistaChange={d.setVistaActiva}
+      >
+        <div className="mb-6 md:mb-8">
+            <EncabezadoPagina titulo="Panel de Administración" subtitulo={`Bienvenido, ${d.user.nombre_completo}`} />
           </div>
 
           <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
@@ -123,8 +109,7 @@ export function PanelAdmin() {
             onSave={d.guardarClub}
             onFormChange={d.handleClubFormChange}
           />
-        </main>
-      </div>
+      </NavegacionPanel>
     </RutaProtegida>
   );
 }
