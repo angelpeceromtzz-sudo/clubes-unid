@@ -10,7 +10,7 @@ import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
 
 export function PanelRectoria() {
   const { usuario } = useAutenticacion();
-  const { tema, esOscuro } = useTheme();
+  const { tema } = useTheme();
   const d = usePanelRectoria();
 
   return (

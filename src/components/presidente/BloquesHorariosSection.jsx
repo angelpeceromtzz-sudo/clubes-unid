@@ -7,7 +7,6 @@ import { PreseleccionadosSinBloque } from './bloques-horarios/PreseleccionadosSi
 import { AlumnosConvocados } from './bloques-horarios/AlumnosConvocados';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
-import { ErrorAlerta } from '../ui/ErrorAlerta';
 import { EncabezadoPagina } from '../ui/EncabezadoPagina';
 import { Alerta } from '../ui/Alerta';
 
@@ -104,7 +103,7 @@ export function SeccionBloquesHorarios({ club }) {
         subtitulo="Gestiona la convocatoria a evaluación presencial y la selección final de alumnos."
       />
 
-      <ErrorAlerta mensaje={error} />
+      {error && <Alerta tipo="error" mensaje={error} />}
 
       {completado && (
         <Alerta tipo="success" mensaje="Ofertas de ingreso enviadas exitosamente. Los alumnos seleccionados recibirán una notificación." />
