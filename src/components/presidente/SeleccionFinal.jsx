@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Spinner } from '../ui/Spinner';
+import { EmptyState } from '../ui/EmptyState';
+import { ErrorAlerta } from '../ui/ErrorAlerta';
 
 export function SeleccionFinal({ club }) {
   const { tema, modoOscuro } = useTheme();
@@ -62,11 +65,7 @@ export function SeleccionFinal({ club }) {
   }
 
   if (cargando) {
-    return (
-      <div className="flex justify-center py-16">
-        <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" />
-      </div>
-    );
+    return <Spinner />;
   }
 
   if (completado) {
@@ -97,18 +96,10 @@ export function SeleccionFinal({ club }) {
         </p>
       </div>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
-          <p className="text-red-400 text-sm font-medium">{error}</p>
-        </div>
-      )}
+      <ErrorAlerta mensaje={error} />
 
       {convocados.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-          <Icono nombre="users" className="h-12 w-12 mb-3 opacity-30" strokeWidth={1.5} />
-          <p className="text-sm font-medium">No hay alumnos convocados</p>
-          <p className="text-xs mt-0.5">Los alumnos aparecerán aquí una vez que hayan sido convocados a evaluación presencial.</p>
-        </div>
+        <EmptyState icono="users" titulo="No hay alumnos convocados" descripcion="Los alumnos aparecerán aquí una vez que hayan sido convocados a evaluación presencial." />
       ) : (
         <>
           <div className="flex items-center justify-between">

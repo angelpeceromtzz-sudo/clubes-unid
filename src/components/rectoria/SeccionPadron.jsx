@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Badge } from './Badge';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Spinner } from '../ui/Spinner';
 
 export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clubesDetalle, cargando }) {
   const { modoOscuro } = useTheme();
@@ -64,7 +65,7 @@ export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clu
       </div>
 
       {cargando ? (
-        <div className="flex justify-center py-10"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" /></div>
+        <Spinner className="py-10" />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

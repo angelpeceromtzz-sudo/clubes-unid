@@ -5,6 +5,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { PreseleccionadosConBloque } from './bloques-horarios/PreseleccionadosConBloque';
 import { PreseleccionadosSinBloque } from './bloques-horarios/PreseleccionadosSinBloque';
 import { AlumnosConvocados } from './bloques-horarios/AlumnosConvocados';
+import { Spinner } from '../ui/Spinner';
+import { EmptyState } from '../ui/EmptyState';
+import { ErrorAlerta } from '../ui/ErrorAlerta';
 
 export function SeccionBloquesHorarios({ club }) {
   const { tema, modoOscuro } = useTheme();
@@ -87,11 +90,7 @@ export function SeccionBloquesHorarios({ club }) {
   }
 
   if (cargando) {
-    return (
-      <div className="flex justify-center py-16">
-        <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" />
-      </div>
-    );
+    return <Spinner />;
   }
 
   const sinAlumnos = convocados.length === 0 && preseleccionadosConBloque.length === 0 && preseleccionadosSinBloque.length === 0;
@@ -107,11 +106,7 @@ export function SeccionBloquesHorarios({ club }) {
         </p>
       </div>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
-          <p className="text-red-400 text-sm font-medium">{error}</p>
-        </div>
-      )}
+      <ErrorAlerta mensaje={error} />
 
       {completado && (
         <div className={`rounded-xl p-4 border ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'}`}>
@@ -143,13 +138,7 @@ export function SeccionBloquesHorarios({ club }) {
       />
 
       {sinAlumnos && (
-        <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-          <Icono nombre="users" className="h-12 w-12 mb-3 opacity-30" strokeWidth={1.5} />
-          <p className="text-sm font-medium">No hay alumnos para gestionar</p>
-          <p className="text-xs mt-0.5">
-            Preselecciona alumnos desde la sección "Solicitudes" para que aparezcan aquí
-          </p>
-        </div>
+        <EmptyState icono="users" titulo="No hay alumnos para gestionar" descripcion="Preselecciona alumnos desde la sección &quot;Solicitudes&quot; para que aparezcan aquí" />
       )}
     </div>
   );

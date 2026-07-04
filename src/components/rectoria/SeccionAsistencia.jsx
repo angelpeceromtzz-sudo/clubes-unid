@@ -1,4 +1,5 @@
 import { useTheme } from '../../contexts/ThemeContext';
+import { Spinner } from '../ui/Spinner';
 
 export function SeccionAsistencia({ clubesDetalle, clubAsistenciaId, seleccionarClubAsistencia, asistencia, cargando }) {
   const { modoOscuro } = useTheme();
@@ -32,7 +33,7 @@ export function SeccionAsistencia({ clubesDetalle, clubAsistenciaId, seleccionar
       </div>
 
       {cargando ? (
-        <div className="flex justify-center py-10"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" /></div>
+        <Spinner className="py-10" />
       ) : asistencia.length === 0 && clubAsistenciaId ? (
         <p className="text-center py-10 text-slate-500">No hay alumnos admitidos en este club</p>
       ) : asistencia.length === 0 ? null : (

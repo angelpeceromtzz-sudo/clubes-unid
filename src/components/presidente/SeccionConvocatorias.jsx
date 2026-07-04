@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 import { BloqueCard } from './BloqueCard';
+import { Spinner } from '../ui/Spinner';
+import { EmptyState } from '../ui/EmptyState';
+import { ErrorAlerta } from '../ui/ErrorAlerta';
 
 export function SeccionConvocatorias({ club }) {
   const { tema } = useTheme();
@@ -59,11 +61,7 @@ export function SeccionConvocatorias({ club }) {
   }
 
   if (cargando) {
-    return (
-      <div className="flex justify-center py-16">
-        <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" />
-      </div>
-    );
+    return <Spinner />;
   }
 
   return (
@@ -77,18 +75,10 @@ export function SeccionConvocatorias({ club }) {
         </p>
       </div>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
-          <p className="text-red-400 text-sm font-medium">{error}</p>
-        </div>
-      )}
+      <ErrorAlerta mensaje={error} />
 
       {convocatorias.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-          <Icono nombre="calendar" className="h-12 w-12 mb-3 opacity-30" strokeWidth={1.5} />
-          <p className="text-sm font-medium">No hay convocatorias activas</p>
-          <p className="text-xs mt-0.5">Preselecciona alumnos desde la sección "Formularios" y genera las convocatorias para que aparezcan aquí.</p>
-        </div>
+        <EmptyState icono="calendar" titulo="No hay convocatorias activas" descripcion="Preselecciona alumnos desde la sección Formularios y genera las convocatorias para que aparezcan aquí" />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {convocatorias.map((c) => (

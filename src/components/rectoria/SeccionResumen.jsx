@@ -1,4 +1,5 @@
 import { useTheme } from '../../contexts/ThemeContext';
+import { Spinner } from '../ui/Spinner';
 
 function TarjetaStat({ titulo, valor, icono, color }) {
   return (
@@ -33,7 +34,7 @@ function BarraOcupacion({ nombre, maximo, ocupado, maxOcupado, modoOscuro }) {
 export function SeccionResumen({ stats, ocupacionClubes, topClubes, cargando }) {
   const { modoOscuro } = useTheme();
   if (cargando) {
-    return <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" /></div>;
+    return <Spinner className="py-20" />;
   }
   if (!stats) {
     return <p className="text-center py-10 text-slate-500">No hay datos disponibles</p>;

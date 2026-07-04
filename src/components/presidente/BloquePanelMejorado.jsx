@@ -1,5 +1,6 @@
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
+import { EmptyState } from '../ui/EmptyState';
 
 export function PanelBloqueMejorado({ titulo, alumnos, seleccionados, onToggleSeleccion }) {
   const { modoOscuro } = useTheme();
@@ -18,11 +19,7 @@ export function PanelBloqueMejorado({ titulo, alumnos, seleccionados, onToggleSe
 
       <div className="p-5 space-y-4">
         {alumnos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-6 text-slate-500">
-            <Icono nombre="users" className="h-10 w-10 mb-2 opacity-30" strokeWidth={1.5} />
-            <p className="text-sm font-medium">Sin alumnos asignados</p>
-            <p className="text-xs mt-0.5">Los alumnos con bloque asignado aparecerán aquí</p>
-          </div>
+          <EmptyState icono="users" titulo="Sin alumnos asignados" descripcion="Los alumnos con bloque asignado aparecerán aquí" />
         ) : (
           <div className="space-y-1.5">
             {alumnos.map((alumno) => (
