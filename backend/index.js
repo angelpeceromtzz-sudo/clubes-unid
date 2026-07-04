@@ -1,8 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { migrate } from './migrate.js';
 migrate();
@@ -18,6 +22,7 @@ import notificacionesRoutes from './routes/notificaciones.js';
 import historialRoutes from './routes/historial.js';
 import convocatoriasRoutes from './routes/convocatorias.js';
 import estadisticasRoutes from './routes/estadisticas.js';
+import uploadRoutes from './routes/upload.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -41,6 +46,9 @@ app.use('/api/historial', historialRoutes);
 app.use('/api/convocatorias', convocatoriasRoutes);
 app.use('/api/estadisticas', estadisticasRoutes);
 app.use('/api/ofertas', ofertasRoutes);
+app.use('/api/upload', uploadRoutes);
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

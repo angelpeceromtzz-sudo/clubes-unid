@@ -148,17 +148,17 @@ router.get('/:id/miembros', authenticate, async (req, res) => {
 // Crea un nuevo club (solo admin)
 router.post('/', authenticate, requireRole(3), async (req, res) => {
   try {
-    const { nombre_club, categoria, cupo_maximo } = req.body;
+    const { nombre_club, categoria, cupo_maximo, imagen_portada } = req.body;
 
     if (!nombre_club || !categoria || !cupo_maximo) {
       return res.status(400).json({ error: 'Nombre, categoría y cupo máximo son obligatorios' });
     }
 
     const result = await pool.query(
-      `INSERT INTO clubes (nombre_club, categoria, cupo_maximo, id_estatus_club)
-       VALUES ($1, $2, $3, 1)
-       RETURNING id_club, nombre_club, categoria, cupo_maximo, id_estatus_club`,
-      [nombre_club, categoria, parseInt(cupo_maximo, 10)],
+      `INSERT INTO clubes (nombre_club, categoria, cupo_maximo, id_estatus_club, imagen_portada)
+       VALUES ($1, $2, $3, 1, $4)
+       RETURNING id_club, nombre_club, categoria, cupo_maximo, id_estatus_club, imagen_portada`,
+      [nombre_club, categoria, parseInt(cupo_maximo, 10), imagen_portada || null],
     );
 
     registrarHistorial({
@@ -182,7 +182,7 @@ router.post('/', authenticate, requireRole(3), async (req, res) => {
 router.put('/:id', authenticate, requireRole(3), async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre_club, categoria, cupo_maximo } = req.body;
+    const { nombre_club, categoria, cupo_maximo, imagen_portada } = req.body;
 
     if (!nombre_club || !categoria || !cupo_maximo) {
       return res.status(400).json({ error: 'Nombre, categoría y cupo máximo son obligatorios' });
@@ -190,10 +190,10 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
 
     const result = await pool.query(
       `UPDATE clubes
-       SET nombre_club = $1, categoria = $2, cupo_maximo = $3
-       WHERE id_club = $4
-       RETURNING id_club, nombre_club, categoria, cupo_maximo, id_estatus_club`,
-      [nombre_club, categoria, parseInt(cupo_maximo, 10), id],
+       SET nombre_club = $1, categoria = $2, cupo_maximo = $3, imagen_portada = COALESCE($4, imagen_portada)
+       WHERE id_club = $5
+       RETURNING id_club, nombre_club, categoria, cupo_maximo, id_estatus_club, imagen_portada`,
+      [nombre_club, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, id],
     );
 
     if (result.rows.length === 0) {

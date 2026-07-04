@@ -11,7 +11,7 @@ export function PanelBloqueMejorado({ titulo, alumnos, seleccionados, onToggleSe
           <h3 className={`text-base font-black uppercase tracking-wider ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
             {titulo}
           </h3>
-          <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-600/30 text-slate-300 border border-slate-600/50">
+          <span className={`text-xs font-bold px-3 py-1 rounded-full border ${modoOscuro ? 'bg-slate-600/30 text-slate-300 border-slate-600/50' : 'bg-slate-200 text-slate-600 border-slate-300/50'}`}>
             {alumnos.length} Alumno{alumnos.length !== 1 ? 's' : ''}
           </span>
         </div>

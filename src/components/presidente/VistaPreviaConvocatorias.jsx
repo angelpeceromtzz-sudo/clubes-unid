@@ -25,7 +25,7 @@ export function VistaPreviaConvocatorias({ vistaPrevia, generando, onConfirmar, 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         {vistaPrevia.bloques.map((b) => (
-          <div key={b.bloque} className="bg-[#18223f] rounded-xl p-4 border border-slate-700/50 text-center">
+          <div key={b.bloque} className={`rounded-xl p-4 border text-center ${modoOscuro ? 'bg-[#18223f] border-slate-700/50' : 'bg-slate-100 border-slate-200'}`}>
             <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Bloque {b.bloque}</p>
             <p className="text-2xl font-black text-amber-400">{b.alumnos}</p>
             <p className="text-xs text-slate-500">alumno{b.alumnos !== 1 ? 's' : ''}</p>

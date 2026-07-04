@@ -12,14 +12,20 @@ export function usePanelAdmin(usuario) {
   const [asignando, setAsignando] = useState({});
   const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
   const [editandoClub, setEditandoClub] = useState(null);
-  const [formularioClub, setFormularioClub] = useState({ nombre_club: '', categoria: '', cupo_maximo: '' });
+  const [formularioClub, setFormularioClub] = useState({ nombre_club: '', categoria: '', cupo_maximo: '', imagen_portada: '' });
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [feedback, setFeedback] = useState('');
   const [errorFeedback, setErrorFeedback] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [filtroRol, setFiltroRol] = useState('');
+  const [busquedaClubes, setBusquedaClubes] = useState('');
   const [historial, setHistorial] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
+  const [mostrarModalUsuario, setMostrarModalUsuario] = useState(false);
+  const [formularioUsuario, setFormularioUsuario] = useState({ nombre_completo: '', correo_institucional: '', contrasena: '', id_rol: 1 });
+  const [enviandoUsuario, setEnviandoUsuario] = useState(false);
+  const [errorModalUsuario, setErrorModalUsuario] = useState('');
 
   useEffect(() => {
     async function cargar() {
@@ -48,14 +54,26 @@ export function usePanelAdmin(usuario) {
 
   const filtrados = (() => {
     const q = busqueda.toLowerCase().trim();
+    const porRol = filtroRol ? usuarios.filter((u) => String(u.id_rol) === filtroRol) : usuarios;
     return q
-      ? usuarios.filter(
+      ? porRol.filter(
           (u) =>
             String(u.id_usuario).includes(q) ||
             u.nombre_completo.toLowerCase().includes(q) ||
             u.correo_institucional.toLowerCase().includes(q)
         )
-      : usuarios;
+      : porRol;
+  })();
+
+  const clubesFiltrados = (() => {
+    const q = busquedaClubes.toLowerCase().trim();
+    return q
+      ? clubes.filter(
+          (c) =>
+            c.nombre_club.toLowerCase().includes(q) ||
+            (c.categoria && c.categoria.toLowerCase().includes(q))
+        )
+      : clubes;
   })();
 
   const manejarCambioRol = useCallback(async (userId, nuevoRolId) => {
@@ -102,6 +120,7 @@ export function usePanelAdmin(usuario) {
   }, []);
 
   const manejarCambioEstatus = useCallback(async (clubId, nuevoEstatusId) => {
+    if (nuevoEstatusId === 3 && !window.confirm('¿Estás seguro de dar de baja este club? Los miembros serán notificados.')) return;
     try {
       await api.updateClubEstatus(clubId, nuevoEstatusId);
       const actualizados = await api.getClubes();
@@ -112,7 +131,7 @@ export function usePanelAdmin(usuario) {
   }, []);
 
   const abrirModalCrear = useCallback(() => {
-    setFormularioClub({ nombre_club: '', categoria: '', cupo_maximo: '' });
+    setFormularioClub({ nombre_club: '', categoria: '', cupo_maximo: '', imagen_portada: '' });
     setEditandoClub(null);
     setErrorModal('');
     setMostrarModalCrear(true);
@@ -123,6 +142,7 @@ export function usePanelAdmin(usuario) {
       nombre_club: club.nombre_club,
       categoria: club.categoria,
       cupo_maximo: String(club.cupo_maximo),
+      imagen_portada: club.imagen_portada || '',
     });
     setEditandoClub(club);
     setErrorModal('');
@@ -140,6 +160,7 @@ export function usePanelAdmin(usuario) {
       setErrorModal('Todos los campos son obligatorios');
       return;
     }
+    if (editandoClub && !window.confirm(`¿Guardar los cambios en "${editandoClub.nombre_club}"?`)) return;
     setEnviando(true);
     try {
       if (editandoClub) {
@@ -147,6 +168,7 @@ export function usePanelAdmin(usuario) {
           nombre_club: formularioClub.nombre_club,
           categoria: formularioClub.categoria,
           cupo_maximo: Number(formularioClub.cupo_maximo),
+          imagen_portada: formularioClub.imagen_portada || null,
         });
         setFeedback('Club actualizado correctamente');
       } else {
@@ -154,6 +176,7 @@ export function usePanelAdmin(usuario) {
           nombre_club: formularioClub.nombre_club,
           categoria: formularioClub.categoria,
           cupo_maximo: Number(formularioClub.cupo_maximo),
+          imagen_portada: formularioClub.imagen_portada || null,
         });
         setFeedback('Club creado correctamente');
       }
@@ -170,6 +193,64 @@ export function usePanelAdmin(usuario) {
   const manejarCambioFormularioClub = useCallback((e) => {
     const { name, value } = e.target;
     setFormularioClub((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const subirImagen = useCallback(async (file) => {
+    try {
+      const result = await api.uploadImagen(file);
+      setFormularioClub((prev) => ({ ...prev, imagen_portada: result.url }));
+    } catch (err) {
+      setErrorModal(err.message);
+    }
+  }, []);
+
+  const abrirModalCrearUsuario = useCallback(() => {
+    setFormularioUsuario({ nombre_completo: '', correo_institucional: '', contrasena: '', id_rol: 1 });
+    setErrorModalUsuario('');
+    setMostrarModalUsuario(true);
+  }, []);
+
+  const cerrarModalUsuario = useCallback(() => {
+    setMostrarModalUsuario(false);
+  }, []);
+
+  const manejarCambioFormularioUsuario = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormularioUsuario((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const guardarUsuario = useCallback(async (e) => {
+    e.preventDefault();
+    setErrorModalUsuario('');
+    const { nombre_completo, correo_institucional, contrasena, id_rol } = formularioUsuario;
+    if (!nombre_completo.trim() || !correo_institucional.trim() || !contrasena.trim()) {
+      setErrorModalUsuario('Todos los campos son obligatorios');
+      return;
+    }
+    setEnviandoUsuario(true);
+    try {
+      await api.createUser({ nombre_completo, correo_institucional, contrasena, id_rol: Number(id_rol) });
+      const actualizados = await api.getUsuarios();
+      setUsuarios(actualizados);
+      setFeedback('Usuario creado correctamente');
+      setMostrarModalUsuario(false);
+    } catch (err) {
+      setErrorModalUsuario(err.message);
+    } finally {
+      setEnviandoUsuario(false);
+    }
+  }, [formularioUsuario]);
+
+  const manejarEliminarUsuario = useCallback(async (userId, nombre) => {
+    if (!window.confirm(`¿Estás seguro de eliminar permanentemente al usuario "${nombre}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await api.deleteUser(userId);
+      const actualizados = await api.getUsuarios();
+      setUsuarios(actualizados);
+      setFeedback(`Usuario "${nombre}" eliminado correctamente`);
+    } catch (err) {
+      setErrorFeedback(err.message);
+    }
   }, []);
 
   useEffect(() => {
@@ -217,7 +298,13 @@ export function usePanelAdmin(usuario) {
     errorFeedback,
     busqueda,
     setBusqueda,
+    filtroRol,
+    setFiltroRol,
+    busquedaClubes,
+    setBusquedaClubes,
     filtrados,
+    usuariosFiltrados: filtrados,
+    clubesFiltrados,
     historial,
     historialLoading: cargandoHistorial,
     isDark: esOscuro,
@@ -248,6 +335,16 @@ export function usePanelAdmin(usuario) {
     cerrarModal,
     guardarClub,
     handleClubFormChange: manejarCambioFormularioClub,
+    subirImagen,
     cargarHistorial,
+    showModalUsuario: mostrarModalUsuario,
+    formUsuario: formularioUsuario,
+    enviandoUsuario,
+    errorModalUsuario,
+    abrirModalCrearUsuario,
+    cerrarModalUsuario,
+    handleUsuarioFormChange: manejarCambioFormularioUsuario,
+    guardarUsuario,
+    handleEliminarUsuario: manejarEliminarUsuario,
   };
 }

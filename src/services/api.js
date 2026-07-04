@@ -229,6 +229,37 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ decision }),
     }),
+
+  uploadImagen: async (file) => {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('imagen', file);
+    const res = await fetch(`${API_BASE}/upload/imagen`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Error al subir imagen' }));
+      throw new Error(err.error || `Error ${res.status}`);
+    }
+    return res.json();
+  },
+
+  marcarTodasNotificacionesLeidas: () =>
+    request('/notificaciones/leer-todas', { method: 'POST' }),
+
+  eliminarNotificacion: (id) =>
+    request(`/notificaciones/${id}`, { method: 'DELETE' }),
+
+  createUser: (data) =>
+    request('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteUser: (id) =>
+    request(`/usuarios/${id}`, { method: 'DELETE' }),
 };
 
 // ✦ A

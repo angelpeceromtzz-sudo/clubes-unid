@@ -24,7 +24,7 @@ export function PreseleccionadosSinBloque({ alumnos, onAsignarBloque }) {
                 if (bloque) onAsignarBloque(s.id_formulario, bloque);
                 e.target.value = '';
               }}
-              className="bg-[#18223f] border border-slate-600 text-slate-300 rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+              className={`rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/50 ${modoOscuro ? 'bg-[#18223f] border border-slate-600 text-slate-300' : 'bg-white border border-slate-300 text-slate-700'}`}
             >
               <option value="">Asignar bloque</option>
               <option value="A">Bloque A</option>

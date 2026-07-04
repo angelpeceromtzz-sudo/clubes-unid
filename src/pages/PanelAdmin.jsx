@@ -12,9 +12,11 @@ import { BarraBusquedaUsuarios } from '../components/admin/BarraBusquedaUsuarios
 import { TablaUsuarios } from '../components/admin/TablaUsuarios';
 import { TablaClubes } from '../components/admin/TablaClubes';
 import { ModalFormularioClub } from '../components/admin/ModalFormularioClub';
+import { ModalFormularioUsuario } from '../components/admin/ModalFormularioUsuario';
 import { TablaHistorial } from '../components/admin/TablaHistorial';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
+import { Icono } from '../components/ui/Icono';
 
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
@@ -52,9 +54,31 @@ export function PanelAdmin() {
 
           {d.vistaActiva === 'usuarios' && (
             <div>
-              <BarraBusquedaUsuarios busqueda={d.busqueda} onChange={d.setBusqueda} />
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="flex-1">
+                  <BarraBusquedaUsuarios busqueda={d.busqueda} onChange={d.setBusqueda} />
+                </div>
+                <select
+                  value={d.filtroRol}
+                  onChange={(e) => d.setFiltroRol(e.target.value)}
+                  className={`px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-amber-400/50 self-start ${d.selectCls}`}
+                >
+                  <option value="">Todos los roles</option>
+                  <option value="1">Alumnos</option>
+                  <option value="2">Presidentes</option>
+                  <option value="3">Admins</option>
+                  <option value="4">Rectoría</option>
+                </select>
+                <button
+                  onClick={d.abrirModalCrearUsuario}
+                  className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center gap-2 shrink-0"
+                >
+                  <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
+                  Crear Usuario
+                </button>
+              </div>
               <TablaUsuarios
-                usuarios={d.usuarios}
+                usuarios={d.usuariosFiltrados}
                 busqueda={d.busqueda}
                 currentUser={d.user}
                 clubesActivosList={d.clubesActivosList}
@@ -62,17 +86,36 @@ export function PanelAdmin() {
                 onRoleChange={d.handleRoleChange}
                 onRemoveFromClub={d.handleRemoveFromClub}
                 onAsignarClub={d.handleAsignarClub}
+                onEliminarUsuario={d.handleEliminarUsuario}
               />
             </div>
           )}
 
           {d.vistaActiva === 'clubes' && (
-            <TablaClubes
-              clubes={d.clubes}
-              onStatusChange={d.handleStatusChange}
-              onEditar={d.abrirModalEditar}
-              onCrear={d.abrirModalCrear}
-            />
+            <div>
+              <div className="mb-4">
+                <div className="relative">
+                  <Icono nombre="search" strokeWidth={2} className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${d.isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                  <input
+                    type="text"
+                    value={d.busquedaClubes}
+                    onChange={(e) => d.setBusquedaClubes(e.target.value)}
+                    placeholder="Buscar club por nombre o categoría..."
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-400/50 ${
+                      d.isDark
+                        ? 'bg-[#0e162c] border-slate-700 text-slate-200 placeholder-slate-500'
+                        : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
+                    }`}
+                  />
+                </div>
+              </div>
+              <TablaClubes
+                clubes={d.clubesFiltrados}
+                onStatusChange={d.handleStatusChange}
+                onEditar={d.abrirModalEditar}
+                onCrear={d.abrirModalCrear}
+              />
+            </div>
           )}
 
           {d.vistaActiva === 'anuncios' && (
@@ -109,6 +152,17 @@ export function PanelAdmin() {
             onClose={d.cerrarModal}
             onSave={d.guardarClub}
             onFormChange={d.handleClubFormChange}
+            onUploadImage={d.subirImagen}
+          />
+
+          <ModalFormularioUsuario
+            show={d.showModalUsuario}
+            formUsuario={d.formUsuario}
+            enviando={d.enviandoUsuario}
+            modalError={d.errorModalUsuario}
+            onClose={d.cerrarModalUsuario}
+            onSave={d.guardarUsuario}
+            onFormChange={d.handleUsuarioFormChange}
           />
       </NavegacionPanel>
     </RutaProtegida>

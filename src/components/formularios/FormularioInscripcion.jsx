@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 import { ModalExito } from '../modals/ModalExito';
 import { api } from '../../services/api';
 import { useAutenticacion } from '../../contexts/AuthContext';
@@ -104,6 +105,7 @@ export function FormularioInscripcion({ club, onClose }) {
     }
   }
 
+  const { tema, modoOscuro } = useTheme();
   const labelCls = 'block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5';
   const errorCls = 'text-red-400 text-xs mt-1 font-medium';
 
@@ -112,12 +114,12 @@ export function FormularioInscripcion({ club, onClose }) {
       <ModalBase show={true} onClose={onClose}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-black text-white">Formulario de Inscripción</h2>
-            <p className="text-sm text-slate-400 mt-0.5">{club.nombre_club}</p>
+            <h2 className={`text-xl font-black ${tema.title}`}>Formulario de Inscripción</h2>
+            <p className={`text-sm mt-0.5 ${tema.subtitle}`}>{club.nombre_club}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
           >
             <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
           </button>

@@ -5,8 +5,8 @@ export function PiePagina() {
   const { tema } = useTheme();
   return (
     <footer className={`border-t transition-colors duration-300 ${tema.headerBorder} ${tema.bg}`}>
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
 
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ export function PiePagina() {
 
         </div>
 
-        <div className={`mt-10 pt-6 border-t transition-colors duration-300 ${tema.headerBorder}`}>
+        <div className={`mt-6 sm:mt-10 pt-4 sm:pt-6 border-t transition-colors duration-300 ${tema.headerBorder}`}>
           <p className={`text-[10px] text-center font-medium ${tema.subtitle}`}>
             &copy; {new Date().getFullYear()} UNID &mdash; Universidad Hispanoamericana de Oriente. Todos los derechos reservados.
           </p>

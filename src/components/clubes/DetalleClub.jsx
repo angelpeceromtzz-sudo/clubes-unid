@@ -7,9 +7,10 @@ import { Icono } from '../ui/Icono';
 import { InfoLugar } from './InfoLugar';
 import { InfoHorarios } from './InfoHorarios';
 import { SidebarClub } from './SidebarClub';
+import { clasesBadge } from '../../constants/colores';
 
 export function DetalleClub({ club, onVolver, onLoginClick }) {
-  const { tema, modoOscuro } = useTheme();
+  const { modoOscuro } = useTheme();
   const { estaAutenticado, esAdmin, tieneInscripcionActiva, clubesPostulados } = useAutenticacion();
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
@@ -20,10 +21,10 @@ export function DetalleClub({ club, onVolver, onLoginClick }) {
   const esInactivo = club.id_estatus_club === 3;
 
   const c = {
-    bg: tema.text === "text-slate-200" ? "bg-[#0e162c] border-slate-700/50" : "bg-white border-slate-200",
-    text: tema.text === "text-slate-200" ? "text-slate-300" : "text-slate-600",
-    title: tema.text === "text-slate-200" ? "text-white" : "text-slate-900",
-    sidebar: tema.text === "text-slate-200" ? "bg-[#0e162c] border-slate-700/50" : "bg-white border-slate-200 shadow-lg",
+    bg: modoOscuro ? "bg-[#0e162c] border-slate-700/50" : "bg-white border-slate-200",
+    text: modoOscuro ? "text-slate-300" : "text-slate-600",
+    title: modoOscuro ? "text-white" : "text-slate-900",
+    sidebar: modoOscuro ? "bg-[#0e162c] border-slate-700/50" : "bg-white border-slate-200 shadow-lg",
   };
 
   function manejarClickBoton() {

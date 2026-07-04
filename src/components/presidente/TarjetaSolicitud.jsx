@@ -1,22 +1,24 @@
 import { useState } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
 import { AvatarInicial } from '../ui/AvatarInicial';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 
 export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, accionando }) {
+  const { modoOscuro } = useTheme();
   const cargando = accionando[solicitud.id_formulario];
   const estatusActual = solicitud.status;
   const [motivoAbierto, setMotivoAbierto] = useState(false);
 
   return (
-    <div className="bg-[#0e162c] border border-slate-700/50 rounded-xl p-4 transition-all hover:border-slate-600/50">
+    <div className={`rounded-xl p-4 transition-all ${modoOscuro ? 'bg-[#0e162c] border border-slate-700/50 hover:border-slate-600/50' : 'bg-white border border-slate-200 shadow-sm hover:border-slate-300'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <AvatarInicial nombre={solicitud.nombre_completo} color="amber" />
             <div>
-              <p className="text-white text-sm font-semibold truncate">{solicitud.nombre_completo}</p>
+              <p className={`text-sm font-semibold truncate ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>{solicitud.nombre_completo}</p>
               <p className="text-slate-500 text-[11px] font-mono">{solicitud.matricula}</p>
             </div>
           </div>
@@ -24,19 +26,19 @@ export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, acci
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3">
             <div>
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Carrera</span>
-              <p className="text-slate-300 text-sm truncate">{solicitud.carrera}</p>
+              <p className={`text-sm truncate ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{solicitud.carrera}</p>
             </div>
             <div>
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Turno</span>
-              <p className="text-slate-300 text-sm">{solicitud.turno}</p>
+              <p className={`text-sm ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{solicitud.turno}</p>
             </div>
             <div>
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Teléfono</span>
-              <p className="text-slate-300 text-sm">{solicitud.telefono_contacto}</p>
+              <p className={`text-sm ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{solicitud.telefono_contacto}</p>
             </div>
             <div>
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Cuatrimestre</span>
-              <p className="text-slate-300 text-sm">{solicitud.cuatrimestre}°</p>
+              <p className={`text-sm ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{solicitud.cuatrimestre}°</p>
             </div>
           </div>
 
@@ -54,12 +56,12 @@ export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, acci
           </button>
 
           {motivoAbierto && (
-            <div className="mt-2 bg-[#18223f] rounded-lg p-3 border border-slate-700/30">
-              <p className="text-slate-300 text-sm leading-relaxed">{solicitud.motivo_ingreso}</p>
+            <div className={`mt-2 rounded-lg p-3 border ${modoOscuro ? 'bg-[#18223f] border-slate-700/30' : 'bg-slate-100 border-slate-200/30'}`}>
+              <p className={`text-sm leading-relaxed ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{solicitud.motivo_ingreso}</p>
               {solicitud.experiencia_previa && (
                 <>
                   <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mt-2 mb-1">Experiencia previa</p>
-                  <p className="text-slate-400 text-sm">{solicitud.experiencia_previa}</p>
+                  <p className={`text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>{solicitud.experiencia_previa}</p>
                 </>
               )}
             </div>

@@ -12,7 +12,7 @@ export function SidebarClub({ club, c, modoOscuro, lleno, disponibles, esProxima
         </span>
       </div>
 
-      <div className={`h-px ${esProximamente || esInactivo ? 'border-slate-700/50' : 'border-slate-700/50'}`} />
+      <div className={`h-px ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`} />
 
       <div>
         <span className="text-[10px] uppercase tracking-wider font-bold block text-slate-500">
@@ -34,7 +34,7 @@ export function SidebarClub({ club, c, modoOscuro, lleno, disponibles, esProxima
           onClick={onBotonClick}
           className={`w-full font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
             !estaAutenticado
-              ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+              ? modoOscuro ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
               : 'bg-amber-400 hover:bg-amber-500 text-[#0e162c]'
           }`}
         >

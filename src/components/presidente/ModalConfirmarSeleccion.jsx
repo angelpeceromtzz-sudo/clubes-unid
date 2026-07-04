@@ -76,10 +76,10 @@ export function ModalConfirmarSeleccion({ aceptados, noSeleccionados, onConfirma
             <button
               onClick={onConfirmar}
               disabled={cargando}
-              className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm uppercase tracking-wider rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
+              className="flex-1 bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-sm uppercase tracking-wider rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {cargando ? (
-                <Spinner size="sm" color="border-black" className="!py-0" />
+                <Spinner size="sm" color="border-[#0e162c]" className="!py-0" />
               ) : (
                 'Confirmar'
               )}

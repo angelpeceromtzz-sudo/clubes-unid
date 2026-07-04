@@ -95,7 +95,7 @@ router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
           if (clubInfo.rows.length > 0) {
             await client.query(
               `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
-               VALUES ($1, $2, $3, 'presidente', $4, $5)`,
+               VALUES ($1, $2, $3, 'presidentes', $4, $5)`,
               [
                 req.user.id,
                 `Cupo liberado: ${clubInfo.rows[0].nombre_club}`,
@@ -145,7 +145,7 @@ router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
         if (clubPres.rows.length > 0) {
           await client.query(
             `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
-             VALUES ($1, $2, $3, 'presidente', $4, $5)`,
+             VALUES ($1, $2, $3, 'presidentes', $4, $5)`,
             [
               req.user.id,
               `Cupo liberado: ${form.nombre_club}`,
