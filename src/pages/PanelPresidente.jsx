@@ -1,15 +1,15 @@
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { RutaProtegida } from '../components/RutaProtegida';
-import { FormularioNotificacion } from '../components/FormularioNotificacion';
-import { InformacionClub } from '../components/InformacionClub';
-import { SeccionAvisos } from '../components/SeccionAvisos';
-import { SeccionMiembros } from '../components/SeccionMiembros';
+import { RutaProtegida } from '../components/layout/RutaProtegida';
+import { FormularioNotificacion } from '../components/formularios/FormularioNotificacion';
+import { InformacionClub } from '../components/clubes/InformacionClub';
+import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
+import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
 import { usePanelPresidente } from '../hooks/usePanelPresidente';
 import { BarraLateralPresidente } from '../components/presidente/PresidenteSidebar';
 import { PestanasMovilPresidente } from '../components/presidente/PresidenteMobileTabs';
 import { EstadoVacio } from '../components/presidente/EmptyState';
-import { SolicitudesPresidente } from '../components/SolicitudesPresidente';
+import { SolicitudesPresidente } from '../components/presidente/SolicitudesPresidente';
 import { SeccionConvocatorias } from '../components/presidente/SeccionConvocatorias';
 import { SeleccionFinal } from '../components/presidente/SeleccionFinal';
 

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useAutenticacion } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { BotonMicrosoft } from './BotonMicrosoft';
-import { Icono } from './ui/Icono';
+import { useAutenticacion } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { BotonMicrosoft } from '../ui/BotonMicrosoft';
+import { Icono } from '../ui/Icono';
 
 export function ModalInicioSesion({ onClose }) {
   const { modoOscuro } = useTheme();

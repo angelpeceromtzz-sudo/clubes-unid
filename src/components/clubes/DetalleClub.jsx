@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { FormularioInscripcion } from './FormularioInscripcion';
-import { useAutenticacion } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { clasesBadge } from '../constants/colores';
-import { Icono } from './ui/Icono';
+import { FormularioInscripcion } from '../formularios/FormularioInscripcion';
+import { useAutenticacion } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { clasesBadge } from '../../constants/colores';
+import { Icono } from '../ui/Icono';
 
 export function DetalleClub({ club, onVolver, onLoginClick }) {
   const { tema, modoOscuro } = useTheme();

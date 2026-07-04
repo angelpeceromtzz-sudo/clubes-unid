@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
-import { useTheme } from '../contexts/ThemeContext';
-import { Icono } from './ui/Icono';
+import { api } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Icono } from '../ui/Icono';
 
 const COLORES_ESTATUS = {
   'En revisión': 'bg-blue-500/20 text-blue-400 border-blue-500/30',

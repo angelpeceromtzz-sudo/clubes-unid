@@ -4,7 +4,7 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
-// Todas las rutas requieren autenticación y rol 4 (Servicios Escolares)
+// Todas las rutas requieren autenticación y rol 4 (Rectoría)
 router.use(authenticate, requireRole(4));
 
 // Estadísticas generales del ecosistema de clubes

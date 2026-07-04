@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { api } from '../services/api';
-import { useTheme } from '../contexts/ThemeContext';
-import { Icono } from './ui/Icono';
+import { api } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Icono } from '../ui/Icono';
 
 const CONFIG_ESTATUS = {
   'Pendiente':        { color: 'text-yellow-400',  bg: 'bg-yellow-500/20',  border: 'border-yellow-500/30', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',                msg: 'Formulario enviado',                  label: 'Postulado' },

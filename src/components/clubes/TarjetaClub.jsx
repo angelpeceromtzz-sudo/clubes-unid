@@ -1,6 +1,6 @@
-import { clasesBadge } from '../constants/colores';
-import { useTheme } from '../contexts/ThemeContext';
-import { Icono } from './ui/Icono';
+import { clasesBadge } from '../../constants/colores';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Icono } from '../ui/Icono';
 
 export function TarjetaClub({
   nombre, descripcion, categoria, cupoMaximo, cupoActual,

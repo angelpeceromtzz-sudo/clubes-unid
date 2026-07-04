@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useAutenticacion } from '../contexts/AuthContext';
+import { useAutenticacion } from '../../contexts/AuthContext';
 
 export function RutaProtegida({ children, requiereAdmin = false, requierePresidente = false, requiereRectoria = false }) {
   const { estaAutenticado, esAdmin, esPresidente, esRectoria } = useAutenticacion();
