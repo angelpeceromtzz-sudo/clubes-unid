@@ -6,6 +6,7 @@ import { Icono } from '../ui/Icono';
 import { Alerta } from '../ui/Alerta';
 import { CampoTexto } from '../ui/CampoTexto';
 import { CampoSelect } from '../ui/CampoSelect';
+import { ModalBase } from '../ui/ModalBase';
 
 const CARRERAS = [
   'Ingeniería en Software y Sist.',
@@ -108,55 +109,53 @@ export function FormularioInscripcion({ club, onClose }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
-        <div className="bg-[#0e162c] border border-slate-700/50 rounded-2xl w-full max-w-lg p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-black text-white">Formulario de Inscripción</h2>
-              <p className="text-sm text-slate-400 mt-0.5">{club.nombre_club}</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-white transition-colors cursor-pointer"
-            >
-              <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
-            </button>
+      <ModalBase show={true} onClose={onClose}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-black text-white">Formulario de Inscripción</h2>
+            <p className="text-sm text-slate-400 mt-0.5">{club.nombre_club}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
+          </button>
+        </div>
+
+        {limiteAlcanzado && <Alerta tipo="error" mensaje="Has alcanzado el límite de 3 postulaciones. No puedes enviar más formularios." />}
+
+        {yaPostulado && !limiteAlcanzado && <Alerta tipo="warning" mensaje="Ya te has postulado a este club anteriormente." />}
+
+        <form onSubmit={manejarEnvio} className="space-y-4">
+          <CampoTexto label="Nombre Completo" name="nombre_completo" value={formulario.nombre_completo} onChange={manejarCambio} placeholder="Tu nombre completo" required error={errores.nombre_completo} />
+
+          <CampoTexto label="Matrícula" name="matricula" value={formulario.matricula} onChange={manejarCambio} placeholder="Ej: 00906641" required error={errores.matricula} />
+
+          <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
+
+          <div className="grid grid-cols-2 gap-4">
+            <CampoTexto label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} type="number" placeholder="Ej: 3" required error={errores.cuatrimestre} />
+            <CampoSelect label="Turno" name="turno" value={formulario.turno} onChange={manejarCambio} opciones={TURNOS} placeholder="Selecciona" required error={errores.turno} />
           </div>
 
-          {limiteAlcanzado && <Alerta tipo="error" mensaje="Has alcanzado el límite de 3 postulaciones. No puedes enviar más formularios." />}
+          <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} />
 
-          {yaPostulado && !limiteAlcanzado && <Alerta tipo="warning" mensaje="Ya te has postulado a este club anteriormente." />}
+          <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} />
 
-          <form onSubmit={manejarEnvio} className="space-y-4">
-            <CampoTexto label="Nombre Completo" name="nombre_completo" value={formulario.nombre_completo} onChange={manejarCambio} placeholder="Tu nombre completo" required error={errores.nombre_completo} />
+          <CampoTexto label="Experiencia Previa" name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} placeholder="¿Has participado en algo similar antes?" type="textarea" />
 
-            <CampoTexto label="Matrícula" name="matricula" value={formulario.matricula} onChange={manejarCambio} placeholder="Ej: 00906641" required error={errores.matricula} />
+          <Alerta tipo="error" mensaje={errorApi} />
 
-            <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
-
-            <div className="grid grid-cols-2 gap-4">
-              <CampoTexto label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} type="number" placeholder="Ej: 3" required error={errores.cuatrimestre} />
-              <CampoSelect label="Turno" name="turno" value={formulario.turno} onChange={manejarCambio} opciones={TURNOS} placeholder="Selecciona" required error={errores.turno} />
-            </div>
-
-            <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} />
-
-            <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} />
-
-            <CampoTexto label="Experiencia Previa" name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} placeholder="¿Has participado en algo similar antes?" type="textarea" />
-
-            <Alerta tipo="error" mensaje={errorApi} />
-
-            <button
-              type="submit"
-              disabled={enviando || bloqueado}
-              className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] mt-2"
-            >
-              {enviando ? 'Enviando formulario...' : 'Enviar Formulario'}
-            </button>
-          </form>
-        </div>
-      </div>
+          <button
+            type="submit"
+            disabled={enviando || bloqueado}
+            className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] mt-2"
+          >
+            {enviando ? 'Enviando formulario...' : 'Enviar Formulario'}
+          </button>
+        </form>
+      </ModalBase>
 
       {enviado && <ModalExito onClose={onClose} />}
     </>

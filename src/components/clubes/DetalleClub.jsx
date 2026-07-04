@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { FormularioInscripcion } from '../formularios/FormularioInscripcion';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { clasesBadge } from '../../constants/colores';
 import { Icono } from '../ui/Icono';
+import { InfoLugar } from './InfoLugar';
+import { InfoHorarios } from './InfoHorarios';
+import { SidebarClub } from './SidebarClub';
 
 export function DetalleClub({ club, onVolver, onLoginClick }) {
   const { tema, modoOscuro } = useTheme();
@@ -88,90 +90,27 @@ export function DetalleClub({ club, onVolver, onLoginClick }) {
             </p>
 
             {club.lugar && (
-              <div className={`rounded-2xl border p-6 transition-colors duration-300 ${c.bg}`}>
-                <h3 className={`text-sm font-black uppercase tracking-widest mb-4 ${c.title}`}>
-                  Lugar de Entrenamiento
-                </h3>
-                <div className="flex items-center gap-3">
-                  <Icono nombre="location" className="h-5 w-5 text-amber-400 shrink-0" />
-                  <Icono nombre="location-point" className="h-5 w-5 text-amber-400 shrink-0" />
-                  <p className={`text-sm font-medium ${c.text}`}>{club.lugar}</p>
-                </div>
-              </div>
+              <InfoLugar lugar={club.lugar} c={c} />
             )}
 
-            {club.horarios && (
-              <div className={`rounded-2xl border p-6 transition-colors duration-300 ${c.bg}`}>
-                <h3 className={`text-sm font-black uppercase tracking-widest mb-4 ${c.title}`}>
-                  Horarios y Días Detallados
-                </h3>
-                <div className="space-y-3">
-                  {club.horarios.map((h, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                      <span className={`text-sm font-medium ${c.text}`}>
-                        <strong className={c.title}>{h.dia}:</strong> {h.horario}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <InfoHorarios horarios={club.horarios} c={c} />
           </div>
 
           <div>
-            <div className={`md:sticky md:top-6 rounded-2xl border p-6 space-y-5 transition-colors duration-300 ${c.sidebar}`}>
-              <div>
-                <h3 className={`text-lg font-bold ${c.title}`}>
-                  {club.nombre_club}
-                </h3>
-                <span className={`inline-block mt-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(club.categoria, modoOscuro)}`}>
-                  {club.categoria}
-                </span>
-              </div>
-
-              <div className={`h-px ${tema.headerBorder}`} />
-
-              <div>
-                <span className="text-[10px] uppercase tracking-wider font-bold block text-slate-500">
-                  Lugares Disponibles
-                </span>
-                <p className={`text-2xl font-black mt-1 ${lleno ? 'text-red-400' : c.title}`}>
-                  {esProximamente || esInactivo ? (
-                    '—'
-                  ) : disponibles > 0 ? (
-                    <>{cupoActual} de {club.cupo_maximo} lugares</>
-                  ) : (
-                    "Completo"
-                  )}
-                </p>
-              </div>
-
-              {botonTexto && (
-                <button
-                  onClick={manejarClickBoton}
-                  className={`w-full font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                    !estaAutenticado
-                      ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                      : 'bg-amber-400 hover:bg-amber-500 text-[#0e162c]'
-                  }`}
-                >
-                  {botonTexto}
-                </button>
-              )}
-
-              {esAdmin && estaAutenticado && (
-                <p className="text-sm text-slate-500 font-medium text-center">
-                  Los administradores no pueden inscribirse a clubes.
-                </p>
-              )}
-
-              {estaAutenticado && tieneInscripcionActiva && !esAdmin && (
-                <p className="text-sm text-amber-400 font-medium text-center">
-                  Ya estás inscrito en un club.
-                </p>
-              )}
-            </div>
+            <SidebarClub
+              club={club}
+              c={c}
+              modoOscuro={modoOscuro}
+              lleno={lleno}
+              disponibles={disponibles}
+              esProximamente={esProximamente}
+              esInactivo={esInactivo}
+              botonTexto={botonTexto}
+              estaAutenticado={estaAutenticado}
+              esAdmin={esAdmin}
+              tieneInscripcionActiva={tieneInscripcionActiva}
+              onBotonClick={manejarClickBoton}
+            />
           </div>
         </div>
       </div>
