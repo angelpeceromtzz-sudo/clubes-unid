@@ -42,8 +42,6 @@ export function usePanelAlumno() {
     miembros,
     postulaciones,
     loading: cargando,
-    isDark: modoOscuro,
-    tema,
     recargar: cargar,
   };
 }
