@@ -27,13 +27,20 @@ import uploadRoutes from './routes/upload.js';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
-app.use(cors({ origin: CORS_ORIGIN }));
-app.use(express.json());
-app.use((req, res, next) => {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  next();
-});
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  : ['http://localhost:5173'];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permite peticiones sin origin (como Postman) o si está en la lista
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  }
+}));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
