@@ -1,11 +1,13 @@
 import { clasesBadge } from '../constants/colores';
+import { useTheme } from '../contexts/ThemeContext';
 import { Icono } from './ui/Icono';
 
 export function TarjetaClub({
   nombre, descripcion, categoria, cupoMaximo, cupoActual,
-  imagen, onClick, modoOscuro = true,
+  imagen, onClick,
   idEstatusClub,
 }) {
+  const { modoOscuro } = useTheme();
   const esProximamente = idEstatusClub === 2;
   const lleno = cupoActual >= cupoMaximo;
 

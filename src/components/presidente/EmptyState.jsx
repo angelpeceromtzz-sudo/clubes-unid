@@ -1,7 +1,9 @@
 import { RutaProtegida } from '../RutaProtegida';
 import { Icono } from '../ui/Icono';
+import { useTheme } from '../../contexts/ThemeContext';
 
-export function EstadoVacio({ tema }) {
+export function EstadoVacio() {
+  const { tema } = useTheme();
   return (
     <RutaProtegida>
       <div className="max-w-lg mx-auto px-6 py-20 text-center">

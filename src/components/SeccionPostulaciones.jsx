@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 import { Icono } from './ui/Icono';
 
 const CONFIG_ESTATUS = {
@@ -92,7 +93,8 @@ function calcularTiempoRestante(fechaExpiracion) {
   return 'Menos de 1 hora';
 }
 
-function TarjetaPostulacionV2({ postulacion, tema, onRespuesta, respondiendo }) {
+function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo }) {
+  const { tema } = useTheme();
   const conf = CONFIG_ESTATUS[postulacion.status] || CONFIG_ESTATUS['Postulado'];
   const esOferta = postulacion.status === 'Oferta enviada';
   const esFinal = ['Miembro oficial', 'Rechazado'].includes(postulacion.status);
@@ -245,7 +247,8 @@ function TarjetaPostulacionV2({ postulacion, tema, onRespuesta, respondiendo }) 
   );
 }
 
-export function SeccionPostulaciones({ postulaciones, tema, onPostulacionesChange }) {
+export function SeccionPostulaciones({ postulaciones, onPostulacionesChange }) {
+  const { tema } = useTheme();
   const [respondiendo, setRespondiendo] = useState({});
 
   async function manejarRespuesta(id, decision) {
@@ -282,7 +285,6 @@ export function SeccionPostulaciones({ postulaciones, tema, onPostulacionesChang
             <TarjetaPostulacionV2
               key={cardKey}
               postulacion={p}
-              tema={tema}
               onRespuesta={manejarRespuesta}
               respondiendo={respondiendo}
             />

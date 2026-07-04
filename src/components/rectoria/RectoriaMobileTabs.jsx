@@ -1,16 +1,18 @@
-import { ELEMENTOS_NAV_SERVICIOS_ESCOLARES } from '../admin/navItems';
+import { ELEMENTOS_NAV_RECTORIA } from '../admin/navItems';
+import { useTheme } from '../../contexts/ThemeContext';
 
-export function PestanasMovilServiciosEscolares({ vistaActiva, onCambiarVista, isDark }) {
+export function PestanasMovilRectoria({ vistaActiva, onCambiarVista }) {
+  const { modoOscuro } = useTheme();
   return (
     <div className="md:hidden flex gap-1 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-      {ELEMENTOS_NAV_SERVICIOS_ESCOLARES.map((item) => (
+      {ELEMENTOS_NAV_RECTORIA.map((item) => (
         <button
           key={item.key}
           onClick={() => onCambiarVista(item.key)}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all duration-200 shrink-0 cursor-pointer
             ${vistaActiva === item.key
               ? 'bg-amber-400 text-[#0e162c] shadow-sm'
-              : isDark
+              : modoOscuro
               ? 'bg-slate-800/50 text-slate-400 hover:text-white'
               : 'bg-slate-200 text-slate-600 hover:text-slate-900'
             }`}

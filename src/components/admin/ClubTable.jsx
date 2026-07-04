@@ -1,18 +1,13 @@
 import { Icono } from '../ui/Icono';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export function TablaClubes({
   clubes,
-  isDark,
-  tableBg,
-  thCls,
-  tdCls,
-  tdTitle,
-  selectCls,
-  tema,
   onStatusChange,
   onEditar,
   onCrear,
 }) {
+  const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls, tema } = useTheme();
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -30,7 +25,7 @@ export function TablaClubes({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className={`border-b text-left ${isDark ? 'border-slate-700/50' : 'border-slate-200'}`}>
+              <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
                 <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>ID</th>
                 <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Nombre</th>
                 <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Categoría</th>
@@ -41,7 +36,7 @@ export function TablaClubes({
             </thead>
             <tbody>
               {clubes.map((c) => (
-                <tr key={c.id_club} className={`border-b transition-colors ${isDark ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
+                <tr key={c.id_club} className={`border-b transition-colors ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
                   <td className={`px-5 py-4 font-mono text-xs ${tdCls}`}>{c.id_club}</td>
                   <td className={`px-5 py-4 font-medium ${tdTitle}`}>{c.nombre_club}</td>
                   <td className={`px-5 py-4 ${tdCls}`}>{c.categoria}</td>

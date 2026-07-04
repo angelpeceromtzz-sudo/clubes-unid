@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { FormularioInscripcion } from './FormularioInscripcion';
 import { useAutenticacion } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { clasesBadge } from '../constants/colores';
 import { Icono } from './ui/Icono';
 
-export function DetalleClub({ club, onVolver, tema, modoOscuro, onLoginClick }) {
+export function DetalleClub({ club, onVolver, onLoginClick }) {
+  const { tema, modoOscuro } = useTheme();
   const { estaAutenticado, esAdmin, tieneInscripcionActiva, clubesPostulados } = useAutenticacion();
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 

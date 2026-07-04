@@ -1,3 +1,5 @@
+import { useTheme } from '../../contexts/ThemeContext';
+
 function TarjetaStat({ titulo, valor, icono, color }) {
   return (
     <div className={`rounded-xl border p-5 ${color} transition-all duration-200`}>
@@ -12,14 +14,14 @@ function TarjetaStat({ titulo, valor, icono, color }) {
   );
 }
 
-function BarraOcupacion({ nombre, maximo, ocupado, maxOcupado, esOscuro }) {
+function BarraOcupacion({ nombre, maximo, ocupado, maxOcupado, modoOscuro }) {
   const pct = maximo > 0 ? Math.round((ocupado / maximo) * 100) : 0;
   const anchoRelativo = maxOcupado > 0 ? Math.round((ocupado / maxOcupado) * 100) : 0;
   const colorBarra = pct >= 80 ? 'bg-red-500' : pct >= 50 ? 'bg-amber-500' : 'bg-emerald-500';
   return (
     <div className="flex items-center gap-3 py-1.5">
       <span className="text-sm w-44 truncate shrink-0">{nombre}</span>
-      <div className={`flex-1 h-3 ${esOscuro ? 'bg-slate-700/50' : 'bg-slate-200'} rounded-full overflow-hidden`}>
+      <div className={`flex-1 h-3 ${modoOscuro ? 'bg-slate-700/50' : 'bg-slate-200'} rounded-full overflow-hidden`}>
         <div className={`h-full rounded-full transition-all duration-500 ${colorBarra}`} style={{ width: `${Math.min(anchoRelativo, 100)}%` }} />
       </div>
       <span className="text-xs font-mono w-20 text-right shrink-0">{ocupado}/{maximo}</span>
@@ -28,7 +30,8 @@ function BarraOcupacion({ nombre, maximo, ocupado, maxOcupado, esOscuro }) {
   );
 }
 
-export function SeccionResumen({ stats, ocupacionClubes, topClubes, cargando, esOscuro }) {
+export function SeccionResumen({ stats, ocupacionClubes, topClubes, cargando }) {
+  const { modoOscuro } = useTheme();
   if (cargando) {
     return <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full" /></div>;
   }
@@ -69,23 +72,23 @@ export function SeccionResumen({ stats, ocupacionClubes, topClubes, cargando, es
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className={`rounded-xl border p-5 ${esOscuro ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-white shadow-sm'}`}>
-          <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${esOscuro ? 'text-slate-300' : 'text-slate-700'}`}>Cupo Máximo vs Ocupado por Club</h3>
+        <div className={`rounded-xl border p-5 ${modoOscuro ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-white shadow-sm'}`}>
+          <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>Cupo Máximo vs Ocupado por Club</h3>
           <div className="space-y-1">
             {ocupacionClubes.length === 0 && <p className="text-sm text-slate-500">Sin datos</p>}
             {ocupacionClubes.map(c => (
-              <BarraOcupacion key={c.id_club} nombre={c.nombre_club} maximo={c.cupo_maximo} ocupado={c.cupo_ocupado} maxOcupado={maxOcupado} esOscuro={esOscuro} />
+              <BarraOcupacion key={c.id_club} nombre={c.nombre_club} maximo={c.cupo_maximo} ocupado={c.cupo_ocupado} maxOcupado={maxOcupado} modoOscuro={modoOscuro} />
             ))}
           </div>
         </div>
 
-        <div className={`rounded-xl border p-5 ${esOscuro ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-white shadow-sm'}`}>
-          <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${esOscuro ? 'text-slate-300' : 'text-slate-700'}`}>Clubes con Más Integrantes</h3>
+        <div className={`rounded-xl border p-5 ${modoOscuro ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-white shadow-sm'}`}>
+          <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>Clubes con Más Integrantes</h3>
           <div className="space-y-2">
             {topClubes.length === 0 && <p className="text-sm text-slate-500">Sin datos</p>}
             {topClubes.map((c, i) => (
               <div key={c.id_club} className="flex items-center gap-3">
-                <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${i < 3 ? 'bg-amber-400 text-[#0e162c]' : esOscuro ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}`}>
+                <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${i < 3 ? 'bg-amber-400 text-[#0e162c]' : modoOscuro ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-600'}`}>
                   {i + 1}
                 </span>
                 <span className="text-sm flex-1 truncate">{c.nombre_club}</span>
@@ -96,8 +99,8 @@ export function SeccionResumen({ stats, ocupacionClubes, topClubes, cargando, es
         </div>
       </div>
 
-      <div className={`rounded-xl border p-5 ${esOscuro ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-white shadow-sm'}`}>
-        <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${esOscuro ? 'text-slate-300' : 'text-slate-700'}`}>Distribución de Solicitudes por Estado</h3>
+      <div className={`rounded-xl border p-5 ${modoOscuro ? 'border-slate-700/50 bg-slate-800/30' : 'border-slate-200 bg-white shadow-sm'}`}>
+        <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>Distribución de Solicitudes por Estado</h3>
         {solicitudesArr.length === 0 ? (
           <p className="text-sm text-slate-500">Sin datos</p>
         ) : (
@@ -119,7 +122,7 @@ export function SeccionResumen({ stats, ocupacionClubes, topClubes, cargando, es
               return (
                 <div key={s.status} className={`rounded-lg border p-3 text-center ${c.bg}`}>
                   <p className={`text-2xl font-black ${c.text}`}>{s.total}</p>
-                  <p className={`text-xs mt-1 ${esOscuro ? 'text-slate-400' : 'text-slate-500'}`}>{s.status}</p>
+                  <p className={`text-xs mt-1 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>{s.status}</p>
                 </div>
               );
             })}

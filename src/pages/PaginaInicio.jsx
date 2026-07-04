@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { TarjetaClub } from '../components/TarjetaClub';
 import { Heroe } from '../components/Heroe';
 import { DetalleClub } from '../components/DetalleClub';
 
-export function PaginaInicio({ clubes, clubesLoading, tema, modoOscuro, onLoginClick, onClubDetalleChange }) {
+export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetalleChange }) {
   const { estaAutenticado } = useAutenticacion();
+  const { tema, modoOscuro } = useTheme();
   const [clubSeleccionado, setClubSeleccionado] = useState(null);
 
   useEffect(() => {
@@ -19,8 +21,6 @@ export function PaginaInicio({ clubes, clubesLoading, tema, modoOscuro, onLoginC
         onVolver={() => {
           setClubSeleccionado(null);
         }}
-        tema={tema}
-        modoOscuro={modoOscuro}
         onLoginClick={onLoginClick}
       />
     );
@@ -70,7 +70,6 @@ export function PaginaInicio({ clubes, clubesLoading, tema, modoOscuro, onLoginC
                 onClick={() => {
                   setClubSeleccionado(club);
                 }}
-                modoOscuro={modoOscuro}
                 idEstatusClub={club.id_estatus_club}
                 estatus={club.estatus}
               />

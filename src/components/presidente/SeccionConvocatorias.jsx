@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Icono } from '../ui/Icono';
+import { useTheme } from '../../contexts/ThemeContext';
 
 function BloqueCard({ convocatoria, isDark, onActualizar, onEnviar, onImprimir }) {
   const [editando, setEditando] = useState(false);
@@ -177,7 +178,8 @@ function BloqueCard({ convocatoria, isDark, onActualizar, onEnviar, onImprimir }
   );
 }
 
-export function SeccionConvocatorias({ club, tema, modoOscuro }) {
+export function SeccionConvocatorias({ club }) {
+  const { tema, modoOscuro } = useTheme();
   const [convocatorias, setConvocatorias] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');

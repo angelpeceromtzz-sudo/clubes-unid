@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 
-export function usePanelServiciosEscolares() {
+export function usePanelRectoria() {
   const [vistaActiva, setVistaActiva] = useState('resumen');
   const [stats, setStats] = useState(null);
   const [ocupacionClubes, setOcupacionClubes] = useState([]);

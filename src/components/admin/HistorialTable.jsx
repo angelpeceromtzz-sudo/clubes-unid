@@ -1,15 +1,12 @@
 import { Icono } from '../ui/Icono';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export function TablaHistorial({
   historial,
   historialLoading,
-  isDark,
-  tableBg,
-  thCls,
-  tdCls,
-  tdTitle,
   onRefresh,
 }) {
+  const { modoOscuro, tableBg, thCls, tdCls, tdTitle } = useTheme();
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -28,8 +25,8 @@ export function TablaHistorial({
         </div>
       ) : historial.length === 0 ? (
         <div className={`${tableBg} rounded-2xl py-16 px-4 text-center`}>
-          <Icono nombre="clock" strokeWidth={2} className={`h-10 w-10 mx-auto mb-3 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} />
-          <p className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <Icono nombre="clock" strokeWidth={2} className={`h-10 w-10 mx-auto mb-3 ${modoOscuro ? 'text-slate-600' : 'text-slate-300'}`} />
+          <p className={`text-sm font-medium ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
             No hay acciones registradas todavía.
           </p>
         </div>
@@ -38,7 +35,7 @@ export function TablaHistorial({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className={`border-b text-left ${isDark ? 'border-slate-700/50' : 'border-slate-200'}`}>
+                <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
                   <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Fecha</th>
                   <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Administrador</th>
                   <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acción</th>
@@ -47,7 +44,7 @@ export function TablaHistorial({
               </thead>
               <tbody>
                 {historial.map((h) => (
-                  <tr key={h.id_historial} className={`border-b transition-colors ${isDark ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
+                  <tr key={h.id_historial} className={`border-b transition-colors ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
                     <td className={`px-5 py-4 whitespace-nowrap font-mono text-xs ${tdCls}`}>
                       {new Date(h.fecha).toLocaleString('es-MX', {
                         day: '2-digit', month: '2-digit', year: 'numeric',

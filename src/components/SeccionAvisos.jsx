@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 import { Icono } from './ui/Icono';
 
-export function SeccionAvisos({ club, esPresidente, tema, modoOscuro }) {
+export function SeccionAvisos({ club, esPresidente }) {
+  const { tema, modoOscuro } = useTheme();
   const [avisos, setAvisos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
