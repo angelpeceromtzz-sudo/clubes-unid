@@ -5,7 +5,7 @@ import { registrarHistorial } from '../lib/audit.js';
 
 const router = Router();
 
-// Lista todos los usuarios (admin y servicios escolares)
+// Lista todos los usuarios (admin y rectoría)
 router.get('/', authenticate, requireRole(3, 4), async (req, res) => {
   try {
     const result = await pool.query(
@@ -80,7 +80,7 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
       [id_rol]
     );
 
-    const roles = { 1: 'Alumno', 2: 'Presidente', 3: 'Admin', 4: 'Servicios Escolares' };
+    const roles = { 1: 'Alumno', 2: 'Presidente', 3: 'Admin', 4: 'Rectoría' };
     registrarHistorial({
       idAdmin: req.user.id,
       adminNombre: req.user.nombre_completo,

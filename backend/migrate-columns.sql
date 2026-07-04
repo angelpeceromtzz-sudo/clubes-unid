@@ -13,16 +13,16 @@ ALTER TABLE clubes ADD COLUMN IF NOT EXISTS horario VARCHAR(100) DEFAULT '';
 ALTER TABLE notificaciones ADD COLUMN IF NOT EXISTS id_destinatario INT;
 CREATE INDEX IF NOT EXISTS idx_notificaciones_destinatario ON notificaciones(id_destinatario);
 
--- 4. Rol Servicios Escolares
-INSERT INTO cat_roles (id_rol, nombre_rol) VALUES (4, 'servicios_escolares')
+-- 4. Rol Rectoría
+INSERT INTO cat_roles (id_rol, nombre_rol) VALUES (4, 'rectoria')
 ON CONFLICT (id_rol) DO NOTHING;
-UPDATE cat_roles SET nombre_rol = 'servicios_escolares' WHERE id_rol = 4;
+UPDATE cat_roles SET nombre_rol = 'rectoria' WHERE id_rol = 4;
 
--- 5. Usuario de prueba para Servicios Escolares
+-- 5. Usuario de prueba para Rectoría
 INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol)
 VALUES (
   'Roberto Carlos Mendoza Lopez',
-  'escolares@unid.mx',
+  'rectoria@unid.mx',
   '$2a$10$xczneQc8cHO3ZipxNcZ1EuK0CnWNHwH8BmSLq0/ChZzXiSlHYy9e2',
   4
 )

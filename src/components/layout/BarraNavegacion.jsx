@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNotificaciones } from '../contexts/NotificationContext';
-import { useClickOutside } from '../hooks/useClickOutside';
-import { useTheme } from '../contexts/ThemeContext';
-import logoLobo from '../assets/logo-lobo.svg';
-import { Icono } from './ui/Icono';
+import { useNotificaciones } from '../../contexts/NotificationContext';
+import { useClickOutside } from '../../hooks/useClickOutside';
+import { useTheme } from '../../contexts/ThemeContext';
+import logoLobo from '../../assets/logo-lobo.svg';
+import { Icono } from '../ui/Icono';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
 

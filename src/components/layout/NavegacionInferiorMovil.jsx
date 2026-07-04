@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAutenticacion } from '../contexts/AuthContext';
-import { Icono } from './ui/Icono';
+import { useAutenticacion } from '../../contexts/AuthContext';
+import { Icono } from '../ui/Icono';
 
 export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiva, onLoginClick, onInicioClick }) {
   const navigate = useNavigate();

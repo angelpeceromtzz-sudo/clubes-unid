@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNotificaciones } from '../contexts/NotificationContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { Icono } from './ui/Icono';
+import { useNotificaciones } from '../../contexts/NotificationContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Icono } from '../ui/Icono';
 
 export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess }) {
   const { modoOscuro } = useTheme();

@@ -1,4 +1,4 @@
-import { RutaProtegida } from '../RutaProtegida';
+import { RutaProtegida } from '../layout/RutaProtegida';
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ModalExito } from './ModalExito';
-import { api } from '../services/api';
-import { useAutenticacion } from '../contexts/AuthContext';
-import { Icono } from './ui/Icono';
+import { ModalExito } from '../modals/ModalExito';
+import { api } from '../../services/api';
+import { useAutenticacion } from '../../contexts/AuthContext';
+import { Icono } from '../ui/Icono';
 
 const CARRERAS = [
   'Ingeniería en Software y Sist.',

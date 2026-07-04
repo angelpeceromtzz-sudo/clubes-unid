@@ -1,4 +1,4 @@
-import { Icono } from './ui/Icono';
+import { Icono } from '../ui/Icono';
 
 export function ModalExito({ onClose }) {
   return (

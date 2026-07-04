@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { TarjetaClub } from '../components/TarjetaClub';
-import { Heroe } from '../components/Heroe';
-import { DetalleClub } from '../components/DetalleClub';
+import { TarjetaClub } from '../components/clubes/TarjetaClub';
+import { Heroe } from '../components/clubes/Heroe';
+import { DetalleClub } from '../components/clubes/DetalleClub';
 
 export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetalleChange }) {
   const { estaAutenticado } = useAutenticacion();

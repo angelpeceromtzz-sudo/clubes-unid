@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Icono } from './ui/Icono';
+import { Icono } from '../ui/Icono';
 
 const DIAPOSITIVAS = [
   {

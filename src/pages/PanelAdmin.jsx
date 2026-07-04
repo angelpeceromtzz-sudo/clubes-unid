@@ -1,7 +1,7 @@
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { RutaProtegida } from '../components/RutaProtegida';
-import { FormularioNotificacion } from '../components/FormularioNotificacion';
+import { RutaProtegida } from '../components/layout/RutaProtegida';
+import { FormularioNotificacion } from '../components/formularios/FormularioNotificacion';
 import { usePanelAdmin } from '../hooks/usePanelAdmin';
 import { BarraLateralAdmin } from '../components/admin/AdminSidebar';
 import { PestanasMovilAdmin } from '../components/admin/AdminMobileTabs';

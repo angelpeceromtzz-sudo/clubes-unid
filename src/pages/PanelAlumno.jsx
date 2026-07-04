@@ -2,12 +2,12 @@ import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { RutaProtegida } from '../components/RutaProtegida';
+import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { Icono } from '../components/ui/Icono';
-import { InformacionClub } from '../components/InformacionClub';
-import { SeccionAvisos } from '../components/SeccionAvisos';
-import { SeccionMiembros } from '../components/SeccionMiembros';
-import { SeccionPostulaciones } from '../components/SeccionPostulaciones';
+import { InformacionClub } from '../components/clubes/InformacionClub';
+import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
+import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
+import { SeccionPostulaciones } from '../components/presidente/SeccionPostulaciones';
 import { usePanelAlumno } from '../hooks/usePanelAlumno';
 
 export function PanelAlumno() {

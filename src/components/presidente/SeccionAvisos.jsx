@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
-import { useTheme } from '../contexts/ThemeContext';
-import { Icono } from './ui/Icono';
+import { api } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Icono } from '../ui/Icono';
 
 export function SeccionAvisos({ club, esPresidente }) {
   const { tema, modoOscuro } = useTheme();
