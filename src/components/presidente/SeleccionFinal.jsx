@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
-import { AvatarInicial } from '../ui/AvatarInicial';
 import { Alerta } from '../ui/Alerta';
-import { Badge } from '../ui/Badge';
 import { EncabezadoPagina } from '../ui/EncabezadoPagina';
 import { PantallaCompletado } from '../ui/PantallaCompletado';
+import { AlumnoSeleccionCard } from './AlumnoSeleccionCard';
+import { BotonEnviarOfertas } from './BotonEnviarOfertas';
 
 export function SeleccionFinal({ club }) {
   const { tema, modoOscuro } = useTheme();
@@ -102,62 +101,22 @@ export function SeleccionFinal({ club }) {
           </div>
 
           <div className="space-y-2">
-            {convocados.map((alumno) => {
-              const esAprobado = decisiones[alumno.id_formulario] === 'aprobado';
-              return (
-                <div
-                  key={alumno.id_formulario}
-                  onClick={() => toggleDecision(alumno.id_formulario)}
-                  className={`rounded-xl border p-4 cursor-pointer transition-all active:scale-[0.99] ${
-                    esAprobado
-                      ? 'bg-emerald-500/10 border-emerald-500/40'
-                      : modoOscuro
-                        ? 'bg-[#0e162c] border-slate-700/50 hover:border-slate-600/50'
-                        : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-6 h-6 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        esAprobado
-                          ? 'bg-emerald-500 border-emerald-500'
-                          : modoOscuro ? 'border-slate-600' : 'border-slate-400'
-                      }`}
-                    >
-                      {esAprobado && (
-                        <Icono nombre="check" className="h-4 w-4 text-white" strokeWidth={3} />
-                      )}
-                    </div>
-                    <AvatarInicial nombre={alumno.nombre_completo} color="amber" />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold truncate ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-                        {alumno.nombre_completo}
-                      </p>
-                      <p className="text-xs text-slate-500 font-mono">{alumno.matricula} · {alumno.carrera}</p>
-                    </div>
-                    <Badge texto={esAprobado ? 'Aprobado' : 'Rechazado'} color={esAprobado ? 'emerald' : 'red'} />
-                  </div>
-                </div>
-              );
-            })}
+            {convocados.map((alumno) => (
+              <AlumnoSeleccionCard
+                key={alumno.id_formulario}
+                alumno={alumno}
+                esAprobado={decisiones[alumno.id_formulario] === 'aprobado'}
+                modoOscuro={modoOscuro}
+                onToggle={() => toggleDecision(alumno.id_formulario)}
+              />
+            ))}
           </div>
 
-          {aprobados.length > 0 && (
-            <button
-              onClick={enviarOfertas}
-              disabled={enviando}
-              className="w-full bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl px-6 py-4 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {enviando ? (
-                <Spinner size="sm" color="border-[#0e162c]" className="!py-0" />
-              ) : (
-                <>
-                  <Icono nombre="check-circle" className="h-5 w-5" strokeWidth={2.5} />
-                  Enviar ofertas ({aprobados.length})
-                </>
-              )}
-            </button>
-          )}
+          <BotonEnviarOfertas
+            aprobados={aprobados}
+            enviando={enviando}
+            onEnviar={enviarOfertas}
+          />
         </>
       )}
     </div>
