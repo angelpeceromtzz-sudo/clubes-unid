@@ -1,6 +1,9 @@
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
 import { TimelinePostulacion, CONFIG_ESTATUS } from './TimelinePostulacion';
+import { AvatarInicial } from '../ui/AvatarInicial';
+import { Badge } from '../ui/Badge';
+import { Spinner } from '../ui/Spinner';
 
 function calcularTiempoRestante(fechaExpiracion) {
   if (!fechaExpiracion) return null;
@@ -32,9 +35,7 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
             {postulacion.imagen_portada ? (
               <img src={postulacion.imagen_portada} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
-                <span className="text-amber-400 font-bold text-sm">{postulacion.nombre_club?.charAt(0)}</span>
-              </div>
+              <AvatarInicial nombre={postulacion.nombre_club} color="amber" size="md" />
             )}
             <div className="min-w-0">
               <h3 className={`text-base font-bold truncate ${tema.isDark ? 'text-white' : 'text-slate-900'}`}>
@@ -45,9 +46,15 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
               </p>
             </div>
           </div>
-          <span className={`shrink-0 text-[10px] uppercase font-bold px-2.5 py-1 rounded-full border ${conf.bg} ${conf.color} ${conf.border}`}>
-            {conf.label}
-          </span>
+          <Badge texto={conf.label} size="md" color={
+            postulacion.status === 'Postulado' || postulacion.status === 'Pendiente' ? 'yellow' :
+            postulacion.status === 'En revisión' ? 'blue' :
+            postulacion.status === 'Preseleccionado' ? 'purple' :
+            postulacion.status === 'Convocado' ? 'indigo' :
+            postulacion.status === 'Oferta enviada' ? 'emerald' :
+            postulacion.status === 'Miembro oficial' ? 'amber' :
+            postulacion.status === 'Rechazado' ? 'red' : 'slate'
+          } />
         </div>
 
         <div className="flex gap-6">
@@ -111,7 +118,7 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
                     className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {cargandoRespuesta === 'aceptar' ? (
-                      <span className="animate-spin w-4 h-4 border-2 border-black border-t-transparent rounded-full" />
+                      <Spinner size="sm" color="border-black" className="!py-0" />
                     ) : (
                       <>
                         <Icono nombre="check" strokeWidth={2.5} className="h-4 w-4" />
@@ -127,7 +134,7 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
                     }`}
                   >
                     {cargandoRespuesta === 'rechazar' ? (
-                      <span className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mx-auto" />
+                      <Spinner size="sm" color="border-current" className="!py-0" />
                     ) : (
                       'Rechazar'
                     )}

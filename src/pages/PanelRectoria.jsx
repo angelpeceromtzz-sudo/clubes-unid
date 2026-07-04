@@ -1,8 +1,7 @@
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePanelRectoria } from '../hooks/usePanelRectoria';
-import { BarraLateralPorRol } from '../components/layout/BarraLateralPorRol';
-import { PestanasMovilPorRol } from '../components/layout/PestanasMovilPorRol';
+import { NavegacionPanel } from '../components/layout/NavegacionPanel';
 import { ELEMENTOS_NAV_RECTORIA } from '../components/admin/navItems';
 import { SeccionResumen } from '../components/rectoria/SeccionResumen';
 import { SeccionClubes } from '../components/rectoria/SeccionClubes';
@@ -15,22 +14,12 @@ export function PanelRectoria() {
   const d = usePanelRectoria();
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)]">
-      <BarraLateralPorRol
-        tituloRol="Rectoría"
-        elementosNav={ELEMENTOS_NAV_RECTORIA}
-        vistaActiva={d.vistaActiva}
-        onVistaChange={d.setVistaActiva}
-        usuario={usuario}
-      />
-      <main className="flex-1 p-4 md:p-8 overflow-auto">
-        <PestanasMovilPorRol
-          elementosNav={ELEMENTOS_NAV_RECTORIA}
-          vistaActiva={d.vistaActiva}
-          onVistaChange={d.setVistaActiva}
-        />
-
-        <h1 className={`text-2xl font-black tracking-tight mb-6 ${tema.title}`}>Panel de Rectoría</h1>
+    <NavegacionPanel
+      elementosNav={ELEMENTOS_NAV_RECTORIA}
+      vistaActiva={d.vistaActiva}
+      onVistaChange={d.setVistaActiva}
+    >
+      <h1 className={`text-2xl font-black tracking-tight mb-6 ${tema.title}`}>Panel de Rectoría</h1>
 
         {d.error && (
           <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
@@ -56,13 +45,12 @@ export function PanelRectoria() {
         {d.vistaActiva === 'asistencia' && (
           <SeccionAsistencia
             clubesDetalle={d.clubesDetalle}
-            clubAsistenciaId={d.clubAsistenciaId}
-            seleccionarClubAsistencia={d.seleccionarClubAsistencia}
-            asistencia={d.asistencia}
-            cargando={d.cargando}
-          />
-        )}
-      </main>
-    </div>
+          clubAsistenciaId={d.clubAsistenciaId}
+          seleccionarClubAsistencia={d.seleccionarClubAsistencia}
+          asistencia={d.asistencia}
+          cargando={d.cargando}
+        />
+      )}
+    </NavegacionPanel>
   );
 }

@@ -5,6 +5,7 @@ import { BloqueCard } from './BloqueCard';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
 import { ErrorAlerta } from '../ui/ErrorAlerta';
+import { EncabezadoPagina } from '../ui/EncabezadoPagina';
 
 export function SeccionConvocatorias({ club }) {
   const { tema } = useTheme();
@@ -66,14 +67,10 @@ export function SeccionConvocatorias({ club }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className={`text-xl font-black uppercase tracking-wider mb-1 ${tema.title}`}>
-          Convocatorias
-        </h2>
-        <p className={`text-sm ${tema.subtitle}`}>
-          Gestiona los bloques de evaluación presencial: asigna fecha, hora y lugar, envía notificaciones e imprime listas de asistencia.
-        </p>
-      </div>
+      <EncabezadoPagina
+        titulo="Convocatorias"
+        subtitulo="Gestiona los bloques de evaluación presencial: asigna fecha, hora y lugar, envía notificaciones e imprime listas de asistencia."
+      />
 
       <ErrorAlerta mensaje={error} />
 

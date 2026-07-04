@@ -1,5 +1,7 @@
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Badge } from '../ui/Badge';
+import { Spinner } from '../ui/Spinner';
 
 export function TablaHistorial({
   historial,
@@ -21,7 +23,7 @@ export function TablaHistorial({
 
       {historialLoading ? (
         <div className="flex items-center justify-center py-20">
-          <span className="animate-spin w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full" />
+          <Spinner size="sm" className="!py-0" />
         </div>
       ) : historial.length === 0 ? (
         <div className={`${tableBg} rounded-2xl py-16 px-4 text-center`}>
@@ -53,26 +55,24 @@ export function TablaHistorial({
                     </td>
                     <td className={`px-5 py-4 font-medium ${tdTitle}`}>{h.admin_nombre}</td>
                     <td className="px-5 py-4">
-                      <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full border ${
+                      <Badge texto={{
+                        cambio_rol: 'Cambio de Rol',
+                        asignar_club: 'Asignar Club',
+                        desasignar_club: 'Desasignar Club',
+                        crear_club: 'Crear Club',
+                        actualizar_club: 'Actualizar Club',
+                        cambio_estatus_club: 'Cambio Estatus',
+                        enviar_anuncio: 'Enviar Anuncio',
+                        baja_usuario: 'Dar de Baja',
+                      }[h.accion] || h.accion} size="md" color={
                         h.accion === 'cambio_rol' || h.accion === 'cambio_estatus_club'
-                          ? 'text-amber-400 border-amber-400/30 bg-amber-400/10'
+                          ? 'amber'
                           : h.accion === 'crear_club' || h.accion === 'enviar_anuncio'
-                          ? 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10'
+                          ? 'emerald'
                           : h.accion === 'baja_usuario' || h.accion === 'desasignar_club'
-                          ? 'text-red-400 border-red-400/30 bg-red-400/10'
-                          : 'text-blue-400 border-blue-400/30 bg-blue-400/10'
-                      }`}>
-                        {{
-                          cambio_rol: 'Cambio de Rol',
-                          asignar_club: 'Asignar Club',
-                          desasignar_club: 'Desasignar Club',
-                          crear_club: 'Crear Club',
-                          actualizar_club: 'Actualizar Club',
-                          cambio_estatus_club: 'Cambio Estatus',
-                          enviar_anuncio: 'Enviar Anuncio',
-                          baja_usuario: 'Dar de Baja',
-                        }[h.accion] || h.accion}
-                      </span>
+                          ? 'red'
+                          : 'blue'
+                      } />
                     </td>
                     <td className={`px-5 py-4 ${tdCls} max-w-xs truncate`}>{h.descripcion}</td>
                   </tr>

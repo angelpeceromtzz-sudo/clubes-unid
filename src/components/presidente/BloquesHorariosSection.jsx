@@ -8,6 +8,8 @@ import { AlumnosConvocados } from './bloques-horarios/AlumnosConvocados';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
 import { ErrorAlerta } from '../ui/ErrorAlerta';
+import { EncabezadoPagina } from '../ui/EncabezadoPagina';
+import { Alerta } from '../ui/Alerta';
 
 export function SeccionBloquesHorarios({ club }) {
   const { tema, modoOscuro } = useTheme();
@@ -97,26 +99,15 @@ export function SeccionBloquesHorarios({ club }) {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className={`text-xl font-black uppercase tracking-wider mb-1 ${tema.title}`}>
-          Bloques y Horarios
-        </h2>
-        <p className={`text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-          Gestiona la convocatoria a evaluación presencial y la selección final de alumnos.
-        </p>
-      </div>
+      <EncabezadoPagina
+        titulo="Bloques y Horarios"
+        subtitulo="Gestiona la convocatoria a evaluación presencial y la selección final de alumnos."
+      />
 
       <ErrorAlerta mensaje={error} />
 
       {completado && (
-        <div className={`rounded-xl p-4 border ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'}`}>
-          <div className="flex items-center gap-2">
-            <Icono nombre="check-circle" className="h-5 w-5 text-emerald-500 shrink-0" strokeWidth={2.5} />
-            <p className="text-sm font-medium text-emerald-500">
-              Ofertas de ingreso enviadas exitosamente. Los alumnos seleccionados recibirán una notificación.
-            </p>
-          </div>
-        </div>
+        <Alerta tipo="success" mensaje="Ofertas de ingreso enviadas exitosamente. Los alumnos seleccionados recibirán una notificación." />
       )}
 
       <PreseleccionadosConBloque

@@ -1,5 +1,7 @@
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
+import { BotonAccion } from '../ui/BotonAccion';
+import { Spinner } from '../ui/Spinner';
 
 export function VistaPreviaConvocatorias({ vistaPrevia, generando, onConfirmar, onCancelar }) {
   const { tema, modoOscuro } = useTheme();
@@ -45,17 +47,9 @@ export function VistaPreviaConvocatorias({ vistaPrevia, generando, onConfirmar, 
         >
           Cancelar
         </button>
-        <button
-          onClick={onConfirmar}
-          disabled={generando}
-          className="flex-1 bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
-        >
-          {generando ? (
-            <span className="animate-spin w-4 h-4 border-2 border-[#0e162c] border-t-transparent rounded-full" />
-          ) : (
-            'Confirmar y Generar Convocatorias'
-          )}
-        </button>
+        <BotonAccion onClick={onConfirmar} disabled={generando} variant="primary" size="lg" className="flex-1">
+          {generando ? <Spinner size="sm" color="border-[#0e162c]" className="!py-0" /> : 'Confirmar y Generar Convocatorias'}
+        </BotonAccion>
       </div>
     </div>
   );

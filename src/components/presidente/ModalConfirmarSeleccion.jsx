@@ -1,5 +1,7 @@
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
+import { BotonAccion } from '../ui/BotonAccion';
+import { Spinner } from '../ui/Spinner';
 
 export function ModalConfirmarSeleccion({ aceptados, noSeleccionados, onConfirmar, onCancelar, cargando }) {
   const { modoOscuro } = useTheme();
@@ -77,7 +79,7 @@ export function ModalConfirmarSeleccion({ aceptados, noSeleccionados, onConfirma
               className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm uppercase tracking-wider rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {cargando ? (
-                <span className="animate-spin w-4 h-4 border-2 border-black border-t-transparent rounded-full" />
+                <Spinner size="sm" color="border-black" className="!py-0" />
               ) : (
                 'Confirmar'
               )}

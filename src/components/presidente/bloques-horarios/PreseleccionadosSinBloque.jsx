@@ -1,4 +1,5 @@
 import { useTheme } from '../../../contexts/ThemeContext';
+import { AvatarInicial } from '../../ui/AvatarInicial';
 
 export function PreseleccionadosSinBloque({ alumnos, onAsignarBloque }) {
   const { tema, modoOscuro } = useTheme();
@@ -12,9 +13,7 @@ export function PreseleccionadosSinBloque({ alumnos, onAsignarBloque }) {
       <div className="space-y-2">
         {alumnos.map((s) => (
           <div key={s.id_formulario} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl ${modoOscuro ? 'bg-[#18223f]' : 'bg-slate-100'}`}>
-            <div className="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold text-xs shrink-0">
-              {s.nombre_completo.charAt(0)}
-            </div>
+            <AvatarInicial nombre={s.nombre_completo} color="purple" />
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold truncate ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>{s.nombre_completo}</p>
               <p className="text-[10px] text-slate-500 font-mono">{s.matricula}</p>

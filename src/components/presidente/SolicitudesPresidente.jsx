@@ -4,7 +4,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
 import { ErrorAlerta } from '../ui/ErrorAlerta';
-import { TarjetaSolicitud } from './TarjetaSolicitud';
+import { ListaSolicitudes } from './ListaSolicitudes';
+import { EncabezadoPagina } from '../ui/EncabezadoPagina';
 import { VistaPreviaConvocatorias } from './VistaPreviaConvocatorias';
 
 export function SolicitudesPresidente({ club }) {
@@ -102,24 +103,18 @@ export function SolicitudesPresidente({ club }) {
     <div className="space-y-8">
       <ErrorAlerta mensaje={error} />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className={`text-xl font-black uppercase tracking-wider ${tema.title}`}>
-            Formularios
-          </h2>
-          <p className={`text-sm ${tema.subtitle}`}>
-            Evalúa las solicitudes entrantes. Preselecciona o rechaza alumnos.
-          </p>
-        </div>
-        {totalPreseleccionados > 0 && !vistaPrevia && (
+      <EncabezadoPagina
+        titulo="Formularios"
+        subtitulo="Evalúa las solicitudes entrantes. Preselecciona o rechaza alumnos."
+        accion={totalPreseleccionados > 0 && !vistaPrevia ? (
           <button
             onClick={mostrarVistaPrevia}
             className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98]"
           >
             Revisión general completada
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {vistaPrevia && (
         <VistaPreviaConvocatorias
@@ -130,63 +125,13 @@ export function SolicitudesPresidente({ club }) {
         />
       )}
 
-      {enRevision.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <h3 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
-              En revisión
-            </h3>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border bg-blue-500/20 text-blue-400 border-blue-500/30">
-              {enRevision.length}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {enRevision.map((s, i) => {
-              const cardKey = s.id_formulario ?? `sol-${i}`;
-              return (
-                <TarjetaSolicitud
-                  key={cardKey}
-                  solicitud={s}
-                  onPreseleccionar={manejarPreseleccionar}
-                  onRechazar={manejarRechazar}
-                  accionando={accionando}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <ListaSolicitudes titulo="En revisión" solicitudes={enRevision} color="blue" onPreseleccionar={manejarPreseleccionar} onRechazar={manejarRechazar} accionando={accionando} themeTitle={tema.title} />
 
       {enRevision.length === 0 && !vistaPrevia && (
         <EmptyState icono="file" titulo="No hay solicitudes pendientes" descripcion="Las solicitudes de alumnos en estado En revisión aparecerán aquí" />
       )}
 
-      {preseleccionados.length > 0 && !vistaPrevia && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <h3 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
-              Preseleccionados
-            </h3>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border bg-purple-500/20 text-purple-400 border-purple-500/30">
-              {preseleccionados.length}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {preseleccionados.map((s, i) => {
-              const cardKey = s.id_formulario ?? `presel-${i}`;
-              return (
-                <TarjetaSolicitud
-                  key={cardKey}
-                  solicitud={s}
-                  onPreseleccionar={manejarPreseleccionar}
-                  onRechazar={manejarRechazar}
-                  accionando={accionando}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <ListaSolicitudes titulo="Preseleccionados" solicitudes={preseleccionados} color="purple" onPreseleccionar={manejarPreseleccionar} onRechazar={manejarRechazar} accionando={accionando} themeTitle={tema.title} />
     </div>
   );
 }

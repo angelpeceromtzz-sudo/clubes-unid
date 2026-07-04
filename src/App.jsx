@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
 import { useTheme } from './contexts/ThemeContext';
@@ -12,104 +12,31 @@ import { PanelPresidente } from './pages/PanelPresidente';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
-import { api, getSession } from './services/api';
+import { useClubes } from './hooks/useClubes';
+import { useAuthRedirect } from './hooks/useAuthRedirect';
 
 function App() {
-  const { estaAutenticado, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, refrescarInscripcionActiva, tieneInscripcionActiva } = useAutenticacion();
-  const { modoOscuro, setModoOscuro, tema } = useTheme();
+  const { esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { tema } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [clubes, setClubes] = useState([]);
-  const [clubesLoading, setClubesLoading] = useState(true);
-  const [categoriaActiva, setCategoriaActiva] = useState('Todos');
+  const { clubesFiltrados, clubesLoading, categoriaActiva, setCategoriaActiva } = useClubes();
+  const { redirigirPostLogin } = useAuthRedirect();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [clubDetalleVisible, setClubDetalleVisible] = useState(false);
   const [catalogoKey, setCatalogoKey] = useState(0);
 
-  useEffect(() => {
-    async function loadClubes() {
-      try {
-        const data = await api.getClubes();
-        setClubes(data);
-      } catch {
-        setClubes([]);
-      } finally {
-        setClubesLoading(false);
-      }
-    }
-    loadClubes();
-    const session = getSession();
-    if (session?.user) {
-      refrescarInscripcionActiva();
-    }
-  }, [refrescarInscripcionActiva]);
-
-  const autenticacionAnterior = useRef(estaAutenticado);
-  const [redireccionPendiente, setRedireccionPendiente] = useState(false);
-
-  useEffect(() => {
-    if (estaAutenticado && !autenticacionAnterior.current) {
-      const sesion = getSession();
-      if (sesion?.user) {
-        const { id_rol } = sesion.user;
-        if (id_rol === 4) {
-          navigate('/rectoria/dashboard', { replace: true });
-        } else if (id_rol === 3) {
-          navigate('/admin/dashboard', { replace: true });
-        } else if (id_rol === 2) {
-          navigate('/presidente/dashboard', { replace: true });
-        } else if (id_rol === 1 && tieneInscripcionActiva) {
-          navigate('/dashboard', { replace: true });
-        } else if (id_rol === 1) {
-          setRedireccionPendiente(true);
-        } else {
-          console.warn('[ROUTING] Rol desconocido:', id_rol);
-          navigate('/', { replace: true });
-        }
-      }
-    }
-    autenticacionAnterior.current = estaAutenticado;
-  }, [estaAutenticado, navigate, tieneInscripcionActiva]);
-
-  useEffect(() => {
-    if (redireccionPendiente && tieneInscripcionActiva) {
-      navigate('/dashboard', { replace: true });
-      setRedireccionPendiente(false);
-    }
-  }, [redireccionPendiente, tieneInscripcionActiva, navigate]);
-
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
-    const session = getSession();
-    if (session?.user) {
-      const { id_rol } = session.user;
-      if (id_rol === 4) {
-        navigate('/rectoria/dashboard', { replace: true });
-      } else if (id_rol === 3) {
-        navigate('/admin/dashboard', { replace: true });
-      } else if (id_rol === 2) {
-        navigate('/presidente/dashboard', { replace: true });
-      } else if (id_rol === 1) {
-        api.getInscripcionActiva().then((insc) => {
-          if (insc) navigate('/dashboard', { replace: true });
-        }).catch(() => {});
-      }
-    }
-  }, [navigate]);
+    redirigirPostLogin();
+  }, [redirigirPostLogin]);
 
   function handleLogout() {
     cerrarSesion();
     navigate('/');
     setMenuAbierto(false);
   }
-
-  const clubesFiltrados = clubes
-    .filter((club) => club.id_estatus_club !== 3)
-    .filter(
-      (club) =>
-        categoriaActiva === 'Todos' || club.categoria === categoriaActiva
-    );
 
   useEffect(() => {
     if (location.pathname !== '/') {

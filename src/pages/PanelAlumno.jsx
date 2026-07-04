@@ -10,6 +10,8 @@ import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
 import { SeccionPostulaciones } from '../components/presidente/SeccionPostulaciones';
 import { usePanelAlumno } from '../hooks/usePanelAlumno';
 import { Spinner } from '../components/ui/Spinner';
+import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
+import { Alerta } from '../components/ui/Alerta';
 
 export function PanelAlumno() {
   const navigate = useNavigate();
@@ -69,12 +71,10 @@ export function PanelAlumno() {
     <RutaProtegida>
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="mb-8">
-          <h1 className={`text-3xl font-black ${tema.title}`}>
-            {esMiembroOficial ? `Mi Club` : `Mis Postulaciones`}
-          </h1>
-          <p className={`text-sm mt-1 ${tema.subtitle}`}>
-            Bienvenido, {d.user.nombre_completo}
-          </p>
+          <EncabezadoPagina
+            titulo={esMiembroOficial ? 'Mi Club' : 'Mis Postulaciones'}
+            subtitulo={`Bienvenido, ${d.user.nombre_completo}`}
+          />
         </div>
 
         {!esMiembroOficial && d.postulaciones.length > 0 && (
@@ -89,25 +89,27 @@ export function PanelAlumno() {
         {d.club && (
           <div className="mt-10">
             {!dismissMiembroBanner && (
-              <div className={`relative rounded-2xl p-6 border mb-8 ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'}`}>
+              <div className="mb-8 relative">
                 <button
                   onClick={descartarBanner}
-                  className={`absolute top-3 right-3 p-1 rounded-full transition-colors cursor-pointer ${modoOscuro ? 'hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-300' : 'hover:bg-emerald-200 text-slate-500 hover:text-emerald-700'}`}
+                  className={`absolute top-3 right-3 p-1 rounded-full transition-colors cursor-pointer z-10 ${modoOscuro ? 'hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-300' : 'hover:bg-emerald-200 text-slate-500 hover:text-emerald-700'}`}
                   title="No mostrar más"
                 >
                   <Icono nombre="close" className="h-4 w-4" strokeWidth={2.5} />
                 </button>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🎉</span>
-                  <div>
-                    <h2 className={`text-lg font-black uppercase tracking-wider ${modoOscuro ? 'text-emerald-300' : 'text-emerald-700'}`}>
-                      Miembro de {d.club.nombre_club}
-                    </h2>
-                    <p className={`text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Eres miembro oficial de este club
-                    </p>
+                <Alerta tipo="success">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🎉</span>
+                    <div>
+                      <h2 className={`text-lg font-black uppercase tracking-wider ${modoOscuro ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                        Miembro de {d.club.nombre_club}
+                      </h2>
+                      <p className={`text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Eres miembro oficial de este club
+                      </p>
+                    </div>
                   </div>
-                </div>
+                </Alerta>
               </div>
             )}
 
