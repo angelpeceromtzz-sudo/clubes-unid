@@ -1,26 +1,33 @@
+import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePanelRectoria } from '../hooks/usePanelRectoria';
-import { BarraLateralRectoria } from '../components/rectoria/RectoriaSidebar';
-import { PestanasMovilRectoria } from '../components/rectoria/RectoriaMobileTabs';
+import { BarraLateralPorRol } from '../components/layout/BarraLateralPorRol';
+import { PestanasMovilPorRol } from '../components/layout/PestanasMovilPorRol';
+import { ELEMENTOS_NAV_RECTORIA } from '../components/admin/navItems';
 import { SeccionResumen } from '../components/rectoria/SeccionResumen';
 import { SeccionClubes } from '../components/rectoria/SeccionClubes';
 import { SeccionPadron } from '../components/rectoria/SeccionPadron';
 import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
 
 export function PanelRectoria() {
+  const { usuario } = useAutenticacion();
   const { tema, esOscuro } = useTheme();
   const d = usePanelRectoria();
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
-      <BarraLateralRectoria
+      <BarraLateralPorRol
+        tituloRol="Rectoría"
+        elementosNav={ELEMENTOS_NAV_RECTORIA}
         vistaActiva={d.vistaActiva}
-        onCambiarVista={d.setVistaActiva}
+        onVistaChange={d.setVistaActiva}
+        usuario={usuario}
       />
       <main className="flex-1 p-4 md:p-8 overflow-auto">
-        <PestanasMovilRectoria
+        <PestanasMovilPorRol
+          elementosNav={ELEMENTOS_NAV_RECTORIA}
           vistaActiva={d.vistaActiva}
-          onCambiarVista={d.setVistaActiva}
+          onVistaChange={d.setVistaActiva}
         />
 
         <h1 className={`text-2xl font-black tracking-tight mb-6 ${tema.title}`}>Panel de Rectoría</h1>
