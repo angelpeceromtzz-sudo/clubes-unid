@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { BotonMicrosoft } from './BotonMicrosoft';
+import { Icono } from './ui/Icono';
 
 export function ModalInicioSesion({ onClose, modoOscuro }) {
   const { iniciarSesion } = useAutenticacion();
@@ -41,9 +42,7 @@ export function ModalInicioSesion({ onClose, modoOscuro }) {
               onClick={onClose}
               className={`${esOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'} transition-colors cursor-pointer`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <Icono nombre="close" strokeWidth={2} className="h-6 w-6 text-slate-400" />
             </button>
           </div>
 
@@ -105,7 +104,7 @@ export function ModalInicioSesion({ onClose, modoOscuro }) {
               <p>alumno.inscrito@unid.mx / 123456</p>
               <p>presidente@unid.mx / 123456</p>
               <p>admin@unid.mx / 123456</p>
-              <p>escolares@unid.mx / 123456</p>
+              <p>rectoria@unid.mx / 123456</p>
             </div>
           </div>
         </div>

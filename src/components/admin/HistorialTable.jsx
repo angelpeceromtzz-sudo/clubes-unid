@@ -1,3 +1,5 @@
+import { Icono } from '../ui/Icono';
+
 export function TablaHistorial({
   historial,
   historialLoading,
@@ -26,9 +28,7 @@ export function TablaHistorial({
         </div>
       ) : historial.length === 0 ? (
         <div className={`${tableBg} rounded-2xl py-16 px-4 text-center`}>
-          <svg xmlns="http://www.w3.org/2000/svg" className={`h-10 w-10 mx-auto mb-3 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <Icono nombre="clock" strokeWidth={2} className={`h-10 w-10 mx-auto mb-3 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} />
           <p className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
             No hay acciones registradas todavía.
           </p>

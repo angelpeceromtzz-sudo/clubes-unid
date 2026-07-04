@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNotificaciones } from '../contexts/NotificationContext';
+import { Icono } from './ui/Icono';
 
 export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess, tema, modoOscuro }) {
   const { crearNotificacion } = useNotificaciones();
@@ -105,9 +106,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
           <label className={labelClass}>Seleccionar Club</label>
 
           <div className="relative">
-            <svg xmlns="http://www.w3.org/2000/svg" className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <Icono nombre="search" strokeWidth={2} className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} />
             <input
               type="text"
               value={busquedaClub}
@@ -142,18 +141,14 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
 
       {mensajeError && (
         <div className="flex items-start gap-2.5 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <Icono nombre="close" strokeWidth={2} className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
           <p className="text-sm font-medium text-red-400">{mensajeError}</p>
         </div>
       )}
 
       {mensajeExito && (
         <div className="flex items-start gap-2.5 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <Icono nombre="check-circle" strokeWidth={2} className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
           <p className="text-sm font-medium text-emerald-400">{mensajeExito}</p>
         </div>
       )}

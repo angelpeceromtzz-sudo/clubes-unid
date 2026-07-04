@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNotificaciones } from '../contexts/NotificationContext';
 import { useClickOutside } from '../hooks/useClickOutside';
 import logoLobo from '../assets/logo-lobo.svg';
+import { Icono } from './ui/Icono';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
 
@@ -54,9 +55,7 @@ export function BarraNavegacion({
               onClick={onLogoClick}
               className="flex md:hidden items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7 7l-7-7 7-7" />
-              </svg>
+              <Icono nombre="arrow-left" className="h-3.5 w-3.5" strokeWidth={2.5} />
               Volver
             </button>
           )}
@@ -97,9 +96,7 @@ export function BarraNavegacion({
             onClick={onVolverCatalogo}
             className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95 md:justify-self-center"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7 7l-7-7 7-7" />
-            </svg>
+            <Icono nombre="arrow-left" className="h-3.5 w-3.5" strokeWidth={2.5} />
             Volver al Catálogo
           </button>
         )}
@@ -112,9 +109,7 @@ export function BarraNavegacion({
                 className={`relative ${tema.iconColor} hover:text-amber-400 transition-colors`}
                 aria-label="Notificaciones"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
+                <Icono nombre="bell" className="h-5 w-5" strokeWidth={2} />
                 {noLeidas > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
                     {noLeidas}
@@ -122,9 +117,7 @@ export function BarraNavegacion({
                 )}
               </button>
               <button onClick={onDashboardClick} className={`${tema.iconColor} hover:text-amber-400 transition-colors`} title="Dashboard">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
+                <Icono nombre="grid" className="h-5 w-5" strokeWidth={2} />
               </button>
               <button
                 onClick={() => setMenuAbierto((prev) => !prev)}
@@ -149,9 +142,7 @@ export function BarraNavegacion({
               className="relative p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 text-white hover:text-amber-400"
               aria-label="Notificaciones"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
+              <Icono nombre="bell" className="h-6 w-6" strokeWidth={2} />
               {noLeidas > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
                   {noLeidas}
@@ -221,13 +212,11 @@ export function BarraNavegacion({
             className={`p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${tema.iconColor} hover:text-amber-400 hover:bg-slate-700/50 ${user ? 'md:hidden' : ''}`}
             aria-label="Menú"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              {menuAbierto ? (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
+            {menuAbierto ? (
+              <Icono nombre="close" className="h-6 w-6" strokeWidth={2} />
+            ) : (
+              <Icono nombre="menu" className="h-6 w-6" strokeWidth={2} />
+            )}
           </button>
 
           {menuAbierto && (
@@ -243,9 +232,7 @@ export function BarraNavegacion({
                       onClick={onDashboardClick}
                       className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                      </svg>
+                      <Icono nombre="grid" className="h-4 w-4" strokeWidth={2} />
                       Mi Dashboard
                     </button>
                     <div className={`h-px ${tema.headerBorder} mx-3`} />
@@ -253,13 +240,11 @@ export function BarraNavegacion({
                       onClick={() => { setModoOscuro((prev) => !prev); setMenuAbierto(false); }}
                       className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        {modoOscuro ? (
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                        ) : (
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        )}
-                      </svg>
+                      {modoOscuro ? (
+                        <Icono nombre="sun" className="h-4 w-4" strokeWidth={2} />
+                      ) : (
+                        <Icono nombre="moon" className="h-4 w-4" strokeWidth={2} />
+                      )}
                       Alternar el modo oscuro
                     </button>
                     <div className={`h-px ${tema.headerBorder} mx-3`} />
@@ -267,9 +252,7 @@ export function BarraNavegacion({
                       onClick={() => { onLogout(); setMenuAbierto(false); }}
                       className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
+                      <Icono nombre="login" className="h-4 w-4" strokeWidth={2} />
                       Cerrar sesión
                     </button>
                   </>
@@ -279,9 +262,7 @@ export function BarraNavegacion({
                       onClick={() => { onLoginClick(); setMenuAbierto(false); }}
                       className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                      </svg>
+                      <Icono nombre="logout" className="h-4 w-4" strokeWidth={2} />
                       Iniciar Sesión
                     </button>
                     <div className={`h-px ${tema.headerBorder} mx-3`} />
@@ -289,13 +270,11 @@ export function BarraNavegacion({
                       onClick={() => { setModoOscuro((prev) => !prev); setMenuAbierto(false); }}
                       className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        {modoOscuro ? (
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                        ) : (
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        )}
-                      </svg>
+                      {modoOscuro ? (
+                        <Icono nombre="sun" className="h-4 w-4" strokeWidth={2} />
+                      ) : (
+                        <Icono nombre="moon" className="h-4 w-4" strokeWidth={2} />
+                      )}
                       {modoOscuro ? 'Modo Claro' : 'Modo Oscuro'}
                     </button>
                     <div className={`h-px ${tema.headerBorder} mx-3`} />
@@ -303,9 +282,7 @@ export function BarraNavegacion({
                       onClick={() => { setMenuAbierto(false); }}
                       className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-                      </svg>
+                      <Icono nombre="help" className="h-4 w-4" strokeWidth={2} />
                       Ayuda
                     </button>
                   </>

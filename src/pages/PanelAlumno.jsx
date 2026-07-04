@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { RutaProtegida } from '../components/RutaProtegida';
+import { Icono } from '../components/ui/Icono';
 import { InformacionClub } from '../components/InformacionClub';
 import { SeccionAvisos } from '../components/SeccionAvisos';
 import { SeccionMiembros } from '../components/SeccionMiembros';
@@ -10,7 +11,7 @@ import { usePanelAlumno } from '../hooks/usePanelAlumno';
 
 export function PanelAlumno({ tema, modoOscuro }) {
   const navigate = useNavigate();
-  const { usuario, esPresidente, esAdmin, esServiciosEscolares } = useAutenticacion();
+  const { usuario, esPresidente, esAdmin, esRectoria } = useAutenticacion();
   const d = usePanelAlumno(tema, modoOscuro);
   const [dismissMiembroBanner, setDismissMiembroBanner] = useState(() => {
     try { return localStorage.getItem('dismiss_miembro_banner') === 'true'; } catch { return false; }
@@ -31,8 +32,8 @@ export function PanelAlumno({ tema, modoOscuro }) {
     return null;
   }
 
-  if (esServiciosEscolares) {
-    navigate('/escolares/dashboard', { replace: true });
+  if (esRectoria) {
+    navigate('/rectoria/dashboard', { replace: true });
     return null;
   }
 
@@ -96,9 +97,7 @@ export function PanelAlumno({ tema, modoOscuro }) {
                   className={`absolute top-3 right-3 p-1 rounded-full transition-colors cursor-pointer ${modoOscuro ? 'hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-300' : 'hover:bg-emerald-200 text-slate-500 hover:text-emerald-700'}`}
                   title="No mostrar más"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <Icono nombre="close" className="h-4 w-4" strokeWidth={2.5} />
                 </button>
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🎉</span>

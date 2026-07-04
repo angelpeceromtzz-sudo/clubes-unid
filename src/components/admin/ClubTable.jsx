@@ -1,3 +1,5 @@
+import { Icono } from '../ui/Icono';
+
 export function TablaClubes({
   clubes,
   isDark,
@@ -19,9 +21,7 @@ export function TablaClubes({
           onClick={onCrear}
           className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-2.5 transition-all duration-200 cursor-pointer active:scale-95 flex items-center gap-2"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
+          <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
           Agregar Nuevo Club
         </button>
       </div>
@@ -73,9 +73,7 @@ export function TablaClubes({
                         className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1"
                         title="Editar club"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
+                        <Icono nombre="edit" strokeWidth={2} className="h-4 w-4" />
                         Editar
                       </button>
                       <button

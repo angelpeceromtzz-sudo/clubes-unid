@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../services/api';
+import { Icono } from './ui/Icono';
 
 const CONFIG_ESTATUS = {
   'Pendiente':        { color: 'text-yellow-400',  bg: 'bg-yellow-500/20',  border: 'border-yellow-500/30', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',                msg: 'Formulario enviado',                  label: 'Postulado' },
@@ -47,9 +48,7 @@ function Timeline({ historial, statusActual }) {
                     : 'bg-slate-800 border border-slate-700'
               }`}>
                 {completado && paso !== 'Oferta emitida' && paso !== 'Miembro oficial' && (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
+                  <Icono nombre="check" strokeWidth={3} className="h-2.5 w-2.5 text-emerald-400" />
                 )}
                 {esActual && paso === 'Oferta enviada' && (
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -196,9 +195,7 @@ function TarjetaPostulacionV2({ postulacion, tema, onRespuesta, respondiendo }) 
                       <span className="animate-spin w-4 h-4 border-2 border-black border-t-transparent rounded-full" />
                     ) : (
                       <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <Icono nombre="check" strokeWidth={2.5} className="h-4 w-4" />
                         Aceptar oferta
                       </>
                     )}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { Icono } from './ui/Icono';
 
 const COLORES_ESTATUS = {
   'En revisión': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -82,9 +83,7 @@ function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, accionando 
               {cargando ? (
                 <span className="animate-spin w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full" />
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Icono nombre="check-circle" strokeWidth={2} className="h-3.5 w-3.5" />
               )}
               Preseleccionar
             </button>
@@ -96,9 +95,7 @@ function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, accionando 
               {cargando ? (
                 <span className="animate-spin w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full" />
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <Icono nombre="close" strokeWidth={2} className="h-3.5 w-3.5" />
               )}
               Rechazar
             </button>
@@ -241,9 +238,7 @@ export function SolicitudesPresidente({ club, tema, modoOscuro }) {
         <div className={`rounded-2xl p-6 border ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`}>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <Icono nombre="check-circle" strokeWidth={2} className="h-5 w-5" />
             </div>
             <div>
               <h3 className={`text-base font-black uppercase tracking-wider ${tema.title}`}>
@@ -324,9 +319,7 @@ export function SolicitudesPresidente({ club, tema, modoOscuro }) {
 
       {enRevision.length === 0 && !vistaPrevia && (
         <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+          <Icono nombre="file" strokeWidth={1.5} className="h-12 w-12 mb-3 opacity-30" />
           <p className="text-sm font-medium">No hay solicitudes pendientes</p>
           <p className="text-xs mt-0.5">Las solicitudes de alumnos en estado 'En revisión' aparecerán aquí</p>
         </div>
