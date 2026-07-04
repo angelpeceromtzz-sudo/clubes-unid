@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
 import { useTheme } from './contexts/ThemeContext';
@@ -16,7 +16,7 @@ import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
 
 function App() {
-  const { esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { estaAutenticado, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
   const { tema } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
