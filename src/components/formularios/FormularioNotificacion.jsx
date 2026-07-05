@@ -38,10 +38,12 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
         ? (audienciaFija ? clubId : Number(clubSeleccionado))
         : undefined;
       await crearNotificacion(titulo.trim(), mensaje.trim(), audienciaFinal, clubIdFinal);
+      const tituloEnviado = titulo.trim();
+      const mensajeEnviado = mensaje.trim();
+      setMensajeExito('Anuncio publicado correctamente');
+      if (onSuccess) onSuccess(tituloEnviado, mensajeEnviado);
       setTitulo('');
       setMensaje('');
-      setMensajeExito('Anuncio publicado correctamente');
-      if (onSuccess) onSuccess();
     } catch (err) {
       setMensajeError(err?.message || 'Error al publicar el anuncio');
     } finally {

@@ -2,7 +2,6 @@
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
-import { FormularioNotificacion } from '../components/formularios/FormularioNotificacion';
 import { InformacionClub } from '../components/clubes/InformacionClub';
 import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
 import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
@@ -64,19 +63,6 @@ export function PanelPresidente() {
               <div className="lg:col-span-2 space-y-8">
                 <InformacionClub club={d.club} />
                 <SeccionAvisos club={d.club} esPresidente={true} />
-                <div className={`rounded-2xl p-6 ${d.isDark ? 'bg-[#0e162c] border border-slate-700/50' : 'bg-white border border-slate-200 shadow-sm'}`}>
-                  <h3 className={`text-lg font-black uppercase tracking-wider mb-2 ${tema.title}`}>
-                    Enviar Anuncio a Miembros
-                  </h3>
-                  <p className={`text-sm mb-6 ${tema.subtitle}`}>
-                    Este anuncio se enviará como notificación a todos los alumnos inscritos en {d.club.nombre_club}.
-                  </p>
-                  <FormularioNotificacion
-                    audienciaFija="club"
-                    clubId={d.club.id_club}
-                    clubNombre={d.club.nombre_club}
-                  />
-                </div>
               </div>
               <div className="space-y-8">
                 <SeccionMiembros miembros={d.miembros} club={d.club} />

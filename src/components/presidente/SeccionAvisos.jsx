@@ -3,15 +3,13 @@ import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
+import { FormularioNotificacion } from '../formularios/FormularioNotificacion';
 
 export function SeccionAvisos({ club, esPresidente }) {
   const { tema, modoOscuro } = useTheme();
   const [avisos, setAvisos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [nuevoTitulo, setNuevoTitulo] = useState('');
-  const [nuevoContenido, setNuevoContenido] = useState('');
-  const [errorPublicacion, setErrorPublicacion] = useState('');
 
   useEffect(() => {
     let montado = true;
@@ -38,19 +36,13 @@ export function SeccionAvisos({ club, esPresidente }) {
     }
   }
 
-  async function manejarPublicar(e) {
-    e.preventDefault();
-    setErrorPublicacion('');
-    if (!nuevoTitulo.trim() || !nuevoContenido.trim()) return;
-
+  async function manejarPublicar(titulo, contenido) {
     try {
-      await api.createAviso(club.id_club, nuevoTitulo, nuevoContenido);
+      await api.createAviso(club.id_club, titulo, contenido);
       await refrescarAvisos();
-      setNuevoTitulo('');
-      setNuevoContenido('');
       setMostrarFormulario(false);
     } catch (err) {
-      setErrorPublicacion(err.message);
+      console.error('Error al crear aviso:', err);
     }
   }
 
@@ -83,29 +75,17 @@ export function SeccionAvisos({ club, esPresidente }) {
       </div>
 
       {mostrarFormulario && (
-        <form onSubmit={manejarPublicar} className={`${cardCls} rounded-xl p-5 mb-5 space-y-3`}>
-          <input
-            type="text"
-            value={nuevoTitulo}
-            onChange={(e) => setNuevoTitulo(e.target.value)}
-            placeholder="Título del aviso"
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 ${esOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400'}`}
+        <div className={`${cardCls} rounded-xl p-5 mb-5`}>
+          <p className={`text-sm mb-4 ${tema.subtitle}`}>
+            Este anuncio se enviará como notificación a todos los alumnos inscritos en {club.nombre_club}.
+          </p>
+          <FormularioNotificacion
+            audienciaFija="club"
+            clubId={club.id_club}
+            clubNombre={club.nombre_club}
+            onSuccess={manejarPublicar}
           />
-          <textarea
-            value={nuevoContenido}
-            onChange={(e) => setNuevoContenido(e.target.value)}
-            placeholder="Contenido del aviso"
-            rows={3}
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 resize-none ${esOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder-slate-400'}`}
-          />
-          {errorPublicacion && <p className="text-red-400 text-xs font-medium">{errorPublicacion}</p>}
-          <button
-            type="submit"
-            className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-2.5 transition-all duration-200 cursor-pointer active:scale-95"
-          >
-            Publicar
-          </button>
-        </form>
+        </div>
       )}
 
       {cargando ? (
