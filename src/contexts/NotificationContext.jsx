@@ -74,6 +74,13 @@ export function ProveedorNotificacion({ children: hijos }) {
     }
   }, []);
 
+  const eliminarVariasNotificaciones = useCallback(async (ids) => {
+    const resultados = await Promise.allSettled(ids.map((id) => api.eliminarNotificacion(id)));
+    const exitosos = ids.filter((_, i) => resultados[i].status === 'fulfilled');
+    setNotificaciones((prev) => prev.filter((n) => !exitosos.includes(n.id_notificacion)));
+    return exitosos.length;
+  }, []);
+
   return (
     <ContextoNotificacion.Provider
       value={{
@@ -84,6 +91,7 @@ export function ProveedorNotificacion({ children: hijos }) {
         fetchNotificaciones: obtenerNotificaciones,
         marcarTodasLeidas,
         eliminarNotificacion,
+        eliminarVariasNotificaciones,
       }}
     >
       {hijos}
