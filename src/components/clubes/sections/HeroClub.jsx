@@ -47,13 +47,12 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
             onClick={onBotonClick}
             className={`mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
               !estaAutenticado
-                ? 'bg-amber-500 hover:bg-amber-400 text-black'
+                ? 'bg-slate-600 text-slate-300 hover:bg-slate-500'
                 : esAdmin || tieneInscripcionActiva
                   ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                   : 'bg-amber-500 hover:bg-amber-400 text-black'
             }`}
           >
-            <Icono nombre="zap" strokeWidth={2} className="h-4 w-4" />
             {botonTexto}
           </button>
         )}
