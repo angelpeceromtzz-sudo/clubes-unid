@@ -105,7 +105,7 @@ export function BarraNavegacion({
             </div>
           )}
 
-          <BadgeNotificaciones className="flex md:hidden" />
+          {user && <BadgeNotificaciones className="flex md:hidden" />}
 
           <MenuUsuario
             user={user}
@@ -139,6 +139,7 @@ export function BarraNavegacion({
         </div>
         <p className={`text-xs pt-2 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
           ¿Dudas o reportes? Contacta al administrador del sistema.
+          contacto@red.unid.mx
         </p>
       </div>
     </ModalBase>
