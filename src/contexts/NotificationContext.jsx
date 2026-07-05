@@ -69,7 +69,8 @@ export function ProveedorNotificacion({ children: hijos }) {
     try {
       await api.eliminarNotificacion(id);
       setNotificaciones((prev) => prev.filter((n) => n.id_notificacion !== id));
-    } catch {
+    } catch (err) {
+      console.error('Error al eliminar notificación:', err);
     }
   }, []);
 

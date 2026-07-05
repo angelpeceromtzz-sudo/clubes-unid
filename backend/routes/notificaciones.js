@@ -37,14 +37,16 @@ router.get('/', authenticate, async (req, res) => {
        JOIN usuarios u ON u.id_usuario = n.id_emisor
        JOIN cat_roles r ON r.id_rol = u.id_rol
        LEFT JOIN clubes c ON c.id_club = n.id_club
-       LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
-       WHERE ($2 IN (3, 4))
-          OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL)
-                       OR (n.audiencia = 'club' AND n.id_club = $3)
-                       OR n.id_destinatario = $1))
-          OR ($2 = 1 AND ((n.audiencia IN ('global', 'alumnos') AND n.id_destinatario IS NULL)
-                       OR (n.audiencia = 'club' AND n.id_club = $4)
-                       OR n.id_destinatario = $1))
+        LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
+        LEFT JOIN notificaciones_eliminadas ne ON ne.id_notificacion = n.id_notificacion AND ne.id_usuario = $1
+       WHERE ne.id_notificacion IS NULL
+         AND (($2 IN (3, 4))
+           OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL)
+                        OR (n.audiencia = 'club' AND n.id_club = $3)
+                        OR n.id_destinatario = $1))
+           OR ($2 = 1 AND ((n.audiencia IN ('global', 'alumnos') AND n.id_destinatario IS NULL)
+                        OR (n.audiencia = 'club' AND n.id_club = $4)
+                        OR n.id_destinatario = $1)))
        ORDER BY n.fecha_creacion DESC
        LIMIT 100`,
       [userId, roleId, clubIdPresidente, clubIdAlumno]
@@ -157,7 +159,7 @@ router.post('/leer-todas', authenticate, async (req, res) => {
   }
 });
 
-// Eliminar una notificación (solo admin o destinatario)
+// Ocultar notificación para el usuario (soft-delete por usuario)
 router.delete('/:id', authenticate, async (req, res) => {
   try {
     const notifId = parseInt(req.params.id);
@@ -165,7 +167,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     const roleId = req.user.id_rol;
 
     const notif = await pool.query(
-      'SELECT id_notificacion, id_emisor, id_destinatario FROM notificaciones WHERE id_notificacion = $1',
+      'SELECT id_notificacion FROM notificaciones WHERE id_notificacion = $1',
       [notifId]
     );
 
@@ -173,14 +175,14 @@ router.delete('/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Notificación no encontrada' });
     }
 
-    if (roleId !== 3 && notif.rows[0].id_destinatario !== userId) {
-      return res.status(403).json({ error: 'No tienes permiso para eliminar esta notificación' });
-    }
+    await pool.query(
+      'INSERT INTO notificaciones_eliminadas (id_notificacion, id_usuario) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [notifId, userId]
+    );
 
-    await pool.query('DELETE FROM notificaciones WHERE id_notificacion = $1', [notifId]);
-    res.json({ ok: true });
+    res.json({ ok: true, oculta: true });
   } catch (err) {
-    console.error('Error al eliminar notificacion:', err);
+    console.error('Error al ocultar notificacion:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
