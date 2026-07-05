@@ -33,3 +33,12 @@ BEGIN
         FOREIGN KEY (id_destinatario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE;
     END IF;
 END $$;
+
+-- Tabla convocatorias
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS bloque CHAR(1);
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS periodo VARCHAR(50);
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS fecha DATE;
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS hora TIME;
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS lugar VARCHAR(200);
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS enviada BOOLEAN DEFAULT FALSE;
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS fecha_creacion TIMESTAMPTZ DEFAULT NOW();
