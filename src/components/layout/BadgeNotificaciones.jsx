@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo, useCallback } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useNotificaciones } from '../../contexts/NotificationContext';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -58,18 +58,12 @@ function ModalNotificacion({ notif, onClose, tema, modoOscuro, onEliminar }) {
 
 export function BadgeNotificaciones({ className = '' }) {
   const { modoOscuro, tema } = useTheme();
-  const { notificaciones, noLeidas, marcarComoLeida, marcarTodasLeidas, eliminarNotificacion, eliminarVariasNotificaciones } = useNotificaciones();
+  const { notificaciones, noLeidas, marcarComoLeida, marcarTodasLeidas, eliminarNotificacion } = useNotificaciones();
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
   const [notifModal, setNotifModal] = useState(null);
-  const [seleccionando, setSeleccionando] = useState(false);
-  const [seleccionados, setSeleccionados] = useState([]);
-  const [confirmarEliminar, setConfirmarEliminar] = useState(false);
-  const [eliminando, setEliminando] = useState(false);
-  const [mensajeExito, setMensajeExito] = useState('');
   const notificacionesRef = useRef(null);
-  const timeoutExito = useRef(null);
 
-  useClickOutside(notificacionesRef, mostrarNotificaciones, () => { setMostrarNotificaciones(false); setSeleccionando(false); setSeleccionados([]); }, '[aria-label="Notificaciones"]');
+  useClickOutside(notificacionesRef, mostrarNotificaciones, () => setMostrarNotificaciones(false), '[aria-label="Notificaciones"]');
 
   const ordenadas = useMemo(() => {
     const noLeidasList = [];
@@ -84,61 +78,10 @@ export function BadgeNotificaciones({ className = '' }) {
     return [...noLeidasList, ...leidasList];
   }, [notificaciones]);
 
-  const mostrarExito = useCallback((msg) => {
-    setMensajeExito(msg);
-    if (timeoutExito.current) clearTimeout(timeoutExito.current);
-    timeoutExito.current = setTimeout(() => setMensajeExito(''), 3000);
-  }, []);
-
-  function toggleSeleccion(id) {
-    setSeleccionados((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }
-
-  function toggleSeleccionarTodo() {
-    if (seleccionados.length === ordenadas.length) {
-      setSeleccionados([]);
-    } else {
-      setSeleccionados(ordenadas.map((n) => n.id_notificacion));
-    }
-  }
-
-  function entrarSeleccion() {
-    setSeleccionando(true);
-    setSeleccionados([]);
-  }
-
-  function salirSeleccion() {
-    setSeleccionando(false);
-    setSeleccionados([]);
-  }
-
-  async function confirmarEliminarSeleccion() {
-    setEliminando(true);
-    try {
-      const total = await eliminarVariasNotificaciones(seleccionados);
-      mostrarExito(`${total} notificación${total !== 1 ? 'es' : ''} eliminada${total !== 1 ? 's' : ''} correctamente`);
-    } catch {
-      // silent
-    }
-    setEliminando(false);
-    setConfirmarEliminar(false);
-    setSeleccionados([]);
-    setSeleccionando(false);
-  }
-
-  async function eliminarUna(id) {
-    await eliminarNotificacion(id);
-    mostrarExito('Notificación eliminada correctamente');
-  }
-
-  const todosSeleccionados = seleccionados.length === ordenadas.length && ordenadas.length > 0;
-
   return (
     <div className={`relative ${className}`}>
       <button
-        onClick={() => setMostrarNotificaciones((prev) => { if (prev) { setSeleccionando(false); setSeleccionados([]); setMensajeExito(''); } return !prev; })}
+        onClick={() => setMostrarNotificaciones((prev) => !prev)}
         className={`relative ${tema.iconColor} hover:text-amber-400 transition-colors`}
         aria-label="Notificaciones"
       >
@@ -157,86 +100,19 @@ export function BadgeNotificaciones({ className = '' }) {
           style={{ animation: 'dropdownIn 0.2s ease-out' }}
         >
           <div className={`rounded-xl overflow-hidden ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'} ${tema.dropdownBorder}`}>
-
-            {/* Header */}
             <div className={`px-4 py-3 flex items-center justify-between ${modoOscuro ? 'border-b border-slate-700/50' : 'border-b border-slate-200'}`}>
-              {seleccionando ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={toggleSeleccionarTodo}
-                    className={`w-5 h-5 rounded border-2 transition-colors flex items-center justify-center ${
-                      todosSeleccionados
-                        ? 'bg-amber-400 border-amber-400'
-                        : modoOscuro ? 'border-slate-600' : 'border-slate-400'
-                    }`}
-                  >
-                    {todosSeleccionados && (
-                      <Icono nombre="check" className="h-3 w-3 text-[#0e162c]" strokeWidth={3} />
-                    )}
-                  </button>
-                  <span className={`text-xs font-semibold ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-                    {seleccionados.length} seleccionada{seleccionados.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-              ) : (
-                <p className={`text-xs font-semibold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Notificaciones {noLeidas > 0 && `(${noLeidas} sin leer)`}
-                </p>
+              <p className={`text-xs font-semibold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
+                Notificaciones {noLeidas > 0 && `(${noLeidas} sin leer)`}
+              </p>
+              {noLeidas > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); marcarTodasLeidas(); }}
+                  className="text-[10px] font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer uppercase tracking-wider"
+                >
+                  Leer todas
+                </button>
               )}
-              <div className="flex items-center gap-2">
-                {!seleccionando && ordenadas.length > 0 && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); entrarSeleccion(); }}
-                    className="text-[10px] font-bold text-slate-500 hover:text-amber-400 transition-colors cursor-pointer uppercase tracking-wider"
-                  >
-                    Seleccionar
-                  </button>
-                )}
-                {seleccionando ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); salirSeleccion(); }}
-                    className="text-[10px] font-bold text-slate-500 hover:text-red-400 transition-colors cursor-pointer uppercase tracking-wider"
-                  >
-                    Cancelar
-                  </button>
-                ) : noLeidas > 0 && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); marcarTodasLeidas(); }}
-                    className="text-[10px] font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer uppercase tracking-wider"
-                  >
-                    Leer todas
-                  </button>
-                )}
-              </div>
             </div>
-
-            {/* Success message */}
-            {mensajeExito && (
-              <div className={`px-4 py-2 text-xs font-medium text-emerald-400 bg-emerald-500/10 border-b ${modoOscuro ? 'border-emerald-500/20' : 'border-emerald-500/20'}`}>
-                {mensajeExito}
-              </div>
-            )}
-
-            {/* Select all / Bulk actions bar */}
-            {seleccionando && seleccionados.length > 0 && (
-              <div className={`px-4 py-2 flex items-center justify-between border-b ${modoOscuro ? 'border-slate-700/50 bg-slate-800/40' : 'border-slate-200 bg-slate-50'}`}>
-                <button
-                  onClick={toggleSeleccionarTodo}
-                  className="text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer uppercase tracking-wider"
-                >
-                  {todosSeleccionados ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                </button>
-                <button
-                  onClick={() => setConfirmarEliminar(true)}
-                  className="text-[11px] font-bold text-red-400 hover:text-red-300 transition-colors cursor-pointer uppercase tracking-wider flex items-center gap-1"
-                >
-                  <Icono nombre="trash" strokeWidth={2} className="h-3 w-3" />
-                  Borrar seleccionados
-                </button>
-              </div>
-            )}
-
-            {/* List */}
             <div
               className="overflow-y-auto"
               style={{
@@ -259,41 +135,22 @@ export function BadgeNotificaciones({ className = '' }) {
                     role="button"
                     tabIndex={0}
                     onClick={() => {
-                      if (seleccionando) {
-                        toggleSeleccion(notif.id_notificacion);
-                      } else {
-                        if (!notif.leido) marcarComoLeida(notif.id_notificacion);
-                        setNotifModal(notif);
-                        setMostrarNotificaciones(false);
-                      }
+                      if (!notif.leido) marcarComoLeida(notif.id_notificacion);
+                      setNotifModal(notif);
+                      setMostrarNotificaciones(false);
                     }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!seleccionando) { marcarComoLeida(notif.id_notificacion); setNotifModal(notif); setMostrarNotificaciones(false); } } }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); marcarComoLeida(notif.id_notificacion); setNotifModal(notif); setMostrarNotificaciones(false); } }}
                     className={`group relative w-full text-left px-4 py-3 transition-colors duration-200 flex flex-col gap-1.5 cursor-pointer ${
-                      seleccionando && seleccionados.includes(notif.id_notificacion)
-                        ? modoOscuro ? 'bg-amber-500/10' : 'bg-amber-100/70'
-                        : notif.leido
-                          ? modoOscuro ? 'opacity-50' : 'opacity-50'
-                          : modoOscuro ? 'bg-slate-800/40' : 'bg-amber-50/50'
+                      notif.leido
+                        ? modoOscuro ? 'opacity-50' : 'opacity-50'
+                        : modoOscuro ? 'bg-slate-800/40' : 'bg-amber-50/50'
                     } ${modoOscuro ? 'hover:bg-slate-700/50' : 'hover:bg-slate-100'}`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      {seleccionando && (
-                        <div
-                          className={`mt-0.5 w-5 h-5 rounded border-2 shrink-0 transition-colors flex items-center justify-center ${
-                            seleccionados.includes(notif.id_notificacion)
-                              ? 'bg-amber-400 border-amber-400'
-                              : modoOscuro ? 'border-slate-600' : 'border-slate-400'
-                          }`}
-                        >
-                          {seleccionados.includes(notif.id_notificacion) && (
-                            <Icono nombre="check" className="h-3 w-3 text-[#0e162c]" strokeWidth={3} />
-                          )}
-                        </div>
-                      )}
-                      <span className={`text-sm font-semibold leading-tight flex-1 ${notif.leido ? (modoOscuro ? 'text-slate-500' : 'text-slate-400') : (modoOscuro ? 'text-slate-100' : 'text-slate-800')}`}>
+                      <span className={`text-sm font-semibold leading-tight ${notif.leido ? (modoOscuro ? 'text-slate-500' : 'text-slate-400') : (modoOscuro ? 'text-slate-100' : 'text-slate-800')}`}>
                         {notif.titulo}
                       </span>
-                      {!notif.leido && !seleccionando && (
+                      {!notif.leido && (
                         <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 mt-1.5" />
                       )}
                     </div>
@@ -313,15 +170,13 @@ export function BadgeNotificaciones({ className = '' }) {
                           })}
                         </span>
                       </div>
-                      {!seleccionando && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); eliminarUna(notif.id_notificacion); }}
-                          className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all cursor-pointer"
-                          title="Eliminar notificación"
-                        >
-                          <Icono nombre="trash" strokeWidth={2} className="h-3.5 w-3.5" />
-                        </button>
-                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); eliminarNotificacion(notif.id_notificacion); }}
+                        className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all cursor-pointer"
+                        title="Eliminar notificación"
+                      >
+                        <Icono nombre="trash" strokeWidth={2} className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))
@@ -336,40 +191,8 @@ export function BadgeNotificaciones({ className = '' }) {
         onClose={() => setNotifModal(null)}
         tema={tema}
         modoOscuro={modoOscuro}
-        onEliminar={eliminarUna}
+        onEliminar={eliminarNotificacion}
       />
-
-      {/* Confirmación eliminar seleccionados */}
-      <ModalBase show={confirmarEliminar} onClose={() => !eliminando && setConfirmarEliminar(false)} maxWidth="max-w-sm">
-        <div className="text-center">
-          <div className={`inline-flex items-center justify-center w-14 h-14 rounded-full mb-4 ${modoOscuro ? 'bg-red-500/10' : 'bg-red-100'}`}>
-            <Icono nombre="alert-triangle" strokeWidth={2} className={`h-7 w-7 ${modoOscuro ? 'text-red-400' : 'text-red-500'}`} />
-          </div>
-          <h3 className={`text-lg font-black uppercase tracking-wider mb-2 ${tema.title}`}>
-            ¿Eliminar notificaciones?
-          </h3>
-          <p className={`text-sm mb-6 ${tema.subtitle}`}>
-            Se eliminarán {seleccionados.length} notificación{seleccionados.length !== 1 ? 'es' : ''} de tu bandeja. Esta acción no se puede deshacer.
-          </p>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setConfirmarEliminar(false)}
-              disabled={eliminando}
-              className="flex-1 border rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40"
-              style={{ borderColor: modoOscuro ? 'rgba(148,163,184,0.3)' : 'rgba(148,163,184,0.5)', color: modoOscuro ? '#94a3b8' : '#64748b' }}
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={confirmarEliminarSeleccion}
-              disabled={eliminando}
-              className="flex-1 bg-red-500 hover:bg-red-400 text-white font-black text-xs uppercase tracking-widest rounded-xl px-4 py-2.5 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {eliminando ? 'Eliminando...' : 'Eliminar'}
-            </button>
-          </div>
-        </div>
-      </ModalBase>
     </div>
   );
 }
