@@ -36,7 +36,7 @@ export function HorariosClub({ horarios, modoOscuro }) {
                 <td className={`py-3 font-medium ${c.text}`}>{h.dia}</td>
                 <td className={`py-3 ${c.text}`}>{h.hora_inicio}</td>
                 <td className={`py-3 ${c.text}`}>{h.hora_fin}</td>
-                <td className={`py-3 ${c.text}`}>{h.lugar || club?.lugar || '—'}</td>
+                <td className={`py-3 ${c.text}`}>{h.lugar || '—'}</td>
               </tr>
             ))}
           </tbody>
