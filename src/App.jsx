@@ -1,5 +1,5 @@
 /* Punto de entrada principal. Renderiza la barra de navegación, las rutas (inicio, dashboard por rol) y el modal de inicio de sesión. */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
 import { useTheme } from './contexts/ThemeContext';
@@ -13,6 +13,7 @@ import { PanelPresidente } from './pages/PanelPresidente';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
+import { DetalleClub } from './components/clubes/DetalleClub';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
 
@@ -25,7 +26,6 @@ function App() {
   const { redirigirPostLogin } = useAuthRedirect();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [clubDetalleVisible, setClubDetalleVisible] = useState(false);
   const [catalogoKey, setCatalogoKey] = useState(0);
 
   const handleLoginSuccess = useCallback(() => {
@@ -39,13 +39,7 @@ function App() {
     setMenuAbierto(false);
   }
 
-  useEffect(() => {
-    if (location.pathname !== '/') {
-      setClubDetalleVisible(false);
-    }
-  }, [location.pathname]);
-
-  const mostrarFiltros = location.pathname === '/' && !clubDetalleVisible;
+  const mostrarFiltros = location.pathname === '/';
 
   function irADashboard() {
     if (esAdmin) {
@@ -61,9 +55,6 @@ function App() {
   }
 
   function irACatalogo() {
-    if (clubDetalleVisible) {
-      setCatalogoKey(k => k + 1);
-    }
     navigate('/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -94,8 +85,10 @@ function App() {
             clubes={clubesFiltrados}
             clubesLoading={clubesLoading}
             onLoginClick={() => setShowLogin(true)}
-            onClubDetalleChange={setClubDetalleVisible}
           />
+        } />
+        <Route path="/club/:id" element={
+          <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />
         <Route path="/dashboard" element={
           <RutaProtegida>

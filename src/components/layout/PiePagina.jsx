@@ -41,7 +41,7 @@ export function PiePagina() {
           <div>
             <h3 className={`text-xs font-black uppercase tracking-widest mb-4 ${tema.title}`}>Contacto</h3>
             <ul className="space-y-2">
-              <li className={`text-xs font-medium ${tema.subtitle}`}>contacto@unid.mx</li>
+              <li className={`text-xs font-medium ${tema.subtitle}`}>contacto@red.unid.mx</li>
               <li className={`text-xs font-medium ${tema.subtitle}`}>+52 981 123 4567</li>
               <li className={`text-xs font-medium ${tema.subtitle}`}>Campeche, Campeche, MX</li>
             </ul>

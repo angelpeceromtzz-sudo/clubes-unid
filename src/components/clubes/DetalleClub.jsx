@@ -1,31 +1,57 @@
-/* Vista detalle de un club con sidebar, información, horarios, lugar y formulario de inscripción. */
-import { useState } from 'react';
-import { FormularioInscripcion } from '../formularios/FormularioInscripcion';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Icono } from '../ui/Icono';
-import { InfoLugar } from './InfoLugar';
-import { InfoHorarios } from './InfoHorarios';
-import { SidebarClub } from './SidebarClub';
-import { clasesBadge } from '../../constants/colores';
+import { FormularioInscripcion } from '../formularios/FormularioInscripcion';
+import { Spinner } from '../ui/Spinner';
+import { api } from '../../services/api';
+import { HeroClub } from './sections/HeroClub';
+import { DescripcionClub } from './sections/DescripcionClub';
+import { AprendizajeClub } from './sections/AprendizajeClub';
+import { RequisitosClub } from './sections/RequisitosClub';
+import { HorariosClub } from './sections/HorariosClub';
+import { LugarClub } from './sections/LugarClub';
+import { PresidenteClub } from './sections/PresidenteClub';
+import { EventosClub } from './sections/EventosClub';
+import { GaleriaClub } from './sections/GaleriaClub';
+import { InfoAdicionalClub } from './sections/InfoAdicionalClub';
+import { FAQClub } from './sections/FAQClub';
 
-export function DetalleClub({ club, onVolver, onLoginClick }) {
+export function DetalleClub({ onLoginClick }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { modoOscuro } = useTheme();
   const { estaAutenticado, esAdmin, tieneInscripcionActiva, clubesPostulados } = useAutenticacion();
+  const [club, setClub] = useState(location.state?.club || null);
+  const [loading, setLoading] = useState(!club);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
-  const cupoActual = parseInt(club.cupo_actual) || 0;
-  const lleno = cupoActual >= club.cupo_maximo;
-  const disponibles = club.cupo_maximo - cupoActual;
-  const esProximamente = club.id_estatus_club === 2;
-  const esInactivo = club.id_estatus_club === 3;
+  useEffect(() => {
+    if (!club) {
+      api.getClub(id)
+        .then((data) => setClub(data))
+        .catch(() => navigate('/'))
+        .finally(() => setLoading(false));
+    }
+  }, []);
 
-  const c = {
-    bg: modoOscuro ? "bg-[#0e162c] border-slate-700/50" : "bg-white border-slate-200",
-    text: modoOscuro ? "text-slate-300" : "text-slate-600",
-    title: modoOscuro ? "text-white" : "text-slate-900",
-    sidebar: modoOscuro ? "bg-[#0e162c] border-slate-700/50" : "bg-white border-slate-200 shadow-lg",
-  };
+  const esProximamente = club?.id_estatus_club === 2;
+  const esInactivo = club?.id_estatus_club === 3;
+  const cupoActual = parseInt(club?.cupo_actual) || 0;
+  const lleno = cupoActual >= (club?.cupo_maximo || 0);
+
+  function obtenerTextoBoton() {
+    if (esProximamente) return null;
+    if (esInactivo) return null;
+    if (lleno) return null;
+    if (!estaAutenticado) return 'INICIA SESIÓN PARA INSCRIBIRTE';
+    if (esAdmin) return null;
+    if (tieneInscripcionActiva) return null;
+    return 'INSCRIBIRME AHORA';
+  }
+
+  const botonTexto = obtenerTextoBoton();
 
   function manejarClickBoton() {
     if (!estaAutenticado) {
@@ -43,78 +69,46 @@ export function DetalleClub({ club, onVolver, onLoginClick }) {
     }
   }
 
-  function obtenerTextoBoton() {
-    if (esProximamente) return null;
-    if (esInactivo) return null;
-    if (!estaAutenticado) return 'INICIA SESIÓN PARA INSCRIBIRTE';
-    if (esAdmin) return null;
-    if (tieneInscripcionActiva) return null;
-    return 'INSCRIBIRME AHORA';
+  if (loading) {
+    return <Spinner className="py-20" />;
   }
 
-  const botonTexto = obtenerTextoBoton();
+  if (!club) {
+    return null;
+  }
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-6 py-8 pb-20 md:pb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
-          <div className="md:col-span-2 space-y-6">
-            <div className="overflow-hidden rounded-2xl">
-              <img
-                src={club.imagen_portada || club.imagen}
-                alt={club.nombre_club}
-                className={`w-full h-full object-cover ${esProximamente ? 'opacity-60' : ''}`}
-              />
-            </div>
+      <div className="max-w-7xl mx-auto px-6 py-8 pb-20 md:pb-8 space-y-10">
+        <HeroClub
+          club={club}
+          modoOscuro={modoOscuro}
+          onBotonClick={manejarClickBoton}
+          botonTexto={botonTexto}
+          estaAutenticado={estaAutenticado}
+          esAdmin={esAdmin}
+          tieneInscripcionActiva={tieneInscripcionActiva}
+        />
 
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(club.categoria, modoOscuro)}`}>
-                {club.categoria}
-              </span>
-              {esProximamente && (
-                <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border text-slate-500 border-slate-500/30 bg-slate-500/10">
-                  Próximamente
-                </span>
-              )}
-              {esInactivo && (
-                <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border text-red-400 border-red-400/30 bg-red-400/10">
-                  Inactivo
-                </span>
-              )}
-            </div>
+        <DescripcionClub club={club} modoOscuro={modoOscuro} />
 
-            <h1 className={`text-3xl md:text-4xl font-black leading-tight ${c.title}`}>
-              {club.nombre_club}
-            </h1>
+        <AprendizajeClub modoOscuro={modoOscuro} />
 
-            <p className={`text-base leading-relaxed ${c.text}`}>
-              {club.descripcion}
-            </p>
+        <RequisitosClub modoOscuro={modoOscuro} />
 
-            {club.lugar && (
-              <InfoLugar lugar={club.lugar} c={c} />
-            )}
+        <HorariosClub horarios={club.horarios} modoOscuro={modoOscuro} />
 
-            <InfoHorarios horarios={club.horarios} c={c} />
-          </div>
+        <LugarClub lugar={club.lugar} modoOscuro={modoOscuro} />
 
-          <div>
-            <SidebarClub
-              club={club}
-              c={c}
-              modoOscuro={modoOscuro}
-              lleno={lleno}
-              disponibles={disponibles}
-              esProximamente={esProximamente}
-              esInactivo={esInactivo}
-              botonTexto={botonTexto}
-              estaAutenticado={estaAutenticado}
-              esAdmin={esAdmin}
-              tieneInscripcionActiva={tieneInscripcionActiva}
-              onBotonClick={manejarClickBoton}
-            />
-          </div>
-        </div>
+        <PresidenteClub modoOscuro={modoOscuro} />
+
+        <EventosClub modoOscuro={modoOscuro} />
+
+        <GaleriaClub modoOscuro={modoOscuro} />
+
+        <InfoAdicionalClub club={club} modoOscuro={modoOscuro} />
+
+        <FAQClub modoOscuro={modoOscuro} />
       </div>
 
       {mostrarFormulario && (

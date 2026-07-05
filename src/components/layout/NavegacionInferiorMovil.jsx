@@ -1,4 +1,5 @@
 /* Navegación inferior fija para móvil con acceso a inicio, panel del club y perfil/inicio de sesión. */
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAutenticacion } from '../../contexts/AuthContext';
@@ -10,6 +11,23 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
   const location = useLocation();
   const { esAdmin, esPresidente } = useAutenticacion();
 
+  const [mostrarNav, setMostrarNav] = useState(true);
+  const ultimoScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > ultimoScrollY.current && currentScrollY > 80) {
+        setMostrarNav(false);
+      } else {
+        setMostrarNav(true);
+      }
+      ultimoScrollY.current = currentScrollY;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const enPanel = location.pathname !== '/';
 
   function irPanel() {
@@ -19,7 +37,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
   }
 
   return (
-    <nav className={`fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-bottom border-t ${modoOscuro ? 'bg-black border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
+    <nav className={`fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-bottom border-t transition-transform duration-300 ${mostrarNav ? 'translate-y-0' : 'translate-y-full'} ${modoOscuro ? 'bg-black border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
       <div className="flex items-center justify-around py-2 px-4">
         <button
           onClick={() => { onInicioClick?.(); navigate('/'); }}

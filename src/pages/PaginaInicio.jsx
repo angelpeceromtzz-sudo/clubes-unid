@@ -1,22 +1,18 @@
-/* Página de inicio con catálogo de clubes, hero y detalle expandible. Muestra alerta si no hay sesión iniciada. */
-import { useState, useEffect, useMemo } from 'react';
+/* Página de inicio con catálogo de clubes, hero. Muestra alerta si no hay sesión iniciada. */
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { TarjetaClub } from '../components/clubes/TarjetaClub';
 import { Heroe } from '../components/clubes/Heroe';
-import { DetalleClub } from '../components/clubes/DetalleClub';
 import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';
 import { Icono } from '../components/ui/Icono';
 
-export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetalleChange }) {
+export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
+  const navigate = useNavigate();
   const { estaAutenticado } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();
-  const [clubSeleccionado, setClubSeleccionado] = useState(null);
-
-  useEffect(() => {
-    onClubDetalleChange?.(clubSeleccionado !== null);
-  }, [clubSeleccionado, onClubDetalleChange]);
 
   const clubesPorCategoria = useMemo(() => {
     const map = {};
@@ -32,18 +28,6 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetall
     }
     return map;
   }, [clubes]);
-
-  if (clubSeleccionado) {
-    return (
-      <DetalleClub
-        club={clubSeleccionado}
-        onVolver={() => {
-          setClubSeleccionado(null);
-        }}
-        onLoginClick={onLoginClick}
-      />
-    );
-  }
 
   return (
     <>
@@ -81,14 +65,14 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetall
                   cupoMaximo={club.cupo_maximo}
                   cupoActual={parseInt(club.cupo_actual) || 0}
                   imagen={club.imagen_portada || club.imagen}
-                  onClick={() => setClubSeleccionado(club)}
+                          onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
                   idEstatusClub={club.id_estatus_club}
                   estatus={club.estatus}
                 />
               ))}
             </div>
 
-            {/* Mobile: Netflix-style rows por categoria */}
+            {/* Mobile: rows por categoria */}
             <div className="md:hidden space-y-8">
               {Object.entries(clubesPorCategoria).map(([categoria, clubs]) => (
                 <section key={categoria}>
@@ -113,7 +97,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick, onClubDetall
                           cupoMaximo={club.cupo_maximo}
                           cupoActual={parseInt(club.cupo_actual) || 0}
                           imagen={club.imagen_portada || club.imagen}
-                          onClick={() => setClubSeleccionado(club)}
+                  onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
                           idEstatusClub={club.id_estatus_club}
                           estatus={club.estatus}
                         />
