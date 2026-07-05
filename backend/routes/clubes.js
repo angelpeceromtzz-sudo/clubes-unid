@@ -47,7 +47,7 @@ router.get('/:id', async (req, res) => {
     const result = await pool.query(
       `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
               c.cupo_maximo, c.id_presidente,
-              c.imagen_portada,
+              c.imagen_portada, c.lugar, c.horario,
               c.id_estatus_club, e.nombre_estatus as estatus,
               c.fecha_creacion,
               COALESCE(
