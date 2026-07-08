@@ -1,4 +1,4 @@
-/* Tarjeta de club en el catálogo: imagen, categoría, nombre, descripción, cupo. Soporta estado "próximamente". */
+/* Tarjeta de club en el catálogo: imagen, categoría, nombre, descripción, badge de convocatoria. Soporta estado "próximamente". */
 import { clasesBadge } from '../../constants/colores';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
@@ -6,11 +6,11 @@ import { Icono } from '../ui/Icono';
 export function TarjetaClub({
   nombre, descripcion, categoria, cupoMaximo, cupoActual,
   imagen, onClick,
-  idEstatusClub,
+  idEstatusClub, estadoConvocatoria,
 }) {
   const { modoOscuro } = useTheme();
   const esProximamente = idEstatusClub === 2;
-  const lleno = cupoActual >= cupoMaximo;
+  const convocatoriaAbierta = estadoConvocatoria === 'abierta';
 
   const c = modoOscuro
     ? {
@@ -20,7 +20,6 @@ export function TarjetaClub({
         title: esProximamente ? "text-slate-500" : "text-white",
         desc: esProximamente ? "text-slate-600" : "text-slate-400",
         divider: esProximamente ? "bg-slate-800/30" : "bg-slate-800",
-        lugares: esProximamente ? "text-slate-600" : "text-slate-400",
       }
     : {
         card: esProximamente
@@ -29,7 +28,6 @@ export function TarjetaClub({
         title: esProximamente ? "text-slate-400" : "text-slate-900",
         desc: esProximamente ? "text-slate-400" : "text-slate-600",
         divider: esProximamente ? "bg-slate-200/50" : "bg-slate-200",
-        lugares: esProximamente ? "text-slate-400" : "text-slate-600",
       };
 
   return (
@@ -68,9 +66,19 @@ export function TarjetaClub({
       <div>
         <div className={`h-px my-5 ${c.divider}`} />
         <div className="flex items-center justify-between">
-          <span className={`text-xs font-bold tracking-wide ${lleno ? 'text-red-400' : c.lugares}`}>
-            {esProximamente ? '— / —' : `Lugares: ${cupoActual} / ${cupoMaximo}`}
-          </span>
+          {!esProximamente && convocatoriaAbierta ? (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+              <Icono nombre="check-circle" strokeWidth={2} className="h-3.5 w-3.5" />
+              Convocatoria abierta
+            </span>
+          ) : !esProximamente ? (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
+              <Icono nombre="lock" strokeWidth={2} className="h-3.5 w-3.5" />
+              Convocatoria cerrada
+            </span>
+          ) : (
+            <span className="text-xs font-bold tracking-wide text-slate-500">— / —</span>
+          )}
           {!esProximamente && (
             <span className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1">
               Ver más

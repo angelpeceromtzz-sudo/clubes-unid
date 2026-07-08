@@ -57,22 +57,23 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
             {/* Desktop: grid layout */}
             <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {clubes.map((club) => (
-                <TarjetaClub
-                  key={club.id_club}
-                  nombre={club.nombre_club}
-                  descripcion={club.descripcion}
-                  categoria={club.categoria}
-                  cupoMaximo={club.cupo_maximo}
-                  cupoActual={parseInt(club.cupo_actual) || 0}
-                  imagen={club.imagen_portada || club.imagen}
-                          onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
-                  idEstatusClub={club.id_estatus_club}
-                  estatus={club.estatus}
-                />
-              ))}
-            </div>
+                  <TarjetaClub
+                    key={club.id_club}
+                    nombre={club.nombre_club}
+                    descripcion={club.descripcion}
+                    categoria={club.categoria}
+                    cupoMaximo={club.cupo_maximo}
+                    cupoActual={parseInt(club.cupo_actual) || 0}
+                    imagen={club.imagen_portada || club.imagen}
+                            onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
+                    idEstatusClub={club.id_estatus_club}
+                    estatus={club.estatus}
+                    estadoConvocatoria={club.estado_convocatoria}
+                  />
+                ))}
+              </div>
 
-            {/* Mobile: rows por categoria */}
+              {/* Mobile: rows por categoria */}
             <div className="md:hidden space-y-8">
               {Object.entries(clubesPorCategoria).map(([categoria, clubs]) => (
                 <section key={categoria}>
@@ -100,6 +101,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
                   onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
                           idEstatusClub={club.id_estatus_club}
                           estatus={club.estatus}
+                          estadoConvocatoria={club.estado_convocatoria}
                         />
                       </div>
                     ))}

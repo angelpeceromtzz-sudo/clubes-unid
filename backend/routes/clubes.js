@@ -14,6 +14,7 @@ router.get('/', async (req, res) => {
               c.cupo_maximo, c.id_presidente,
               c.imagen_portada,
               c.id_estatus_club, e.nombre_estatus as estatus,
+              c.estado_convocatoria,
               c.fecha_creacion,
               COALESCE(
                 (SELECT COUNT(*) FROM inscripciones i
