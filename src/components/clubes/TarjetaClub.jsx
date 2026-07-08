@@ -69,19 +69,19 @@ export function TarjetaClub({
           {!esProximamente && convocatoriaAbierta ? (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
               <Icono nombre="check-circle" strokeWidth={2} className="h-3.5 w-3.5" />
-              Convocatoria abierta
+              Abierta
             </span>
           ) : !esProximamente ? (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
               <Icono nombre="lock" strokeWidth={2} className="h-3.5 w-3.5" />
-              Convocatoria cerrada
+              Cerrada
             </span>
           ) : (
             <span className="text-xs font-bold tracking-wide text-slate-500">— / —</span>
           )}
           {!esProximamente && (
             <span className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1">
-              Ver más
+              Ver detalles
               <Icono nombre="chevron-right" strokeWidth={2} className="h-3.5 w-3.5" />
             </span>
           )}

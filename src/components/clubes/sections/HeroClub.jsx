@@ -1,7 +1,7 @@
 import { Icono } from '../../ui/Icono';
 import { clasesBadge } from '../../../constants/colores';
 
-export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAutenticado, esAdmin, tieneInscripcionActiva }) {
+export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAutenticado, esAdmin, tieneInscripcionActiva, deshabilitado }) {
   const esProximamente = club.id_estatus_club === 2;
   const esInactivo = club.id_estatus_club === 3;
 
@@ -35,6 +35,18 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
               Inactivo
             </span>
           )}
+          {!esProximamente && !esInactivo && club.estado_convocatoria === 'abierta' && (
+            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+              <Icono nombre="check-circle" strokeWidth={2} className="h-3 w-3" />
+              Abierta
+            </span>
+          )}
+          {!esProximamente && !esInactivo && club.estado_convocatoria && club.estado_convocatoria !== 'abierta' && (
+            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
+              <Icono nombre="lock" strokeWidth={2} className="h-3 w-3" />
+              Cerrada
+            </span>
+          )}
         </div>
         <h1 className={`text-3xl md:text-4xl font-black leading-tight mb-4 ${c.title}`}>
           {club.nombre_club}
@@ -48,7 +60,7 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
             className={`mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
               !estaAutenticado
                 ? 'bg-slate-600 text-slate-300 hover:bg-slate-500'
-                : esAdmin || tieneInscripcionActiva
+                : deshabilitado || esAdmin || tieneInscripcionActiva
                   ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                   : 'bg-amber-500 hover:bg-amber-400 text-black'
             }`}

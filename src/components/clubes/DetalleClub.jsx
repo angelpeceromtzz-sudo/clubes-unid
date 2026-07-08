@@ -40,28 +40,32 @@ export function DetalleClub({ onLoginClick }) {
   const esInactivo = club?.id_estatus_club === 3;
   const cupoActual = parseInt(club?.cupo_actual) || 0;
   const lleno = cupoActual >= (club?.cupo_maximo || 0);
+  const convocatoriaCerrada = !!club?.estado_convocatoria && club.estado_convocatoria !== 'abierta';
+  const yaEnvio = clubesPostulados.includes(club?.id_club);
+  const deshabilitado = convocatoriaCerrada || yaEnvio;
 
   function obtenerTextoBoton() {
     if (esProximamente) return null;
     if (esInactivo) return null;
+    if (convocatoriaCerrada) return 'CONVOCATORIA CERRADA';
     if (lleno) return null;
     if (!estaAutenticado) return 'INICIA SESIÓN PARA INSCRIBIRTE';
     if (esAdmin) return null;
     if (tieneInscripcionActiva) return null;
+    if (yaEnvio) return 'SOLICITUD ENVIADA';
     return 'INSCRIBIRME AHORA';
   }
 
   const botonTexto = obtenerTextoBoton();
 
   function manejarClickBoton() {
+    if (deshabilitado) return;
     if (!estaAutenticado) {
       onLoginClick();
     } else if (esAdmin) {
       return;
     } else if (tieneInscripcionActiva) {
       alert("Ya eres miembro activo de un club.");
-    } else if (clubesPostulados.includes(club.id_club)) {
-      alert("Ya enviaste una solicitud para este club. No puedes duplicarla.");
     } else if (clubesPostulados.length >= 3) {
       alert("Ya tienes 3 postulaciones en proceso. Espera una respuesta.");
     } else {
@@ -88,6 +92,7 @@ export function DetalleClub({ onLoginClick }) {
           estaAutenticado={estaAutenticado}
           esAdmin={esAdmin}
           tieneInscripcionActiva={tieneInscripcionActiva}
+          deshabilitado={deshabilitado}
         />
 
         <DescripcionClub club={club} modoOscuro={modoOscuro} />
