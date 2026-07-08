@@ -47,12 +47,12 @@ export function DetalleClub({ onLoginClick }) {
   function obtenerTextoBoton() {
     if (esProximamente) return null;
     if (esInactivo) return null;
+    if (yaEnvio) return 'SOLICITUD ENVIADA';
     if (convocatoriaCerrada) return 'CONVOCATORIA CERRADA';
     if (lleno) return null;
     if (!estaAutenticado) return 'INICIA SESIÓN PARA INSCRIBIRTE';
     if (esAdmin) return null;
     if (tieneInscripcionActiva) return null;
-    if (yaEnvio) return 'SOLICITUD ENVIADA';
     return 'INSCRIBIRME AHORA';
   }
 

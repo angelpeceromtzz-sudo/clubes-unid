@@ -69,12 +69,14 @@ export function TarjetaClub({
           {!esProximamente && convocatoriaAbierta ? (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
               <Icono nombre="check-circle" strokeWidth={2} className="h-3.5 w-3.5" />
-              Abierta
+              <span className="md:hidden">Abierta</span>
+              <span className="hidden md:inline">Convocatoria abierta</span>
             </span>
           ) : !esProximamente ? (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
               <Icono nombre="lock" strokeWidth={2} className="h-3.5 w-3.5" />
-              Cerrada
+              <span className="md:hidden">Cerrada</span>
+              <span className="hidden md:inline">Convocatoria cerrada</span>
             </span>
           ) : (
             <span className="text-xs font-bold tracking-wide text-slate-500">— / —</span>

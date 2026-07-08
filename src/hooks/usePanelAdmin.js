@@ -26,6 +26,9 @@ export function usePanelAdmin(usuario) {
   const [formularioUsuario, setFormularioUsuario] = useState({ nombre_completo: '', correo_institucional: '', contrasena: '', id_rol: 1 });
   const [enviandoUsuario, setEnviandoUsuario] = useState(false);
   const [errorModalUsuario, setErrorModalUsuario] = useState('');
+  const [modalAdmin, setModalAdmin] = useState({ show: false, targetUser: null, accion: '' });
+  const [enviandoAdmin, setEnviandoAdmin] = useState(false);
+  const [errorAdmin, setErrorAdmin] = useState('');
 
   useEffect(() => {
     async function cargar() {
@@ -241,6 +244,37 @@ export function usePanelAdmin(usuario) {
     }
   }, [formularioUsuario]);
 
+  const abrirModalAdmin = useCallback((user, accion) => {
+    setModalAdmin({ show: true, targetUser: user, accion });
+    setErrorAdmin('');
+  }, []);
+
+  const manejarAdminAction = useCallback(async (password) => {
+    const { targetUser, accion } = modalAdmin;
+    setEnviandoAdmin(true);
+    setErrorAdmin('');
+    try {
+      await api.adminAction(targetUser.id_usuario, accion, password);
+      const actualizados = await api.getUsuarios();
+      setUsuarios(actualizados);
+      setFeedback(
+        accion === 'promote'
+          ? `"${targetUser.nombre_completo}" ahora es administrador`
+          : `"${targetUser.nombre_completo}" ya no es administrador`
+      );
+      setModalAdmin({ show: false, targetUser: null, accion: '' });
+    } catch (err) {
+      setErrorAdmin(err.message);
+    } finally {
+      setEnviandoAdmin(false);
+    }
+  }, [modalAdmin]);
+
+  const cerrarModalAdmin = useCallback(() => {
+    setModalAdmin({ show: false, targetUser: null, accion: '' });
+    setErrorAdmin('');
+  }, []);
+
   const manejarEliminarUsuario = useCallback(async (userId, nombre) => {
     if (!window.confirm(`¿Estás seguro de eliminar permanentemente al usuario "${nombre}"? Esta acción no se puede deshacer.`)) return;
     try {
@@ -346,5 +380,11 @@ export function usePanelAdmin(usuario) {
     handleUsuarioFormChange: manejarCambioFormularioUsuario,
     guardarUsuario,
     handleEliminarUsuario: manejarEliminarUsuario,
+    modalAdmin: modalAdmin,
+    enviandoAdmin,
+    errorAdmin,
+    abrirModalAdmin,
+    manejarAdminAction,
+    cerrarModalAdmin,
   };
 }

@@ -35,16 +35,16 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
               Inactivo
             </span>
           )}
-          {!esProximamente && !esInactivo && club.estado_convocatoria === 'abierta' && (
+          {!esProximamente && !esInactivo && !deshabilitado && club.estado_convocatoria === 'abierta' && (
             <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
               <Icono nombre="check-circle" strokeWidth={2} className="h-3 w-3" />
-              Abierta
+              Convocatoria abierta
             </span>
           )}
-          {!esProximamente && !esInactivo && club.estado_convocatoria && club.estado_convocatoria !== 'abierta' && (
+          {!esProximamente && !esInactivo && !deshabilitado && club.estado_convocatoria && club.estado_convocatoria !== 'abierta' && (
             <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
               <Icono nombre="lock" strokeWidth={2} className="h-3 w-3" />
-              Cerrada
+              Convocatoria cerrada
             </span>
           )}
         </div>

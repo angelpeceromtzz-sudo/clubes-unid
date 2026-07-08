@@ -213,4 +213,83 @@ router.put('/:id/asignar-club', authenticate, requireRole(3), async (req, res) =
   }
 });
 
+// Acción de admin protegida por contraseña: promover o degradar administradores
+router.post('/admin-action', authenticate, requireRole(3), async (req, res) => {
+  try {
+    const { targetUserId, action, password } = req.body;
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+    if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
+      return res.status(403).json({ error: 'Contraseña incorrecta' });
+    }
+
+    if (!targetUserId || !['promote', 'demote'].includes(action)) {
+      return res.status(400).json({ error: 'Solicitud inválida' });
+    }
+
+    const targetId = parseInt(targetUserId);
+    if (targetId === req.user.id) {
+      return res.status(403).json({ error: 'No puedes modificarte a ti mismo' });
+    }
+
+    const targetUser = await pool.query(
+      'SELECT id_rol, nombre_completo FROM usuarios WHERE id_usuario = $1',
+      [targetId],
+    );
+
+    if (targetUser.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (action === 'promote') {
+      if (targetUser.rows[0].id_rol === 3) {
+        return res.status(400).json({ error: 'El usuario ya es administrador' });
+      }
+      const result = await pool.query(
+        `UPDATE usuarios SET id_rol = 3 WHERE id_usuario = $1
+         RETURNING id_usuario, nombre_completo, correo_institucional, id_rol`,
+        [targetId],
+      );
+      const rolResult = await pool.query(
+        'SELECT nombre_rol FROM cat_roles WHERE id_rol = 3',
+      );
+      registrarHistorial({
+        idAdmin: req.user.id,
+        adminNombre: req.user.nombre_completo,
+        accion: 'promover_admin',
+        descripcion: `${req.user.nombre_completo} promovió a "${targetUser.rows[0].nombre_completo}" como administrador`,
+        entidadTipo: 'usuario',
+        entidadId: targetId,
+        detalles: { id_rol_nuevo: 3 },
+      });
+      res.json({ ...result.rows[0], rol: rolResult.rows[0]?.nombre_rol || 'admin' });
+    } else {
+      if (targetUser.rows[0].id_rol !== 3) {
+        return res.status(400).json({ error: 'El usuario no es administrador' });
+      }
+      const result = await pool.query(
+        `UPDATE usuarios SET id_rol = 1 WHERE id_usuario = $1
+         RETURNING id_usuario, nombre_completo, correo_institucional, id_rol`,
+        [targetId],
+      );
+      const rolResult = await pool.query(
+        'SELECT nombre_rol FROM cat_roles WHERE id_rol = 1',
+      );
+      registrarHistorial({
+        idAdmin: req.user.id,
+        adminNombre: req.user.nombre_completo,
+        accion: 'degradar_admin',
+        descripcion: `${req.user.nombre_completo} degradó al administrador "${targetUser.rows[0].nombre_completo}" a alumno`,
+        entidadTipo: 'usuario',
+        entidadId: targetId,
+        detalles: { id_rol_nuevo: 1 },
+      });
+      res.json({ ...result.rows[0], rol: rolResult.rows[0]?.nombre_rol || 'alumno' });
+    }
+  } catch (err) {
+    console.error('Error en admin-action:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 export default router;

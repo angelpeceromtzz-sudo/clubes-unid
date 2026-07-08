@@ -14,6 +14,7 @@ import { TablaClubes } from '../components/admin/TablaClubes';
 import { ModalFormularioClub } from '../components/admin/ModalFormularioClub';
 import { ModalFormularioUsuario } from '../components/admin/ModalFormularioUsuario';
 import { TablaHistorial } from '../components/admin/TablaHistorial';
+import { ModalPasswordAdmin } from '../components/admin/ModalPasswordAdmin';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { Icono } from '../components/ui/Icono';
@@ -87,6 +88,7 @@ export function PanelAdmin() {
                 onRemoveFromClub={d.handleRemoveFromClub}
                 onAsignarClub={d.handleAsignarClub}
                 onEliminarUsuario={d.handleEliminarUsuario}
+                onAdminAction={d.abrirModalAdmin}
               />
             </div>
           )}
@@ -163,6 +165,16 @@ export function PanelAdmin() {
             onClose={d.cerrarModalUsuario}
             onSave={d.guardarUsuario}
             onFormChange={d.handleUsuarioFormChange}
+          />
+
+          <ModalPasswordAdmin
+            show={d.modalAdmin.show}
+            targetUser={d.modalAdmin.targetUser}
+            accion={d.modalAdmin.accion}
+            enviando={d.enviandoAdmin}
+            error={d.errorAdmin}
+            onConfirm={d.manejarAdminAction}
+            onClose={d.cerrarModalAdmin}
           />
       </NavegacionPanel>
     </RutaProtegida>

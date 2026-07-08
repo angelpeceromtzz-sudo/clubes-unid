@@ -262,6 +262,12 @@ export const api = {
   deleteUser: (id) =>
     request(`/usuarios/${id}`, { method: 'DELETE' }),
 
+  adminAction: (targetUserId, action, password) =>
+    request('/usuarios/admin-action', {
+      method: 'POST',
+      body: JSON.stringify({ targetUserId, action, password }),
+    }),
+
   getConvocatoriaClub: (clubId) => request(`/clubes/${clubId}/convocatoria`),
 
   actualizarConfiguracionConvocatoria: (clubId, data) =>
