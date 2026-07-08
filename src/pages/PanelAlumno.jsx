@@ -13,6 +13,7 @@ import { usePanelAlumno } from '../hooks/usePanelAlumno';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { Alerta } from '../components/ui/Alerta';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 
 export function PanelAlumno() {
   const navigate = useNavigate();
@@ -43,11 +44,11 @@ export function PanelAlumno() {
     return null;
   }
 
-  const esMiembroOficial = !!d.club;
-
   const recargarPostulaciones = useCallback(() => {
     d.recargar();
-  }, [d]);
+  }, [d.recargar]);
+
+  const esMiembroOficial = !!d.club;
 
   if (d.loading) {
     return <Spinner className="py-32" />;
@@ -69,12 +70,13 @@ export function PanelAlumno() {
   }
 
   return (
+    <ErrorBoundary>
     <RutaProtegida>
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="mb-8">
           <EncabezadoPagina
             titulo={esMiembroOficial ? 'Mi Club' : 'Mis Postulaciones'}
-            subtitulo={`Bienvenido, ${d.user.nombre_completo}`}
+            subtitulo={`Bienvenido, ${d?.user?.nombre_completo || usuario?.nombre_completo || ''}`}
           />
         </div>
 
@@ -127,5 +129,6 @@ export function PanelAlumno() {
         )}
       </div>
     </RutaProtegida>
+    </ErrorBoundary>
   );
 }

@@ -51,8 +51,8 @@ export function ProveedorNotificacion({ children: hijos }) {
     }
   }, []);
 
-  const crearNotificacion = useCallback(async (titulo, mensaje, audiencia, id_club) => {
-    const data = await api.createNotificacion(titulo, mensaje, audiencia, id_club);
+  const crearNotificacion = useCallback(async (titulo, mensaje, audiencia, id_club, id_destinatario) => {
+    const data = await api.createNotificacion(titulo, mensaje, audiencia, id_club, id_destinatario);
     obtenerNotificaciones().catch(() => {});
     return data;
   }, [obtenerNotificaciones]);

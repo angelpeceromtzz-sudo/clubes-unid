@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import pool from '../db.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireRole } from '../middleware/auth.js';
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -184,6 +184,38 @@ router.post('/login-microsoft', async (req, res) => {
     });
   } catch (err) {
     console.error('Error en login-microsoft:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Crear usuario (solo admin)
+router.post('/register', authenticate, requireRole(3), async (req, res) => {
+  try {
+    const { nombre_completo, correo_institucional, contrasena, id_rol } = req.body;
+
+    if (!nombre_completo || !correo_institucional || !contrasena) {
+      return res.status(400).json({ error: 'nombre_completo, correo_institucional y contrasena son obligatorios' });
+    }
+
+    const existe = await pool.query('SELECT id_usuario FROM usuarios WHERE correo_institucional = $1', [correo_institucional]);
+    if (existe.rows.length > 0) {
+      return res.status(409).json({ error: 'El correo ya está registrado' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(contrasena, salt);
+    const rolFinal = id_rol || 1;
+
+    const result = await pool.query(
+      `INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id_usuario, nombre_completo, correo_institucional, id_rol`,
+      [nombre_completo.trim(), correo_institucional.trim(), password_hash, rolFinal],
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al registrar usuario:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

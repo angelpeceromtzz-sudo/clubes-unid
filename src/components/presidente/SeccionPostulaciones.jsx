@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { TarjetaPostulacionV2 } from '../alumno/TarjetaPostulacionV2';
@@ -6,6 +6,11 @@ import { TarjetaPostulacionV2 } from '../alumno/TarjetaPostulacionV2';
 export function SeccionPostulaciones({ postulaciones, onPostulacionesChange }) {
   const { tema } = useTheme();
   const [respondiendo, setRespondiendo] = useState({});
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
 
   async function manejarRespuesta(id, decision) {
     setRespondiendo((prev) => ({ ...prev, [id]: decision }));
@@ -15,7 +20,9 @@ export function SeccionPostulaciones({ postulaciones, onPostulacionesChange }) {
     } catch (err) {
       alert(err.message);
     } finally {
-      setRespondiendo((prev) => ({ ...prev, [id]: null }));
+      if (mountedRef.current) {
+        setRespondiendo((prev) => ({ ...prev, [id]: null }));
+      }
     }
   }
 
@@ -23,7 +30,7 @@ export function SeccionPostulaciones({ postulaciones, onPostulacionesChange }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className={`text-xl font-black uppercase tracking-wider ${tema.title}`}>
             Mis Postulaciones

@@ -164,10 +164,10 @@ export const api = {
 
   getNotificaciones: () => request('/notificaciones'),
 
-  createNotificacion: (titulo, mensaje, audiencia, id_club) =>
+  createNotificacion: (titulo, mensaje, audiencia, id_club, id_destinatario) =>
     request('/notificaciones', {
       method: 'POST',
-      body: JSON.stringify({ titulo, mensaje, audiencia, id_club }),
+      body: JSON.stringify({ titulo, mensaje, audiencia, id_club, id_destinatario }),
     }),
 
   marcarNotificacionLeida: (id) =>

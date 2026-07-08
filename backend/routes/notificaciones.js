@@ -40,11 +40,12 @@ router.get('/', authenticate, async (req, res) => {
         LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
         LEFT JOIN notificaciones_eliminadas ne ON ne.id_notificacion = n.id_notificacion AND ne.id_usuario = $1
        WHERE ne.id_notificacion IS NULL
+         AND n.id_emisor != $1
          AND (($2 IN (3, 4))
-           OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL)
+           OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
                         OR (n.audiencia = 'club' AND n.id_club = $3)
                         OR n.id_destinatario = $1))
-           OR ($2 = 1 AND ((n.audiencia IN ('global', 'alumnos') AND n.id_destinatario IS NULL)
+           OR ($2 = 1 AND ((n.audiencia IN ('global', 'alumnos') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $4))
                         OR (n.audiencia = 'club' AND n.id_club = $4)
                         OR n.id_destinatario = $1)))
        ORDER BY n.fecha_creacion DESC
@@ -61,7 +62,7 @@ router.get('/', authenticate, async (req, res) => {
 
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { titulo, mensaje, audiencia, id_club } = req.body;
+    const { titulo, mensaje, audiencia, id_club, id_destinatario } = req.body;
     const userId = req.user.id;
     const roleId = req.user.id_rol;
 
@@ -89,10 +90,10 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [userId, titulo, mensaje, audiencia, audiencia === 'club' ? id_club : null]
+      [userId, titulo, mensaje, audiencia, audiencia === 'club' ? id_club : null, id_destinatario || null]
     );
 
     if (roleId === 3) {
@@ -136,13 +137,35 @@ router.post('/:id/leer', authenticate, async (req, res) => {
 router.post('/leer-todas', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
+    const roleId = req.user.id_rol;
+
+    let clubId = null;
+    if (roleId === 2) {
+      const pres = await pool.query('SELECT id_club FROM clubes WHERE id_presidente = $1', [userId]);
+      if (pres.rows.length > 0) clubId = pres.rows[0].id_club;
+    }
+    if (roleId === 1) {
+      const ins = await pool.query(
+        'SELECT id_club FROM inscripciones WHERE id_usuario = $1 AND id_estatus_inscripcion = 1 LIMIT 1',
+        [userId]
+      );
+      if (ins.rows.length > 0) clubId = ins.rows[0].id_club;
+    }
 
     const notifs = await pool.query(
       `SELECT n.id_notificacion
        FROM notificaciones n
        LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
-       WHERE nl.id_notificacion IS NULL`,
-      [userId]
+       WHERE nl.id_notificacion IS NULL
+         AND n.id_emisor != $1
+         AND (($2 IN (3, 4))
+           OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
+                        OR (n.audiencia = 'club' AND n.id_club = $3)
+                        OR n.id_destinatario = $1))
+           OR ($2 = 1 AND ((n.audiencia IN ('global', 'alumnos') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
+                        OR (n.audiencia = 'club' AND n.id_club = $3)
+                        OR n.id_destinatario = $1)))`,
+      [userId, roleId, clubId]
     );
 
     for (const row of notifs.rows) {
