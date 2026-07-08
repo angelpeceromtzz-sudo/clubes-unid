@@ -5,7 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 export function usePanelPresidente(usuario) {
   const { esOscuro, tema } = useTheme();
-  const [vistaActiva, setVistaActiva] = useState('mi-club');
+  const [vistaActiva, setVistaActiva] = useState('principal');
   const [estado, setEstado] = useState({ club: null, miembros: [], loading: true, error: '' });
 
   useEffect(() => {

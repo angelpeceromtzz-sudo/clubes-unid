@@ -3,12 +3,26 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import { api, getSession, setSession, clearSession } from '../services/api';
 import { msalInstance, loginRequest } from '../services/authConfig';
 
+function jwtExpirado(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+}
+
 const ContextoAutenticacion = createContext(null);
 
 export function ProveedorAutenticacion({ children: hijos }) {
   const [usuario, setUsuario] = useState(() => {
     const sesion = getSession();
-    return sesion ? sesion.user : null;
+    if (!sesion?.token) return null;
+    if (jwtExpirado(sesion.token)) {
+      clearSession();
+      return null;
+    }
+    return sesion.user;
   });
 
   const [tieneInscripcionActiva, setTieneInscripcionActiva] = useState(false);
@@ -58,34 +72,41 @@ export function ProveedorAutenticacion({ children: hijos }) {
         }
 
         const cuentas = msalInstance.getAllAccounts();
-        if (cuentas.length > 0 && !getSession()) {
-          console.log('[MSAL] Intentando adquisición silenciosa con cuenta cacheada');
-          const silencioso = await msalInstance.acquireTokenSilent({
-            ...loginRequest,
-            account: cuentas[0],
-          });
-          if (cancelado || !silencioso?.accessToken) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-            return;
-          }
-          const data = await api.loginMicrosoft(silencioso.accessToken);
-          if (cancelado) return;
-          setSession({ token: data.token, user: data.user });
-          setUsuario(data.user);
+        const sesion = getSession();
+        const tokenExpirado = sesion?.token ? jwtExpirado(sesion.token) : true;
+
+        if (cuentas.length > 0 && tokenExpirado) {
+          console.log('[MSAL] Token expirado. Intentando renovación silenciosa...');
           try {
-            const insc = await api.getInscripcionActiva();
-            if (!cancelado) setTieneInscripcionActiva(!!insc);
-          } catch {
-            if (!cancelado) setTieneInscripcionActiva(false);
+            const silencioso = await msalInstance.acquireTokenSilent({
+              ...loginRequest,
+              account: cuentas[0],
+            });
+            if (!cancelado && silencioso?.accessToken) {
+              const data = await api.loginMicrosoft(silencioso.accessToken);
+              if (!cancelado) {
+                setSession({ token: data.token, user: data.user });
+                setUsuario(data.user);
+                try {
+                  const insc = await api.getInscripcionActiva();
+                  if (!cancelado) setTieneInscripcionActiva(!!insc);
+                } catch {
+                  if (!cancelado) setTieneInscripcionActiva(false);
+                }
+                if (!cancelado && data.user.id_rol === 1) await obtenerMisFormularios();
+                window.history.replaceState({}, document.title, window.location.pathname);
+                console.log('[MSAL] Token renovado silenciosamente');
+                return;
+              }
+            }
+          } catch (err) {
+            console.error('[MSAL] No se pudo renovar el token:', err);
           }
-          if (!cancelado && data.user.id_rol === 1) await obtenerMisFormularios();
-          window.history.replaceState({}, document.title, window.location.pathname);
-          console.log('[MSAL] Login silencioso completado, URL limpia');
-          return;
         }
 
-        const sesion = getSession();
-        if (!sesion) {
+        if (!sesion || tokenExpirado) {
+          if (tokenExpirado) clearSession();
+          setUsuario(null);
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
           if (!cancelado && sesion.user.id_rol === 1) await obtenerMisFormularios();

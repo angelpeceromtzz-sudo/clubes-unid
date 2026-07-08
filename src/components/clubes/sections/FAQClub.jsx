@@ -2,8 +2,8 @@ import { Icono } from '../../ui/Icono';
 
 const faqs = [
   { p: '¿Cómo me inscribo?', r: 'Haz clic en "Inscribirme ahora" y completa el formulario.' },
-  { p: '¿Hay costo?', r: 'La mayoría de los clubes son gratuitos para alumnos UNID.' },
-  { p: '¿Puedo unirme a varios?', r: 'Sí, siempre que cumplas con los horarios y requisitos.' },
+  { p: '¿Hay costo?', r: 'Los clubes son gratuitos para alumnos UNID.' },
+  { p: '¿Puedo unirme a varios?', r: 'No, solo podras ser miembro de un club, pero podras postularte hasta a 3.' },
   { p: '¿Hay límite de cupo?', r: 'Sí, cada club tiene un cupo máximo de alumnos.' },
 ];
 

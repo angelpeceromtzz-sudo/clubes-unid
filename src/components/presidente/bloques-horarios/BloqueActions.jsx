@@ -4,7 +4,7 @@ import { Spinner } from '../../ui/Spinner';
 export function BloqueActions({ editando, guardando, enviando, completo, onToggleEdit, onEnviar, onImprimir }) {
   const { modoOscuro } = useTheme();
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-col sm:flex-row gap-2">
       <button
         onClick={onToggleEdit}
         className={`flex-1 border rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 ${

@@ -49,6 +49,7 @@ router.get('/:id', async (req, res) => {
               c.cupo_maximo, c.id_presidente,
               c.imagen_portada, c.lugar, c.horario,
               c.id_estatus_club, e.nombre_estatus as estatus,
+              c.estado_convocatoria, c.max_postulaciones, c.postulaciones_actuales,
               c.fecha_creacion,
               COALESCE(
                 (SELECT COUNT(*) FROM inscripciones i
@@ -218,6 +219,77 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
     res.json({ ...result.rows[0], estatus: estatusResult.rows[0]?.nombre_estatus || 'activo' });
   } catch (err) {
     console.error('Error al actualizar club:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Obtiene configuración de convocatoria del club (presidente)
+router.get('/:id/convocatoria', authenticate, requireRole(2), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const club = await pool.query(
+      `SELECT estado_convocatoria, max_postulaciones, postulaciones_actuales
+       FROM clubes WHERE id_club = $1 AND id_presidente = $2`,
+      [id, req.user.id],
+    );
+    if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado o no eres el presidente' });
+    res.json(club.rows[0]);
+  } catch (err) {
+    console.error('Error al obtener convocatoria:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Actualiza configuración de convocatoria (presidente)
+// estado: 'abierta' | 'cerrada_manual' | 'cerrada_por_limite'
+// reiniciar_periodo: true solo cuando se inicia un nuevo período
+router.put('/:id/convocatoria', authenticate, requireRole(2), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado, max_postulaciones, reiniciar_periodo } = req.body;
+
+    const club = await pool.query(
+      'SELECT id_presidente FROM clubes WHERE id_club = $1',
+      [id],
+    );
+    if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado' });
+    if (club.rows[0].id_presidente !== req.user.id) return res.status(403).json({ error: 'No eres el presidente' });
+
+    if (!['abierta', 'cerrada_manual', 'cerrada_por_limite'].includes(estado)) {
+      return res.status(400).json({ error: 'Estado inválido. Debe ser: abierta, cerrada_manual o cerrada_por_limite' });
+    }
+
+    const updates = ["estado_convocatoria = $1"];
+    const params = [estado];
+    let idx = 2;
+
+    if (max_postulaciones !== undefined) {
+      updates.push(`max_postulaciones = $${idx}`);
+      params.push(max_postulaciones || null);
+      idx++;
+    }
+
+    if (reiniciar_periodo === true) {
+      updates.push(`postulaciones_actuales = $${idx}`);
+      params.push(0);
+      idx++;
+    }
+
+    params.push(id);
+    await pool.query(
+      `UPDATE clubes SET ${updates.join(', ')} WHERE id_club = $${idx}`,
+      params,
+    );
+
+    const result = await pool.query(
+      `SELECT estado_convocatoria, max_postulaciones, postulaciones_actuales
+       FROM clubes WHERE id_club = $1`,
+      [id],
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al actualizar convocatoria:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

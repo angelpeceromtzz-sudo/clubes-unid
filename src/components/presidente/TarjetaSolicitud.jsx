@@ -23,7 +23,7 @@ export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, acci
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-3">
             <div>
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Carrera</span>
               <p className={`text-sm truncate ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{solicitud.carrera}</p>

@@ -6,7 +6,7 @@ export function PanelBloqueMejorado({ titulo, alumnos, seleccionados, onToggleSe
   const { modoOscuro } = useTheme();
   return (
     <div className={`${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'} rounded-2xl border overflow-hidden`}>
-      <div className="flex items-center justify-between p-5 pb-0">
+      <div className="flex items-center justify-between p-5 pb-0 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <h3 className={`text-base font-black uppercase tracking-wider ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
             {titulo}

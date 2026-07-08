@@ -48,7 +48,7 @@ export function AlumnosConvocados({ bloqueA, bloqueB, onConfirmarSeleccion, comp
 
   return (
     <>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <label className="flex items-center gap-2 cursor-pointer">
           <div
             onClick={toggleTodos}

@@ -1,6 +1,5 @@
-/* Panel del presidente de club: información del club, solicitudes, convocatorias y selección final. */
+/* Panel del presidente de club: información del club y gestión completa de convocatorias. */
 import { useAutenticacion } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { InformacionClub } from '../components/clubes/InformacionClub';
 import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
@@ -9,16 +8,12 @@ import { usePanelPresidente } from '../hooks/usePanelPresidente';
 import { NavegacionPanel } from '../components/layout/NavegacionPanel';
 import { ELEMENTOS_NAV_PRESIDENTE } from '../components/admin/elementosNavegacion';
 import { EstadoVacio } from '../components/presidente/EmptyState';
-import { SolicitudesPresidente } from '../components/presidente/SolicitudesPresidente';
-import { HistorialPostulaciones } from '../components/presidente/HistorialPostulaciones';
-import { SeccionConvocatorias } from '../components/presidente/SeccionConvocatorias';
-import { SeleccionFinal } from '../components/presidente/SeleccionFinal';
+import { VistaConvocatorias } from '../components/presidente/VistaConvocatorias';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 
 export function PanelPresidente() {
   const { usuario } = useAutenticacion();
-  const { tema } = useTheme();
   const d = usePanelPresidente(usuario);
 
   if (d.loading) {
@@ -59,7 +54,7 @@ export function PanelPresidente() {
             />
           </div>
 
-          {d.vistaActiva === 'mi-club' && (
+          {d.vistaActiva === 'principal' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <InformacionClub club={d.club} />
@@ -71,20 +66,8 @@ export function PanelPresidente() {
             </div>
           )}
 
-          {d.vistaActiva === 'solicitudes' && (
-            <SolicitudesPresidente club={d.club} />
-          )}
-
-          {d.vistaActiva === 'historial' && (
-            <HistorialPostulaciones club={d.club} />
-          )}
-
           {d.vistaActiva === 'convocatorias' && (
-            <SeccionConvocatorias club={d.club} />
-          )}
-
-          {d.vistaActiva === 'seleccion-final' && (
-            <SeleccionFinal club={d.club} />
+            <VistaConvocatorias club={d.club} />
           )}
       </NavegacionPanel>
     </RutaProtegida>

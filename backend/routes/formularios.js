@@ -118,75 +118,122 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben estar llenos' });
     }
 
-    const clubValido = await pool.query(
-      'SELECT cupo_maximo, id_estatus_club FROM clubes WHERE id_club = $1',
-      [id_club],
-    );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    if (clubValido.rows.length === 0) {
-      return res.status(404).json({ error: 'El club no existe' });
-    }
+      // Validaciones iniciales fuera de la transacción (no requieren lock)
+      const existente = await pool.query(
+        'SELECT id_club, id_estatus_club FROM clubes WHERE id_club = $1',
+        [id_club],
+      );
+      if (existente.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'El club no existe' });
+      }
+      if (existente.rows[0].id_estatus_club !== 1) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'El club no está disponible para inscripciones' });
+      }
 
-    if (clubValido.rows[0].id_estatus_club !== 1) {
-      return res.status(400).json({ error: 'El club no está disponible para inscripciones' });
-    }
+      // Lock atómico: evitar race conditions en el límite
+      const clubRow = await client.query(
+        `SELECT estado_convocatoria, max_postulaciones, postulaciones_actuales
+         FROM clubes WHERE id_club = $1 FOR UPDATE`,
+        [id_club],
+      );
+      const club = clubRow.rows[0];
 
-    const activa = await pool.query(
-      `SELECT id_inscripcion FROM inscripciones
-       WHERE id_usuario = $1 AND id_estatus_inscripcion = 1
-       LIMIT 1`,
-      [req.user.id],
-    );
+      if (club.estado_convocatoria !== 'abierta') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'La convocatoria de este club está cerrada. No se aceptan nuevas postulaciones.' });
+      }
 
-    if (activa.rows.length > 0) {
-      return res.status(400).json({ error: 'Ya tienes una inscripción activa en un club' });
-    }
+      const maxPost = club.max_postulaciones;
+      const actuales = club.postulaciones_actuales;
+      if (maxPost !== null && actuales >= maxPost) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Este club ha alcanzado el límite de postulaciones. La convocatoria está cerrada.' });
+      }
 
-    const duplicado = await pool.query(
-      `SELECT id_formulario FROM formularios
-       WHERE id_alumno = $1 AND id_club = $2`,
-      [req.user.id, id_club],
-    );
+      const activa = await client.query(
+        `SELECT id_inscripcion FROM inscripciones
+         WHERE id_usuario = $1 AND id_estatus_inscripcion = 1
+         LIMIT 1`,
+        [req.user.id],
+      );
+      if (activa.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Ya tienes una inscripción activa en un club' });
+      }
 
-    if (duplicado.rows.length > 0) {
-      return res.status(400).json({ error: 'Ya enviaste un formulario para este club' });
-    }
+      const duplicado = await client.query(
+        `SELECT id_formulario FROM formularios
+         WHERE id_alumno = $1 AND id_club = $2`,
+        [req.user.id, id_club],
+      );
+      if (duplicado.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Ya enviaste un formulario para este club' });
+      }
 
-    const totalFormularios = await pool.query(
-      'SELECT COUNT(*) as total FROM formularios WHERE id_alumno = $1',
-      [req.user.id],
-    );
+      const totalFormularios = await client.query(
+        'SELECT COUNT(*) as total FROM formularios WHERE id_alumno = $1',
+        [req.user.id],
+      );
+      if (parseInt(totalFormularios.rows[0].total, 10) >= LIMITE_POSTULACIONES) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: `Has alcanzado el límite de ${LIMITE_POSTULACIONES} postulaciones` });
+      }
 
-    if (parseInt(totalFormularios.rows[0].total, 10) >= LIMITE_POSTULACIONES) {
-      return res.status(400).json({
-        error: `Has alcanzado el límite de ${LIMITE_POSTULACIONES} postulaciones`,
+      const result = await client.query(
+        `INSERT INTO formularios (id_alumno, id_club, bloque_asignado,
+          nombre_completo, matricula, carrera, cuatrimestre, turno,
+          telefono_contacto, motivo_ingreso, experiencia_previa)
+         VALUES ($1, $2, DEFAULT, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING *`,
+        [
+          req.user.id,
+          id_club,
+          nombre_completo,
+          matricula,
+          carrera,
+          cuatrimestre,
+          turno,
+          telefono_contacto,
+          motivo_ingreso,
+          experiencia_previa || '',
+        ],
+      );
+
+      const nuevasActuales = actuales + 1;
+      if (maxPost !== null && nuevasActuales >= maxPost) {
+        await client.query(
+          `UPDATE clubes
+           SET postulaciones_actuales = postulaciones_actuales + 1,
+               estado_convocatoria = 'cerrada_por_limite'
+           WHERE id_club = $1`,
+          [id_club],
+        );
+      } else {
+        await client.query(
+          `UPDATE clubes SET postulaciones_actuales = postulaciones_actuales + 1 WHERE id_club = $1`,
+          [id_club],
+        );
+      }
+
+      await client.query('COMMIT');
+
+      res.status(201).json({
+        message: 'Formulario enviado correctamente',
+        formulario: result.rows[0],
       });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
-
-    const result = await pool.query(
-      `INSERT INTO formularios (id_alumno, id_club, bloque_asignado,
-        nombre_completo, matricula, carrera, cuatrimestre, turno,
-        telefono_contacto, motivo_ingreso, experiencia_previa)
-       VALUES ($1, $2, DEFAULT, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING *`,
-      [
-        req.user.id,
-        id_club,
-        nombre_completo,
-        matricula,
-        carrera,
-        cuatrimestre,
-        turno,
-        telefono_contacto,
-        motivo_ingreso,
-        experiencia_previa || '',
-      ],
-    );
-
-    res.status(201).json({
-      message: 'Formulario enviado correctamente',
-      formulario: result.rows[0],
-    });
   } catch (err) {
     console.error('Error al crear formulario:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -462,6 +509,45 @@ router.post('/seleccionar', authenticate, requireRole(2), async (req, res) => {
     }
   } catch (err) {
     console.error('Error en selección:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Devuelve todas las ofertas de ingreso enviadas a postulantes del club (presidente)
+router.get('/ofertas/:id_club', authenticate, requireRole(2), async (req, res) => {
+  try {
+    const { id_club } = req.params;
+
+    const club = await pool.query(
+      'SELECT id_presidente FROM clubes WHERE id_club = $1',
+      [id_club],
+    );
+
+    if (club.rows.length === 0) {
+      return res.status(404).json({ error: 'El club no existe' });
+    }
+
+    if (club.rows[0].id_presidente !== req.user.id) {
+      return res.status(403).json({ error: 'No eres el presidente de este club' });
+    }
+
+    const result = await pool.query(
+      `SELECT f.id_formulario, f.id_alumno, f.nombre_completo, f.matricula,
+              f.status, f.fecha_oferta, f.fecha_respuesta, f.fecha_expiracion,
+              f.motivo_rechazo
+       FROM formularios f
+       WHERE f.id_club = $1
+         AND (f.status = 'Oferta enviada'
+              OR f.status = 'Miembro oficial'
+              OR (f.status = 'Rechazado'
+                  AND f.motivo_rechazo IN ('Oferta rechazada por el alumno', 'Oferta expirada (72h)')))
+       ORDER BY f.fecha_oferta DESC NULLS LAST`,
+      [id_club],
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener historial de ofertas:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

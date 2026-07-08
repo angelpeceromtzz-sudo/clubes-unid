@@ -261,6 +261,16 @@ export const api = {
 
   deleteUser: (id) =>
     request(`/usuarios/${id}`, { method: 'DELETE' }),
+
+  getConvocatoriaClub: (clubId) => request(`/clubes/${clubId}/convocatoria`),
+
+  actualizarConfiguracionConvocatoria: (clubId, data) =>
+    request(`/clubes/${clubId}/convocatoria`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  getHistorialOfertas: (clubId) => request(`/formularios/ofertas/${clubId}`),
 };
 
 // ✦ A
