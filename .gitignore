@@ -26,6 +26,9 @@ dist-ssr
 # Vercel
 .vercel
 
+# Environment
+.env
+
 # Documents
 *.docx
 clubes-unid-backup/
