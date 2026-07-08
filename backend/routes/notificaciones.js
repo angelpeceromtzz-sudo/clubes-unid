@@ -210,19 +210,4 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-// Eliminar todas las notificaciones (solo admin)
-router.delete('/all', async (req, res) => {
-  try {
-    const secret = req.query.secret;
-    if (secret !== 'temporal-cleanup-2026') return res.status(403).json({ error: 'No autorizado' });
-    await pool.query('DELETE FROM notificaciones_eliminadas');
-    await pool.query('DELETE FROM notificaciones_leidas');
-    const r = await pool.query('DELETE FROM notificaciones');
-    res.json({ ok: true, eliminadas: r.rowCount });
-  } catch (err) {
-    console.error('Error al eliminar notificaciones:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
 export default router;
