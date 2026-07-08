@@ -73,6 +73,7 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
 
     const distribucion = distribuirEnBloques(preseleccionados.rows.length);
     const periodo = new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    const idPresidente = club.rows[0].id_presidente;
     const client = await pool.connect();
 
     try {
@@ -84,9 +85,19 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
         const numAlumnos = distribucion[b];
 
         const conv = await client.query(
-          `INSERT INTO convocatorias (id_club, bloque, periodo)
-           VALUES ($1, $2, $3) RETURNING id_convocatoria`,
-          [id_club, bloqueNombre, periodo],
+          `INSERT INTO convocatorias
+             (id_club, id_presidente, fecha, hora, lugar, bloque, periodo)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id_convocatoria`,
+          [
+            id_club,
+            idPresidente,
+            null,
+            null,
+            null,
+            bloqueNombre,
+            periodo,
+          ],
         );
         const idConv = conv.rows[0].id_convocatoria;
 
