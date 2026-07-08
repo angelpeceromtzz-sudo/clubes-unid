@@ -17,7 +17,7 @@ export function usePanelPresidente(usuario) {
 
         if (!montado) return;
 
-        if (!perfil.id_club || perfil.id_presidente !== perfil.id_usuario) {
+        if (!perfil.id_club || Number(perfil.id_presidente) !== Number(perfil.id_usuario)) {
           setEstado({ club: null, miembros: [], loading: false, error: '' });
           return;
         }

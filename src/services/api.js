@@ -146,6 +146,8 @@ export const api = {
 
   getSolicitudesPendientes: (clubId) => request(`/formularios/pendientes/${clubId}`),
 
+  getAllSolicitudes: (clubId) => request(`/formularios/todos/${clubId}`),
+
   actualizarEstatusSolicitud: (id, status) =>
     request(`/formularios/${id}/estatus`, {
       method: 'PUT',

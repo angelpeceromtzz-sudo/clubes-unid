@@ -10,6 +10,7 @@ import { NavegacionPanel } from '../components/layout/NavegacionPanel';
 import { ELEMENTOS_NAV_PRESIDENTE } from '../components/admin/elementosNavegacion';
 import { EstadoVacio } from '../components/presidente/EmptyState';
 import { SolicitudesPresidente } from '../components/presidente/SolicitudesPresidente';
+import { HistorialPostulaciones } from '../components/presidente/HistorialPostulaciones';
 import { SeccionConvocatorias } from '../components/presidente/SeccionConvocatorias';
 import { SeleccionFinal } from '../components/presidente/SeleccionFinal';
 import { Spinner } from '../components/ui/Spinner';
@@ -72,6 +73,10 @@ export function PanelPresidente() {
 
           {d.vistaActiva === 'solicitudes' && (
             <SolicitudesPresidente club={d.club} />
+          )}
+
+          {d.vistaActiva === 'historial' && (
+            <HistorialPostulaciones club={d.club} />
           )}
 
           {d.vistaActiva === 'convocatorias' && (

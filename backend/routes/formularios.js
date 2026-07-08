@@ -215,7 +215,12 @@ router.get('/pendientes/:id_club', authenticate, requireRole(2), async (req, res
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
               f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
-              f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta
+              f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
+              (SELECT json_agg(json_build_object(
+                'status_anterior', hp.status_anterior,
+                'status_nuevo', hp.status_nuevo,
+                'fecha_cambio', hp.fecha_cambio
+              ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
        FROM formularios f
        WHERE f.id_club = $1
          AND f.status NOT IN ('Miembro oficial', 'Rechazado')
@@ -230,6 +235,48 @@ router.get('/pendientes/:id_club', authenticate, requireRole(2), async (req, res
     res.json(result.rows);
   } catch (err) {
     console.error('Error al obtener formularios del club:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Devuelve TODOS los formularios de un club (incluyendo Miembro oficial y Rechazado)
+// con el historial de cambios, solo para el presidente de ese club
+router.get('/todos/:id_club', authenticate, requireRole(2), async (req, res) => {
+  try {
+    const { id_club } = req.params;
+
+    const club = await pool.query(
+      'SELECT id_presidente FROM clubes WHERE id_club = $1',
+      [id_club],
+    );
+
+    if (club.rows.length === 0) {
+      return res.status(404).json({ error: 'El club no existe' });
+    }
+
+    if (club.rows[0].id_presidente !== req.user.id) {
+      return res.status(403).json({ error: 'No eres el presidente de este club' });
+    }
+
+    const result = await pool.query(
+      `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
+              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
+              f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
+              f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
+              (SELECT json_agg(json_build_object(
+                'status_anterior', hp.status_anterior,
+                'status_nuevo', hp.status_nuevo,
+                'fecha_cambio', hp.fecha_cambio
+              ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
+       FROM formularios f
+       WHERE f.id_club = $1
+       ORDER BY f.fecha_envio DESC`,
+      [id_club],
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener todos los formularios del club:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
