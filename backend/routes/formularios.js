@@ -224,10 +224,6 @@ router.get('/pendientes/:id_club', authenticate, requireRole(2), async (req, res
        FROM formularios f
        WHERE f.id_club = $1
          AND f.status NOT IN ('Miembro oficial', 'Rechazado')
-         AND f.id_alumno NOT IN (
-           SELECT id_usuario FROM inscripciones
-           WHERE id_club = $1 AND id_estatus_inscripcion = 1
-         )
        ORDER BY f.fecha_envio DESC`,
       [id_club],
     );
