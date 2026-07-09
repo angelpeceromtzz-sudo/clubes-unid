@@ -292,4 +292,53 @@ router.post('/admin-action', authenticate, requireRole(3), async (req, res) => {
   }
 });
 
+// Reactivar usuario con soft delete (solo admin)
+router.patch('/:id/reactivar', authenticate, requireRole(3), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const usuario = await pool.query(
+      `SELECT id_usuario, nombre_completo, correo_institucional, deleted_at
+       FROM usuarios WHERE id_usuario = $1`,
+      [id],
+    );
+
+    if (usuario.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const row = usuario.rows[0];
+
+    if (!row.deleted_at) {
+      return res.status(400).json({ error: 'El usuario ya está activo' });
+    }
+
+    await pool.query(
+      `UPDATE usuarios SET deleted_at = NULL WHERE id_usuario = $1`,
+      [id],
+    );
+
+    registrarHistorial({
+      idAdmin: req.user.id,
+      adminNombre: req.user.nombre_completo,
+      accion: 'reactivar_usuario',
+      descripcion: `${req.user.nombre_completo} reactivó al usuario "${row.nombre_completo}" (ID ${id})`,
+      entidadTipo: 'usuario',
+      entidadId: parseInt(id),
+    });
+
+    res.json({
+      message: 'Usuario reactivado correctamente',
+      user: {
+        id_usuario: row.id_usuario,
+        nombre_completo: row.nombre_completo,
+        correo_institucional: row.correo_institucional,
+      },
+    });
+  } catch (err) {
+    console.error('Error al reactivar usuario:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 export default router;
