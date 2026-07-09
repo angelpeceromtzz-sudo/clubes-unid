@@ -22,14 +22,16 @@ export function usePanelAlumno() {
         setMiembros([]);
       }
     }
-    try {
-      const p = await api.getMisPostulaciones();
-      setPostulaciones(p);
-    } catch {
-      setPostulaciones([]);
+    if (usuario?.id_rol === 1) {
+      try {
+        const p = await api.getMisPostulaciones();
+        setPostulaciones(p);
+      } catch {
+        setPostulaciones([]);
+      }
     }
     setCargando(false);
-  }, [obtenerDatosPanel]);
+  }, [obtenerDatosPanel, usuario]);
 
   useEffect(() => {
     cargar();

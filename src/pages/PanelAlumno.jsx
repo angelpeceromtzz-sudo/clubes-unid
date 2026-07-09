@@ -1,5 +1,5 @@
 /* Panel del alumno: muestra su club (si es miembro) o sus postulaciones. Redirige según rol. */
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -30,19 +30,24 @@ export function PanelAlumno() {
     try { localStorage.setItem('dismiss_miembro_banner', 'true'); } catch {}
   }
 
-  if (esPresidente) {
-    navigate('/presidente/dashboard', { replace: true });
-    return null;
-  }
+  const redirigir = useRef(false);
 
-  if (esAdmin) {
-    navigate('/admin/dashboard', { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (redirigir.current) return;
+    if (esPresidente) {
+      redirigir.current = true;
+      navigate('/presidente/dashboard', { replace: true });
+    } else if (esAdmin) {
+      redirigir.current = true;
+      navigate('/admin/dashboard', { replace: true });
+    } else if (esRectoria) {
+      redirigir.current = true;
+      navigate('/rectoria/dashboard', { replace: true });
+    }
+  }, [esPresidente, esAdmin, esRectoria, navigate]);
 
-  if (esRectoria) {
-    navigate('/rectoria/dashboard', { replace: true });
-    return null;
+  if (esPresidente || esAdmin || esRectoria) {
+    return <Spinner className="py-32" />;
   }
 
   const recargarPostulaciones = useCallback(() => {
