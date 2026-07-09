@@ -292,6 +292,68 @@ router.post('/admin-action', authenticate, requireRole(3), async (req, res) => {
   }
 });
 
+// Desactivar usuario (soft delete, solo admin)
+router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (parseInt(id) === req.user.id) {
+      return res.status(403).json({ error: 'No puedes desactivarte a ti mismo' });
+    }
+
+    const usuario = await pool.query(
+      `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional, u.deleted_at, u.id_rol,
+              c.nombre_club
+       FROM usuarios u
+       LEFT JOIN clubes c ON c.id_presidente = u.id_usuario
+       WHERE u.id_usuario = $1`,
+      [id],
+    );
+
+    if (usuario.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const row = usuario.rows[0];
+
+    if (row.deleted_at) {
+      return res.status(400).json({ error: 'El usuario ya está desactivado' });
+    }
+
+    await pool.query(
+      `UPDATE usuarios SET deleted_at = NOW() WHERE id_usuario = $1`,
+      [id],
+    );
+
+    registrarHistorial({
+      idAdmin: req.user.id,
+      adminNombre: req.user.nombre_completo,
+      accion: 'desactivar_usuario',
+      descripcion: `${req.user.nombre_completo} desactivó al usuario "${row.nombre_completo}" (ID ${id})`,
+      entidadTipo: 'usuario',
+      entidadId: parseInt(id),
+    });
+
+    const respuesta = {
+      message: 'Usuario desactivado correctamente',
+      user: {
+        id_usuario: row.id_usuario,
+        nombre_completo: row.nombre_completo,
+        correo_institucional: row.correo_institucional,
+      },
+    };
+
+    if (row.nombre_club) {
+      respuesta.warning = `El usuario era presidente del club "${row.nombre_club}". El club se ha quedado sin presidente.`;
+    }
+
+    res.json(respuesta);
+  } catch (err) {
+    console.error('Error al desactivar usuario:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // Reactivar usuario con soft delete (solo admin)
 router.patch('/:id/reactivar', authenticate, requireRole(3), async (req, res) => {
   try {
