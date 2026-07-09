@@ -21,6 +21,10 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
+// Meto institutional_id en el JWT para que el frontend lo tenga disponible
+// sin necesidad de llamar a /me en cada render. La key "id" la dejé como
+// está porque cambiarla a "id_usuario" implicaría modificar todas las
+// rutas que usan req.user.id y prefiero no arriesgarme a romper algo.
 function generarToken(user) {
   return jwt.sign(
     {
@@ -114,6 +118,11 @@ router.post('/login-microsoft', async (req, res) => {
       return res.status(400).json({ error: 'No se pudo obtener el correo desde Microsoft' });
     }
 
+    // El ID institucional es la parte local del UPN (ej: "00906641" de
+    // "00906641@red.unid.mx"). Uso userPrincipalName en vez de mail porque
+    // mail puede venir null o ser distinto del UPN. Si el UPN no tiene @
+    // (caso raro) devuelvo null para no guardar basura — dos strings vacíos
+    // sí chocan en el UNIQUE constraint, dos null no.
     const institutionalId = (userPrincipalName && userPrincipalName.includes('@'))
       ? userPrincipalName.split('@')[0]
       : null;
@@ -128,6 +137,10 @@ router.post('/login-microsoft', async (req, res) => {
       idRol = adminResult.rows.length > 0 ? adminResult.rows[0].id_rol : 3;
     }
 
+    // Busco primero por microsoft_id (el GUID de Entra no cambia nunca).
+    // Si no lo encuentro, busco por correo_institucional para cubrir el
+    // caso de un usuario local que inició sesión con Microsoft por primera
+    // vez — en ese escenario el microsoft_id aún es null en la DB.
     let existing = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
               u.id_rol, r.nombre_rol as rol, u.institutional_id, u.deleted_at
@@ -170,12 +183,23 @@ router.post('/login-microsoft', async (req, res) => {
     } else {
       const row = existing.rows[0];
 
+      // Si la cuenta está desactivada, no la reactivo automáticamente.
+      // Prefiero que el admin decida cuándo reactivar manualmente con
+      // el endpoint PATCH /:id/reactivar, así evitamos que alguien que
+      // fue eliminado por una razón específica vuelva a entrar solo
+      // porque Microsoft lo autentica.
       if (row.deleted_at) {
         return res.status(403).json({
           error: 'Cuenta desactivada. Contacta al administrador.',
         });
       }
 
+      // Actualizo los datos que Microsoft me dio. Uso COALESCE en
+      // microsoft_id para no pisarlo si ya existe (en usuarios que
+      // encontré por correo pero aún no tenían microsoft_id asignado).
+      // En institutional_id usé COALESCE al revés: si Microsoft no
+      // devuelve UPN (institutionalId = null), conservo el que ya
+      // tenía guardado en la DB para no borrarlo accidentalmente.
       await pool.query(
         `UPDATE usuarios SET
            nombre_completo = $1,
@@ -202,6 +226,8 @@ router.post('/login-microsoft', async (req, res) => {
         row.rol = rolResult.rows[0]?.nombre_rol || 'alumno';
       }
 
+      // Si Microsoft no envió UPN (institutionalId = null), me quedo
+      // con el que ya tenía la fila en la DB.
       user = {
         id_usuario: row.id_usuario,
         nombre_completo: nombre,

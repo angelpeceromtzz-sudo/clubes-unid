@@ -26,6 +26,9 @@ export function FormularioInscripcion({ club, onClose }) {
   const [formulario, setFormulario] = useState({
     id_club: club.id_club || club.id,
     nombre_completo: usuario?.nombre_completo || '',
+    // Si el usuario ya tiene institutional_id (vino de Microsoft), lo
+    // precargo en la matrícula. Si no, se queda vacío para que el alumno
+    // lo escriba manualmente.
     matricula: usuario?.institutional_id || '',
     carrera: '',
     cuatrimestre: '',
@@ -48,6 +51,9 @@ export function FormularioInscripcion({ club, onClose }) {
     const errs = {};
     if (!formulario.nombre_completo.trim()) errs.nombre_completo = 'El nombre es obligatorio';
 
+    // Si ya tengo institutional_id del contexto, no valido la matrícula
+    // porque viene del sistema y es confiable. Solo valido si el usuario
+    // la está escribiendo manualmente.
     if (!usuario?.institutional_id) {
       if (!formulario.matricula) {
         errs.matricula = 'La matrícula es obligatoria';
@@ -134,6 +140,10 @@ export function FormularioInscripcion({ club, onClose }) {
         <form onSubmit={manejarEnvio} className="space-y-4">
           <CampoTexto label="Nombre Completo" name="nombre_completo" value={formulario.nombre_completo} onChange={manejarCambio} placeholder="Tu nombre completo" required error={errores.nombre_completo} />
 
+          {/* Si el usuario tiene institutional_id, el campo se muestra
+               bloqueado (disabled). No puede editarlo porque ese ID viene
+               de Microsoft Entra ID y es el oficial. Si no tiene, se
+               muestra editable por si entró con login local. */}
           {usuario?.institutional_id ? (
             <CampoTexto label="Matrícula" name="matricula" value={formulario.matricula} disabled={true} required error={errores.matricula} />
           ) : (

@@ -114,6 +114,11 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
       experiencia_previa,
     } = req.body;
 
+    // No confío en la matrícula que viene del frontend. Si el usuario
+    // tiene institutional_id en la base de datos, uso ese valor, sin
+    // importar lo que el cliente haya enviado. Esto evita que alguien
+    // se registre con una matrícula que no es la suya. Tampoco confío
+    // en el JWT por si está cacheado — hago una consulta fresca a la DB.
     const userDb = await pool.query(
       'SELECT institutional_id FROM usuarios WHERE id_usuario = $1',
       [req.user.id],

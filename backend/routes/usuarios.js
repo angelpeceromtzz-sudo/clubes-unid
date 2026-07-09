@@ -292,7 +292,9 @@ router.post('/admin-action', authenticate, requireRole(3), async (req, res) => {
   }
 });
 
-// Desactivar usuario (soft delete, solo admin)
+// Soft delete — no borro físicamente porque hay clubes, inscripciones y
+// formularios que referencian al usuario. Si lo borrara de verdad, esas
+// FKs se romperían o habría que cascadear borrados no deseados.
 router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
   try {
     const { id } = req.params;
@@ -301,6 +303,8 @@ router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
       return res.status(403).json({ error: 'No puedes desactivarte a ti mismo' });
     }
 
+    // Aprovecho el LEFT JOIN con clubes para saber si el usuario es
+    // presidente de algún club y advertírselo al admin en la respuesta.
     const usuario = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional, u.deleted_at, u.id_rol,
               c.nombre_club
@@ -316,10 +320,14 @@ router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
 
     const row = usuario.rows[0];
 
+    // Si ya estaba desactivado, aviso. No es error grave, pero mejor
+    // que el admin sepa que no pasó nada.
     if (row.deleted_at) {
       return res.status(400).json({ error: 'El usuario ya está desactivado' });
     }
 
+    // Solo marco la fecha, no borro nada. Si el usuario vuelve a iniciar
+    // sesión con Microsoft, login-microsoft lo rechazará con 403.
     await pool.query(
       `UPDATE usuarios SET deleted_at = NOW() WHERE id_usuario = $1`,
       [id],
@@ -343,6 +351,9 @@ router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
       },
     };
 
+    // Si el usuario era presidente, su club se queda sin presidente.
+    // La FK en clubes tiene ON DELETE SET NULL, así que se limpia solo,
+    // pero el admin debería saberlo para asignar un reemplazo.
     if (row.nombre_club) {
       respuesta.warning = `El usuario era presidente del club "${row.nombre_club}". El club se ha quedado sin presidente.`;
     }
@@ -354,7 +365,9 @@ router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
   }
 });
 
-// Reactivar usuario con soft delete (solo admin)
+// La reactivación es manual y exclusiva del admin a propósito: si un
+// usuario fue desactivado, no quiero que reactivar dependa de que
+// Microsoft lo autentique. El admin revisa el caso y decide.
 router.patch('/:id/reactivar', authenticate, requireRole(3), async (req, res) => {
   try {
     const { id } = req.params;
