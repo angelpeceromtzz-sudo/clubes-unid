@@ -38,12 +38,15 @@ router.post('/asignar-alumno', authenticate, requireRole(3), async (req, res) =>
     const club = clubResult.rows[0];
 
     const activaResult = await pool.query(
-      'SELECT id_inscripcion FROM inscripciones WHERE id_usuario = $1 AND id_estatus_inscripcion = 1 LIMIT 1',
+      'SELECT i.id_inscripcion, c.nombre_club as club_anterior FROM inscripciones i LEFT JOIN clubes c ON c.id_club = i.id_club WHERE i.id_usuario = $1 AND i.id_estatus_inscripcion = 1 LIMIT 1',
       [id_usuario]
     );
 
     if (activaResult.rows.length > 0) {
-      return res.status(400).json({ error: 'El alumno ya tiene una inscripción activa en otro club' });
+      await pool.query(
+        'UPDATE inscripciones SET id_estatus_inscripcion = 2, fecha_baja = NOW() WHERE id_inscripcion = $1',
+        [activaResult.rows[0].id_inscripcion]
+      );
     }
 
     const cupoResult = await pool.query(
@@ -64,17 +67,26 @@ router.post('/asignar-alumno', authenticate, requireRole(3), async (req, res) =>
       [id_usuario, id_club]
     );
 
+    const huboReasignacion = activaResult.rows.length > 0;
+    const accion = huboReasignacion ? 'reasignar_alumno' : 'asignar_alumno';
+    const clubAnterior = huboReasignacion ? activaResult.rows[0].club_anterior : null;
+    const descripcion = huboReasignacion
+      ? `${req.user.nombre_completo} reasignó al usuario "${userResult.rows[0].nombre_completo}" del club "${clubAnterior}" al club "${club.nombre_club}"`
+      : `${req.user.nombre_completo} asignó al usuario "${userResult.rows[0].nombre_completo}" al club "${club.nombre_club}"`;
+
     registrarHistorial({
       idAdmin: req.user.id,
       adminNombre: req.user.nombre_completo,
-      accion: 'asignar_alumno',
-      descripcion: `${req.user.nombre_completo} asignó al usuario "${userResult.rows[0].nombre_completo}" al club "${club.nombre_club}"`,
+      accion,
+      descripcion,
       entidadTipo: 'inscripcion',
       entidadId: result.rows[0].id_inscripcion,
     });
 
     res.status(201).json({
-      message: `Alumno asignado al club "${club.nombre_club}" correctamente`,
+      message: huboReasignacion
+        ? `Alumno reasignado del club "${clubAnterior}" al club "${club.nombre_club}" correctamente`
+        : `Alumno asignado al club "${club.nombre_club}" correctamente`,
       inscripcion: result.rows[0],
     });
   } catch (err) {

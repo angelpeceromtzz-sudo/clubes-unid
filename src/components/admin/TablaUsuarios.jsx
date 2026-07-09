@@ -13,6 +13,7 @@ export function TablaUsuarios({
   onRoleChange,
   onRemoveFromClub,
   onAsignarClub,
+  onAsignarAlumnoClub,
   onEliminarUsuario,
   onAdminAction,
 }) {
@@ -40,12 +41,33 @@ export function TablaUsuarios({
 
   function renderClub(u) {
     if (u.id_rol === 1) {
-      return u.nombre_club ? (
+      const clubActual = u.nombre_club;
+      return (
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${modoOscuro ? 'text-amber-300 bg-amber-400/10 border border-amber-400/20' : 'text-amber-700 bg-amber-50 border border-amber-200'}`}>
-            {u.nombre_club}
-          </span>
-          {u.id_usuario !== currentUser.id && (
+          <select
+            value={clubActual ? String(clubesActivosList.find((c) => c.nombre_club === clubActual)?.id_club || '') : ''}
+            onChange={(e) => {
+              const clubId = e.target.value ? Number(e.target.value) : null;
+              if (!clubId) return;
+              const clubSel = clubesActivosList.find((c) => c.id_club === clubId);
+              if (!clubSel) return;
+              if (clubActual) {
+                if (!window.confirm(`¿Reasignar a "${u.nombre_completo}" del club "${clubActual}" al club "${clubSel.nombre_club}"?`)) return;
+              } else {
+                if (!window.confirm(`¿Asignar a "${u.nombre_completo}" al club "${clubSel.nombre_club}"?`)) return;
+              }
+              onAsignarAlumnoClub(u.id_usuario, clubId);
+            }}
+            disabled={asignando[u.id_usuario] || u.id_usuario === currentUser.id}
+            className={selectCls}
+            title={u.id_usuario === currentUser.id ? 'No puedes asignarte un club a ti mismo' : ''}
+          >
+            <option value="">{clubActual ? clubActual : 'Sin club'}</option>
+            {clubesActivosList.map((c) => (
+              <option key={c.id_club} value={c.id_club}>{c.nombre_club}</option>
+            ))}
+          </select>
+          {clubActual && u.id_usuario !== currentUser.id && (
             <button
               onClick={() => onRemoveFromClub(u.id_usuario)}
               className="p-1 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors cursor-pointer active:scale-90"
@@ -54,9 +76,10 @@ export function TablaUsuarios({
               <Icono nombre="close" strokeWidth={2} className="h-4 w-4" />
             </button>
           )}
+          {asignando[u.id_usuario] && (
+            <Spinner size="sm" color="border-amber-400" className="!py-0" />
+          )}
         </div>
-      ) : (
-        <span className="text-xs text-slate-500 font-medium">Sin Club</span>
       );
     }
     if (u.id_rol === 2) {

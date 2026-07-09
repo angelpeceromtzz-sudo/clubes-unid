@@ -283,6 +283,7 @@ export function usePanelAdmin(usuario) {
   }, []);
 
   const manejarAsignarAlumnoClub = useCallback(async (id_usuario, id_club) => {
+    setAsignando((prev) => ({ ...prev, [id_usuario]: true }));
     try {
       const result = await api.asignarAlumnoClub(id_usuario, id_club);
       const [usuariosActualizados, clubesActualizados] = await Promise.all([
@@ -294,6 +295,8 @@ export function usePanelAdmin(usuario) {
       setFeedback(result.message || 'Alumno asignado correctamente');
     } catch (err) {
       setErrorFeedback(err.message);
+    } finally {
+      setAsignando((prev) => ({ ...prev, [id_usuario]: false }));
     }
   }, []);
 
