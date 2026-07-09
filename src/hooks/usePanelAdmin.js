@@ -282,6 +282,21 @@ export function usePanelAdmin(usuario) {
     setErrorAdmin('');
   }, []);
 
+  const manejarAsignarAlumnoClub = useCallback(async (id_usuario, id_club) => {
+    try {
+      const result = await api.asignarAlumnoClub(id_usuario, id_club);
+      const [usuariosActualizados, clubesActualizados] = await Promise.all([
+        api.getUsuarios(),
+        api.getClubes(),
+      ]);
+      setUsuarios(usuariosActualizados);
+      setClubes(clubesActualizados);
+      setFeedback(result.message || 'Alumno asignado correctamente');
+    } catch (err) {
+      setErrorFeedback(err.message);
+    }
+  }, []);
+
   const manejarEliminarUsuario = useCallback(async (userId, nombre) => {
     if (!window.confirm(`¿Estás seguro de eliminar permanentemente al usuario "${nombre}"? Esta acción no se puede deshacer.`)) return;
     try {
@@ -387,6 +402,7 @@ export function usePanelAdmin(usuario) {
     handleUsuarioFormChange: manejarCambioFormularioUsuario,
     guardarUsuario,
     handleEliminarUsuario: manejarEliminarUsuario,
+    handleAsignarAlumnoClub: manejarAsignarAlumnoClub,
     modalAdmin: modalAdmin,
     enviandoAdmin,
     errorAdmin,

@@ -294,6 +294,12 @@ export const api = {
 
   deleteHorario: (id) =>
     request(`/horarios/${id}`, { method: 'DELETE' }),
+
+  asignarAlumnoClub: (id_usuario, id_club) =>
+    request('/admin/asignar-alumno', {
+      method: 'POST',
+      body: JSON.stringify({ id_usuario, id_club }),
+    }),
 };
 
 // ✦ A

@@ -11,6 +11,7 @@ import { TarjetasEstadisticas } from '../components/admin/TarjetasEstadisticas';
 import { BarraBusquedaUsuarios } from '../components/admin/BarraBusquedaUsuarios';
 import { TablaUsuarios } from '../components/admin/TablaUsuarios';
 import { TablaClubes } from '../components/admin/TablaClubes';
+import { AsignarAlumnoClub } from '../components/admin/AsignarAlumnoClub';
 import { ModalFormularioClub } from '../components/admin/ModalFormularioClub';
 import { ModalFormularioUsuario } from '../components/admin/ModalFormularioUsuario';
 import { TablaHistorial } from '../components/admin/TablaHistorial';
@@ -118,6 +119,15 @@ export function PanelAdmin() {
                 onCrear={d.abrirModalCrear}
               />
             </div>
+          )}
+
+          {d.vistaActiva === 'asignar' && (
+            <AsignarAlumnoClub
+              usuarios={d.usuarios}
+              clubesActivos={d.clubesActivosList}
+              modoOscuro={d.isDark}
+              onAsignar={d.handleAsignarAlumnoClub}
+            />
           )}
 
           {d.vistaActiva === 'anuncios' && (
