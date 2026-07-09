@@ -22,12 +22,13 @@ export function DetalleClub({ onLoginClick }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { modoOscuro } = useTheme();
-  const { estaAutenticado, esAdmin, tieneInscripcionActiva, clubesPostulados } = useAutenticacion();
+  const { estaAutenticado, esAdmin, tieneInscripcionActiva, clubesPostulados, usuario } = useAutenticacion();
   const [club, setClub] = useState(location.state?.club || null);
   const [loading, setLoading] = useState(!club);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (!club) {
       api.getClub(id)
         .then((data) => setClub(data))
@@ -101,11 +102,16 @@ export function DetalleClub({ onLoginClick }) {
 
         <RequisitosClub modoOscuro={modoOscuro} />
 
-        <HorariosClub horarios={club.horarios} modoOscuro={modoOscuro} />
-
         <LugarClub lugar={club.lugar} modoOscuro={modoOscuro} />
 
-        <PresidenteClub modoOscuro={modoOscuro} />
+        <PresidenteClub club={club} modoOscuro={modoOscuro} />
+
+        <HorariosClub
+          club={club}
+          modoOscuro={modoOscuro}
+          esAdmin={esAdmin}
+          esPresidente={usuario?.id_usuario === club.id_presidente}
+        />
 
         <EventosClub modoOscuro={modoOscuro} />
 

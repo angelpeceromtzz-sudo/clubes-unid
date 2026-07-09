@@ -1,5 +1,6 @@
 import { Icono } from '../../ui/Icono';
 import { clasesBadge } from '../../../constants/colores';
+import { obtenerUrlImagen } from '../../../utils/imagen';
 
 export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAutenticado, esAdmin, tieneInscripcionActiva, deshabilitado }) {
   const esProximamente = club.id_estatus_club === 2;
@@ -15,7 +16,7 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
     <div className={`rounded-2xl overflow-hidden border ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
       <div className="overflow-hidden rounded-t-2xl h-64 md:h-80">
         <img
-          src={club.imagen_portada || club.imagen}
+          src={obtenerUrlImagen(club.imagen_portada || club.imagen)}
           alt={club.nombre_club}
           className={`w-full h-full object-cover ${esProximamente ? 'opacity-60' : ''}`}
         />

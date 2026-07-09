@@ -12,7 +12,7 @@ export function usePanelAdmin(usuario) {
   const [asignando, setAsignando] = useState({});
   const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
   const [editandoClub, setEditandoClub] = useState(null);
-  const [formularioClub, setFormularioClub] = useState({ nombre_club: '', categoria: '', cupo_maximo: '', imagen_portada: '' });
+  const [formularioClub, setFormularioClub] = useState({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '', imagen_portada: '' });
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [feedback, setFeedback] = useState('');
@@ -134,7 +134,7 @@ export function usePanelAdmin(usuario) {
   }, []);
 
   const abrirModalCrear = useCallback(() => {
-    setFormularioClub({ nombre_club: '', categoria: '', cupo_maximo: '', imagen_portada: '' });
+    setFormularioClub({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '', imagen_portada: '' });
     setEditandoClub(null);
     setErrorModal('');
     setMostrarModalCrear(true);
@@ -143,6 +143,7 @@ export function usePanelAdmin(usuario) {
   const abrirModalEditar = useCallback((club) => {
     setFormularioClub({
       nombre_club: club.nombre_club,
+      descripcion: club.descripcion || '',
       categoria: club.categoria,
       cupo_maximo: String(club.cupo_maximo),
       imagen_portada: club.imagen_portada || '',
@@ -159,8 +160,12 @@ export function usePanelAdmin(usuario) {
   const guardarClub = useCallback(async (e) => {
     e.preventDefault();
     setErrorModal('');
-    if (!formularioClub.nombre_club.trim() || !formularioClub.categoria.trim() || !formularioClub.cupo_maximo) {
+    if (!formularioClub.nombre_club.trim() || !formularioClub.descripcion.trim() || !formularioClub.categoria.trim() || !formularioClub.cupo_maximo) {
       setErrorModal('Todos los campos son obligatorios');
+      return;
+    }
+    if (!editandoClub && !formularioClub.imagen_portada.trim()) {
+      setErrorModal('La imagen del club es obligatoria');
       return;
     }
     if (editandoClub && !window.confirm(`¿Guardar los cambios en "${editandoClub.nombre_club}"?`)) return;
@@ -169,6 +174,7 @@ export function usePanelAdmin(usuario) {
       if (editandoClub) {
         await api.updateClub(editandoClub.id_club, {
           nombre_club: formularioClub.nombre_club,
+          descripcion: formularioClub.descripcion,
           categoria: formularioClub.categoria,
           cupo_maximo: Number(formularioClub.cupo_maximo),
           imagen_portada: formularioClub.imagen_portada || null,
@@ -177,6 +183,7 @@ export function usePanelAdmin(usuario) {
       } else {
         await api.createClub({
           nombre_club: formularioClub.nombre_club,
+          descripcion: formularioClub.descripcion,
           categoria: formularioClub.categoria,
           cupo_maximo: Number(formularioClub.cupo_maximo),
           imagen_portada: formularioClub.imagen_portada || null,

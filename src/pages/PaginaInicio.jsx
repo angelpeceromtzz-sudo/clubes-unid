@@ -8,6 +8,7 @@ import { Heroe } from '../components/clubes/Heroe';
 import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';
 import { Icono } from '../components/ui/Icono';
+import { obtenerUrlImagen } from '../utils/imagen';
 
 export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
   const navigate = useNavigate();
@@ -64,7 +65,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
                     categoria={club.categoria}
                     cupoMaximo={club.cupo_maximo}
                     cupoActual={parseInt(club.cupo_actual) || 0}
-                    imagen={club.imagen_portada || club.imagen}
+                    imagen={obtenerUrlImagen(club.imagen_portada || club.imagen)}
                             onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
                     idEstatusClub={club.id_estatus_club}
                     estatus={club.estatus}
@@ -97,7 +98,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
                           categoria={club.categoria}
                           cupoMaximo={club.cupo_maximo}
                           cupoActual={parseInt(club.cupo_actual) || 0}
-                          imagen={club.imagen_portada || club.imagen}
+                          imagen={obtenerUrlImagen(club.imagen_portada || club.imagen)}
                   onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
                           idEstatusClub={club.id_estatus_club}
                           estatus={club.estatus}

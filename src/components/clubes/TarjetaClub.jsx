@@ -2,6 +2,7 @@
 import { clasesBadge } from '../../constants/colores';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
+import { obtenerUrlImagen } from '../../utils/imagen';
 
 export function TarjetaClub({
   nombre, descripcion, categoria, cupoMaximo, cupoActual,
@@ -38,12 +39,20 @@ export function TarjetaClub({
       } ${c.card}`}
     >
       <div>
-        <div className={`overflow-hidden rounded-xl h-40 mb-5`}>
-          <img
-            src={imagen}
-            alt={nombre}
-            className={`w-full h-full object-cover ${esProximamente ? 'opacity-50' : 'transition-transform duration-500 group-hover:scale-105'}`}
-          />
+        <div className={`overflow-hidden rounded-xl h-40 mb-5 flex items-center justify-center`}>
+          {obtenerUrlImagen(imagen) ? (
+            <img
+              src={obtenerUrlImagen(imagen)}
+              alt={nombre}
+              className={`w-full h-full object-cover ${esProximamente ? 'opacity-50' : 'transition-transform duration-500 group-hover:scale-105'}`}
+            />
+          ) : (
+            <div className={`w-full h-full flex items-center justify-center ${modoOscuro ? 'bg-slate-800' : 'bg-slate-100'}`}>
+              <svg className={`w-12 h-12 ${modoOscuro ? 'text-slate-600' : 'text-slate-300'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 mb-3">
           <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(categoria, modoOscuro)}`}>

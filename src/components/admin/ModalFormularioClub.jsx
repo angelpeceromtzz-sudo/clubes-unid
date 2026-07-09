@@ -6,6 +6,7 @@ import { BotonAccion } from '../ui/BotonAccion';
 import { CampoTexto } from '../ui/CampoTexto';
 import { ModalBase } from '../ui/ModalBase';
 import { Spinner } from '../ui/Spinner';
+import { obtenerUrlImagen } from '../../utils/imagen';
 
 export function ModalFormularioClub({
   show,
@@ -54,6 +55,8 @@ export function ModalFormularioClub({
       <form onSubmit={onSave} className="space-y-4">
         <CampoTexto label="Nombre del Club" name="nombre_club" value={formClub.nombre_club} onChange={onFormChange} placeholder="Ej: Equipo de Voleibol" required />
 
+        <CampoTexto label="Descripción" name="descripcion" value={formClub.descripcion} onChange={onFormChange} placeholder="Describe el club y sus actividades..." type="textarea" required />
+
         <div>
           <label className={labelCls}>Categoría <span className="text-red-400">*</span></label>
           <select name="categoria" value={formClub.categoria} onChange={onFormChange} className={inputClasses}>
@@ -66,11 +69,9 @@ export function ModalFormularioClub({
 
         <CampoTexto label="Cupo Máximo" name="cupo_maximo" value={formClub.cupo_maximo} onChange={onFormChange} type="number" placeholder="Ej: 30" required />
 
-        <CampoTexto label="URL de Imagen (opcional)" name="imagen_portada" value={formClub.imagen_portada} onChange={onFormChange} placeholder="https://ejemplo.com/imagen.jpg" />
-
         <div>
-          <label className={labelCls}>O subir imagen</label>
-          <div className="flex items-center gap-3">
+          <label className={labelCls}>Imagen del Club <span className="text-red-400">*</span></label>
+          <div className="flex items-center gap-3 mt-1">
             <input
               ref={fileInputRef}
               type="file"
@@ -89,13 +90,22 @@ export function ModalFormularioClub({
             {subiendo && (
               <Spinner size="sm" color="border-amber-400" className="!py-0" />
             )}
+            {!subiendo && formClub.imagen_portada && (
+              <span className="text-xs text-emerald-400 font-semibold">Imagen seleccionada</span>
+            )}
+            {!subiendo && !formClub.imagen_portada && (
+              <span className="text-xs text-slate-500">Ningún archivo seleccionado</span>
+            )}
           </div>
+          {!formClub.imagen_portada && !subiendo && (
+            <p className="text-red-400 text-xs mt-1 font-medium">La imagen del club es obligatoria</p>
+          )}
         </div>
 
         {formClub.imagen_portada && (
           <div className="relative w-full h-32 rounded-lg overflow-hidden">
             <img
-              src={formClub.imagen_portada}
+              src={obtenerUrlImagen(formClub.imagen_portada)}
               alt="Vista previa"
               className="w-full h-full object-cover"
             />

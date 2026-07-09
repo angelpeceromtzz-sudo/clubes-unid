@@ -14,7 +14,7 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://localhost:4000',
+        target: 'https://clubes-unid.onrender.com',
         changeOrigin: true,
       },
     },
