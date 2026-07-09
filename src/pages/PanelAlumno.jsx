@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { Icono } from '../components/ui/Icono';
 import { InformacionClub } from '../components/clubes/InformacionClub';
+import { HorariosClub } from '../components/clubes/sections/HorariosClub';
 import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
 import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
 import { SeccionPostulaciones } from '../components/presidente/SeccionPostulaciones';
@@ -119,6 +120,7 @@ export function PanelAlumno() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <InformacionClub club={d.club} />
+                <HorariosClub club={d.club} modoOscuro={modoOscuro} esAdmin={false} esPresidente={false} />
                 <SeccionAvisos club={d.club} esPresidente={false} />
               </div>
               <div className="space-y-8">
