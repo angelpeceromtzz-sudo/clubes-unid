@@ -102,7 +102,7 @@ router.get('/mis-postulaciones', authenticate, requireRole(1), async (req, res) 
 
 router.post('/', authenticate, requireRole(1), async (req, res) => {
   try {
-    const {
+    let {
       id_club,
       nombre_completo,
       matricula,
@@ -113,6 +113,15 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
       motivo_ingreso,
       experiencia_previa,
     } = req.body;
+
+    const userDb = await pool.query(
+      'SELECT institutional_id FROM usuarios WHERE id_usuario = $1',
+      [req.user.id],
+    );
+    const institutionalIdDb = userDb.rows[0]?.institutional_id;
+    if (institutionalIdDb) {
+      matricula = institutionalIdDb;
+    }
 
     if (!id_club || !nombre_completo || !matricula || !carrera || !cuatrimestre || !turno || !telefono_contacto || !motivo_ingreso) {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben estar llenos' });

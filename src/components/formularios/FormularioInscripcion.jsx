@@ -26,7 +26,7 @@ export function FormularioInscripcion({ club, onClose }) {
   const [formulario, setFormulario] = useState({
     id_club: club.id_club || club.id,
     nombre_completo: usuario?.nombre_completo || '',
-    matricula: '',
+    matricula: usuario?.institutional_id || '',
     carrera: '',
     cuatrimestre: '',
     turno: '',
@@ -48,10 +48,12 @@ export function FormularioInscripcion({ club, onClose }) {
     const errs = {};
     if (!formulario.nombre_completo.trim()) errs.nombre_completo = 'El nombre es obligatorio';
 
-    if (!formulario.matricula) {
-      errs.matricula = 'La matrícula es obligatoria';
-    } else if (!/^\d+$/.test(formulario.matricula)) {
-      errs.matricula = 'La matrícula debe contener solo números';
+    if (!usuario?.institutional_id) {
+      if (!formulario.matricula) {
+        errs.matricula = 'La matrícula es obligatoria';
+      } else if (!/^\d+$/.test(formulario.matricula)) {
+        errs.matricula = 'La matrícula debe contener solo números';
+      }
     }
 
     if (!formulario.carrera) errs.carrera = 'Selecciona una carrera';
@@ -132,7 +134,11 @@ export function FormularioInscripcion({ club, onClose }) {
         <form onSubmit={manejarEnvio} className="space-y-4">
           <CampoTexto label="Nombre Completo" name="nombre_completo" value={formulario.nombre_completo} onChange={manejarCambio} placeholder="Tu nombre completo" required error={errores.nombre_completo} />
 
-          <CampoTexto label="Matrícula" name="matricula" value={formulario.matricula} onChange={manejarCambio} placeholder="Ej: 00906641" required error={errores.matricula} />
+          {usuario?.institutional_id ? (
+            <CampoTexto label="Matrícula" name="matricula" value={formulario.matricula} disabled={true} required error={errores.matricula} />
+          ) : (
+            <CampoTexto label="Matrícula" name="matricula" value={formulario.matricula} onChange={manejarCambio} placeholder="Ej: 00906641" required error={errores.matricula} />
+          )}
 
           <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
 
@@ -141,7 +147,7 @@ export function FormularioInscripcion({ club, onClose }) {
             <CampoSelect label="Turno" name="turno" value={formulario.turno} onChange={manejarCambio} opciones={TURNOS} placeholder="Selecciona" required error={errores.turno} />
           </div>
 
-          <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} />
+          <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} maxLength={10} />
 
           <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} />
 
