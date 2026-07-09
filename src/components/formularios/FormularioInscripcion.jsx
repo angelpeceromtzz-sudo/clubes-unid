@@ -21,14 +21,22 @@ const CARRERAS = [
 
 const TURNOS = ['Matutino', 'Vespertino'];
 
+const ETIQUETAS = {
+  nombre_completo: 'Nombre Completo',
+  matricula: 'Matrícula',
+  carrera: 'Carrera',
+  cuatrimestre: 'Cuatrimestre',
+  turno: 'Turno',
+  telefono_contacto: 'Teléfono de Contacto',
+  motivo_ingreso: 'Motivo de Ingreso',
+  experiencia_previa: 'Experiencia Previa',
+};
+
 export function FormularioInscripcion({ club, onClose }) {
   const { usuario, clubesPostulados, actualizarClubesPostulados, refrescarInscripcionActiva } = useAutenticacion();
   const [formulario, setFormulario] = useState({
     id_club: club.id_club || club.id,
     nombre_completo: usuario?.nombre_completo || '',
-    // Si el usuario ya tiene institutional_id (vino de Microsoft), lo
-    // precargo en la matrícula. Si no, se queda vacío para que el alumno
-    // lo escriba manualmente.
     matricula: usuario?.institutional_id || '',
     carrera: '',
     cuatrimestre: '',
@@ -41,27 +49,24 @@ export function FormularioInscripcion({ club, onClose }) {
   const yaPostulado = clubesPostulados.includes(idClubActual);
   const limiteAlcanzado = clubesPostulados.length >= 3;
   const bloqueado = yaPostulado || limiteAlcanzado;
+  const datosPrecargados = !!usuario?.institutional_id;
 
   const [errores, setErrores] = useState({});
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [errorApi, setErrorApi] = useState('');
+  const [confirmando, setConfirmando] = useState(false);
 
   function validar() {
     const errs = {};
     if (!formulario.nombre_completo.trim()) errs.nombre_completo = 'El nombre es obligatorio';
-
-    // Si ya tengo institutional_id del contexto, no valido la matrícula
-    // porque viene del sistema y es confiable. Solo valido si el usuario
-    // la está escribiendo manualmente.
-    if (!usuario?.institutional_id) {
+    if (!datosPrecargados) {
       if (!formulario.matricula) {
         errs.matricula = 'La matrícula es obligatoria';
       } else if (!/^\d+$/.test(formulario.matricula)) {
         errs.matricula = 'La matrícula debe contener solo números';
       }
     }
-
     if (!formulario.carrera) errs.carrera = 'Selecciona una carrera';
     if (!formulario.cuatrimestre) {
       errs.cuatrimestre = 'El cuatrimestre es obligatorio';
@@ -69,7 +74,6 @@ export function FormularioInscripcion({ club, onClose }) {
       errs.cuatrimestre = 'El cuatrimestre debe ser mayor a 0';
     }
     if (!formulario.turno) errs.turno = 'Selecciona un turno';
-
     if (!formulario.telefono_contacto) {
       errs.telefono_contacto = 'El teléfono de contacto es obligatorio';
     } else if (!/^\d{10}$/.test(formulario.telefono_contacto)) {
@@ -81,22 +85,23 @@ export function FormularioInscripcion({ club, onClose }) {
 
   function manejarCambio(e) {
     const { name, value } = e.target;
-
     if (name === 'matricula' || name === 'telefono_contacto') {
       if (!/^\d*$/.test(value)) return;
     }
-
     setFormulario((prev) => ({ ...prev, [name]: value }));
     if (errores[name]) setErrores((prev) => ({ ...prev, [name]: '' }));
   }
 
-  async function manejarEnvio(e) {
+  function manejarConfirmacion(e) {
     e.preventDefault();
     setErrorApi('');
     const errs = validar();
     setErrores(errs);
     if (Object.keys(errs).length > 0) return;
+    setConfirmando(true);
+  }
 
+  async function manejarEnvio() {
     setEnviando(true);
     try {
       await api.createFormulario({
@@ -108,14 +113,17 @@ export function FormularioInscripcion({ club, onClose }) {
       setEnviado(true);
     } catch (err) {
       setErrorApi(err.message);
+      setConfirmando(false);
     } finally {
       setEnviando(false);
     }
   }
 
   const { tema, modoOscuro } = useTheme();
-  const labelCls = 'block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5';
-  const errorCls = 'text-red-400 text-xs mt-1 font-medium';
+
+  const resumenCls = `rounded-xl border p-4 ${modoOscuro ? 'bg-slate-800/30 border-slate-700/30' : 'bg-slate-50 border-slate-200'}`;
+  const resumenLabelCls = 'text-[11px] font-bold uppercase tracking-wider text-slate-400';
+  const resumenValCls = `text-sm font-medium mt-0.5 ${modoOscuro ? 'text-white' : 'text-slate-900'}`;
 
   return (
     <>
@@ -134,45 +142,102 @@ export function FormularioInscripcion({ club, onClose }) {
         </div>
 
         {limiteAlcanzado && <Alerta tipo="error" mensaje="Has alcanzado el límite de 3 postulaciones. No puedes enviar más formularios." />}
-
         {yaPostulado && !limiteAlcanzado && <Alerta tipo="warning" mensaje="Ya te has postulado a este club anteriormente." />}
 
-        <form onSubmit={manejarEnvio} className="space-y-4">
-          <CampoTexto label="Nombre Completo" name="nombre_completo" value={formulario.nombre_completo} onChange={manejarCambio} placeholder="Tu nombre completo" required error={errores.nombre_completo} />
+        {confirmando ? (
+          <div>
+            <div className="flex items-center gap-2 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <Icono nombre="eye" strokeWidth={2} className="h-4 w-4 text-amber-400" />
+              </div>
+              <p className={`text-sm font-bold ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+                Revisa tus datos antes de confirmar
+              </p>
+            </div>
 
-          {/* Si el usuario tiene institutional_id, el campo se muestra
-               bloqueado (disabled). No puede editarlo porque ese ID viene
-               de Microsoft Entra ID y es el oficial. Si no tiene, se
-               muestra editable por si entró con login local. */}
-          {usuario?.institutional_id ? (
-            <CampoTexto label="Matrícula" name="matricula" value={formulario.matricula} disabled={true} required error={errores.matricula} />
-          ) : (
-            <CampoTexto label="Matrícula" name="matricula" value={formulario.matricula} onChange={manejarCambio} placeholder="Ej: 00906641" required error={errores.matricula} />
-          )}
+            <div className="space-y-3 mb-6">
+              {Object.entries(ETIQUETAS).map(([campo, etiqueta]) => {
+                const valor = formulario[campo];
+                const omitir = campo === 'experiencia_previa' && !valor;
+                if (omitir) return null;
+                return (
+                  <div key={campo} className={resumenCls}>
+                    <p className={resumenLabelCls}>{etiqueta}</p>
+                    <p className={resumenValCls}>
+                      {campo === 'cuatrimestre' ? `${valor}°` : valor || <span className="italic text-slate-400">No especificado</span>}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
 
-          <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
+            <Alerta tipo="error" mensaje={errorApi} />
 
-          <div className="grid grid-cols-2 gap-4">
-            <CampoTexto label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} type="number" placeholder="Ej: 3" required error={errores.cuatrimestre} />
-            <CampoSelect label="Turno" name="turno" value={formulario.turno} onChange={manejarCambio} opciones={TURNOS} placeholder="Selecciona" required error={errores.turno} />
+            <div className="flex gap-3">
+              <button
+                onClick={manejarEnvio}
+                disabled={enviando}
+                className="flex-1 bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+              >
+                {enviando ? 'Enviando...' : 'Sí, Confirmar y Enviar'}
+              </button>
+              <button
+                onClick={() => { setConfirmando(false); setErrorApi(''); }}
+                disabled={enviando}
+                className={`px-6 py-3.5 rounded-xl border text-sm font-bold transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${modoOscuro ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-600 hover:bg-slate-100'}`}
+              >
+                Editar
+              </button>
+            </div>
           </div>
+        ) : (
+          <form onSubmit={manejarConfirmacion} className="space-y-4">
+            <CampoTexto
+              label="Nombre Completo"
+              name="nombre_completo"
+              value={formulario.nombre_completo}
+              onChange={manejarCambio}
+              placeholder="Tu nombre completo"
+              readOnly={datosPrecargados}
+              required
+              error={errores.nombre_completo}
+            />
 
-          <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} maxLength={10} />
+            <CampoTexto
+              label="Matrícula"
+              name="matricula"
+              value={formulario.matricula}
+              onChange={manejarCambio}
+              placeholder="Ej: 00906641"
+              readOnly={datosPrecargados}
+              required
+              error={errores.matricula}
+            />
 
-          <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} />
+            <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
 
-          <CampoTexto label="Experiencia Previa" name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} placeholder="¿Has participado en algo similar antes?" type="textarea" />
+            <div className="grid grid-cols-2 gap-4">
+              <CampoTexto label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} type="number" placeholder="Ej: 3" required error={errores.cuatrimestre} />
+              <CampoSelect label="Turno" name="turno" value={formulario.turno} onChange={manejarCambio} opciones={TURNOS} placeholder="Selecciona" required error={errores.turno} />
+            </div>
 
-          <Alerta tipo="error" mensaje={errorApi} />
+            <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} maxLength={10} />
 
-          <button
-            type="submit"
-            disabled={enviando || bloqueado}
-            className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] mt-2"
-          >
-            {enviando ? 'Enviando formulario...' : 'Enviar Formulario'}
-          </button>
-        </form>
+            <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} />
+
+            <CampoTexto label="Experiencia Previa" name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} placeholder="¿Has participado en algo similar antes?" type="textarea" />
+
+            <Alerta tipo="error" mensaje={errorApi} />
+
+            <button
+              type="submit"
+              disabled={enviando || bloqueado}
+              className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] mt-2"
+            >
+              Revisar Formulario
+            </button>
+          </form>
+        )}
       </ModalBase>
 
       {enviado && <ModalExito onClose={onClose} />}
