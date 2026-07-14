@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireRole } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
 
 const router = Router();
@@ -41,7 +41,8 @@ router.get('/', authenticate, async (req, res) => {
         LEFT JOIN notificaciones_eliminadas ne ON ne.id_notificacion = n.id_notificacion AND ne.id_usuario = $1
        WHERE ne.id_notificacion IS NULL
          AND n.id_emisor != $1
-         AND (($2 IN (3, 4))
+         AND (($2 IN (3, 4) AND ((n.audiencia = 'global' AND n.id_destinatario IS NULL)
+                                OR n.id_destinatario = $1))
            OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
                         OR (n.audiencia = 'club' AND n.id_club = $3)
                         OR n.id_destinatario = $1))
@@ -56,6 +57,44 @@ router.get('/', authenticate, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Error al obtener notificaciones:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Actividad del sistema — solo admin/rectoría
+router.get('/actividad', authenticate, requireRole(3, 4), async (req, res) => {
+  try {
+    let page = parseInt(req.query.page, 10);
+    if (!Number.isFinite(page) || page < 1) page = 1;
+    const limit = 50;
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.query('SELECT COUNT(*)::int AS total FROM notificaciones');
+    const total = countResult.rows[0].total;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const result = await pool.query(
+      `SELECT n.id_notificacion, n.id_emisor,
+              u.nombre_completo AS emisor_nombre,
+              r.nombre_rol AS emisor_rol,
+              c.nombre_club AS club_nombre,
+              n.titulo, n.mensaje, n.audiencia, n.id_club,
+              n.fecha_creacion,
+              dest.nombre_completo AS destinatario_nombre,
+              dest.correo_institucional AS destinatario_correo
+       FROM notificaciones n
+       JOIN usuarios u ON u.id_usuario = n.id_emisor
+       JOIN cat_roles r ON r.id_rol = u.id_rol
+       LEFT JOIN clubes c ON c.id_club = n.id_club
+       LEFT JOIN usuarios dest ON dest.id_usuario = n.id_destinatario
+       ORDER BY n.fecha_creacion DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+
+    res.json({ notificaciones: result.rows, page, totalPages, total });
+  } catch (err) {
+    console.error('Error al obtener actividad del sistema:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
@@ -158,7 +197,8 @@ router.post('/leer-todas', authenticate, async (req, res) => {
        LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
        WHERE nl.id_notificacion IS NULL
          AND n.id_emisor != $1
-         AND (($2 IN (3, 4))
+         AND (($2 IN (3, 4) AND ((n.audiencia = 'global' AND n.id_destinatario IS NULL)
+                                OR n.id_destinatario = $1))
            OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
                         OR (n.audiencia = 'club' AND n.id_club = $3)
                         OR n.id_destinatario = $1))

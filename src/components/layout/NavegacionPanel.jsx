@@ -16,8 +16,13 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
             return (
               <button
                 key={item.key}
-                onClick={() => onVistaChange(item.key)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
+                onClick={() => !item.deshabilitado && onVistaChange(item.key)}
+                disabled={item.deshabilitado}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${
+                  item.deshabilitado
+                    ? 'text-slate-600 cursor-not-allowed opacity-50'
+                    : 'cursor-pointer'
+                } ${
                   activo
                     ? 'bg-amber-400/20 text-amber-400 border border-amber-400/30'
                     : modoOscuro ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
@@ -41,11 +46,16 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
             return (
               <button
                 key={item.key}
-                onClick={() => onVistaChange(item.key)}
-                className={`flex-1 text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-full transition-all duration-200 whitespace-nowrap cursor-pointer ${
+                onClick={() => !item.deshabilitado && onVistaChange(item.key)}
+                disabled={item.deshabilitado}
+                className={`flex-1 text-[11px] font-bold uppercase tracking-wider px-3 py-2 rounded-full transition-all duration-200 whitespace-nowrap ${
+                  item.deshabilitado
+                    ? 'text-slate-600 cursor-not-allowed opacity-50'
+                    : 'cursor-pointer'
+                } ${
                   activo
-                    ? 'bg-amber-400 text-[#0e162c] font-black'
-                    : modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-amber-400/20 text-slate-500'
+                    : modoOscuro ? 'text-slate-400' : 'text-slate-500'
                 }`}
               >
                 {item.label}

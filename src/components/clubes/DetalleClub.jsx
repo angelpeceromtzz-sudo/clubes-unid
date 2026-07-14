@@ -40,17 +40,23 @@ export function DetalleClub({ onLoginClick }) {
   const esProximamente = club?.id_estatus_club === 2;
   const esInactivo = club?.id_estatus_club === 3;
   const cupoActual = parseInt(club?.cupo_actual) || 0;
-  const lleno = cupoActual >= (club?.cupo_maximo || 0);
-  const convocatoriaCerrada = !!club?.estado_convocatoria && club.estado_convocatoria !== 'abierta';
+  const estado = !esProximamente ? club?.estado_calculado : null;
   const yaEnvio = clubesPostulados.includes(club?.id_club);
-  const deshabilitado = convocatoriaCerrada || yaEnvio;
+  const deshabilitado = (estado && estado !== 'abierto') || yaEnvio;
+
+  function formatearFecha(fechaIso) {
+    if (!fechaIso) return '';
+    const fecha = new Date(fechaIso);
+    return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
 
   function obtenerTextoBoton() {
     if (esProximamente) return null;
     if (esInactivo) return null;
     if (yaEnvio) return 'SOLICITUD ENVIADA';
-    if (convocatoriaCerrada) return 'CONVOCATORIA CERRADA';
-    if (lleno) return null;
+    if (estado === 'proximo') return `Abre el ${formatearFecha(club?.fecha_apertura_programada)}`;
+    if (estado === 'lleno') return 'CUPO LLENO';
+    if (estado === 'cerrado') return 'CONVOCATORIA CERRADA';
     if (!estaAutenticado) return 'INICIA SESIÓN PARA INSCRIBIRTE';
     if (esAdmin) return null;
     if (tieneInscripcionActiva) return null;

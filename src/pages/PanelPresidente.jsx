@@ -71,7 +71,7 @@ export function PanelPresidente() {
             <VistaConvocatorias club={d.club} />
           )}
 
-          {d.vistaActiva === 'horarios' && (
+          {d.vistaActiva === 'horarios' && false && (
             <HorariosClub
               club={d.club}
               modoOscuro={d.isDark}

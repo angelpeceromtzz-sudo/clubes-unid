@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { generarListaAsistencia } from '../lib/asistenciaTemplate.js';
+import { registrarActividadClub } from '../lib/clubActivity.js';
 
 const router = Router();
 
@@ -114,6 +115,13 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
       }
 
       await client.query('COMMIT');
+      registrarActividadClub({
+        tipo_evento: 'convocatoria_generada',
+        id_club: Number(id_club),
+        id_actor: req.user.id,
+        descripcion: `Se generaron ${distribucion.length} bloque(s) de convocatoria para ${preseleccionados.rows.length} alumno(s)`,
+        detalles: { bloques: distribucion.length, alumnos: preseleccionados.rows.length },
+      });
       res.json({
         mensaje: `Convocatorias generadas: ${distribucion.length} bloque(s) para ${preseleccionados.rows.length} alumno(s)`,
         bloques: distribucion.map((cantidad, i) => ({
@@ -186,6 +194,14 @@ router.put('/:id', authenticate, requireRole(2), async (req, res) => {
        RETURNING *`,
       [fecha || null, hora || null, lugar || null, id],
     );
+
+    registrarActividadClub({
+      tipo_evento: 'evento_creado',
+      id_club: conv.rows[0].id_club,
+      id_actor: req.user.id,
+      descripcion: `Convocatoria del bloque ${conv.rows[0].bloque} actualizada`,
+      detalles: { fecha, hora, lugar, bloque: conv.rows[0].bloque },
+    });
 
     res.json(result.rows[0]);
   } catch (err) {
@@ -350,6 +366,13 @@ router.post('/ofertas', authenticate, requireRole(2), async (req, res) => {
       }
 
       await client.query('COMMIT');
+      registrarActividadClub({
+        tipo_evento: 'ofertas_enviadas',
+        id_club: Number(id_club),
+        id_actor: req.user.id,
+        descripcion: `Se enviaron ${ofertados} oferta(s) de ingreso de ${nombreClub}`,
+        detalles: { ofertados, rechazados: convocados.rows.length - ofertados, total: convocados.rows.length },
+      });
       res.json({
         mensaje: `Ofertas enviadas a ${ofertados} alumno(s)`,
         total: convocados.rows.length,

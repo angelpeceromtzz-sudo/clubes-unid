@@ -1,4 +1,3 @@
-
 // Servicio de API — abstrae las llamadas HTTP al backend
 const API_BASE = 'https://clubes-unid.onrender.com/api';
 
@@ -164,6 +163,10 @@ export const api = {
 
   getNotificaciones: () => request('/notificaciones'),
 
+  getActividad: (page = 1) => request(`/notificaciones/actividad?page=${page}`),
+
+  getActividadClubes: (page = 1) => request(`/clubes/actividad?page=${page}`),
+
   createNotificacion: (titulo, mensaje, audiencia, id_club, id_destinatario) =>
     request('/notificaciones', {
       method: 'POST',
@@ -274,6 +277,11 @@ export const api = {
     request(`/clubes/${clubId}/convocatoria`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+
+  cerrarConvocatoria: (clubId) =>
+    request(`/clubes/${clubId}/cerrar-convocatoria`, {
+      method: 'POST',
     }),
 
   getHistorialOfertas: (clubId) => request(`/formularios/ofertas/${clubId}`),

@@ -5,6 +5,7 @@ import { obtenerUrlImagen } from '../../../utils/imagen';
 export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAutenticado, esAdmin, tieneInscripcionActiva, deshabilitado }) {
   const esProximamente = club.id_estatus_club === 2;
   const esInactivo = club.id_estatus_club === 3;
+  const estado = !esProximamente && !esInactivo ? club.estado_calculado : null;
 
   const c = {
     bg: modoOscuro ? "bg-[#0e162c]" : "bg-white",
@@ -36,16 +37,22 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
               Inactivo
             </span>
           )}
-          {!esProximamente && !esInactivo && !deshabilitado && club.estado_convocatoria === 'abierta' && (
+          {!esProximamente && !esInactivo && !deshabilitado && estado === 'abierto' && (
             <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
               <Icono nombre="check-circle" strokeWidth={2} className="h-3 w-3" />
               Convocatoria abierta
             </span>
           )}
-          {!esProximamente && !esInactivo && !deshabilitado && club.estado_convocatoria && club.estado_convocatoria !== 'abierta' && (
+          {!esProximamente && !esInactivo && !deshabilitado && estado === 'proximo' && (
+            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border bg-amber-500/10 border-amber-500/30 text-amber-400">
+              <Icono nombre="clock" strokeWidth={2} className="h-3 w-3" />
+              Abre pronto
+            </span>
+          )}
+          {!esProximamente && !esInactivo && !deshabilitado && (estado === 'lleno' || estado === 'cerrado') && (
             <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
               <Icono nombre="lock" strokeWidth={2} className="h-3 w-3" />
-              Convocatoria cerrada
+              {estado === 'lleno' ? 'Cupo lleno' : 'Convocatoria cerrada'}
             </span>
           )}
         </div>

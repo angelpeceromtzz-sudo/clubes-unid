@@ -7,11 +7,11 @@ import { obtenerUrlImagen } from '../../utils/imagen';
 export function TarjetaClub({
   nombre, descripcion, categoria, cupoMaximo, cupoActual,
   imagen, onClick,
-  idEstatusClub, estadoConvocatoria,
+  idEstatusClub, estadoCalculado,
 }) {
   const { modoOscuro } = useTheme();
   const esProximamente = idEstatusClub === 2;
-  const convocatoriaAbierta = estadoConvocatoria === 'abierta';
+  const estado = !esProximamente ? estadoCalculado : null;
 
   const c = modoOscuro
     ? {
@@ -75,20 +75,37 @@ export function TarjetaClub({
       <div>
         <div className={`h-px my-5 ${c.divider}`} />
         <div className="flex items-center justify-between">
-          {!esProximamente && convocatoriaAbierta ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
-              <Icono nombre="check-circle" strokeWidth={2} className="h-3.5 w-3.5" />
-              <span className="md:hidden">Abierta</span>
-              <span className="hidden md:inline">Convocatoria abierta</span>
-            </span>
-          ) : !esProximamente ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
-              <Icono nombre="lock" strokeWidth={2} className="h-3.5 w-3.5" />
-              <span className="md:hidden">Cerrada</span>
-              <span className="hidden md:inline">Convocatoria cerrada</span>
-            </span>
-          ) : (
-            <span className="text-xs font-bold tracking-wide text-slate-500">— / —</span>
+          {!esProximamente && (
+            <>
+              {estado === 'abierto' ? (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+                  <Icono nombre="check-circle" strokeWidth={2} className="h-3.5 w-3.5" />
+                  <span className="md:hidden">Abierta</span>
+                  <span className="hidden md:inline">Convocatoria abierta</span>
+                </span>
+              ) : estado === 'proximo' ? (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-amber-500/10 border-amber-500/30 text-amber-400">
+                  <Icono nombre="clock" strokeWidth={2} className="h-3.5 w-3.5" />
+                  <span className="md:hidden">Abre pronto</span>
+                  <span className="hidden md:inline">Abre pronto</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
+                  <Icono nombre="lock" strokeWidth={2} className="h-3.5 w-3.5" />
+                  {estado === 'lleno' ? (
+                    <>
+                      <span className="md:hidden">Cupo lleno</span>
+                      <span className="hidden md:inline">Cupo lleno</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="md:hidden">Cerrada</span>
+                      <span className="hidden md:inline">Convocatoria cerrada</span>
+                    </>
+                  )}
+                </span>
+              )}
+            </>
           )}
           {!esProximamente && (
             <span className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1">

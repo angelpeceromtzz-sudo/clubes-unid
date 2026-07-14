@@ -14,6 +14,7 @@ import { TablaClubes } from '../components/admin/TablaClubes';
 import { ModalFormularioClub } from '../components/admin/ModalFormularioClub';
 import { ModalFormularioUsuario } from '../components/admin/ModalFormularioUsuario';
 import { TablaHistorial } from '../components/admin/TablaHistorial';
+import { TablaActividad } from '../components/admin/TablaActividad';
 import { ModalPasswordAdmin } from '../components/admin/ModalPasswordAdmin';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -144,6 +145,10 @@ export function PanelAdmin() {
               historialLoading={d.historialLoading}
               onRefresh={d.cargarHistorial}
             />
+          )}
+
+          {d.vistaActiva === 'actividad' && (
+            <TablaActividad />
           )}
 
           <ModalFormularioClub

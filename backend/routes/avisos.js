@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate } from '../middleware/auth.js';
+import { registrarActividadClub } from '../lib/clubActivity.js';
 
 const router = Router();
 
@@ -58,6 +59,13 @@ router.post('/', authenticate, async (req, res) => {
     );
 
     const aviso = result.rows[0];
+    registrarActividadClub({
+      tipo_evento: 'anuncio_club',
+      id_club: Number(id_club),
+      id_actor: req.user.id,
+      descripcion: `${req.user.nombre_completo} publicó el aviso "${titulo}" en el club`,
+      detalles: { titulo },
+    });
     res.status(201).json({
       ...aviso,
       autor: req.user.nombre_completo,

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { registrarHistorial } from '../lib/audit.js';
+import { calcularEstadoClub } from '../lib/estadoClub.js';
 
 const router = Router();
 
@@ -152,22 +154,28 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
 
       // Lock atómico: evitar race conditions en el límite
       const clubRow = await client.query(
-        `SELECT estado_convocatoria, max_postulaciones, postulaciones_actuales
+        `SELECT fecha_apertura_programada, fecha_limite_cierre,
+                max_postulaciones, postulaciones_actuales,
+                cerrada_manualmente
          FROM clubes WHERE id_club = $1 FOR UPDATE`,
         [id_club],
       );
       const club = clubRow.rows[0];
 
-      if (club.estado_convocatoria !== 'abierta') {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ error: 'La convocatoria de este club está cerrada. No se aceptan nuevas postulaciones.' });
-      }
-
       const maxPost = club.max_postulaciones;
       const actuales = club.postulaciones_actuales;
-      if (maxPost !== null && actuales >= maxPost) {
+
+      const estadoCalculado = calcularEstadoClub({
+        cerradaManualmente: club.cerrada_manualmente,
+        fechaAperturaProgramada: club.fecha_apertura_programada,
+        fechaLimiteCierre: club.fecha_limite_cierre,
+        maxPostulaciones: maxPost,
+        postulacionesActuales: actuales,
+      });
+
+      if (estadoCalculado !== 'abierto') {
         await client.query('ROLLBACK');
-        return res.status(400).json({ error: 'Este club ha alcanzado el límite de postulaciones. La convocatoria está cerrada.' });
+        return res.status(400).json({ error: 'La convocatoria de este club no está abierta. No se aceptan nuevas postulaciones.' });
       }
 
       const activa = await client.query(
@@ -220,21 +228,10 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
         ],
       );
 
-      const nuevasActuales = actuales + 1;
-      if (maxPost !== null && nuevasActuales >= maxPost) {
-        await client.query(
-          `UPDATE clubes
-           SET postulaciones_actuales = postulaciones_actuales + 1,
-               estado_convocatoria = 'cerrada_por_limite'
-           WHERE id_club = $1`,
-          [id_club],
-        );
-      } else {
-        await client.query(
-          `UPDATE clubes SET postulaciones_actuales = postulaciones_actuales + 1 WHERE id_club = $1`,
-          [id_club],
-        );
-      }
+      await client.query(
+        `UPDATE clubes SET postulaciones_actuales = postulaciones_actuales + 1 WHERE id_club = $1`,
+        [id_club],
+      );
 
       await client.query('COMMIT');
 
@@ -410,6 +407,14 @@ router.put('/:id/estatus', authenticate, requireRole(2), async (req, res) => {
       }
     } catch (notifErr) {
       console.error('Error al crear notificación:', notifErr);
+      registrarHistorial({
+        idAdmin: req.user.id,
+        adminNombre: req.user.nombre_completo || 'Sistema',
+        accion: 'error_notificacion',
+        descripcion: `Error al crear notificación de estatus "${status}" para alumno ID ${form.id_alumno}: ${notifErr.message}`,
+        entidadTipo: 'notificacion',
+        detalles: { error: notifErr.message, status, id_alumno: form.id_alumno, id_club: form.id_club },
+      });
     }
 
     const actualizado = await pool.query(

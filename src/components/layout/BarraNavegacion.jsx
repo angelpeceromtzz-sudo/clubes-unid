@@ -1,6 +1,8 @@
-/* Barra de navegación superior con logo, categorías (filtro), acciones de usuario y badge de notificaciones. Se oculta al hacer scroll hacia abajo en móvil. */
-import { useEffect, useRef, useState } from 'react';
+/* Barra de navegación superior con logo, filtro de estado (pills), dropdown de categoría, acciones de usuario y badge de notificaciones. Se oculta al hacer scroll hacia abajo en móvil. */
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useClickOutside } from '../../hooks/useClickOutside';
 import logoLobo from '../../assets/logo-lobo.svg';
 import { Icono } from '../ui/Icono';
 import { BadgeNotificaciones } from './BadgeNotificaciones';
@@ -8,9 +10,11 @@ import { MenuUsuario } from './MenuUsuario';
 import { ModalBase } from '../ui/ModalBase';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
+const ESTADOS = ["Todos", "Abiertos", "Proximos", "Llenos"];
 
 export function BarraNavegacion({
   categoriaActiva, setCategoriaActiva,
+  estadoActivo, setEstadoActivo,
   menuAbierto, setMenuAbierto, onLogoClick,
   user, onLoginClick, onLogout, onDashboardClick,
   mostrarFiltros = true, onVolverCatalogo,
@@ -19,13 +23,22 @@ export function BarraNavegacion({
 
   const [mostrarHeader, setMostrarHeader] = useState(true);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
+  const [menuCategoria, setMenuCategoria] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const [esMobile, setEsMobile] = useState(() => window.innerWidth < 768);
   const ultimoScrollY = useRef(0);
+  const catDesktopRef = useRef(null);
+  const catMobileRef = useRef(null);
+
+  useClickOutside(catDesktopRef, menuCategoria, () => setMenuCategoria(false));
+  useClickOutside(catMobileRef, menuCategoria, () => setMenuCategoria(false));
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       if (currentScrollY > ultimoScrollY.current && currentScrollY > 80) {
         setMostrarHeader(false);
+        setMenuCategoria(false);
       } else {
         setMostrarHeader(true);
       }
@@ -35,6 +48,28 @@ export function BarraNavegacion({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = (e) => setEsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    setEsMobile(mq.matches);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (esMobile && menuCategoria && catMobileRef.current) {
+      const rect = catMobileRef.current.getBoundingClientRect();
+      const dropdownWidth = 192;
+      const safePadding = 8;
+      const left = rect.left + dropdownWidth > window.innerWidth
+        ? window.innerWidth - dropdownWidth - safePadding
+        : rect.left;
+      setDropdownPos({ top: rect.bottom + 4, left });
+    }
+  }, [esMobile, menuCategoria]);
+
+  const labelCategoria = categoriaActiva === 'Todos' ? 'Categorías' : `Categoría: ${categoriaActiva}`;
+
   return (
     <>
       <style>{`
@@ -43,7 +78,7 @@ export function BarraNavegacion({
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
-      <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-transform duration-300 ${tema.headerBg} ${tema.headerBorder} ${mostrarHeader ? 'max-md:translate-y-0' : 'max-md:-translate-y-full'}`}>
+      <header className={`sticky top-0 z-50 backdrop-blur-md border-b ${tema.headerBg} ${tema.headerBorder}`}>
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 md:grid md:grid-cols-3">
         <div className="flex items-center gap-2 md:justify-self-start">
           {!mostrarFiltros && (
@@ -72,19 +107,54 @@ export function BarraNavegacion({
         </div>
 
         {mostrarFiltros ? (
-          <nav className={`hidden md:inline-flex items-center transition-colors duration-300 md:justify-self-center ${tema.navPill}`}>
-            {CATEGORIAS.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategoriaActiva(cat)}
-                className={`font-bold text-xs tracking-wide px-4 py-2 transition-all duration-200 cursor-pointer active:scale-95 ${
-                  categoriaActiva === cat ? tema.btnActive : tema.btnInactive
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </nav>
+          <div className="hidden md:flex items-center justify-center gap-2 md:justify-self-center">
+            <nav className={`inline-flex items-center transition-colors duration-300 ${tema.navPill}`}>
+              {ESTADOS.map((est) => (
+                <button
+                  key={est}
+                  onClick={() => setEstadoActivo(est)}
+                  className={`font-bold text-xs tracking-wide px-4 py-2 transition-all duration-200 cursor-pointer active:scale-95 ${
+                    estadoActivo === est ? tema.btnActive : tema.btnInactive
+                  }`}
+                >
+                  {est}
+                </button>
+              ))}
+              <div className={`w-px h-4 mx-1 ${modoOscuro ? 'bg-slate-600' : 'bg-slate-300'}`} />
+              <div className="relative" ref={catDesktopRef}>
+                <button
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => setMenuCategoria((v) => !v)}
+                  className={`inline-flex items-center gap-1.5 font-bold text-xs tracking-wide px-4 py-2 transition-all duration-200 cursor-pointer active:scale-95 rounded-full ${
+                    categoriaActiva !== 'Todos' ? tema.btnActive : tema.btnInactive
+                  }`}
+                >
+                  {labelCategoria}
+                  <Icono nombre="chevron-down" strokeWidth={2.5} className={`h-3 w-3 transition-transform duration-200 ${menuCategoria ? 'rotate-180' : ''}`} />
+                </button>
+                {menuCategoria && (
+                  <div
+                    className={`absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border shadow-2xl py-1 transition-colors duration-300 ${tema.dropdownBg} ${tema.dropdownBorder}`}
+                    style={{ animation: 'dropdownIn 0.15s ease-out' }}
+                  >
+                    {CATEGORIAS.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => { setCategoriaActiva(cat); setMenuCategoria(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg mx-1 ${tema.dropdownItem} ${tema.text} flex items-center justify-between`}
+                        style={{ width: 'calc(100% - 8px)' }}
+                      >
+                        {cat}
+                        {categoriaActiva === cat && (
+                          <Icono nombre="check" strokeWidth={2.5} className="h-4 w-4 text-amber-400" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </nav>
+          </div>
         ) : (
           <button
             onClick={onVolverCatalogo}
@@ -119,6 +189,66 @@ export function BarraNavegacion({
         </div>
       </div>
     </header>
+
+    {mostrarFiltros && (
+      <div className={`md:hidden sticky top-[57px] z-40 backdrop-blur-md border-b ${tema.headerBorder} transition-transform duration-300 ${mostrarHeader ? 'translate-y-0' : '-translate-y-full'}`}>
+        <div
+          className="flex items-center gap-2.5 px-4 py-2.5 overflow-x-auto"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+        >
+          <style>{`.nf-mobile-filter::-webkit-scrollbar { display: none; }`}</style>
+          {ESTADOS.map((est) => (
+            <button
+              key={est}
+              onClick={() => setEstadoActivo(est)}
+              className={`nf-mobile-filter shrink-0 font-bold text-xs tracking-wide px-4 py-2 rounded-full border transition-all duration-200 cursor-pointer active:scale-95 ${
+                estadoActivo === est ? tema.btnActive : tema.btnInactive
+              }`}
+            >
+              {est}
+            </button>
+          ))}
+          <div className="relative shrink-0" ref={catMobileRef}>
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => setMenuCategoria((v) => !v)}
+              className={`nf-mobile-filter inline-flex items-center gap-1.5 font-bold text-xs tracking-wide px-4 py-2 rounded-full border transition-all duration-200 cursor-pointer active:scale-95 ${
+                categoriaActiva !== 'Todos'
+                  ? 'text-amber-400 border-amber-400/30 bg-amber-400/10'
+                  : modoOscuro
+                    ? 'text-slate-300 border-slate-600'
+                    : 'text-slate-600 border-slate-300'
+              }`}
+            >
+              {labelCategoria}
+              <Icono nombre="chevron-down" strokeWidth={2.5} className={`h-3 w-3 transition-transform duration-200 ${menuCategoria ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {menuCategoria && esMobile && createPortal(
+      <div
+        className={`fixed z-50 w-48 rounded-xl border shadow-2xl py-1 ${tema.dropdownBg} ${tema.dropdownBorder}`}
+        style={{ top: dropdownPos.top, left: dropdownPos.left, animation: 'dropdownIn 0.15s ease-out' }}
+      >
+        {CATEGORIAS.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => { setCategoriaActiva(cat); setMenuCategoria(false); }}
+            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg mx-1 ${tema.dropdownItem} ${tema.text} flex items-center justify-between`}
+            style={{ width: 'calc(100% - 8px)' }}
+          >
+            {cat}
+            {categoriaActiva === cat && (
+              <Icono nombre="check" strokeWidth={2.5} className="h-4 w-4 text-amber-400" />
+            )}
+          </button>
+        ))}
+      </div>,
+      document.body
+    )}
 
     <ModalBase show={mostrarAyuda} onClose={() => setMostrarAyuda(false)} maxWidth="max-w-md">
       <div className="flex items-center justify-between mb-6">

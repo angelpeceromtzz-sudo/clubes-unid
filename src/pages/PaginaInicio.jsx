@@ -69,7 +69,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
                             onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
                     idEstatusClub={club.id_estatus_club}
                     estatus={club.estatus}
-                    estadoConvocatoria={club.estado_convocatoria}
+                    estadoCalculado={club.estado_calculado}
                   />
                 ))}
               </div>
@@ -102,7 +102,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
                   onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
                           idEstatusClub={club.id_estatus_club}
                           estatus={club.estatus}
-                          estadoConvocatoria={club.estado_convocatoria}
+                          estadoCalculado={club.estado_calculado}
                         />
                       </div>
                     ))}

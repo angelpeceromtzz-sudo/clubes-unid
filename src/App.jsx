@@ -22,7 +22,7 @@ function App() {
   const { tema } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { clubesFiltrados, clubesLoading, categoriaActiva, setCategoriaActiva } = useClubes();
+  const { clubesFiltrados, clubesLoading, categoriaActiva, setCategoriaActiva, estadoActivo, setEstadoActivo } = useClubes();
   const { redirigirPostLogin } = useAuthRedirect();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -64,6 +64,8 @@ function App() {
       <BarraNavegacion
         categoriaActiva={categoriaActiva}
         setCategoriaActiva={setCategoriaActiva}
+        estadoActivo={estadoActivo}
+        setEstadoActivo={setEstadoActivo}
         menuAbierto={menuAbierto}
         setMenuAbierto={setMenuAbierto}
         onLogoClick={irACatalogo}

@@ -8,6 +8,7 @@ import { SeccionResumen } from '../components/rectoria/SeccionResumen';
 import { SeccionClubes } from '../components/rectoria/SeccionClubes';
 import { SeccionPadron } from '../components/rectoria/SeccionPadron';
 import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
+import { TablaActividad } from '../components/admin/TablaActividad';
 
 export function PanelRectoria() {
   const { usuario } = useAutenticacion();
@@ -52,6 +53,9 @@ export function PanelRectoria() {
           cargando={d.cargando}
         />
       )}
+        {d.vistaActiva === 'actividad' && (
+          <TablaActividad />
+        )}
     </NavegacionPanel>
   );
 }
