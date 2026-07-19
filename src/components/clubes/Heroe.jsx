@@ -1,39 +1,25 @@
 /* Hero con carrusel de diapositivas (imágenes de fondo, gradiente, título y CTA para explorar clubes). */
 import { useState, useEffect, useRef } from 'react';
 import { Icono } from '../ui/Icono';
-
-const DIAPOSITIVAS = [
-  {
-    imagen: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=1470&auto=format&fit=crop",
-    alineacion: "right",
-    logro: "Bienvenidos a la manada"
-  },
-  {
-    imagen: "https://images.unsplash.com/photo-1526470608269-f658cec19927?q=80&w=1470&auto=format&fit=crop",
-    alineacion: "left",
-    logro: "Gala Cultural — Auditorio Principal"
-  },
-  {
-    imagen: "https://images.unsplash.com/photo-1529543544282-eaaf510c6c15?q=80&w=1470&auto=format&fit=crop",
-    alineacion: "right",
-    logro: "Exposición Anual de Artes Plásticas"
-  },
-  {
-    imagen: "https://images.unsplash.com/photo-1575361204480-a430a8e7eae0?q=80&w=1471&auto=format&fit=crop",
-    alineacion: "left",
-    logro: "Torneo Nacional de Esports 2025"
-  },
-];
+import { api } from '../../services/api';
 
 export function Heroe() {
+  const [diapositivas, setDiapositivas] = useState([]);
   const [slideActual, setSlideActual] = useState(0);
-  const total = DIAPOSITIVAS.length;
   const temporizadorRef = useRef(null);
+
+  useEffect(() => {
+    api.getDiapositivasHero()
+      .then(setDiapositivas)
+      .catch(() => setDiapositivas([]));
+  }, []);
+
+  const total = diapositivas.length;
 
   function reiniciarTemporizador() {
     clearInterval(temporizadorRef.current);
     temporizadorRef.current = setInterval(() => {
-      setSlideActual((prev) => (prev + 1) % DIAPOSITIVAS.length);
+      setSlideActual((prev) => (prev + 1) % total);
     }, 8000);
   }
 
@@ -48,44 +34,55 @@ export function Heroe() {
   }
 
   useEffect(() => {
+    if (total === 0) return;
     temporizadorRef.current = setInterval(() => {
-      setSlideActual((prev) => (prev + 1) % DIAPOSITIVAS.length);
+      setSlideActual((prev) => (prev + 1) % total);
     }, 8000);
     return () => clearInterval(temporizadorRef.current);
-  }, []);
+  }, [total]);
+
+  if (total === 0) return null;
+
+  function gradiente(alineacion) {
+    if (alineacion === 'derecha') return 'linear-gradient(to left, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)';
+    if (alineacion === 'centro') return 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)';
+    return 'linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)';
+  }
+
+  function alignClasses(alineacion) {
+    if (alineacion === 'derecha') return 'items-end text-right';
+    if (alineacion === 'centro') return 'items-center text-center';
+    return 'items-start text-left';
+  }
 
   return (
     <section className="w-full">
       <div className="group relative w-full overflow-hidden h-70 sm:h-88 md:h-104 lg:h-120">
 
-        {DIAPOSITIVAS.map((slide, index) => (
+        {diapositivas.map((slide, index) => (
           <div
-            key={index}
+            key={slide.id_diapositiva}
             className={`absolute inset-0 transition-all duration-700 ease-in-out ${
               index === slideActual ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
             <div
               className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-              style={{ backgroundImage: `url(${slide.imagen})` }}
+              style={{ backgroundImage: `url(${slide.url_imagen})` }}
             />
 
             <div
               className="absolute inset-0"
-              style={{
-                background: slide.alineacion === 'right'
-                  ? 'linear-gradient(to left, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)'
-                  : 'linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)'
-              }}
+              style={{ background: gradiente(slide.alineacion) }}
             />
 
             <div
               className={`relative z-10 h-full flex flex-col justify-center px-8 md:px-16 lg:px-24 ${
-                slide.alineacion === 'right' ? 'items-end text-right' : 'items-start text-left'
+                alignClasses(slide.alineacion)
               }`}
             >
               <span className="inline-block text-[10px] md:text-xs uppercase tracking-widest font-bold text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/30 mb-4">
-                {slide.logro}
+                {slide.titulo}
               </span>
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold italic uppercase text-white max-w-2xl leading-tight">
@@ -94,7 +91,7 @@ export function Heroe() {
               </h1>
 
               <p className="text-gray-200 text-base md:text-lg lg:text-xl font-medium tracking-wide max-w-xl mt-3 leading-relaxed">
-                DESCUBRE TUS PASIONES. IMPULSA TU FUTURO.
+                {slide.subtitulo || 'DESCUBRE TUS PASIONES. IMPULSA TU FUTURO.'}
               </p>
 
               <button
