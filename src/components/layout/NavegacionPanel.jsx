@@ -1,6 +1,7 @@
 /* Panel de navegación con sidebar fijo en escritorio y tabs horizontales en móvil.
    Renderiza `children` como contenido principal sincronizado con `vistaActiva`. */
 import { useTheme } from '../../contexts/ThemeContext';
+import { NAVBAR_HEIGHT } from '../../config/layout';
 
 export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, children }) {
   const { modoOscuro } = useTheme();
@@ -9,7 +10,10 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
       <style>{`.nav-tabs-hide-scroll::-webkit-scrollbar { display: none; }`}</style>
     <div className="flex min-h-screen">
       {/* Sidebar - visible en md+ */}
-      <div className={`hidden md:flex flex-col shrink-0 w-64 border-r sticky top-16 self-start h-[calc(100vh-4rem)] overflow-y-auto ${modoOscuro ? 'bg-[#0a1128] border-slate-800/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+      <div
+        className={`hidden md:flex flex-col shrink-0 w-64 border-r sticky self-start overflow-y-auto ${modoOscuro ? 'bg-[#0a1128] border-slate-800/60' : 'bg-white border-slate-200 shadow-sm'}`}
+        style={{ top: `${NAVBAR_HEIGHT}px`, height: `calc(100vh - ${NAVBAR_HEIGHT}px)` }}
+      >
         <nav className="pt-6 px-3 space-y-1">
           {elementosNav.map((item) => {
             const activo = vistaActiva === item.key;

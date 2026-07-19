@@ -84,7 +84,7 @@ export function BarraNavegacion({
         }
       `}</style>
       <header
-        className={`sticky top-0 z-50 backdrop-blur-md border-b navbar-transition ${tema.headerBg} ${tema.headerBorder} ${heroVisible ? 'navbar-transparent' : ''}`}
+        className={`sticky top-0 md:fixed md:top-0 md:left-0 md:right-0 md:w-full z-50 backdrop-blur-md border-b navbar-transition ${tema.headerBg} ${tema.headerBorder} ${heroVisible ? 'navbar-transparent' : ''}`}
       >
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 md:grid md:grid-cols-3">
         <div className="flex items-center gap-2 md:justify-self-start">

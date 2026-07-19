@@ -16,6 +16,7 @@ import { PaginaInicio } from './pages/PaginaInicio';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
+import { NAVBAR_HEIGHT } from './config/layout';
 
 function App() {
   const { estaAutenticado, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
@@ -30,6 +31,7 @@ function App() {
   const [heroVisible, setHeroVisible] = useState(true);
 
   useEffect(() => {
+    setHeroVisible(true);
     if (window.innerWidth < 768) return;
     const timer = setTimeout(() => {
       const hero = document.getElementById('hero');
@@ -41,7 +43,7 @@ function App() {
       observer.observe(hero);
     }, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [location.pathname]);
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
@@ -75,7 +77,10 @@ function App() {
   }
 
   return (
-    <div className={`min-h-screen font-sans transition-colors duration-300 pb-16 md:pb-0 ${tema.bg} ${tema.text}`}>
+    <div
+      className={`min-h-screen font-sans transition-colors duration-300 pb-16 md:pb-0 pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
+      style={{ '--navbar-height': location.pathname === '/' ? '0px' : `${NAVBAR_HEIGHT}px` }}
+    >
       <BarraNavegacion
         categoriaActiva={categoriaActiva}
         setCategoriaActiva={setCategoriaActiva}

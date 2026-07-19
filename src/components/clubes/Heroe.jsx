@@ -1,4 +1,4 @@
-/* Hero con carrusel de diapositivas (imágenes de fondo, gradiente, título y CTA para explorar clubes). */
+/* Hero con carrusel de diapositivas (imágenes de fondo, gradiente y título). */
 import { useState, useEffect, useRef } from 'react';
 import { Icono } from '../ui/Icono';
 import { api } from '../../services/api';
@@ -57,7 +57,7 @@ export function Heroe() {
 
   return (
     <section id="hero" className="w-full">
-      <div className="group relative w-full overflow-hidden h-70 sm:h-88 md:h-104 lg:h-120">
+      <div className="group relative w-full overflow-hidden h-70 sm:h-88 md:h-[60vh] lg:h-[65vh]">
 
         {diapositivas.map((slide, index) => (
           <div
@@ -93,13 +93,6 @@ export function Heroe() {
               <p className="text-gray-200 text-base md:text-lg lg:text-xl font-medium tracking-wide max-w-xl mt-3 leading-relaxed">
                 {slide.subtitulo || 'DESCUBRE TUS PASIONES. IMPULSA TU FUTURO.'}
               </p>
-
-              <button
-                onClick={() => document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' })}
-                className="mt-6 inline-flex items-center gap-2 bg-amber-400 text-[#0e162c] font-extrabold text-sm md:text-base px-6 py-3 md:px-8 md:py-3.5 rounded-xl shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer">
-                <span>Explorar Clubes</span>
-                <Icono nombre="arrow-right" strokeWidth={2} className="h-4 w-4 md:h-5 md:w-5" />
-              </button>
             </div>
           </div>
         ))}
