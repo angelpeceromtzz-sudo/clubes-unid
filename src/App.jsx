@@ -1,5 +1,5 @@
 /* Punto de entrada principal. Renderiza la barra de navegación, las rutas (inicio, dashboard por rol) y el modal de inicio de sesión. */
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
 import { useTheme } from './contexts/ThemeContext';
@@ -27,6 +27,21 @@ function App() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [catalogoKey, setCatalogoKey] = useState(0);
+  const [heroVisible, setHeroVisible] = useState(true);
+
+  useEffect(() => {
+    if (window.innerWidth < 768) return;
+    const timer = setTimeout(() => {
+      const hero = document.getElementById('hero');
+      if (!hero) return;
+      const observer = new IntersectionObserver(
+        ([entry]) => { if (!entry.isIntersecting) { setHeroVisible(false); observer.disconnect(); } },
+        { threshold: 0 }
+      );
+      observer.observe(hero);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
@@ -75,6 +90,7 @@ function App() {
         onDashboardClick={irADashboard}
         mostrarFiltros={mostrarFiltros}
         onVolverCatalogo={irACatalogo}
+        heroVisible={heroVisible}
       />
 
       {showLogin && (

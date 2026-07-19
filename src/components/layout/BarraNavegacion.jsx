@@ -18,6 +18,7 @@ export function BarraNavegacion({
   menuAbierto, setMenuAbierto, onLogoClick,
   user, onLoginClick, onLogout, onDashboardClick,
   mostrarFiltros = true, onVolverCatalogo,
+  heroVisible = true,
 }) {
   const { tema, modoOscuro } = useTheme();
 
@@ -77,8 +78,14 @@ export function BarraNavegacion({
           from { opacity: 0; transform: translateY(-8px) scale(0.96); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
+        @media (min-width: 768px) {
+          .navbar-transition { transition: background-color 0.5s ease, border-color 0.5s ease; }
+          .navbar-transparent { background-color: transparent !important; border-color: transparent !important; }
+        }
       `}</style>
-      <header className={`sticky top-0 z-50 backdrop-blur-md border-b ${tema.headerBg} ${tema.headerBorder}`}>
+      <header
+        className={`sticky top-0 z-50 backdrop-blur-md border-b navbar-transition ${tema.headerBg} ${tema.headerBorder} ${heroVisible ? 'navbar-transparent' : ''}`}
+      >
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 md:grid md:grid-cols-3">
         <div className="flex items-center gap-2 md:justify-self-start">
           {!mostrarFiltros && (

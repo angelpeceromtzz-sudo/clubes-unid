@@ -56,7 +56,7 @@ export function Heroe() {
   }
 
   return (
-    <section className="w-full">
+    <section id="hero" className="w-full">
       <div className="group relative w-full overflow-hidden h-70 sm:h-88 md:h-104 lg:h-120">
 
         {diapositivas.map((slide, index) => (
