@@ -25,6 +25,7 @@ import estadisticasRoutes from './routes/estadisticas.js';
 import uploadRoutes from './routes/upload.js';
 import horariosRoutes from './routes/horarios.js';
 import adminRoutes from './routes/admin.js';
+import diapositivasHeroRoutes from './routes/diapositivasHero.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -65,6 +66,7 @@ app.use('/api/ofertas', ofertasRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/horarios', horariosRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/diapositivas-hero', diapositivasHeroRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
