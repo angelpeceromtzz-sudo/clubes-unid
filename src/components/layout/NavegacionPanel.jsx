@@ -9,8 +9,8 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
       <style>{`.nav-tabs-hide-scroll::-webkit-scrollbar { display: none; }`}</style>
     <div className="flex min-h-screen">
       {/* Sidebar - visible en md+ */}
-      <div className={`hidden md:flex flex-col shrink-0 w-64 border-r ${modoOscuro ? 'border-slate-800/60' : 'border-slate-200'}`}>
-        <nav className="sticky top-0 pt-6 px-3 space-y-1">
+      <div className={`hidden md:flex flex-col shrink-0 w-64 border-r sticky top-16 self-start h-[calc(100vh-4rem)] overflow-y-auto ${modoOscuro ? 'bg-[#0a1128] border-slate-800/60' : 'bg-white border-slate-200 shadow-sm'}`}>
+        <nav className="pt-6 px-3 space-y-1">
           {elementosNav.map((item) => {
             const activo = vistaActiva === item.key;
             return (
