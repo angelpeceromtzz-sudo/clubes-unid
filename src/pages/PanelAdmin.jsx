@@ -16,6 +16,7 @@ import { ModalFormularioUsuario } from '../components/admin/ModalFormularioUsuar
 import { TablaHistorial } from '../components/admin/TablaHistorial';
 import { TablaActividad } from '../components/admin/TablaActividad';
 import { ModalPasswordAdmin } from '../components/admin/ModalPasswordAdmin';
+import { SeccionDiapositivas } from '../components/admin/SeccionDiapositivas';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { Icono } from '../components/ui/Icono';
@@ -149,6 +150,28 @@ export function PanelAdmin() {
 
           {d.vistaActiva === 'actividad' && (
             <TablaActividad />
+          )}
+
+          {d.vistaActiva === 'diapositivas' && (
+            <SeccionDiapositivas
+              diapositivas={d.hero.diapositivas}
+              diapositivasFiltradas={d.hero.diapositivasFiltradas}
+              busqueda={d.hero.busqueda}
+              setBusqueda={d.hero.setBusqueda}
+              showModal={d.hero.showModal}
+              editando={d.hero.editando}
+              form={d.hero.form}
+              enviando={d.hero.enviando}
+              errorModal={d.hero.errorModal}
+              abrirModalCrear={d.hero.abrirModalCrear}
+              abrirModalEditar={d.hero.abrirModalEditar}
+              cerrarModal={d.hero.cerrarModal}
+              toggleActiva={d.hero.toggleActiva}
+              eliminar={d.hero.eliminar}
+              guardar={d.hero.guardar}
+              handleFormChange={d.hero.handleFormChange}
+              subirImagen={d.hero.subirImagen}
+            />
           )}
 
           <ModalFormularioClub

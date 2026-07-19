@@ -5,6 +5,7 @@ import { useFeedback } from './useFeedback';
 import { useAdminClubes } from './useAdminClubes';
 import { useAdminUsuarios } from './useAdminUsuarios';
 import { useAdminHistorial } from './useAdminHistorial';
+import { useAdminHeroDiapositivas } from './useAdminHeroDiapositivas';
 
 export function usePanelAdmin(usuario) {
   const { esOscuro, cardCls, tableBg, thCls, tdCls, tdTitle, sbBg, sbItemBase, sbItemActive, sbItemInactive, selectCls, inputCls, labelCls, tema } = useTheme();
@@ -14,6 +15,7 @@ export function usePanelAdmin(usuario) {
   const clubes = useAdminClubes(setFeedback, setErrorFeedback);
   const usuarios = useAdminUsuarios(clubes.refetchClubes, setFeedback, setErrorFeedback);
   const historial = useAdminHistorial(vistaActiva === 'historial');
+  const heroDiapositivas = useAdminHeroDiapositivas(setFeedback, setErrorFeedback);
 
   return {
     vistaActiva,
@@ -87,5 +89,6 @@ export function usePanelAdmin(usuario) {
     abrirModalAdmin: usuarios.abrirModalAdmin,
     manejarAdminAction: usuarios.manejarAdminAction,
     cerrarModalAdmin: usuarios.cerrarModalAdmin,
+    hero: heroDiapositivas,
   };
 }
