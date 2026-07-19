@@ -1,4 +1,4 @@
-const BASE_BACKEND = 'https://clubes-unid.onrender.com';
+const BASE_BACKEND = import.meta.env.VITE_BACKEND_URL || '';
 
 export function obtenerUrlImagen(path) {
   if (!path) return null;

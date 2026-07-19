@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Icono } from '../ui/Icono';
 import { api } from '../../services/api';
+import { obtenerUrlImagen } from '../../utils/imagen';
 
 export function Heroe() {
   const [diapositivas, setDiapositivas] = useState([]);
@@ -68,7 +69,7 @@ export function Heroe() {
           >
             <div
               className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-              style={{ backgroundImage: `url(${slide.url_imagen})` }}
+              style={{ backgroundImage: `url(${obtenerUrlImagen(slide.url_imagen)})` }}
             />
 
             <div

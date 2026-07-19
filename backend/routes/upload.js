@@ -38,7 +38,8 @@ router.post('/imagen', authenticate, requireRole(3), upload.single('imagen'), (r
     if (!req.file) {
       return res.status(400).json({ error: 'No se envió ninguna imagen o el formato no es válido' });
     }
-    const url = `/uploads/${req.file.filename}`;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const url = `${baseUrl}/uploads/${req.file.filename}`;
     res.json({ url });
   } catch (err) {
     console.error('Error al subir imagen:', err);
