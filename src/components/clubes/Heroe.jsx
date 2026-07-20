@@ -1,4 +1,4 @@
-/* Hero con carrusel de diapositivas (imágenes de fondo, gradiente y título). */
+/* Hero con carrusel de imágenes de banner (fondo, gradiente suave y navegación). */
 import { useState, useEffect, useRef } from 'react';
 import { Icono } from '../ui/Icono';
 import { api } from '../../services/api';
@@ -45,15 +45,9 @@ export function Heroe() {
   if (total === 0) return null;
 
   function gradiente(alineacion) {
-    if (alineacion === 'derecha') return 'linear-gradient(to left, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)';
-    if (alineacion === 'centro') return 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)';
-    return 'linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)';
-  }
-
-  function alignClasses(alineacion) {
-    if (alineacion === 'derecha') return 'items-end text-right';
-    if (alineacion === 'centro') return 'items-center text-center';
-    return 'items-start text-left';
+    if (alineacion === 'derecha') return 'linear-gradient(to left, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)';
+    if (alineacion === 'centro') return 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)';
+    return 'linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)';
   }
 
   return (
@@ -76,25 +70,6 @@ export function Heroe() {
               className="absolute inset-0"
               style={{ background: gradiente(slide.alineacion) }}
             />
-
-            <div
-              className={`relative z-10 h-full flex flex-col justify-center px-8 md:px-16 lg:px-24 ${
-                alignClasses(slide.alineacion)
-              }`}
-            >
-              <span className="inline-block text-[10px] md:text-xs uppercase tracking-widest font-bold text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/30 mb-4">
-                {slide.titulo}
-              </span>
-
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold italic uppercase text-white max-w-2xl leading-tight">
-                ¡ÚNETE A LOS{' '}
-                <span className="text-amber-400">LOBOS ROJOS</span>!
-              </h1>
-
-              <p className="text-gray-200 text-base md:text-lg lg:text-xl font-medium tracking-wide max-w-xl mt-3 leading-relaxed">
-                {slide.subtitulo || 'DESCUBRE TUS PASIONES. IMPULSA TU FUTURO.'}
-              </p>
-            </div>
           </div>
         ))}
 

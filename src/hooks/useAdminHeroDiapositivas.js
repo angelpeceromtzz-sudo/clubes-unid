@@ -1,4 +1,4 @@
-/* Hook para gestión de diapositivas del hero: CRUD, filtros y modal de creación/edición. */
+/* Hook para gestión de banners principales: CRUD, filtros y modal de creación/edición. */
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 
@@ -74,10 +74,10 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
   }, [refetch, setErrorFeedback]);
 
   const eliminar = useCallback(async (diapositiva) => {
-    if (!window.confirm(`¿Eliminar la diapositiva "${diapositiva.titulo}"?`)) return;
+    if (!window.confirm(`¿Eliminar el banner "${diapositiva.titulo}"?`)) return;
     try {
       await api.deleteDiapositivaHero(diapositiva.id_diapositiva);
-      setFeedback('Diapositiva eliminada correctamente');
+      setFeedback('Banner eliminado correctamente');
       await refetch();
     } catch (err) {
       setErrorFeedback(err.message);
@@ -116,10 +116,10 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
       };
       if (editando) {
         await api.updateDiapositivaHero(editando.id_diapositiva, payload);
-        setFeedback('Diapositiva actualizada correctamente');
+        setFeedback('Banner actualizado correctamente');
       } else {
         await api.createDiapositivaHero(payload);
-        setFeedback('Diapositiva creada correctamente');
+        setFeedback('Banner creado correctamente');
       }
       await refetch();
       setShowModal(false);

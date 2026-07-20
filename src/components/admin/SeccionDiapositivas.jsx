@@ -1,4 +1,4 @@
-/* Sección de gestión de diapositivas del hero: tabla con CRUD y modal de creación/edición. */
+/* Sección de gestión de banners principales: tabla con CRUD y modal de creación/edición. */
 import { useRef, useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
@@ -47,13 +47,13 @@ export function SeccionDiapositivas({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className={`text-sm ${tema.subtitle}`}>{diapositivas.length} diapositivas registradas</p>
+        <p className={`text-sm ${tema.subtitle}`}>{diapositivas.length} banners registrados</p>
         <button
           onClick={abrirModalCrear}
           className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-2.5 transition-all duration-200 cursor-pointer active:scale-95 flex items-center gap-2"
         >
           <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
-          Agregar Diapositiva
+          Agregar Banner
         </button>
       </div>
 
@@ -195,7 +195,7 @@ export function SeccionDiapositivas({
       <ModalBase show={showModal} onClose={cerrarModal} maxWidth="max-w-md">
         <div className="flex items-center justify-between mb-6">
           <h2 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
-            {editando ? 'Editar Diapositiva' : 'Nueva Diapositiva'}
+            {editando ? 'Editar Banner' : 'Nuevo Banner'}
           </h2>
           <button
             onClick={cerrarModal}
@@ -275,7 +275,7 @@ export function SeccionDiapositivas({
                   {editando ? 'Guardando...' : 'Creando...'}
                 </>
               ) : (
-                editando ? 'Guardar Cambios' : 'Crear Diapositiva'
+                editando ? 'Guardar Cambios' : 'Crear Banner'
               )}
             </BotonAccion>
           </div>

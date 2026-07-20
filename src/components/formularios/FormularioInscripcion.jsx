@@ -56,6 +56,7 @@ export function FormularioInscripcion({ club, onClose }) {
   const [enviando, setEnviando] = useState(false);
   const [errorApi, setErrorApi] = useState('');
   const [confirmando, setConfirmando] = useState(false);
+  const [confirmado, setConfirmado] = useState(false);
 
   function validar() {
     const errs = {};
@@ -127,7 +128,7 @@ export function FormularioInscripcion({ club, onClose }) {
 
   return (
     <>
-      <ModalBase show={true} onClose={onClose}>
+      <ModalBase show={true} onClose={() => {}}>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className={`text-xl font-black ${tema.title}`}>Formulario de Inscripción</h2>
@@ -135,9 +136,9 @@ export function FormularioInscripcion({ club, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
+            className={`transition-colors cursor-pointer ${modoOscuro ? 'text-amber-300 hover:text-amber-200' : 'text-amber-500 hover:text-amber-600'}`}
           >
-            <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
+            <Icono nombre="close" strokeWidth={2} className="h-7 w-7" />
           </button>
         </div>
 
@@ -146,11 +147,8 @@ export function FormularioInscripcion({ club, onClose }) {
 
         {confirmando ? (
           <div>
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                <Icono nombre="eye" strokeWidth={2} className="h-4 w-4 text-amber-400" />
-              </div>
-              <p className={`text-sm font-bold ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+            <div className="mb-5">
+              <p className={`text-base font-black ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
                 Revisa tus datos antes de confirmar
               </p>
             </div>
@@ -173,16 +171,28 @@ export function FormularioInscripcion({ club, onClose }) {
 
             <Alerta tipo="error" mensaje={errorApi} />
 
-            <div className="flex gap-3">
+            <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${confirmado ? (modoOscuro ? 'border-amber-400/40 bg-amber-400/5' : 'border-amber-400/40 bg-amber-50') : (modoOscuro ? 'border-slate-700 bg-slate-800/30' : 'border-slate-200 bg-slate-50')}`}>
+              <input
+                type="checkbox"
+                checked={confirmado}
+                onChange={(e) => setConfirmado(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-amber-400 cursor-pointer"
+              />
+              <span className={`text-xs leading-relaxed ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+                Confirmo que la información proporcionada es correcta y entiendo que el envío de esta postulación no garantiza mi aceptación en el club. También comprendo que proporcionar información falsa o incumplir los requisitos de la convocatoria puede ser motivo de rechazo.
+              </span>
+            </label>
+
+            <div className="flex gap-3 mt-2">
               <button
                 onClick={manejarEnvio}
-                disabled={enviando}
+                disabled={enviando || !confirmado}
                 className="flex-1 bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98]"
               >
                 {enviando ? 'Enviando...' : 'Sí, Confirmar y Enviar'}
               </button>
               <button
-                onClick={() => { setConfirmando(false); setErrorApi(''); }}
+                onClick={() => { setConfirmando(false); setConfirmado(false); setErrorApi(''); }}
                 disabled={enviando}
                 className={`px-6 py-3.5 rounded-xl border text-sm font-bold transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${modoOscuro ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-300 text-slate-600 hover:bg-slate-100'}`}
               >
@@ -212,12 +222,13 @@ export function FormularioInscripcion({ club, onClose }) {
               readOnly={datosPrecargados}
               required
               error={errores.matricula}
+              maxLength={8}
             />
 
             <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
 
             <div className="grid grid-cols-2 gap-4">
-              <CampoTexto label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} type="number" placeholder="Ej: 3" required error={errores.cuatrimestre} />
+              <CampoSelect label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} opciones={['1','2','3','4','5','6','7','8','9']} placeholder="Selecciona" required error={errores.cuatrimestre} />
               <CampoSelect label="Turno" name="turno" value={formulario.turno} onChange={manejarCambio} opciones={TURNOS} placeholder="Selecciona" required error={errores.turno} />
             </div>
 

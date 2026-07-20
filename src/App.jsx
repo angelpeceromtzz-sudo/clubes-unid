@@ -78,7 +78,7 @@ function App() {
 
   return (
     <div
-      className={`min-h-screen font-sans transition-colors duration-300 pb-16 md:pb-0 pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
+      className={`min-h-screen font-sans transition-colors duration-300 pb-16 md:pb-0 md:pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
       style={{ '--navbar-height': location.pathname === '/' ? '0px' : `${NAVBAR_HEIGHT}px` }}
     >
       <BarraNavegacion

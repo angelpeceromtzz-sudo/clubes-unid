@@ -58,7 +58,7 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
                     : 'cursor-pointer'
                 } ${
                   activo
-                    ? 'bg-amber-400/20 text-slate-500'
+                    ? 'bg-amber-400/20 text-amber-400'
                     : modoOscuro ? 'text-slate-400' : 'text-slate-500'
                 }`}
               >

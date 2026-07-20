@@ -86,31 +86,32 @@ export function BarraNavegacion({
       <header
         className={`sticky top-0 md:fixed md:top-0 md:left-0 md:right-0 md:w-full z-50 backdrop-blur-md border-b navbar-transition ${tema.headerBg} ${tema.headerBorder} ${heroVisible ? 'navbar-transparent' : ''}`}
       >
-      <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 md:grid md:grid-cols-3">
+      <div className={`max-w-7xl mx-auto px-3 md:px-4 ${mostrarFiltros ? 'py-2 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-3 md:grid md:grid-cols-3`}>
         <div className="flex items-center gap-2 md:justify-self-start">
-          {!mostrarFiltros && (
+          {mostrarFiltros ? (
+            <div
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={onLogoClick}
+            >
+              <img src={logoLobo} alt="Logo" className="w-10 h-10 md:w-12 md:h-12" />
+              <div>
+                <span className={`text-base sm:text-lg font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
+                  UNID
+                </span>
+                <p className="text-[10px] sm:text-[11px] uppercase tracking-widest text-amber-400 font-black leading-tight">
+                  Clubs Lobos Rojos
+                </p>
+              </div>
+            </div>
+          ) : (
             <button
               onClick={onLogoClick}
-              className="flex md:hidden items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95"
+              className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95"
             >
               <Icono nombre="arrow-left" className="h-3.5 w-3.5" strokeWidth={2.5} />
               Volver
             </button>
           )}
-          <div
-            className={`flex items-center gap-2 cursor-pointer ${!mostrarFiltros ? 'hidden md:flex' : ''}`}
-            onClick={onLogoClick}
-          >
-            <img src={logoLobo} alt="Logo" className="w-10 h-10" />
-            <div>
-              <span className={`text-base sm:text-lg font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
-                UNID
-              </span>
-              <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-amber-400 font-bold leading-tight">
-                Clubs Lobos Rojos
-              </p>
-            </div>
-          </div>
         </div>
 
         {mostrarFiltros ? (

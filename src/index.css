@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+.scrollbar-amber::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-amber::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-amber::-webkit-scrollbar-thumb {
+  background: #f59e0b;
+  border-radius: 9999px;
+}
+.scrollbar-amber {
+  scrollbar-width: thin;
+  scrollbar-color: #f59e0b transparent;
+}
+
 @media print {
   nav, aside, button {
     display: none !important;

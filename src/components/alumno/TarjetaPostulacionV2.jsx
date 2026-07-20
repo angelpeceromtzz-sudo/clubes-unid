@@ -19,17 +19,17 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
     <div className={`rounded-2xl border overflow-hidden ${tema.isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`}>
       <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {postulacion.imagen_portada ? (
               <img src={postulacion.imagen_portada} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
             ) : (
               <AvatarInicial nombre={postulacion.nombre_club} color="amber" size="md" />
             )}
             <div className="min-w-0">
-              <h3 className={`text-base font-bold truncate ${tema.isDark ? 'text-white' : 'text-slate-900'}`}>
+              <h3 className={`text-sm sm:text-base font-bold ${tema.isDark ? 'text-white' : 'text-slate-900'}`}>
                 {postulacion.nombre_club}
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-slate-500">
                 {postulacion.categoria} · {new Date(postulacion.fecha_envio).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
@@ -45,18 +45,18 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
           } />
         </div>
 
-        <div className="flex gap-6">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
           <div className="shrink-0">
             <TimelinePostulacion historial={postulacion.historial} statusActual={postulacion.status} />
           </div>
 
           <div className="flex-1 min-w-0">
             <div className={`rounded-xl p-3 mb-3 ${conf.bg} border ${conf.border}`}>
-              <div className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 shrink-0 ${conf.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="flex items-start gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 shrink-0 mt-0.5 ${conf.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={conf.icon} />
                 </svg>
-                <p className={`text-xs font-medium ${conf.color}`}>{conf.msg}</p>
+                <p className={`text-xs sm:text-sm font-medium leading-relaxed ${conf.color}`}>{conf.msg}</p>
               </div>
             </div>
 
