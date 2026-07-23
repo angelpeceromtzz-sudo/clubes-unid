@@ -6,26 +6,18 @@ import pool from './db.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function migrate() {
-  const migrationsDir = __dirname;
-  const files = fs.readdirSync(migrationsDir)
-    .filter((f) => f.startsWith('migrate-') && f.endsWith('.sql'))
-    .sort();
+  const schemaPath = path.join(__dirname, 'schema.sql');
 
-  if (files.length === 0) {
-    console.log('[migrate] No se encontraron archivos de migración.');
+  if (!fs.existsSync(schemaPath)) {
+    console.error('[migrate] schema.sql no encontrado.');
     return;
   }
 
-  for (const file of files) {
-    const filePath = path.join(migrationsDir, file);
-    const sql = fs.readFileSync(filePath, 'utf8');
-    try {
-      await pool.query(sql);
-      console.log(`[migrate] Ejecutada: ${file}`);
-    } catch (err) {
-      console.error(`[migrate] Error en ${file}:`, err.message);
-    }
+  const sql = fs.readFileSync(schemaPath, 'utf8');
+  try {
+    await pool.query(sql);
+    console.log('[migrate] schema.sql ejecutado correctamente.');
+  } catch (err) {
+    console.error('[migrate] Error al ejecutar schema.sql:', err.message);
   }
-
-  console.log('[migrate] Migraciones completadas.');
 }
