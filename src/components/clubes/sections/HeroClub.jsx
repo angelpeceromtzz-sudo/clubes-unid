@@ -23,7 +23,7 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
         />
       </div>
       <div className={`p-6 md:p-8 ${c.bg}`}>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(club.categoria, modoOscuro)}`}>
             {club.categoria}
           </span>

@@ -54,7 +54,7 @@ export function TarjetaClub({
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(categoria, modoOscuro)}`}>
             {categoria}
           </span>
@@ -74,7 +74,7 @@ export function TarjetaClub({
 
       <div>
         <div className={`h-px my-5 ${c.divider}`} />
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           {!esProximamente && (
             <>
               {estado === 'abierto' ? (

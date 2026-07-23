@@ -70,7 +70,7 @@ export function PiePagina() {
 
         <div className={`mt-6 sm:mt-10 pt-4 sm:pt-6 border-t transition-colors duration-300 ${tema.headerBorder}`}>
           <p className={`text-[10px] text-center font-medium ${tema.subtitle}`}>
-            &copy; {new Date().getFullYear()} UNID &mdash; Universidad Hispanoamericana de Oriente. Todos los derechos reservados.
+            &copy; {new Date().getFullYear()} UNID &mdash; Universidad Interamericana para el Desarrollo. Todos los derechos reservados.
           </p>
         </div>
       </div>

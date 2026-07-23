@@ -32,7 +32,7 @@ export function BarraNavegacion({
   const catMobileRef = useRef(null);
 
   useClickOutside(catDesktopRef, menuCategoria, () => setMenuCategoria(false));
-  useClickOutside(catMobileRef, menuCategoria, () => setMenuCategoria(false));
+  useClickOutside(catMobileRef, menuCategoria, () => setMenuCategoria(false), '.nf-mobile-cat-dropdown');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -238,7 +238,7 @@ export function BarraNavegacion({
 
     {menuCategoria && esMobile && createPortal(
       <div
-        className={`fixed z-50 w-48 rounded-xl border shadow-2xl py-1 ${tema.dropdownBg} ${tema.dropdownBorder}`}
+        className={`nf-mobile-cat-dropdown fixed z-50 w-48 rounded-xl border shadow-2xl py-1 ${tema.dropdownBg} ${tema.dropdownBorder}`}
         style={{ top: dropdownPos.top, left: dropdownPos.left, animation: 'dropdownIn 0.15s ease-out' }}
       >
         {CATEGORIAS.map((cat) => (
