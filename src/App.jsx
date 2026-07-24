@@ -20,7 +20,7 @@ import { NAVBAR_HEIGHT } from './config/layout';
 
 function App() {
   const { estaAutenticado, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
-  const { tema } = useTheme();
+  const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { clubesFiltrados, clubesLoading, categoriaActiva, setCategoriaActiva, estadoActivo, setEstadoActivo } = useClubes();
@@ -72,7 +72,7 @@ function App() {
   return (
     <div
       className={`min-h-screen font-sans transition-colors duration-300 pb-16 lg:pb-0 lg:pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
-      style={{ '--navbar-height': location.pathname === '/' ? '0px' : `${NAVBAR_HEIGHT}px` }}
+      style={{ '--navbar-height': modoOscuro && location.pathname !== '/' ? `${NAVBAR_HEIGHT}px` : '0px' }}
     >
       <BarraNavegacion
         categoriaActiva={categoriaActiva}

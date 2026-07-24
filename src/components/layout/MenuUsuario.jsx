@@ -20,7 +20,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
           onClick={() => setMenuAbierto((prev) => !prev)}
           className="hidden lg:flex items-center gap-2 cursor-pointer"
         >
-          <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-8 h-8 rounded-full bg-amber-500 lg:ring-2 lg:ring-[#0b111e]/60 flex items-center justify-center text-white font-bold text-sm">
             {user.nombre_completo.charAt(0)}
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${menuAbierto ? 'rotate-180' : ''} ${tema.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

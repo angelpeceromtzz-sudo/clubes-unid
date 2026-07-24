@@ -85,10 +85,14 @@ export function BarraNavegacion({
         }
       `}</style>
       <header
-        className={`sticky top-0 lg:fixed lg:top-0 lg:left-0 lg:right-0 lg:w-full z-50 border-b transition-colors duration-300 ${
-          !scrolled && heroVisible
-            ? 'bg-transparent border-transparent'
-            : `${tema.headerBg} ${tema.headerBorder} backdrop-blur-md`
+        className={`sticky top-0 border-b transition-colors duration-300 z-50 ${
+          modoOscuro
+            ? `lg:fixed lg:top-0 lg:left-0 lg:right-0 lg:w-full ${
+                !scrolled && heroVisible
+                  ? 'bg-transparent border-transparent'
+                  : `${tema.headerBg} ${tema.headerBorder} backdrop-blur-md`
+              }`
+            : `${tema.headerBg} ${tema.headerBorder}`
         }`}
       >
       <div className={`w-full px-6 sm:px-8 lg:px-10 xl:px-16 ${mostrarFiltros ? 'py-2.5 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-4 lg:gap-6`}>
@@ -185,37 +189,37 @@ export function BarraNavegacion({
           {user && (
             <div className="hidden lg:flex items-center gap-3">
               <BadgeNotificaciones />
-              <button onClick={onDashboardClick} className={`${tema.iconColor} hover:text-amber-400 transition-colors`} title="Dashboard">
+              <button onClick={onDashboardClick} className={`p-2 rounded-full cursor-pointer ${modoOscuro ? 'md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : ''} ${tema.iconColor} hover:text-amber-400 transition-colors`} title="Dashboard">
                 <Icono nombre="grid" className="h-5 w-5" strokeWidth={2} />
               </button>
             </div>
           )}
 
-          {user && <BadgeNotificaciones className="flex md:hidden" />}
+          {user && <BadgeNotificaciones className="flex lg:hidden" />}
 
-          <div className="hidden lg:block">
-            <MenuUsuario
-              user={user}
-              menuAbierto={menuAbierto}
-              setMenuAbierto={setMenuAbierto}
-              onDashboardClick={onDashboardClick}
-              onLogout={onLogout}
-              onLoginClick={onLoginClick}
-              onAyuda={() => setMostrarAyuda(true)}
-            />
-          </div>
+          <MenuUsuario
+            user={user}
+            menuAbierto={menuAbierto}
+            setMenuAbierto={setMenuAbierto}
+            onDashboardClick={onDashboardClick}
+            onLogout={onLogout}
+            onLoginClick={onLoginClick}
+            onAyuda={() => setMostrarAyuda(true)}
+          />
         </div>
       </div>
     </header>
 
     {mostrarFiltros && (
       <div className={`md:hidden sticky top-[57px] z-40 border-b transition-all duration-300 ${
-        !scrolled && heroVisible
-          ? 'bg-transparent border-transparent'
-          : `${tema.headerBg} ${tema.headerBorder} backdrop-blur-md`
+        modoOscuro
+          ? (!scrolled && heroVisible
+              ? 'bg-transparent border-transparent'
+              : `${tema.headerBg} ${tema.headerBorder} backdrop-blur-md`)
+          : `${tema.headerBg} ${tema.headerBorder}`
       } ${mostrarHeader ? 'translate-y-0' : '-translate-y-full'}`}>
         <div
-          className="flex items-center gap-2.5 px-4 py-2.5 overflow-x-auto"
+          className="flex items-center gap-2.5 px-5 py-2.5 overflow-x-auto justify-center"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
         >
           <style>{`.nf-mobile-filter::-webkit-scrollbar { display: none; }`}</style>

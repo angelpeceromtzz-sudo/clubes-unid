@@ -37,7 +37,7 @@ export function ThemeProvider({ children }) {
         isDark: false,
         bg: 'bg-slate-50',
         text: 'text-slate-800',
-        headerBg: 'bg-white/80',
+        headerBg: 'bg-white',
         headerBorder: 'border-slate-200',
         title: 'text-slate-900',
         subtitle: 'text-slate-500',

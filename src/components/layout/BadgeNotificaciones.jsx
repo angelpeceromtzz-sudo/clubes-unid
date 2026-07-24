@@ -82,7 +82,7 @@ export function BadgeNotificaciones({ className = '' }) {
     <div className={`relative ${className}`}>
       <button
         onClick={() => setMostrarNotificaciones((prev) => !prev)}
-        className={`relative ${tema.iconColor} hover:text-amber-400 transition-colors`}
+        className={`relative p-2 rounded-full cursor-pointer ${modoOscuro ? 'md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : ''} ${tema.iconColor} hover:text-amber-400 transition-colors`}
         aria-label="Notificaciones"
       >
         <Icono nombre="bell" className="h-6 w-6 md:h-5 md:w-5" strokeWidth={2} />

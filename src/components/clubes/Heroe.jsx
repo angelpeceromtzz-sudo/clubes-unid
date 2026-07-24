@@ -1,4 +1,4 @@
-/* Hero con carrusel de imágenes de banner (fondo, gradiente suave y navegación). */
+/* Hero con carrusel de imágenes de banner (fondo y navegación). */
 import { useState, useEffect, useRef } from 'react';
 import { Icono } from '../ui/Icono';
 import { api } from '../../services/api';
@@ -44,18 +44,12 @@ export function Heroe() {
 
   if (total === 0) return null;
 
-  function gradiente(alineacion) {
-    if (alineacion === 'derecha') return 'linear-gradient(to left, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)';
-    if (alineacion === 'centro') return 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)';
-    return 'linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)';
-  }
-
   /*
    * Imagen hero recomendada para el panel admin:
    *   Dimensiones: 1920 × 800 px (relación ~12:5 ≈ 21:9)
    *   Formato:     JPG/PNG/WebP, < 500 KB
    *   Composición: sujeto principal centrado o en tercio superior,
-   *                dejando margen inferior para gradiente + texto.
+   *                dejando margen inferior para texto.
    */
   return (
     <section id="hero" className="w-full">
@@ -73,10 +67,6 @@ export function Heroe() {
               style={{ backgroundImage: `url(${obtenerUrlImagen(slide.url_imagen)})` }}
             />
 
-            <div
-              className="absolute inset-0"
-              style={{ background: gradiente(slide.alineacion) }}
-            />
           </div>
         ))}
 

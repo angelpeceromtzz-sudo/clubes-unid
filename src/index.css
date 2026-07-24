@@ -30,3 +30,9 @@
     display: block !important;
   }
 }
+
+@media (min-width: 1024px) and (max-height: 900px) {
+  #hero > div {
+    max-height: 55vh !important;
+  }
+}
