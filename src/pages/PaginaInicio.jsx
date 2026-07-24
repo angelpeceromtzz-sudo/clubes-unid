@@ -15,7 +15,7 @@ const ORDEN_CATEGORIA = ['Deportes', 'Cultura', 'Tecnologia'];
 export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
   const navigate = useNavigate();
   const { estaAutenticado } = useAutenticacion();
-  const { tema } = useTheme();
+  const { tema, modoOscuro } = useTheme();
 
   const clubesOrdenados = useMemo(() => {
     return [...clubes].sort((a, b) => {
@@ -33,6 +33,21 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
       const rankCatB = prioB === -1 ? ORDEN_CATEGORIA.length : prioB;
       return rankCatA - rankCatB;
     });
+  }, [clubes]);
+
+  const clubesPorCategoria = useMemo(() => {
+    const map = {};
+    for (const club of clubes) {
+      if (club.id_estatus_club === 2) {
+        if (!map['Proximamente']) map['Proximamente'] = [];
+        map['Proximamente'].push(club);
+        continue;
+      }
+      const cat = club.categoria || 'General';
+      if (!map[cat]) map[cat] = [];
+      map[cat].push(club);
+    }
+    return map;
   }, [clubes]);
 
   return (
@@ -59,23 +74,63 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
             No hay clubes disponibles en esta categoría.
           </p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-6 lg:gap-8">
-            {clubesOrdenados.map((club) => (
-              <TarjetaClub
-                key={club.id_club}
-                nombre={club.nombre_club}
-                descripcion={club.descripcion}
-                categoria={club.categoria}
-                cupoMaximo={club.cupo_maximo}
-                cupoActual={parseInt(club.cupo_actual) || 0}
-                imagen={obtenerUrlImagen(club.imagen_portada || club.imagen)}
-                onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
-                idEstatusClub={club.id_estatus_club}
-                estatus={club.estatus}
-                estadoCalculado={club.estado_calculado}
-              />
-            ))}
-          </div>
+          <>
+            {/* Desktop: grid layout */}
+            <div className="hidden lg:grid lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {clubesOrdenados.map((club) => (
+                <TarjetaClub
+                  key={club.id_club}
+                  nombre={club.nombre_club}
+                  descripcion={club.descripcion}
+                  categoria={club.categoria}
+                  cupoMaximo={club.cupo_maximo}
+                  cupoActual={parseInt(club.cupo_actual) || 0}
+                  imagen={obtenerUrlImagen(club.imagen_portada || club.imagen)}
+                  onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
+                  idEstatusClub={club.id_estatus_club}
+                  estatus={club.estatus}
+                  estadoCalculado={club.estado_calculado}
+                />
+              ))}
+            </div>
+
+            {/* Mobile: Netflix-style rows per category */}
+            <div className="lg:hidden space-y-8">
+              {Object.entries(clubesPorCategoria).map(([categoria, clubs]) => (
+                <section key={categoria}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className={`text-sm font-black uppercase tracking-wider ${tema.title}`}>
+                      {categoria}
+                    </h3>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      modoOscuro ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'
+                    }`}>
+                      {clubs.length}
+                    </span>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <style>{`.nf-scroll::-webkit-scrollbar { display: none; }`}</style>
+                    {clubs.map((club) => (
+                      <div key={club.id_club} className="nf-scroll shrink-0 w-64">
+                        <TarjetaClub
+                          nombre={club.nombre_club}
+                          descripcion={club.descripcion}
+                          categoria={club.categoria}
+                          cupoMaximo={club.cupo_maximo}
+                          cupoActual={parseInt(club.cupo_actual) || 0}
+                          imagen={obtenerUrlImagen(club.imagen_portada || club.imagen)}
+                          onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
+                          idEstatusClub={club.id_estatus_club}
+                          estatus={club.estatus}
+                          estadoCalculado={club.estado_calculado}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </>
         )}
       </main>
     </>

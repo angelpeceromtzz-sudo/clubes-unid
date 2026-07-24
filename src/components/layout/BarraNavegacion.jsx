@@ -85,25 +85,25 @@ export function BarraNavegacion({
         }
       `}</style>
       <header
-        className={`sticky top-0 md:fixed md:top-0 md:left-0 md:right-0 md:w-full z-50 border-b transition-colors duration-300 ${
+        className={`sticky top-0 lg:fixed lg:top-0 lg:left-0 lg:right-0 lg:w-full z-50 border-b transition-colors duration-300 ${
           !scrolled && heroVisible
             ? 'bg-transparent border-transparent'
             : `${tema.headerBg} ${tema.headerBorder} backdrop-blur-md`
         }`}
       >
-      <div className={`w-full px-6 sm:px-8 lg:px-12 xl:px-16 ${mostrarFiltros ? 'py-2 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-3 md:grid md:grid-cols-3`}>
-        <div className="flex items-center gap-2 md:justify-self-start">
+      <div className={`w-full px-6 sm:px-8 lg:px-10 xl:px-16 ${mostrarFiltros ? 'py-2.5 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-4 lg:gap-6`}>
+        <div className="flex items-center gap-4 md:gap-6">
           {mostrarFiltros ? (
             <div
-              className="flex items-center gap-2 cursor-pointer"
+              className="flex items-center gap-2 cursor-pointer shrink-0"
               onClick={onLogoClick}
             >
-              <img src={logoLobo} alt="Logo" className="w-10 h-10 md:w-12 md:h-12" />
+              <img src={logoLobo} alt="Logo"               className="w-10 h-10 lg:w-12 lg:h-12 shrink-0" />
               <div>
-                <span className={`text-base sm:text-lg font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
+                <span className={`text-sm sm:text-base lg:text-sm font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
                   UNID
                 </span>
-                <p className="text-[10px] sm:text-[11px] uppercase tracking-widest text-amber-400 font-black leading-tight">
+                <p className="text-[9px] sm:text-[10px] lg:text-[9px] uppercase tracking-widest text-amber-400 font-black leading-tight">
                   Clubs Lobos Rojos
                 </p>
               </div>
@@ -117,29 +117,30 @@ export function BarraNavegacion({
               Volver
             </button>
           )}
-        </div>
 
-        {mostrarFiltros ? (
-          <div className="hidden md:flex items-center justify-center gap-2 md:justify-self-center">
-            <nav className={`inline-flex items-center transition-colors duration-300 ${tema.navPill}`}>
+          {mostrarFiltros && (
+            <nav className="hidden md:flex items-center gap-1">
               {ESTADOS.map((est) => (
                 <button
                   key={est}
                   onClick={() => setEstadoActivo(est)}
-                  className={`font-bold text-xs tracking-wide px-4 py-2 transition-all duration-200 cursor-pointer active:scale-95 ${
-                    estadoActivo === est ? tema.btnActive : tema.btnInactive
+                  className={`font-semibold text-xs lg:text-sm tracking-wide px-3 py-1.5 transition-all duration-200 cursor-pointer active:scale-95 ${
+                    estadoActivo === est
+                      ? 'rounded-full text-white bg-amber-500 shadow-sm shadow-amber-500/30'
+                      : `rounded-md ${modoOscuro ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-500 hover:text-slate-800 hover:bg-black/5'}`
                   }`}
                 >
                   {est}
                 </button>
               ))}
-              <div className={`w-px h-4 mx-1 ${modoOscuro ? 'bg-slate-600' : 'bg-slate-300'}`} />
-              <div className="relative" ref={catDesktopRef}>
+              <div className="relative hidden lg:block" ref={catDesktopRef}>
                 <button
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={() => setMenuCategoria((v) => !v)}
-                  className={`inline-flex items-center gap-1.5 font-bold text-xs tracking-wide px-4 py-2 transition-all duration-200 cursor-pointer active:scale-95 rounded-full ${
-                    categoriaActiva !== 'Todos' ? tema.btnActive : tema.btnInactive
+                  className={`inline-flex items-center gap-1 font-semibold text-xs lg:text-sm tracking-wide px-3 py-1.5 transition-all duration-200 cursor-pointer active:scale-95 ${
+                    categoriaActiva !== 'Todos'
+                      ? 'rounded-full text-white bg-amber-500 shadow-sm shadow-amber-500/30'
+                      : `rounded-md ${modoOscuro ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-500 hover:text-slate-800 hover:bg-black/5'}`
                   }`}
                 >
                   {labelCategoria}
@@ -147,7 +148,7 @@ export function BarraNavegacion({
                 </button>
                 {menuCategoria && (
                   <div
-                    className={`absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border shadow-2xl py-1 transition-colors duration-300 ${tema.dropdownBg} ${tema.dropdownBorder}`}
+                    className={`absolute left-0 top-full mt-1 z-50 w-48 rounded-xl border shadow-2xl py-1 transition-colors duration-300 ${tema.dropdownBg} ${tema.dropdownBorder}`}
                     style={{ animation: 'dropdownIn 0.15s ease-out' }}
                   >
                     {CATEGORIAS.map((cat) => (
@@ -167,20 +168,22 @@ export function BarraNavegacion({
                 )}
               </div>
             </nav>
-          </div>
-        ) : (
+          )}
+        </div>
+
+        {!mostrarFiltros && (
           <button
             onClick={onVolverCatalogo}
-            className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95 md:justify-self-center"
+            className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95"
           >
             <Icono nombre="arrow-left" className="h-3.5 w-3.5" strokeWidth={2.5} />
             Volver al Catálogo
           </button>
         )}
 
-        <div className="flex items-center gap-4 md:justify-self-end">
+        <div className="flex items-center gap-3 lg:gap-4 ml-auto shrink-0">
           {user && (
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-3">
               <BadgeNotificaciones />
               <button onClick={onDashboardClick} className={`${tema.iconColor} hover:text-amber-400 transition-colors`} title="Dashboard">
                 <Icono nombre="grid" className="h-5 w-5" strokeWidth={2} />
@@ -190,15 +193,17 @@ export function BarraNavegacion({
 
           {user && <BadgeNotificaciones className="flex md:hidden" />}
 
-          <MenuUsuario
-            user={user}
-            menuAbierto={menuAbierto}
-            setMenuAbierto={setMenuAbierto}
-            onDashboardClick={onDashboardClick}
-            onLogout={onLogout}
-            onLoginClick={onLoginClick}
-            onAyuda={() => setMostrarAyuda(true)}
-          />
+          <div className="hidden lg:block">
+            <MenuUsuario
+              user={user}
+              menuAbierto={menuAbierto}
+              setMenuAbierto={setMenuAbierto}
+              onDashboardClick={onDashboardClick}
+              onLogout={onLogout}
+              onLoginClick={onLoginClick}
+              onAyuda={() => setMostrarAyuda(true)}
+            />
+          </div>
         </div>
       </div>
     </header>
@@ -225,22 +230,6 @@ export function BarraNavegacion({
               {est}
             </button>
           ))}
-          <div className="relative shrink-0" ref={catMobileRef}>
-            <button
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={() => setMenuCategoria((v) => !v)}
-              className={`nf-mobile-filter inline-flex items-center gap-1.5 font-bold text-xs tracking-wide px-4 py-2 rounded-full border transition-all duration-200 cursor-pointer active:scale-95 ${
-                categoriaActiva !== 'Todos'
-                  ? 'text-amber-400 border-amber-400/30 bg-amber-400/10'
-                  : modoOscuro
-                    ? 'text-slate-300 border-slate-600'
-                    : 'text-slate-600 border-slate-300'
-              }`}
-            >
-              {labelCategoria}
-              <Icono nombre="chevron-down" strokeWidth={2.5} className={`h-3 w-3 transition-transform duration-200 ${menuCategoria ? 'rotate-180' : ''}`} />
-            </button>
-          </div>
         </div>
       </div>
     )}

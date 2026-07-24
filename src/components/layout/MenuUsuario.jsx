@@ -9,16 +9,17 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
 
   useClickOutside(dropdownRef, menuAbierto, () => setMenuAbierto(false));
 
+  const nombreTruncado = user?.nombre_completo?.length > 26
+    ? user.nombre_completo.slice(0, 26) + '...'
+    : user?.nombre_completo;
+
   return (
     <div className="relative flex items-center" ref={dropdownRef}>
       {user && (
         <button
           onClick={() => setMenuAbierto((prev) => !prev)}
-          className="hidden md:flex items-center gap-2 cursor-pointer"
+          className="hidden lg:flex items-center gap-2 cursor-pointer"
         >
-          <span className={`text-sm font-medium hidden sm:inline transition-colors duration-300 ${tema.profileText}`}>
-            {user.nombre_completo}
-          </span>
           <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-sm">
             {user.nombre_completo.charAt(0)}
           </div>
@@ -30,7 +31,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
 
       <button
         onClick={() => { setMenuAbierto((prev) => !prev); }}
-        className={`p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${tema.iconColor} hover:text-amber-400 ${modoOscuro ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'} ${user ? 'md:hidden' : ''}`}
+        className={`p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-95 ${tema.iconColor} hover:text-amber-400 ${modoOscuro ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'        } ${user ? 'lg:hidden' : ''}`}
         aria-label="Menú"
       >
         {menuAbierto ? (
@@ -49,6 +50,10 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
           >
             {user ? (
               <>
+                <div className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {user.nombre_completo}
+                </div>
+                <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
                   onClick={() => { onDashboardClick(); setMenuAbierto(false); }}
                   className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}

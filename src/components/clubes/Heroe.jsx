@@ -59,9 +59,7 @@ export function Heroe() {
    */
   return (
     <section id="hero" className="w-full">
-      {/* aspect-[21/9] mantiene la proporción del hero independientemente del viewport.
-          min-h garantiza un piso en pantallas bajas; max-h evita que crezca de más. */}
-      <div className="group relative w-full overflow-hidden aspect-[21/9] min-h-[280px] sm:min-h-[320px] md:min-h-[400px] max-h-[600px]">
+      <div className="group relative w-full overflow-hidden min-h-[200px] sm:min-h-[320px] lg:aspect-[21/9] lg:min-h-[400px] max-h-[600px]">
 
         {diapositivas.map((slide, index) => (
           <div
@@ -71,7 +69,7 @@ export function Heroe() {
             }`}
           >
             <div
-              className="absolute inset-0 bg-cover bg-no-repeat bg-[center_30%]"
+              className="absolute inset-0 bg-no-repeat bg-contain lg:bg-cover lg:bg-[center_30%]"
               style={{ backgroundImage: `url(${obtenerUrlImagen(slide.url_imagen)})` }}
             />
 
@@ -86,14 +84,14 @@ export function Heroe() {
           <>
             <button
               onClick={anterior}
-              className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
+              className="absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
               aria-label="Anterior"
             >
               <Icono nombre="chevron-left" strokeWidth={2} className="h-6 w-6" />
             </button>
             <button
               onClick={siguiente}
-              className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
+              className="absolute right-4 lg:right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
               aria-label="Siguiente"
             >
               <Icono nombre="chevron-right" strokeWidth={2} className="h-6 w-6" />

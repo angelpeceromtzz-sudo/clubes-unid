@@ -37,7 +37,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
   }
 
   return (
-    <nav className={`fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-bottom border-t transition-transform duration-300 ${mostrarNav ? 'translate-y-0' : 'translate-y-full'} ${modoOscuro ? 'bg-black border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
+    <nav className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom border-t transition-transform duration-300 ${mostrarNav ? 'translate-y-0' : 'translate-y-full'} ${modoOscuro ? 'bg-black border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
       <div className="flex items-center justify-around py-2 px-4">
         <button
           onClick={() => { onInicioClick?.(); navigate('/'); }}

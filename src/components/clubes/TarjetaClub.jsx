@@ -44,7 +44,7 @@ export function TarjetaClub({
             <img
               src={obtenerUrlImagen(imagen)}
               alt={nombre}
-              className={`w-full h-full object-cover ${esProximamente ? 'opacity-50' : 'transition-transform duration-500 group-hover:scale-105'}`}
+              className={`w-full h-full object-cover ${esProximamente ? 'opacity-50' : 'transition-transform duration-500 group-hover:scale-110'}`}
             />
           ) : (
             <div className={`w-full h-full flex items-center justify-center ${modoOscuro ? 'bg-slate-800' : 'bg-slate-100'}`}>
@@ -72,49 +72,36 @@ export function TarjetaClub({
         </p>
       </div>
 
-      <div className="mt-auto">
-        <div className={`h-px my-5 ${c.divider}`} />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {!esProximamente && (
-            <>
-              {estado === 'abierto' ? (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
-                  <Icono nombre="check-circle" strokeWidth={2} className="h-3.5 w-3.5" />
-                  <span className="md:hidden">Abierta</span>
-                  <span className="hidden md:inline">Convocatoria abierta</span>
-                </span>
-              ) : estado === 'proximo' ? (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-amber-500/10 border-amber-500/30 text-amber-400">
-                  <Icono nombre="clock" strokeWidth={2} className="h-3.5 w-3.5" />
-                  <span className="md:hidden">Abre pronto</span>
-                  <span className="hidden md:inline">Abre pronto</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
-                  <Icono nombre="lock" strokeWidth={2} className="h-3.5 w-3.5" />
-                  {estado === 'lleno' ? (
-                    <>
-                      <span className="md:hidden">Cupo lleno</span>
-                      <span className="hidden md:inline">Cupo lleno</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="md:hidden">Cerrada</span>
-                      <span className="hidden md:inline">Convocatoria cerrada</span>
-                    </>
-                  )}
-                </span>
-              )}
-            </>
-          )}
-          {!esProximamente && (
-            <span className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center gap-1">
-              Ver detalles
-              <Icono nombre="chevron-right" strokeWidth={2} className="h-3.5 w-3.5" />
+      {!esProximamente && (
+        <div className="mt-auto">
+          <div className={`h-px my-5 ${c.divider}`} />
+          <div className="flex items-center justify-between gap-2">
+            {estado === 'abierto' ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+                <Icono nombre="check-circle" strokeWidth={2} className="h-3 w-3" />
+                <span className="lg:hidden">Abierta</span>
+                <span className="hidden lg:inline">Convoc. abierta</span>
+              </span>
+            ) : estado === 'proximo' ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-amber-500/10 border-amber-500/30 text-amber-400">
+                <Icono nombre="clock" strokeWidth={2} className="h-3 w-3" />
+                <span className="lg:hidden">Próximo</span>
+                <span className="hidden lg:inline">Abre pronto</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-red-500/10 border-red-500/30 text-red-400">
+                <Icono nombre="lock" strokeWidth={2} className="h-3 w-3" />
+                <span className="lg:hidden">{estado === 'lleno' ? 'Lleno' : 'Cerrada'}</span>
+                <span className="hidden lg:inline">{estado === 'lleno' ? 'Cupo lleno' : 'Convoc. cerrada'}</span>
+              </span>
+            )}
+            <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+              Ver más
+              <Icono nombre="chevron-right" strokeWidth={2} className="h-3 w-3" />
             </span>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
