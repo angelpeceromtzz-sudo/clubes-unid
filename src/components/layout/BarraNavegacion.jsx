@@ -31,8 +31,8 @@ export function BarraNavegacion({
   const catDesktopRef = useRef(null);
   const catMobileRef = useRef(null);
 
-  useClickOutside(catDesktopRef, menuCategoria, () => setMenuCategoria(false));
-  useClickOutside(catMobileRef, menuCategoria, () => setMenuCategoria(false), '.nf-mobile-cat-dropdown');
+  useClickOutside(catDesktopRef, menuCategoria, () => setMenuCategoria(false), '.nf-mobile-cat-dropdown');
+  useClickOutside(catMobileRef, menuCategoria && esMobile, () => setMenuCategoria(false), '.nf-mobile-cat-dropdown');
 
   useEffect(() => {
     const handleScroll = () => {
