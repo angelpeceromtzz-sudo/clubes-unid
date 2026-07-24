@@ -38,8 +38,8 @@ export function TarjetaClub({
         esProximamente ? '' : 'hover:shadow-2xl transition-all duration-300 active:scale-[0.98]'
       } ${c.card}`}
     >
-      <div>
-        <div className={`overflow-hidden rounded-xl h-40 mb-5 flex items-center justify-center`}>
+      <div className="flex flex-col flex-1">
+        <div className={`overflow-hidden rounded-xl h-48 mb-5 flex items-center justify-center`}>
           {obtenerUrlImagen(imagen) ? (
             <img
               src={obtenerUrlImagen(imagen)}
@@ -64,7 +64,7 @@ export function TarjetaClub({
             </span>
           )}
         </div>
-        <h3 className={`text-lg font-bold ${c.title} ${esProximamente ? '' : 'group-hover:text-amber-400 transition-colors duration-200'}`}>
+        <h3 className={`text-lg font-bold line-clamp-2 ${c.title} ${esProximamente ? '' : 'group-hover:text-amber-400 transition-colors duration-200'}`}>
           {nombre}
         </h3>
         <p className={`text-xs mt-2 font-medium leading-relaxed line-clamp-3 ${c.desc}`}>
@@ -72,7 +72,7 @@ export function TarjetaClub({
         </p>
       </div>
 
-      <div>
+      <div className="mt-auto">
         <div className={`h-px my-5 ${c.divider}`} />
         <div className="flex flex-wrap items-center justify-between gap-2">
           {!esProximamente && (

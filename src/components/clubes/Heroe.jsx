@@ -50,9 +50,18 @@ export function Heroe() {
     return 'linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)';
   }
 
+  /*
+   * Imagen hero recomendada para el panel admin:
+   *   Dimensiones: 1920 × 800 px (relación ~12:5 ≈ 21:9)
+   *   Formato:     JPG/PNG/WebP, < 500 KB
+   *   Composición: sujeto principal centrado o en tercio superior,
+   *                dejando margen inferior para gradiente + texto.
+   */
   return (
     <section id="hero" className="w-full">
-      <div className="group relative w-full overflow-hidden h-70 sm:h-88 md:h-[60vh] lg:h-[65vh]">
+      {/* aspect-[21/9] mantiene la proporción del hero independientemente del viewport.
+          min-h garantiza un piso en pantallas bajas; max-h evita que crezca de más. */}
+      <div className="group relative w-full overflow-hidden aspect-[21/9] min-h-[280px] sm:min-h-[320px] md:min-h-[400px] max-h-[600px]">
 
         {diapositivas.map((slide, index) => (
           <div
@@ -62,7 +71,7 @@ export function Heroe() {
             }`}
           >
             <div
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              className="absolute inset-0 bg-cover bg-no-repeat bg-[center_30%]"
               style={{ backgroundImage: `url(${obtenerUrlImagen(slide.url_imagen)})` }}
             />
 
@@ -73,20 +82,24 @@ export function Heroe() {
           </div>
         ))}
 
-        <button
-          onClick={anterior}
-          className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
-          aria-label="Anterior"
-        >
-          <Icono nombre="chevron-left" strokeWidth={2} className="h-6 w-6" />
-        </button>
-        <button
-          onClick={siguiente}
-          className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
-          aria-label="Siguiente"
-        >
-          <Icono nombre="chevron-right" strokeWidth={2} className="h-6 w-6" />
-        </button>
+        {total > 1 && (
+          <>
+            <button
+              onClick={anterior}
+              className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
+              aria-label="Anterior"
+            >
+              <Icono nombre="chevron-left" strokeWidth={2} className="h-6 w-6" />
+            </button>
+            <button
+              onClick={siguiente}
+              className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
+              aria-label="Siguiente"
+            >
+              <Icono nombre="chevron-right" strokeWidth={2} className="h-6 w-6" />
+            </button>
+          </>
+        )}
 
       </div>
     </section>

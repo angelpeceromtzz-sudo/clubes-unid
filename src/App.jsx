@@ -30,19 +30,12 @@ function App() {
   const [catalogoKey, setCatalogoKey] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
 
+  const handleScrollChange = useCallback((isScrolled) => {
+    setHeroVisible(!isScrolled);
+  }, []);
+
   useEffect(() => {
-    setHeroVisible(true);
-    if (window.innerWidth < 768) return;
-    const timer = setTimeout(() => {
-      const hero = document.getElementById('hero');
-      if (!hero) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => { if (!entry.isIntersecting) { setHeroVisible(false); observer.disconnect(); } },
-        { threshold: 0 }
-      );
-      observer.observe(hero);
-    }, 100);
-    return () => clearTimeout(timer);
+    setHeroVisible(window.scrollY <= 5);
   }, [location.pathname]);
 
   const handleLoginSuccess = useCallback(() => {
@@ -96,6 +89,7 @@ function App() {
         mostrarFiltros={mostrarFiltros}
         onVolverCatalogo={irACatalogo}
         heroVisible={heroVisible}
+        onScrollChange={handleScrollChange}
       />
 
       {showLogin && (

@@ -19,9 +19,11 @@ export function BarraNavegacion({
   user, onLoginClick, onLogout, onDashboardClick,
   mostrarFiltros = true, onVolverCatalogo,
   heroVisible = true,
+  onScrollChange,
 }) {
   const { tema, modoOscuro } = useTheme();
 
+  const [scrolled, setScrolled] = useState(() => window.scrollY > 5);
   const [mostrarHeader, setMostrarHeader] = useState(true);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
   const [menuCategoria, setMenuCategoria] = useState(false);
@@ -37,6 +39,9 @@ export function BarraNavegacion({
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+      const isScrolled = currentScrollY > 5;
+      setScrolled(isScrolled);
+      if (onScrollChange) onScrollChange(isScrolled);
       if (currentScrollY > ultimoScrollY.current && currentScrollY > 80) {
         setMostrarHeader(false);
         setMenuCategoria(false);
@@ -47,7 +52,7 @@ export function BarraNavegacion({
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [onScrollChange]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -78,15 +83,15 @@ export function BarraNavegacion({
           from { opacity: 0; transform: translateY(-8px) scale(0.96); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @media (min-width: 768px) {
-          .navbar-transition { transition: background-color 0.5s ease, border-color 0.5s ease; }
-          .navbar-transparent { background-color: transparent !important; border-color: transparent !important; }
-        }
       `}</style>
       <header
-        className={`sticky top-0 md:fixed md:top-0 md:left-0 md:right-0 md:w-full z-50 backdrop-blur-md border-b navbar-transition ${tema.headerBg} ${tema.headerBorder} ${heroVisible ? 'navbar-transparent' : ''}`}
+        className={`sticky top-0 md:fixed md:top-0 md:left-0 md:right-0 md:w-full z-50 border-b transition-colors duration-300 ${
+          !scrolled && heroVisible
+            ? 'bg-transparent border-transparent'
+            : `${tema.headerBg} ${tema.headerBorder} backdrop-blur-md`
+        }`}
       >
-      <div className={`max-w-7xl mx-auto px-3 md:px-4 ${mostrarFiltros ? 'py-2 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-3 md:grid md:grid-cols-3`}>
+      <div className={`w-full px-6 sm:px-8 lg:px-12 xl:px-16 ${mostrarFiltros ? 'py-2 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-3 md:grid md:grid-cols-3`}>
         <div className="flex items-center gap-2 md:justify-self-start">
           {mostrarFiltros ? (
             <div
@@ -199,7 +204,11 @@ export function BarraNavegacion({
     </header>
 
     {mostrarFiltros && (
-      <div className={`md:hidden sticky top-[57px] z-40 backdrop-blur-md border-b ${tema.headerBorder} transition-transform duration-300 ${mostrarHeader ? 'translate-y-0' : '-translate-y-full'}`}>
+      <div className={`md:hidden sticky top-[57px] z-40 border-b transition-all duration-300 ${
+        !scrolled && heroVisible
+          ? 'bg-transparent border-transparent'
+          : `${tema.headerBg} ${tema.headerBorder} backdrop-blur-md`
+      } ${mostrarHeader ? 'translate-y-0' : '-translate-y-full'}`}>
         <div
           className="flex items-center gap-2.5 px-4 py-2.5 overflow-x-auto"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}

@@ -3,17 +3,22 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { v2 as cloudinary } from 'cloudinary';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+function extraerPublicId(url) {
+  if (!url || !url.includes('cloudinary.com')) return null;
+  const match = url.match(/upload\/(?:v\d+\/)?(.+?)\.(jpg|jpeg|png|gif|webp|svg)$/);
+  return match ? `clubs-unid/${match[1]}` : null;
+}
 
-function eliminarArchivoLocal(url) {
-  if (!url || !url.startsWith('/uploads/')) return;
-  const filePath = path.join(uploadsDir, path.basename(url));
-  fs.unlink(filePath, () => {});
+async function eliminarEnCloudinary(url) {
+  const publicId = extraerPublicId(url);
+  if (!publicId) return;
+  try {
+    await cloudinary.uploader.destroy(publicId);
+  } catch (err) {
+    console.error('Error al eliminar imagen de Cloudinary:', err.message);
+  }
 }
 
 const router = Router();
@@ -117,7 +122,7 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
     );
 
     if (url_imagen && url_imagen !== urlAnterior) {
-      eliminarArchivoLocal(urlAnterior);
+      eliminarEnCloudinary(urlAnterior);
     }
 
     registrarHistorial({
@@ -156,7 +161,7 @@ router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
 
     await pool.query('DELETE FROM diapositivas_hero WHERE id_diapositiva = $1', [id]);
 
-    eliminarArchivoLocal(existe.rows[0].url_imagen);
+    eliminarEnCloudinary(existe.rows[0].url_imagen);
 
     registrarHistorial({
       idAdmin: req.user.id,
