@@ -37,6 +37,14 @@ router.post('/imagen', authenticate, requireRole(3), upload.single('imagen'), (r
     console.error('Error al subir imagen:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
+}, (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ error: `Error de upload: ${err.message}` });
+  }
+  if (err.message && err.message.includes('Cloudinary')) {
+    return res.status(500).json({ error: 'Error al subir a Cloudinary. Verifica CLOUDINARY_URL.' });
+  }
+  next(err);
 });
 
 export default router;
