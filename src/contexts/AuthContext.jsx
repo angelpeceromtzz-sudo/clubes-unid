@@ -26,6 +26,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
   });
 
   const [tieneInscripcionActiva, setTieneInscripcionActiva] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
   const [clubesPostulados, setClubesPostulados] = useState([]);
 
@@ -117,7 +118,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
       }
     }
 
-    inicializar();
+    inicializar().finally(() => { if (!cancelado) setAuthReady(true); });
     return () => { cancelado = true; };
   }, []);
 
@@ -211,6 +212,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
     <ContextoAutenticacion.Provider
       value={{
         usuario,
+        authReady,
         iniciarSesion,
         iniciarSesionMicrosoft,
         cerrarSesion,

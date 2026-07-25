@@ -20,6 +20,7 @@ export function BarraNavegacion({
   mostrarFiltros = true, onVolverCatalogo,
   heroVisible = true, contenidoMax,
   onScrollChange,
+  splashActivo = false,
 }) {
   const { tema, modoOscuro } = useTheme();
 
@@ -104,7 +105,7 @@ export function BarraNavegacion({
               className="flex items-center gap-2 cursor-pointer shrink-0"
               onClick={onLogoClick}
             >
-              <img src={logoLobo} alt="Logo"               className="w-10 h-10 lg:w-12 lg:h-12 shrink-0" />
+              <img src={logoLobo} alt="Logo" id="navbar-logo" className={`w-10 h-10 lg:w-12 lg:h-12 shrink-0 transition-opacity duration-200 ${splashActivo ? 'opacity-0' : 'opacity-100'}`} />
               <div>
                 <span className={`text-sm sm:text-base lg:text-sm font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
                   UNID

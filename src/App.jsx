@@ -16,10 +16,11 @@ import { PaginaInicio } from './pages/PaginaInicio';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
+import { SplashScreen } from './components/ui/SplashScreen';
 import { NAVBAR_HEIGHT } from './config/layout';
 
 function App() {
-  const { estaAutenticado, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { estaAutenticado, authReady, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,6 +30,7 @@ function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [catalogoKey, setCatalogoKey] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
+  const [splashDone, setSplashDone] = useState(false);
 
   const handleScrollChange = useCallback((isScrolled) => {
     setHeroVisible(!isScrolled);
@@ -74,7 +76,10 @@ function App() {
       className={`min-h-screen font-sans transition-colors duration-300 pb-16 lg:pb-0 lg:pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
       style={{ '--navbar-height': modoOscuro && location.pathname !== '/' ? `${NAVBAR_HEIGHT}px` : '0px' }}
     >
+      <SplashScreen authReady={authReady} clubesLoading={clubesLoading} onFinish={() => setSplashDone(true)} />
+
       <BarraNavegacion
+        splashActivo={!splashDone}
         categoriaActiva={categoriaActiva}
         setCategoriaActiva={setCategoriaActiva}
         estadoActivo={estadoActivo}
