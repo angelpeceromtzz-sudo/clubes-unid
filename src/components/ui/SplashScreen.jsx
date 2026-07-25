@@ -28,6 +28,12 @@ export function SplashScreen({ authReady, clubesLoading, onFinish }) {
   authReadyRef.current = authReady;
   clubesLoadingRef.current = clubesLoading;
 
+  useEffect(() => {
+    if (phase === 'done' && !dismissed.current) {
+      onFinish?.();
+    }
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const dismiss = () => {
     if (dismissed.current) return;
     dismissed.current = true;
