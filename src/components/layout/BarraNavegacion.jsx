@@ -162,7 +162,7 @@ export function BarraNavegacion({
                       <button
                         key={cat}
                         onClick={() => { setCategoriaActiva(cat); setMenuCategoria(false); }}
-                        className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg mx-1 ${tema.dropdownItem} ${tema.text} flex items-center justify-between`}
+                        className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg mx-1 cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center justify-between`}
                         style={{ width: 'calc(100% - 8px)' }}
                       >
                         {cat}
@@ -240,7 +240,7 @@ export function BarraNavegacion({
           <button
             key={cat}
             onClick={() => { setCategoriaActiva(cat); setMenuCategoria(false); }}
-            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg mx-1 ${tema.dropdownItem} ${tema.text} flex items-center justify-between`}
+            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg mx-1 cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center justify-between`}
             style={{ width: 'calc(100% - 8px)' }}
           >
             {cat}

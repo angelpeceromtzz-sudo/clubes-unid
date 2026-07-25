@@ -41,7 +41,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
       <div className="flex items-center justify-around py-2 px-4">
         <button
           onClick={() => { onInicioClick?.(); navigate('/'); }}
-          className={`flex flex-col items-center gap-0.5 transition-colors duration-200 ${!enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
+          className={`flex flex-col items-center gap-0.5 transition-colors duration-200 cursor-pointer ${!enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
         >
           <Icono nombre="home" strokeWidth={2} className="h-5 w-5" />
           <span className="text-[10px] font-medium">Inicio</span>
@@ -50,7 +50,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
         {tieneInscripcionActiva && (
           <button
             onClick={irPanel}
-            className={`flex flex-col items-center gap-0.5 transition-colors duration-200 ${enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
+            className={`flex flex-col items-center gap-0.5 transition-colors duration-200 cursor-pointer ${enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
           >
             <Icono nombre="clipboard" strokeWidth={2} className="h-5 w-5" />
             <span className="text-[10px] font-medium">Mi Club</span>
@@ -59,7 +59,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
 
         <button
           onClick={estaAutenticado ? irPanel : onLoginClick}
-          className={`flex flex-col items-center gap-0.5 transition-colors duration-200 ${estaAutenticado && enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
+          className={`flex flex-col items-center gap-0.5 transition-colors duration-200 cursor-pointer ${estaAutenticado && enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
         >
           {estaAutenticado ? (
             <Icono nombre="profile" strokeWidth={2} className="h-5 w-5" />

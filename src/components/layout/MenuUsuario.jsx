@@ -56,7 +56,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
                   onClick={() => { onDashboardClick(); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                 >
                   <Icono nombre="grid" className="h-4 w-4" strokeWidth={2} />
                   Mi Dashboard
@@ -64,7 +64,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
                   onClick={() => { setModoOscuro((prev) => !prev); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                 >
                   {modoOscuro ? (
                     <Icono nombre="sun" className="h-4 w-4" strokeWidth={2} />
@@ -76,7 +76,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
                   onClick={() => { onAyuda(); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                 >
                   <Icono nombre="help" className="h-4 w-4" strokeWidth={2} />
                   Ayuda
@@ -84,7 +84,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
                   onClick={() => { onLogout(); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                 >
                   <Icono nombre="login" className="h-4 w-4" strokeWidth={2} />
                   Cerrar sesión
@@ -94,7 +94,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
               <>
                 <button
                   onClick={() => { onLoginClick(); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                 >
                   <Icono nombre="logout" className="h-4 w-4" strokeWidth={2} />
                   Iniciar Sesión
@@ -102,7 +102,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
                   onClick={() => { setModoOscuro((prev) => !prev); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                 >
                   {modoOscuro ? (
                     <Icono nombre="sun" className="h-4 w-4" strokeWidth={2} />
@@ -114,7 +114,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
                   onClick={() => { onAyuda(); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                 >
                   <Icono nombre="help" className="h-4 w-4" strokeWidth={2} />
                   Ayuda

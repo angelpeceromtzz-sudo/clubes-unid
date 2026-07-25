@@ -6,6 +6,7 @@ import { FormularioInscripcion } from '../formularios/FormularioInscripcion';
 import { Spinner } from '../ui/Spinner';
 import { api } from '../../services/api';
 import { HeroClub } from './sections/HeroClub';
+import { AprendizajeClub } from './sections/AprendizajeClub';
 import { RequisitosFAQClub } from './sections/RequisitosFAQClub';
 import { HorariosClub } from './sections/HorariosClub';
 import { LugarClub } from './sections/LugarClub';
@@ -98,6 +99,10 @@ export function DetalleClub({ onLoginClick }) {
           tieneInscripcionActiva={tieneInscripcionActiva}
           deshabilitado={deshabilitado}
         />
+
+        <div className="md:hidden">
+          <AprendizajeClub modoOscuro={modoOscuro} />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <LugarClub lugar={club.lugar} modoOscuro={modoOscuro} />

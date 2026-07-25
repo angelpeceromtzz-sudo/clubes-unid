@@ -95,7 +95,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
             <button
               type="button"
               onClick={() => { setListaAbierta(true); setBusquedaClub(''); }}
-              className={`flex items-center gap-2 w-full rounded-xl border px-4 py-3 text-sm transition-colors ${
+              className={`flex items-center gap-2 w-full rounded-xl border px-4 py-3 text-sm transition-colors cursor-pointer ${
                 modoOscuro ? 'bg-amber-400/10 border-amber-400/30 text-amber-400 hover:bg-amber-400/20' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
               }`}
             >
@@ -122,7 +122,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
                 <button
                   type="button"
                   onClick={() => { setClubSeleccionado(''); setListaAbierta(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors cursor-pointer ${
                     !clubSeleccionado
                       ? modoOscuro ? 'bg-amber-400/10 text-amber-400' : 'bg-amber-50 text-amber-700'
                       : modoOscuro ? 'text-slate-400 hover:bg-slate-800/50' : 'text-slate-500 hover:bg-slate-100'
@@ -136,7 +136,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
                       key={c.id_club}
                       type="button"
                       onClick={() => { setClubSeleccionado(String(c.id_club)); setListaAbierta(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-t ${
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors cursor-pointer border-t ${
                         modoOscuro ? 'border-slate-700/50' : 'border-slate-100'
                       } ${
                         clubSeleccionado === String(c.id_club)

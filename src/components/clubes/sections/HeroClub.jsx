@@ -62,10 +62,10 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
           <h1 className={`text-3xl md:text-4xl font-black leading-tight mb-4 ${c.title}`}>
             {club.nombre_club}
           </h1>
-          <p className={`text-base leading-relaxed mb-4 ${c.text}`}>
+          <p className={`text-base leading-relaxed mb-6 ${c.text}`}>
             {club.descripcion}
           </p>
-          <div className="mb-4">
+          <div className="hidden md:block mb-8">
             <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${c.title}`}>
               ¿Qué aprenderás?
             </p>
@@ -85,10 +85,10 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
               onClick={onBotonClick}
               className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
                 !estaAutenticado
-                  ? 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                  ? 'bg-slate-600 text-slate-300 hover:bg-slate-500 cursor-pointer'
                   : deshabilitado || esAdmin || tieneInscripcionActiva
                     ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                    : 'bg-amber-500 hover:bg-amber-400 text-black'
+                    : 'bg-amber-500 hover:bg-amber-400 text-black cursor-pointer'
               }`}
             >
               {botonTexto}
