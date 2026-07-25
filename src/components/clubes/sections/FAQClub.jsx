@@ -15,7 +15,7 @@ export function FAQClub({ modoOscuro }) {
   };
 
   return (
-    <section className={`rounded-2xl border p-6 md:p-8 ${c.bg}`}>
+    <section className={`h-full rounded-2xl border p-6 md:p-8 ${c.bg}`}>
       <div className="flex items-center gap-3 mb-4">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${modoOscuro ? 'bg-amber-500/10' : 'bg-amber-100'}`}>
           <Icono nombre="help-circle" strokeWidth={2} className={`h-5 w-5 ${modoOscuro ? 'text-amber-400' : 'text-amber-600'}`} />

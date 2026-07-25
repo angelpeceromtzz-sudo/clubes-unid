@@ -18,7 +18,7 @@ export function BarraNavegacion({
   menuAbierto, setMenuAbierto, onLogoClick,
   user, onLoginClick, onLogout, onDashboardClick,
   mostrarFiltros = true, onVolverCatalogo,
-  heroVisible = true,
+  heroVisible = true, contenidoMax,
   onScrollChange,
 }) {
   const { tema, modoOscuro } = useTheme();
@@ -76,6 +76,8 @@ export function BarraNavegacion({
 
   const labelCategoria = categoriaActiva === 'Todos' ? 'Categorías' : `Categoría: ${categoriaActiva}`;
 
+  const maxWidthClasses = { '7xl': 'max-w-7xl', '6xl': 'max-w-6xl' };
+
   return (
     <>
       <style>{`
@@ -95,7 +97,7 @@ export function BarraNavegacion({
             : `${tema.headerBg} ${tema.headerBorder}`
         }`}
       >
-      <div className={`w-full px-6 sm:px-8 lg:px-10 xl:px-16 ${mostrarFiltros ? 'py-2.5 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-4 lg:gap-6`}>
+      <div className={`${contenidoMax ? `${maxWidthClasses[contenidoMax]} mx-auto px-6` : 'w-full px-6 sm:px-8 lg:px-10 xl:px-16'} ${mostrarFiltros ? 'py-2.5 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-4 lg:gap-6`}>
         <div className="flex items-center gap-4 md:gap-6">
           {mostrarFiltros ? (
             <div
@@ -174,16 +176,6 @@ export function BarraNavegacion({
             </nav>
           )}
         </div>
-
-        {!mostrarFiltros && (
-          <button
-            onClick={onVolverCatalogo}
-            className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95"
-          >
-            <Icono nombre="arrow-left" className="h-3.5 w-3.5" strokeWidth={2.5} />
-            Volver al Catálogo
-          </button>
-        )}
 
         <div className="flex items-center gap-3 lg:gap-4 ml-auto shrink-0">
           {user && (

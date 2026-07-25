@@ -88,6 +88,7 @@ function App() {
         onDashboardClick={irADashboard}
         mostrarFiltros={mostrarFiltros}
         onVolverCatalogo={irACatalogo}
+        contenidoMax={location.pathname.startsWith('/club/') ? '7xl' : null}
         heroVisible={heroVisible}
         onScrollChange={handleScrollChange}
       />

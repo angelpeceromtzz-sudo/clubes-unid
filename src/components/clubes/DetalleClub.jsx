@@ -6,16 +6,13 @@ import { FormularioInscripcion } from '../formularios/FormularioInscripcion';
 import { Spinner } from '../ui/Spinner';
 import { api } from '../../services/api';
 import { HeroClub } from './sections/HeroClub';
-import { DescripcionClub } from './sections/DescripcionClub';
-import { AprendizajeClub } from './sections/AprendizajeClub';
-import { RequisitosClub } from './sections/RequisitosClub';
+import { RequisitosFAQClub } from './sections/RequisitosFAQClub';
 import { HorariosClub } from './sections/HorariosClub';
 import { LugarClub } from './sections/LugarClub';
 import { PresidenteClub } from './sections/PresidenteClub';
 import { EventosClub } from './sections/EventosClub';
-import { GaleriaClub } from './sections/GaleriaClub';
 import { InfoAdicionalClub } from './sections/InfoAdicionalClub';
-import { FAQClub } from './sections/FAQClub';
+import { PiePagina } from '../layout/PiePagina';
 
 export function DetalleClub({ onLoginClick }) {
   const { id } = useParams();
@@ -102,30 +99,17 @@ export function DetalleClub({ onLoginClick }) {
           deshabilitado={deshabilitado}
         />
 
-        <DescripcionClub club={club} modoOscuro={modoOscuro} />
-
-        <AprendizajeClub modoOscuro={modoOscuro} />
-
-        <RequisitosClub modoOscuro={modoOscuro} />
-
-        <LugarClub lugar={club.lugar} modoOscuro={modoOscuro} />
-
-        <PresidenteClub club={club} modoOscuro={modoOscuro} />
-
-        <HorariosClub
-          club={club}
-          modoOscuro={modoOscuro}
-          esAdmin={esAdmin}
-          esPresidente={usuario?.id_usuario === club.id_presidente}
-        />
-
-        <EventosClub modoOscuro={modoOscuro} />
-
-        <GaleriaClub modoOscuro={modoOscuro} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <LugarClub lugar={club.lugar} modoOscuro={modoOscuro} />
+          <HorariosClub club={club} modoOscuro={modoOscuro} />
+          <EventosClub modoOscuro={modoOscuro} />
+        </div>
 
         <InfoAdicionalClub club={club} modoOscuro={modoOscuro} />
 
-        <FAQClub modoOscuro={modoOscuro} />
+        <PresidenteClub club={club} modoOscuro={modoOscuro} />
+
+        <RequisitosFAQClub modoOscuro={modoOscuro} />
       </div>
 
       {mostrarFormulario && (
@@ -134,6 +118,8 @@ export function DetalleClub({ onLoginClick }) {
           onClose={() => setMostrarFormulario(false)}
         />
       )}
+
+      <PiePagina />
     </>
   );
 }

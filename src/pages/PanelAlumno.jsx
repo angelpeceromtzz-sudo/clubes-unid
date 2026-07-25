@@ -13,6 +13,8 @@ import { SeccionPostulaciones } from '../components/presidente/SeccionPostulacio
 import { usePanelAlumno } from '../hooks/usePanelAlumno';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
+import { NavegacionPanel } from '../components/layout/NavegacionPanel';
+import { ELEMENTOS_NAV_ALUMNO } from '../components/admin/elementosNavegacion';
 import { Alerta } from '../components/ui/Alerta';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 
@@ -24,6 +26,7 @@ export function PanelAlumno() {
   const [dismissMiembroBanner, setDismissMiembroBanner] = useState(() => {
     try { return localStorage.getItem('dismiss_miembro_banner') === 'true'; } catch { return false; }
   });
+  const [vistaAlumno, setVistaAlumno] = useState('mi-club');
 
   function descartarBanner() {
     setDismissMiembroBanner(true);
@@ -78,63 +81,79 @@ export function PanelAlumno() {
   return (
     <ErrorBoundary>
     <RutaProtegida>
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        <div className="mb-8">
-          <EncabezadoPagina
-            titulo={esMiembroOficial ? 'Mi Club' : 'Mis Postulaciones'}
-            subtitulo={`Bienvenido, ${d?.user?.nombre_completo || usuario?.nombre_completo || ''}`}
-          />
-        </div>
-
-        {!esMiembroOficial && d.postulaciones.length > 0 && (
-          <div className="mb-10">
-            <SeccionPostulaciones
-              postulaciones={d.postulaciones}
-              onPostulacionesChange={recargarPostulaciones}
+      {esMiembroOficial ? (
+        <NavegacionPanel
+          elementosNav={ELEMENTOS_NAV_ALUMNO}
+          vistaActiva={vistaAlumno}
+          onVistaChange={setVistaAlumno}
+        >
+          <div className="mb-6 md:mb-8">
+            <EncabezadoPagina
+              titulo="Mi Club"
+              subtitulo={`Bienvenido, ${d?.user?.nombre_completo || usuario?.nombre_completo || ''}`}
             />
           </div>
-        )}
 
-        {d.club && (
-          <div className="mt-10">
-            {!dismissMiembroBanner && (
-              <div className="mb-8 relative">
-                <button
-                  onClick={descartarBanner}
-                  className={`absolute top-3 right-3 p-1 rounded-full transition-colors cursor-pointer z-10 ${modoOscuro ? 'hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-300' : 'hover:bg-emerald-200 text-slate-500 hover:text-emerald-700'}`}
-                  title="No mostrar más"
-                >
-                  <Icono nombre="close" className="h-4 w-4" strokeWidth={2.5} />
-                </button>
-                <Alerta tipo="success">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🎉</span>
-                    <div>
-                      <h2 className={`text-lg font-black uppercase tracking-wider ${modoOscuro ? 'text-emerald-300' : 'text-emerald-700'}`}>
-                        Miembro de {d.club.nombre_club}
-                      </h2>
-                      <p className={`text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Eres miembro oficial de este club
-                      </p>
-                    </div>
+          {!dismissMiembroBanner && (
+            <div className="mb-8 relative">
+              <button
+                onClick={descartarBanner}
+                className={`absolute top-3 right-3 p-1 rounded-full transition-colors cursor-pointer z-10 ${modoOscuro ? 'hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-300' : 'hover:bg-emerald-200 text-slate-500 hover:text-emerald-700'}`}
+                title="No mostrar más"
+              >
+                <Icono nombre="close" className="h-4 w-4" strokeWidth={2.5} />
+              </button>
+              <Alerta tipo="success">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🎉</span>
+                  <div>
+                    <h2 className={`text-lg font-black uppercase tracking-wider ${modoOscuro ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                      Miembro de {d.club.nombre_club}
+                    </h2>
+                    <p className={`text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Eres miembro oficial de este club
+                    </p>
                   </div>
-                </Alerta>
-              </div>
-            )}
+                </div>
+              </Alerta>
+            </div>
+          )}
 
+          {vistaAlumno === 'mi-club' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <InformacionClub club={d.club} />
-                <HorariosClub club={d.club} modoOscuro={modoOscuro} esAdmin={false} esPresidente={false} />
                 <SeccionAvisos club={d.club} esPresidente={false} />
               </div>
               <div className="space-y-8">
                 <SeccionMiembros miembros={d.miembros} club={d.club} />
               </div>
             </div>
+          )}
+
+          {vistaAlumno === 'horarios' && (
+            <HorariosClub club={d.club} modoOscuro={modoOscuro} />
+          )}
+        </NavegacionPanel>
+      ) : (
+        <div className="max-w-6xl mx-auto px-6 py-10">
+          <div className="mb-8">
+            <EncabezadoPagina
+              titulo="Mis Postulaciones"
+              subtitulo={`Bienvenido, ${d?.user?.nombre_completo || usuario?.nombre_completo || ''}`}
+            />
           </div>
-        )}
-      </div>
+
+          {d.postulaciones.length > 0 && (
+            <div className="mb-10">
+              <SeccionPostulaciones
+                postulaciones={d.postulaciones}
+                onPostulacionesChange={recargarPostulaciones}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </RutaProtegida>
     </ErrorBoundary>
   );

@@ -9,7 +9,7 @@ export function LugarClub({ lugar, modoOscuro }) {
   };
 
   return (
-    <section className={`rounded-2xl border p-6 md:p-8 ${c.bg}`}>
+    <section className={`rounded-2xl border p-5 md:p-6 ${c.bg}`}>
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${modoOscuro ? 'bg-amber-500/10' : 'bg-amber-100'}`}>
@@ -21,14 +21,11 @@ export function LugarClub({ lugar, modoOscuro }) {
           Próximamente
         </span>
       </div>
-      <div className={`rounded-xl border-2 border-dashed p-8 md:p-12 text-center ${modoOscuro ? 'border-slate-700 bg-slate-800/30' : 'border-slate-300 bg-slate-50'}`}>
-        <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${modoOscuro ? 'bg-slate-700/50' : 'bg-slate-200'}`}>
-          <Icono nombre="map-pin" strokeWidth={1.5} className={`h-8 w-8 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} />
+      <div className={`rounded-xl border border-dashed p-4 md:p-6 text-center ${modoOscuro ? 'border-slate-700 bg-slate-800/30' : 'border-slate-300 bg-slate-50'}`}>
+        <div className={`w-10 h-10 mx-auto mb-2 rounded-full flex items-center justify-center ${modoOscuro ? 'bg-slate-700/50' : 'bg-slate-200'}`}>
+          <Icono nombre="map-pin" strokeWidth={1.5} className={`h-5 w-5 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} />
         </div>
-        <p className={`text-sm font-bold mb-1 ${c.title}`}>Mapa del club</p>
-        <p className={`text-xs leading-relaxed max-w-md mx-auto ${c.text}`}>
-          Próximamente se mostrará la ubicación detallada del club.
-        </p>
+        <p className={`text-xs ${c.text}`}>Próximamente se mostrará la ubicación del club.</p>
       </div>
     </section>
   );
