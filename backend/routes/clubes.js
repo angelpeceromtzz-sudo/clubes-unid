@@ -423,4 +423,44 @@ router.post('/:id/cerrar-convocatoria', authenticate, requireRole(2), async (req
   }
 });
 
+// Historial de membresía del club (altas y bajas)
+router.get('/:id/historial-membresia', authenticate, requireRole(2, 3), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user.id_rol === 2) {
+      const clubDelPresidente = await pool.query(
+        `SELECT id_club FROM clubes WHERE id_presidente = $1`,
+        [req.user.id]
+      );
+      if (clubDelPresidente.rows.length === 0 || clubDelPresidente.rows[0].id_club !== parseInt(id)) {
+        return res.status(403).json({ error: 'No eres presidente de este club' });
+      }
+    }
+
+    const result = await pool.query(
+      `SELECT
+         i.id_inscripcion,
+         i.id_usuario,
+         u.nombre_completo,
+         u.correo_institucional,
+         i.fecha_inscripcion,
+         i.fecha_baja,
+         i.id_estatus_inscripcion,
+         e.nombre_estatus
+       FROM inscripciones i
+       JOIN usuarios u ON u.id_usuario = i.id_usuario
+       JOIN cat_estatus_inscripciones e ON e.id_estatus_inscripcion = i.id_estatus_inscripcion
+       WHERE i.id_club = $1
+       ORDER BY i.fecha_inscripcion DESC`,
+      [id]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener historial de membresía:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 export default router;

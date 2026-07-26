@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { TimelinePostulacion, CONFIG_ESTATUS } from './TimelinePostulacion';
 import { AvatarInicial } from '../ui/AvatarInicial';
@@ -6,14 +7,32 @@ import { calcularTiempoRestante } from '../../utils/fechas';
 import { InfoConvocatoria } from './InfoConvocatoria';
 import { OfertaCard } from './OfertaCard';
 import { BienvenidoCard } from './BienvenidoCard';
+import { api } from '../../services/api';
+
+const STATUS_CANCELABLES = ['En revisión', 'Preseleccionado', 'Convocado'];
 
 export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo }) {
   const { tema } = useTheme();
+  const [cancelando, setCancelando] = useState(false);
   const conf = CONFIG_ESTATUS[postulacion.status] || CONFIG_ESTATUS['Postulado'];
   const esOferta = postulacion.status === 'Oferta enviada';
   const esFinal = ['Miembro oficial', 'Rechazado'].includes(postulacion.status);
+  const esCancelable = STATUS_CANCELABLES.includes(postulacion.status);
   const tiempoRestante = esOferta ? calcularTiempoRestante(postulacion.fecha_expiracion) : null;
   const cargandoRespuesta = respondiendo[postulacion.id_formulario];
+
+  async function manejarCancelacion() {
+    if (!window.confirm('¿Estás seguro de que quieres cancelar esta postulación?')) return;
+    setCancelando(true);
+    try {
+      await api.cancelarPostulacion(postulacion.id_formulario);
+      if (onRespuesta) onRespuesta(postulacion.id_formulario, 'cancelar');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setCancelando(false);
+    }
+  }
 
   return (
     <div className={`rounded-2xl border overflow-hidden ${tema.isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`}>
@@ -82,6 +101,22 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
                   <>Respondiste el {new Date(postulacion.fecha_respuesta).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</>
                 )}
               </p>
+            )}
+
+            {esCancelable && (
+              <button
+                onClick={manejarCancelacion}
+                disabled={cancelando}
+                className={`mt-3 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  cancelando
+                    ? 'opacity-50 cursor-not-allowed'
+                    : tema.isDark
+                      ? 'text-red-400 hover:bg-red-500/10 border border-red-500/30'
+                      : 'text-red-600 hover:bg-red-50 border border-red-200'
+                }`}
+              >
+                {cancelando ? 'Cancelando...' : 'Cancelar postulación'}
+              </button>
             )}
           </div>
         </div>

@@ -141,6 +141,11 @@ export const api = {
   removeFromClub: (userId) =>
     request(`/inscripciones/${userId}`, { method: 'DELETE' }),
 
+  getHistorialMembresia: (clubId) => request(`/clubes/${clubId}/historial-membresia`),
+
+  bajarMiembro: (userId) =>
+    request(`/inscripciones/${userId}`, { method: 'DELETE' }),
+
   getMisFormularios: () => request('/formularios'),
 
   getSolicitudesPendientes: (clubId) => request(`/formularios/pendientes/${clubId}`),
@@ -233,6 +238,9 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ decision }),
     }),
+
+  cancelarPostulacion: (id) =>
+    request(`/formularios/${id}/cancelar`, { method: 'PATCH' }),
 
   uploadImagen: async (file) => {
     const token = getToken();

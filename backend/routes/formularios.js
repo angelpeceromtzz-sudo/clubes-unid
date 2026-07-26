@@ -18,7 +18,7 @@ const ESTATUS_FLUJO = {
   'En revisión': ['Preseleccionado', 'Rechazado'],
   'Preseleccionado': ['Convocado', 'Rechazado'],
   'Convocado': ['Oferta enviada', 'Rechazado'],
-  'Oferta enviada': [],
+  'Oferta enviada': ['Rechazado'],
   'Miembro oficial': [],
   'Rechazado': [],
 };
@@ -199,8 +199,20 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
         return res.status(400).json({ error: 'Ya enviaste un formulario para este club' });
       }
 
+      // Limpiar ofertas expiradas antes de contar (lazy expiry)
+      await client.query(
+        `UPDATE formularios
+         SET status = 'Rechazado', motivo_rechazo = 'Oferta expirada (72h)'
+         WHERE id_alumno = $1
+           AND status = 'Oferta enviada'
+           AND fecha_expiracion < NOW()`,
+        [req.user.id],
+      );
+
       const totalFormularios = await client.query(
-        'SELECT COUNT(*) as total FROM formularios WHERE id_alumno = $1',
+        `SELECT COUNT(*) as total FROM formularios
+         WHERE id_alumno = $1
+           AND status NOT IN ('Miembro oficial', 'Rechazado')`,
         [req.user.id],
       );
       if (parseInt(totalFormularios.rows[0].total, 10) >= LIMITE_POSTULACIONES) {
@@ -463,6 +475,81 @@ router.put('/:id/bloque', authenticate, requireRole(2), async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error al asignar bloque:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Cancelar postulación (alumno retira su solicitud)
+router.patch('/:id/cancelar', authenticate, requireRole(1), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const formulario = await pool.query(
+      `SELECT f.*, c.id_presidente, c.nombre_club
+       FROM formularios f
+       JOIN clubes c ON c.id_club = f.id_club
+       WHERE f.id_formulario = $1 AND f.id_alumno = $2`,
+      [id, req.user.id],
+    );
+
+    if (formulario.rows.length === 0) {
+      return res.status(404).json({ error: 'El formulario no existe o no te pertenece' });
+    }
+
+    const form = formulario.rows[0];
+    const statusPermitidos = ['En revisión', 'Preseleccionado', 'Convocado', 'Oferta enviada'];
+
+    if (!statusPermitidos.includes(form.status)) {
+      return res.status(400).json({
+        error: `No puedes cancelar una postulación con status "${form.status}"`,
+      });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      await client.query(
+        `UPDATE formularios
+         SET status = 'Rechazado',
+             motivo_rechazo = 'Cancelado por el alumno',
+             fecha_respuesta = NOW()
+         WHERE id_formulario = $1`,
+        [id],
+      );
+
+      await client.query(
+        `UPDATE clubes SET postulaciones_actuales = GREATEST(postulaciones_actuales - 1, 0)
+         WHERE id_club = $1`,
+        [form.id_club],
+      );
+
+      try {
+        await pool.query(
+          `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
+           VALUES ($1, $2, $3, 'presidentes', $4, $5)`,
+          [
+            req.user.id,
+            `Postulación cancelada: ${form.nombre_club}`,
+            `El alumno ${form.nombre_completo} canceló su postulación a "${form.nombre_club}".`,
+            form.id_club,
+            form.id_presidente,
+          ],
+        );
+      } catch (notifErr) {
+        console.error('Error al notificar cancelación:', notifErr);
+      }
+
+      await client.query('COMMIT');
+      res.json({ message: 'Postulación cancelada correctamente', status: 'Rechazado' });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error al cancelar postulación:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

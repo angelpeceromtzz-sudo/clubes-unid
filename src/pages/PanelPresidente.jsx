@@ -9,6 +9,8 @@ import { NavegacionPanel } from '../components/layout/NavegacionPanel';
 import { ELEMENTOS_NAV_PRESIDENTE } from '../components/admin/elementosNavegacion';
 import { EstadoVacio } from '../components/presidente/EmptyState';
 import { VistaConvocatorias } from '../components/presidente/VistaConvocatorias';
+import { VistaMiembros } from '../components/presidente/VistaMiembros';
+import { VistaHistorial } from '../components/presidente/VistaHistorial';
 import { HorariosClub } from '../components/clubes/sections/HorariosClub';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -69,6 +71,14 @@ export function PanelPresidente() {
 
           {d.vistaActiva === 'convocatorias' && (
             <VistaConvocatorias club={d.club} />
+          )}
+
+          {d.vistaActiva === 'miembros' && (
+            <VistaMiembros club={d.club} />
+          )}
+
+          {d.vistaActiva === 'historial' && (
+            <VistaHistorial club={d.club} />
           )}
 
           {d.vistaActiva === 'horarios' && false && (
