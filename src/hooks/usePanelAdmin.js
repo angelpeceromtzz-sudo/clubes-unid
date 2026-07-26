@@ -1,6 +1,7 @@
 /* Hook del panel de administración: orquesta sub-hooks de usuarios, clubes, historial y feedback. */
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { api } from '../services/api';
 import { useFeedback } from './useFeedback';
 import { useAdminClubes } from './useAdminClubes';
 import { useAdminUsuarios } from './useAdminUsuarios';
@@ -10,12 +11,32 @@ import { useAdminHeroDiapositivas } from './useAdminHeroDiapositivas';
 export function usePanelAdmin(usuario) {
   const { esOscuro, cardCls, tableBg, thCls, tdCls, tdTitle, sbBg, sbItemBase, sbItemActive, sbItemInactive, selectCls, inputCls, labelCls, tema } = useTheme();
   const [vistaActiva, setVistaActiva] = useState('resumen');
+  const [dashboardData, setDashboardData] = useState(null);
+  const [cargandoDashboard, setCargandoDashboard] = useState(true);
 
   const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
   const clubes = useAdminClubes(setFeedback, setErrorFeedback);
   const usuarios = useAdminUsuarios(clubes.refetchClubes, setFeedback, setErrorFeedback);
   const historial = useAdminHistorial(vistaActiva === 'historial');
   const heroDiapositivas = useAdminHeroDiapositivas(setFeedback, setErrorFeedback);
+
+  const cargarDashboard = useCallback(async () => {
+    setCargandoDashboard(true);
+    try {
+      const data = await api.get('/admin/dashboard-data');
+      setDashboardData(data);
+    } catch {
+      setDashboardData(null);
+    } finally {
+      setCargandoDashboard(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (vistaActiva === 'resumen') {
+      cargarDashboard();
+    }
+  }, [vistaActiva, cargarDashboard]);
 
   return {
     vistaActiva,
@@ -48,6 +69,8 @@ export function usePanelAdmin(usuario) {
     clubesActivos: clubes.clubesActivos,
     clubesActivosList: clubes.clubesActivosList,
     totalInscripciones: usuarios.totalInscripciones,
+    dashboardData,
+    cargandoDashboard,
     cardCls,
     tableBg,
     thCls,

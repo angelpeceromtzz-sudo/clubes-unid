@@ -32,3 +32,6 @@ dist-ssr
 # Documents
 *.docx
 clubes-unid-backup/
+
+# Graphify
+graphify-out/

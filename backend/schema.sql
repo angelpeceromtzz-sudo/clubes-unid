@@ -270,15 +270,41 @@ CREATE INDEX IF NOT EXISTS idx_historial_postulacion_formulario ON historial_pos
 CREATE INDEX IF NOT EXISTS idx_historial_postulacion_fecha ON historial_postulacion(fecha_cambio DESC);
 
 CREATE TABLE IF NOT EXISTS horarios_club (
-    id_horario SERIAL PRIMARY KEY,
-    id_club INT NOT NULL,
-    fecha DATE NOT NULL,
-    hora TIME NOT NULL,
-    lugar VARCHAR(255) NOT NULL,
+    id_horario    SERIAL PRIMARY KEY,
+    id_club       INT NOT NULL,
+    dia_semana    SMALLINT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
+    hora_inicio   TIME NOT NULL,
+    hora_fin      TIME NOT NULL,
+    lugar         VARCHAR(255) NOT NULL,
     ubicacion_maps VARCHAR(500) DEFAULT '',
+    descripcion   TEXT DEFAULT '',
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_horario_club FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE CASCADE
+    CONSTRAINT fk_horario_club FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE CASCADE,
+    CONSTRAINT chk_hora_valida CHECK (hora_fin > hora_inicio)
 );
+
+CREATE INDEX IF NOT EXISTS idx_horarios_club_id ON horarios_club(id_club);
+
+-- Migración: convertir horarios_club de eventos puntuales a horario semanal recurrente
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'horarios_club' AND column_name = 'fecha'
+  ) THEN
+    TRUNCATE TABLE horarios_club;
+    ALTER TABLE horarios_club DROP CONSTRAINT IF EXISTS fk_horario_club;
+    ALTER TABLE horarios_club DROP COLUMN IF EXISTS fecha;
+    ALTER TABLE horarios_club DROP COLUMN IF EXISTS hora;
+    ALTER TABLE horarios_club ADD COLUMN dia_semana   SMALLINT NOT NULL DEFAULT 1 CHECK (dia_semana BETWEEN 0 AND 6);
+    ALTER TABLE horarios_club ADD COLUMN hora_inicio  TIME NOT NULL DEFAULT '09:00';
+    ALTER TABLE horarios_club ADD COLUMN hora_fin     TIME NOT NULL DEFAULT '11:00';
+    ALTER TABLE horarios_club ADD COLUMN descripcion  TEXT DEFAULT '';
+    ALTER TABLE horarios_club ADD CONSTRAINT fk_horario_club FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE CASCADE;
+    ALTER TABLE horarios_club ADD CONSTRAINT chk_hora_valida CHECK (hora_fin > hora_inicio);
+    RAISE NOTICE 'Migración horarios_club completada: convertido a horario semanal recurrente';
+  END IF;
+END $$;
 
 -- ============================================================
 -- VISTAS

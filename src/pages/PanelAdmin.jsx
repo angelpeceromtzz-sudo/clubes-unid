@@ -7,7 +7,7 @@ import { usePanelAdmin } from '../hooks/usePanelAdmin';
 import { NavegacionPanel } from '../components/layout/NavegacionPanel';
 import { ELEMENTOS_NAV_ADMIN } from '../components/admin/elementosNavegacion';
 import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
-import { TarjetasEstadisticas } from '../components/admin/TarjetasEstadisticas';
+import { DashboardAdmin } from '../components/admin/DashboardAdmin';
 import { BarraBusquedaUsuarios } from '../components/admin/BarraBusquedaUsuarios';
 import { TablaUsuarios } from '../components/admin/TablaUsuarios';
 import { TablaClubes } from '../components/admin/TablaClubes';
@@ -19,7 +19,7 @@ import { ModalPasswordAdmin } from '../components/admin/ModalPasswordAdmin';
 import { SeccionDiapositivas } from '../components/admin/SeccionDiapositivas';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
-import { Icono } from '../components/ui/Icono';
+import { formatearNombre } from '../utils/formato';
 
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
@@ -42,43 +42,50 @@ export function PanelAdmin() {
         onVistaChange={d.setVistaActiva}
       >
         <div className="mb-6 md:mb-8">
-            <EncabezadoPagina titulo="Panel de Administración" subtitulo={`Bienvenido, ${d.user.nombre_completo}`} />
+            <EncabezadoPagina titulo="Panel de Administración" subtitulo={`Bienvenido, ${formatearNombre(d.user.nombre_completo)}`} />
           </div>
 
           <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
 
           {d.vistaActiva === 'resumen' && (
-            <TarjetasEstadisticas
+            <DashboardAdmin
               totalAlumnos={d.totalAlumnos}
               clubesActivos={d.clubesActivos}
               totalInscripciones={d.totalInscripciones}
+              solicitudesPendientes={d.dashboardData?.solicitudesPendientes}
+              cargandoDashboard={d.cargandoDashboard}
+              inscripciones={d.dashboardData?.ultimasInscripciones}
+              inscripcionesPorMes={d.dashboardData?.inscripcionesPorMes}
+              clubes={d.clubes}
+              historial={d.historial}
+              historialLoading={d.historialLoading}
             />
           )}
 
           {d.vistaActiva === 'usuarios' && (
             <div>
-              <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                <div className="flex-1">
-                  <BarraBusquedaUsuarios busqueda={d.busqueda} onChange={d.setBusqueda} />
+              <div className="flex flex-col gap-3 mb-4">
+                <BarraBusquedaUsuarios busqueda={d.busqueda} onChange={d.setBusqueda} />
+                <div className="flex gap-2">
+                  <select
+                    value={d.filtroRol}
+                    onChange={(e) => d.setFiltroRol(e.target.value)}
+                    className={`flex-1 sm:flex-none px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-amber-400/50 ${d.selectCls}`}
+                  >
+                    <option value="">Todos los roles</option>
+                    <option value="1">Alumnos</option>
+                    <option value="2">Presidentes</option>
+                    <option value="3">Admins</option>
+                    <option value="4">Rectoría</option>
+                  </select>
+                  <button
+                    onClick={d.abrirModalCrearUsuario}
+                    className="flex-1 sm:flex-none bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                  >
+                    <span className="text-lg leading-none">+</span>
+                    Crear Usuario
+                  </button>
                 </div>
-                <select
-                  value={d.filtroRol}
-                  onChange={(e) => d.setFiltroRol(e.target.value)}
-                  className={`px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-amber-400/50 self-start ${d.selectCls}`}
-                >
-                  <option value="">Todos los roles</option>
-                  <option value="1">Alumnos</option>
-                  <option value="2">Presidentes</option>
-                  <option value="3">Admins</option>
-                  <option value="4">Rectoría</option>
-                </select>
-                <button
-                  onClick={d.abrirModalCrearUsuario}
-                  className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center gap-2 shrink-0"
-                >
-                  <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
-                  Crear Usuario
-                </button>
               </div>
               <TablaUsuarios
                 usuarios={d.usuariosFiltrados}
@@ -100,7 +107,11 @@ export function PanelAdmin() {
             <div>
               <div className="mb-4">
                 <div className="relative">
-                  <Icono nombre="search" strokeWidth={2} className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${d.isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                  <span className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${d.isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </span>
                   <input
                     type="text"
                     value={d.busquedaClubes}

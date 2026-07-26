@@ -81,7 +81,7 @@ export function PanelPresidente() {
             <VistaHistorial club={d.club} />
           )}
 
-          {d.vistaActiva === 'horarios' && false && (
+          {d.vistaActiva === 'horarios' && (
             <HorariosClub
               club={d.club}
               modoOscuro={d.isDark}

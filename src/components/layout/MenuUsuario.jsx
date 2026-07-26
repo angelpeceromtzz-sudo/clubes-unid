@@ -23,7 +23,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
           <div className="w-8 h-8 rounded-full bg-amber-500 lg:ring-2 lg:ring-[#0b111e]/60 flex items-center justify-center text-white font-bold text-sm">
             {user.nombre_completo.charAt(0)}
           </div>
-          <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${menuAbierto ? 'rotate-180' : ''} ${tema.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${menuAbierto ? 'rotate-180' : ''} ${modoOscuro ? 'text-white' : tema.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
@@ -31,7 +31,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
 
       <button
         onClick={() => { setMenuAbierto((prev) => !prev); }}
-        className={`p-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${tema.iconColor} hover:text-amber-400 ${modoOscuro ? 'md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : ''} ${user ? 'lg:hidden' : ''}`}
+        className={`p-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${modoOscuro ? 'text-white hover:text-amber-400 md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : `${tema.iconColor} hover:text-amber-400`} ${user ? 'lg:hidden' : ''}`}
         aria-label="Menú"
       >
         {menuAbierto ? (

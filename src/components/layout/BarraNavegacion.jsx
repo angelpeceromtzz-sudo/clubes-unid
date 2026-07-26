@@ -121,7 +121,7 @@ export function BarraNavegacion({
               className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95"
             >
               <Icono nombre="arrow-left" className="h-3.5 w-3.5" strokeWidth={2.5} />
-              Volver
+              Volver al Portal
             </button>
           )}
 
