@@ -5,7 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 export function BarraBusquedaUsuarios({ busqueda, onChange }) {
   const { modoOscuro } = useTheme();
   return (
-    <div className="relative mb-4">
+    <div className="relative flex-1">
       <Icono nombre="search" strokeWidth={2} className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} />
       <input
         type="text"

@@ -7,12 +7,10 @@ CREATE TABLE IF NOT EXISTS diapositivas_hero (
     titulo              VARCHAR(200) NOT NULL,
     subtitulo           VARCHAR(300),
     url_imagen          VARCHAR(500) NOT NULL,
-    alineacion          VARCHAR(10) NOT NULL DEFAULT 'izquierda',
     orden               INT NOT NULL DEFAULT 0,
     activa              BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_alineacion CHECK (alineacion IN ('izquierda', 'centro', 'derecha'))
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================
@@ -77,10 +75,10 @@ CREATE TRIGGER trg_proteger_ultima_diapositiva
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM diapositivas_hero LIMIT 1) THEN
-        INSERT INTO diapositivas_hero (titulo, subtitulo, url_imagen, alineacion, orden, activa) VALUES
-            ('Bienvenidos a la manada',           NULL, 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=1470&auto=format&fit=crop', 'derecha',   1, TRUE),
-            ('Gala Cultural — Auditorio Principal', NULL, 'https://images.unsplash.com/photo-1526470608269-f658cec19927?q=80&w=1470&auto=format&fit=crop', 'izquierda', 2, TRUE),
-            ('Exposición Anual de Artes Plásticas', NULL, 'https://images.unsplash.com/photo-1529543544282-eaaf510c6c15?q=80&w=1470&auto=format&fit=crop', 'derecha',   3, TRUE),
-            ('Torneo Nacional de Esports 2025',    NULL, 'https://images.unsplash.com/photo-1575361204480-a430a8e7eae0?q=80&w=1471&auto=format&fit=crop', 'izquierda', 4, TRUE);
+        INSERT INTO diapositivas_hero (titulo, subtitulo, url_imagen, orden, activa) VALUES
+            ('Bienvenidos a la manada',           NULL, 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=1470&auto=format&fit=crop', 1, TRUE),
+            ('Gala Cultural — Auditorio Principal', NULL, 'https://images.unsplash.com/photo-1526470608269-f658cec19927?q=80&w=1470&auto=format&fit=crop', 2, TRUE),
+            ('Exposición Anual de Artes Plásticas', NULL, 'https://images.unsplash.com/photo-1529543544282-eaaf510c6c15?q=80&w=1470&auto=format&fit=crop', 3, TRUE),
+            ('Torneo Nacional de Esports 2025',    NULL, 'https://images.unsplash.com/photo-1575361204480-a430a8e7eae0?q=80&w=1471&auto=format&fit=crop', 4, TRUE);
     END IF;
 END $$;

@@ -1,5 +1,5 @@
 /* Página de inicio con catálogo de clubes, hero. Muestra alerta si no hay sesión iniciada. */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -16,6 +16,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
   const navigate = useNavigate();
   const { estaAutenticado } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();
+  const [heroListo, setHeroListo] = useState(false);
 
   const clubesOrdenados = useMemo(() => {
     return [...clubes].sort((a, b) => {
@@ -52,7 +53,12 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
 
   return (
     <>
-      <Heroe />
+      {!heroListo && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0b111e]">
+          <Spinner size="lg" color="border-amber-400" />
+        </div>
+      )}
+      <Heroe onReady={() => setHeroListo(true)} />
       <main id="catalogo" className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 py-12 pb-24 md:pb-12">
         <div className="mb-10">
           <h2 className={`text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>

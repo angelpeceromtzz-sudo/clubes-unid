@@ -1,13 +1,15 @@
 /* Hook para gestión de banners principales: CRUD, filtros y modal de creación/edición. */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
+
+const MAX_BANNERS = 6;
 
 export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
   const [diapositivas, setDiapositivas] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState({ titulo: '', subtitulo: '', url_imagen: '', alineacion: 'izquierda', orden: '0', activa: true });
+  const [form, setForm] = useState({ titulo: '', subtitulo: '', url_imagen: '', orden: '1', activa: true });
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -31,6 +33,19 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
       : diapositivas;
   })();
 
+  const posicionesDisponibles = useMemo(() => {
+    const ocupadas = new Set(
+      diapositivas
+        .filter((d) => !editando || d.id_diapositiva !== editando.id_diapositiva)
+        .map((d) => d.orden)
+    );
+    const disponibles = [];
+    for (let i = 1; i <= MAX_BANNERS; i++) {
+      if (!ocupadas.has(i)) disponibles.push(i);
+    }
+    return disponibles;
+  }, [diapositivas, editando]);
+
   const refetch = useCallback(async () => {
     try {
       const actualizadas = await api.getDiapositivasHeroAdmin();
@@ -41,18 +56,22 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
   }, []);
 
   const abrirModalCrear = useCallback(() => {
-    setForm({ titulo: '', subtitulo: '', url_imagen: '', alineacion: 'izquierda', orden: '0', activa: true });
+    const ocupadas = new Set(diapositivas.map((d) => d.orden));
+    let siguienteOrden = 1;
+    for (let i = 1; i <= MAX_BANNERS; i++) {
+      if (!ocupadas.has(i)) { siguienteOrden = i; break; }
+    }
+    setForm({ titulo: '', subtitulo: '', url_imagen: '', orden: String(siguienteOrden), activa: true });
     setEditando(null);
     setErrorModal('');
     setShowModal(true);
-  }, []);
+  }, [diapositivas]);
 
   const abrirModalEditar = useCallback((d) => {
     setForm({
       titulo: d.titulo,
       subtitulo: d.subtitulo || '',
       url_imagen: d.url_imagen || '',
-      alineacion: d.alineacion || 'izquierda',
       orden: String(d.orden ?? 0),
       activa: d.activa,
     });
@@ -104,7 +123,6 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
         titulo: form.titulo,
         subtitulo: form.subtitulo || null,
         url_imagen: form.url_imagen || null,
-        alineacion: form.alineacion,
         orden: parseInt(form.orden, 10) || 0,
         activa: form.activa,
       };
@@ -169,5 +187,7 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
     pendienteConfirmacion,
     confirmarPendiente,
     cancelarPendiente,
+    posicionesDisponibles,
+    maxBanners: MAX_BANNERS,
   };
 }

@@ -65,28 +65,26 @@ export function PanelAdmin() {
 
           {d.vistaActiva === 'usuarios' && (
             <div>
-              <div className="flex flex-col gap-3 mb-4">
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
                 <BarraBusquedaUsuarios busqueda={d.busqueda} onChange={d.setBusqueda} />
-                <div className="flex gap-2">
-                  <select
-                    value={d.filtroRol}
-                    onChange={(e) => d.setFiltroRol(e.target.value)}
-                    className={`flex-1 sm:flex-none px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-amber-400/50 ${d.selectCls}`}
-                  >
-                    <option value="">Todos los roles</option>
-                    <option value="1">Alumnos</option>
-                    <option value="2">Presidentes</option>
-                    <option value="3">Admins</option>
-                    <option value="4">Rectoría</option>
-                  </select>
-                  <button
-                    onClick={d.abrirModalCrearUsuario}
-                    className="flex-1 sm:flex-none bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0"
-                  >
-                    <span className="text-lg leading-none">+</span>
-                    Crear Usuario
-                  </button>
-                </div>
+                <select
+                  value={d.filtroRol}
+                  onChange={(e) => d.setFiltroRol(e.target.value)}
+                  className={`flex-1 sm:flex-none px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-amber-400/50 ${d.selectCls}`}
+                >
+                  <option value="">Todos los roles</option>
+                  <option value="1">Alumnos</option>
+                  <option value="2">Presidentes</option>
+                  <option value="3">Admins</option>
+                  <option value="4">Rectoría</option>
+                </select>
+                <button
+                  onClick={d.abrirModalCrearUsuario}
+                  className="flex-1 sm:flex-none bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                >
+                  <span className="text-lg leading-none">+</span>
+                  Crear Usuario
+                </button>
               </div>
               <TablaUsuarios
                 usuarios={d.usuariosFiltrados}
@@ -106,8 +104,8 @@ export function PanelAdmin() {
 
           {d.vistaActiva === 'clubes' && (
             <div>
-              <div className="mb-4">
-                <div className="relative">
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="relative flex-1">
                   <span className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${d.isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -125,6 +123,13 @@ export function PanelAdmin() {
                     }`}
                   />
                 </div>
+                <button
+                  onClick={d.abrirModalCrear}
+                  className="flex-1 sm:flex-none bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                >
+                  <span className="text-lg leading-none">+</span>
+                  Agregar Nuevo Club
+                </button>
               </div>
               <TablaClubes
                 clubes={d.clubesFiltrados}
@@ -183,6 +188,8 @@ export function PanelAdmin() {
               guardar={d.hero.guardar}
               handleFormChange={d.hero.handleFormChange}
               subirImagen={d.hero.subirImagen}
+              posicionesDisponibles={d.hero.posicionesDisponibles}
+              maxBanners={d.hero.maxBanners}
             />
           )}
 

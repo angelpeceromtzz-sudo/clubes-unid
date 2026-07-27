@@ -251,12 +251,10 @@ CREATE TABLE IF NOT EXISTS diapositivas_hero (
     titulo VARCHAR(200) NOT NULL,
     subtitulo VARCHAR(300),
     url_imagen VARCHAR(500) NOT NULL,
-    alineacion VARCHAR(10) NOT NULL DEFAULT 'izquierda',
     orden INT NOT NULL DEFAULT 0,
     activa BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_alineacion CHECK (alineacion IN ('izquierda', 'centro', 'derecha'))
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS historial_postulacion (

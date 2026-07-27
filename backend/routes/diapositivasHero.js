@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id_diapositiva, titulo, subtitulo, url_imagen,
-              alineacion, orden, activa, fecha_creacion, fecha_actualizacion
+              orden, activa, fecha_creacion, fecha_actualizacion
        FROM diapositivas_hero
        WHERE activa = TRUE
        ORDER BY orden ASC`
@@ -45,7 +45,7 @@ router.get('/admin', authenticate, requireRole(3), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id_diapositiva, titulo, subtitulo, url_imagen,
-              alineacion, orden, activa, fecha_creacion, fecha_actualizacion
+              orden, activa, fecha_creacion, fecha_actualizacion
        FROM diapositivas_hero
        ORDER BY orden ASC`
     );
@@ -56,20 +56,27 @@ router.get('/admin', authenticate, requireRole(3), async (req, res) => {
   }
 });
 
+const MAX_BANNERS = 6;
+
 // Crea una diapositiva — admin
 router.post('/', authenticate, requireRole(3), async (req, res) => {
   try {
-    const { titulo, subtitulo, url_imagen, alineacion, orden, activa } = req.body;
+    const { titulo, subtitulo, url_imagen, orden, activa } = req.body;
 
     if (!titulo || !url_imagen) {
       return res.status(400).json({ error: 'Título e imagen son obligatorios' });
     }
 
+    const ordenNum = parseInt(orden, 10) || 1;
+    if (ordenNum < 1 || ordenNum > MAX_BANNERS) {
+      return res.status(400).json({ error: `El orden debe estar entre 1 y ${MAX_BANNERS}` });
+    }
+
     const result = await pool.query(
-      `INSERT INTO diapositivas_hero (titulo, subtitulo, url_imagen, alineacion, orden, activa)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id_diapositiva, titulo, subtitulo, url_imagen, alineacion, orden, activa, fecha_creacion, fecha_actualizacion`,
-      [titulo, subtitulo || null, url_imagen, alineacion || 'izquierda', orden || 0, activa !== false]
+      `INSERT INTO diapositivas_hero (titulo, subtitulo, url_imagen, orden, activa)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id_diapositiva, titulo, subtitulo, url_imagen, orden, activa, fecha_creacion, fecha_actualizacion`,
+      [titulo, subtitulo || null, url_imagen, ordenNum, activa !== false]
     );
 
     const diapositiva = result.rows[0];
@@ -81,7 +88,7 @@ router.post('/', authenticate, requireRole(3), async (req, res) => {
       descripcion: `${req.user.nombre_completo} creó la diapositiva "${titulo}"`,
       entidadTipo: 'diapositiva_hero',
       entidadId: diapositiva.id_diapositiva,
-      detalles: { titulo, alineacion: alineacion || 'izquierda' },
+      detalles: { titulo },
     });
 
     res.status(201).json(diapositiva);
@@ -95,7 +102,14 @@ router.post('/', authenticate, requireRole(3), async (req, res) => {
 router.put('/:id', authenticate, requireRole(3), async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, subtitulo, url_imagen, alineacion, orden, activa } = req.body;
+    const { titulo, subtitulo, url_imagen, orden, activa } = req.body;
+
+    if (orden !== undefined) {
+      const ordenNum = parseInt(orden, 10);
+      if (isNaN(ordenNum) || ordenNum < 1 || ordenNum > MAX_BANNERS) {
+        return res.status(400).json({ error: `El orden debe estar entre 1 y ${MAX_BANNERS}` });
+      }
+    }
 
     const actual = await pool.query(
       'SELECT url_imagen FROM diapositivas_hero WHERE id_diapositiva = $1',
@@ -113,12 +127,11 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
        SET titulo      = COALESCE($1, titulo),
            subtitulo   = COALESCE($2, subtitulo),
            url_imagen  = COALESCE($3, url_imagen),
-           alineacion  = COALESCE($4, alineacion),
-           orden       = COALESCE($5, orden),
-           activa      = COALESCE($6, activa)
-       WHERE id_diapositiva = $7
-       RETURNING id_diapositiva, titulo, subtitulo, url_imagen, alineacion, orden, activa, fecha_creacion, fecha_actualizacion`,
-      [titulo, subtitulo, url_imagen, alineacion, orden, activa, id]
+           orden       = COALESCE($4, orden),
+           activa      = COALESCE($5, activa)
+       WHERE id_diapositiva = $6
+       RETURNING id_diapositiva, titulo, subtitulo, url_imagen, orden, activa, fecha_creacion, fecha_actualizacion`,
+      [titulo, subtitulo, url_imagen, orden, activa, id]
     );
 
     if (url_imagen && url_imagen !== urlAnterior) {
@@ -132,7 +145,7 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
       descripcion: `${req.user.nombre_completo} actualizó la diapositiva ID ${id}`,
       entidadTipo: 'diapositiva_hero',
       entidadId: parseInt(id),
-      detalles: { titulo, alineacion, activa },
+      detalles: { titulo, activa },
     });
 
     res.json(result.rows[0]);

@@ -12,15 +12,8 @@ export function TablaClubes({
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls, tema } = useTheme();
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4">
         <p className={`text-sm ${tema.subtitle}`}>{clubes.length} clubes registrados</p>
-        <button
-          onClick={onCrear}
-          className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-2.5 transition-all duration-200 cursor-pointer active:scale-95 flex items-center gap-2"
-        >
-          <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
-          Agregar Nuevo Club
-        </button>
       </div>
 
       {/* Desktop - tabla */}

@@ -27,6 +27,8 @@ export function SeccionDiapositivas({
   guardar,
   handleFormChange,
   subirImagen,
+  posicionesDisponibles,
+  maxBanners,
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, inputCls, labelCls, tema } = useTheme();
   const fileInputRef = useRef(null);
@@ -44,21 +46,13 @@ export function SeccionDiapositivas({
     }
   };
 
+  const limiteAlcanzado = !editando && posicionesDisponibles.length === 0;
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className={`text-sm ${tema.subtitle}`}>{diapositivas.length} banners registrados</p>
-        <button
-          onClick={abrirModalCrear}
-          className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-2.5 transition-all duration-200 cursor-pointer active:scale-95 flex items-center gap-2"
-        >
-          <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
-          Agregar Banner
-        </button>
-      </div>
-
-      <div className="mb-4">
-        <div className="relative">
+      <p className={`text-sm mb-3 ${tema.subtitle}`}>{diapositivas.length} de {maxBanners} banners registrados</p>
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
           <Icono nombre="search" strokeWidth={2} className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} />
           <input
             type="text"
@@ -72,7 +66,24 @@ export function SeccionDiapositivas({
             }`}
           />
         </div>
+        <button
+          onClick={abrirModalCrear}
+          disabled={limiteAlcanzado}
+          className={`flex-1 sm:flex-none font-black text-xs uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0 ${
+            limiteAlcanzado
+              ? 'bg-slate-600 text-slate-400 cursor-not-allowed active:scale-100'
+              : 'bg-amber-400 hover:bg-amber-500 text-[#0e162c]'
+          }`}
+        >
+          <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
+          Agregar Banner
+        </button>
       </div>
+      {limiteAlcanzado && (
+        <p className={`text-xs mb-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
+          Límite de {maxBanners} banners alcanzado. Elimina uno para agregar otro.
+        </p>
+      )}
 
       {/* Desktop - tabla */}
       <div className={`${tableBg} rounded-2xl overflow-hidden hidden md:block`}>
@@ -84,7 +95,6 @@ export function SeccionDiapositivas({
                 <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Imagen</th>
                 <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Título</th>
                 <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Orden</th>
-                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Alineación</th>
                 <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Estado</th>
                 <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acciones</th>
               </tr>
@@ -104,7 +114,6 @@ export function SeccionDiapositivas({
                   </td>
                   <td className={`px-5 py-4 font-medium ${tdTitle}`}>{d.titulo}</td>
                   <td className={`px-5 py-4 ${tdCls}`}>{d.orden}</td>
-                  <td className={`px-5 py-4 ${tdCls}`}>{d.alineacion}</td>
                   <td className="px-5 py-4">
                     <Badge texto={d.activa ? 'Activa' : 'Inactiva'} color={d.activa ? 'emerald' : 'slate'} size="md" />
                   </td>
@@ -157,7 +166,6 @@ export function SeccionDiapositivas({
                 <p className={`text-sm font-semibold truncate ${tdTitle}`}>{d.titulo}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className={`text-[10px] ${tdCls}`}>Orden: {d.orden}</span>
-                  <span className={`text-[10px] ${tdCls}`}>{d.alineacion}</span>
                 </div>
               </div>
               <Badge texto={d.activa ? 'Activa' : 'Inactiva'} color={d.activa ? 'emerald' : 'slate'} size="sm" />
@@ -211,15 +219,13 @@ export function SeccionDiapositivas({
           <CampoTexto label="Subtítulo" name="subtitulo" value={form.subtitulo} onChange={handleFormChange} placeholder="Texto secundario (opcional)" />
 
           <div>
-            <label className={labelCls}>Alineación del texto</label>
-            <select name="alineacion" value={form.alineacion} onChange={handleFormChange} className={inputCls}>
-              <option value="izquierda">Izquierda</option>
-              <option value="centro">Centro</option>
-              <option value="derecha">Derecha</option>
+            <label className={labelCls}>Orden</label>
+            <select name="orden" value={form.orden} onChange={handleFormChange} className={inputCls}>
+              {posicionesDisponibles.map((pos) => (
+                <option key={pos} value={pos}>Posición {pos}</option>
+              ))}
             </select>
           </div>
-
-          <CampoTexto label="Orden" name="orden" value={form.orden} onChange={handleFormChange} type="number" placeholder="0" />
 
           <div>
             <label className={labelCls}>Imagen <span className="text-red-400">*</span></label>

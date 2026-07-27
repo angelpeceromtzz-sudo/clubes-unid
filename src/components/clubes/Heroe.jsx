@@ -4,15 +4,31 @@ import { Icono } from '../ui/Icono';
 import { api } from '../../services/api';
 import { obtenerUrlImagen } from '../../utils/imagen';
 
-export function Heroe() {
+export function Heroe({ onReady }) {
   const [diapositivas, setDiapositivas] = useState([]);
   const [slideActual, setSlideActual] = useState(0);
   const temporizadorRef = useRef(null);
+  const imagenesListas = useRef(false);
 
   useEffect(() => {
     api.getDiapositivasHero()
-      .then(setDiapositivas)
-      .catch(() => setDiapositivas([]));
+      .then((data) => {
+        setDiapositivas(data);
+        if (data.length > 0 && !imagenesListas.current) {
+          const img = new Image();
+          img.onload = () => {
+            imagenesListas.current = true;
+            onReady?.();
+          };
+          img.src = obtenerUrlImagen(data[0].url_imagen);
+        } else {
+          onReady?.();
+        }
+      })
+      .catch(() => {
+        setDiapositivas([]);
+        onReady?.();
+      });
   }, []);
 
   const total = diapositivas.length;
@@ -42,7 +58,11 @@ export function Heroe() {
     return () => clearInterval(temporizadorRef.current);
   }, [total]);
 
-  if (total === 0) return null;
+  if (total === 0) return (
+    <section id="hero" className="w-full">
+      <div className="min-h-[200px] sm:min-h-[320px] lg:aspect-[21/9] lg:min-h-[400px] max-h-[600px]" />
+    </section>
+  );
 
   /*
    * Imagen hero recomendada para el panel admin:
