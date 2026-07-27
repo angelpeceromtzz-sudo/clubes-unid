@@ -17,6 +17,7 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   const [modalAdmin, setModalAdmin] = useState({ show: false, targetUser: null, accion: '' });
   const [enviandoAdmin, setEnviandoAdmin] = useState(false);
   const [errorAdmin, setErrorAdmin] = useState('');
+  const [pendienteConfirmacion, setPendienteConfirmacion] = useState(null);
 
   useEffect(() => {
     api.getUsuarios()
@@ -62,15 +63,8 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   }, [setFeedback, setErrorFeedback]);
 
   const handleRemoveFromClub = useCallback(async (userId) => {
-    if (!window.confirm('¿Estás seguro de dar de baja a este alumno de su club?')) return;
-    try {
-      await api.removeFromClub(userId);
-      const actualizados = await api.getUsuarios();
-      setUsuarios(actualizados);
-    } catch (err) {
-      setErrorFeedback(err.message);
-    }
-  }, [setErrorFeedback]);
+    setPendienteConfirmacion({ tipo: 'bajaAlumno', userId });
+  }, []);
 
   const handleAsignarClub = useCallback(async (userId, clubId) => {
     setAsignando((prev) => ({ ...prev, [userId]: true }));
@@ -111,16 +105,8 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   }, [refetchClubes, setFeedback, setErrorFeedback]);
 
   const handleEliminarUsuario = useCallback(async (userId, nombre) => {
-    if (!window.confirm(`¿Estás seguro de eliminar permanentemente al usuario "${nombre}"? Esta acción no se puede deshacer.`)) return;
-    try {
-      await api.deleteUser(userId);
-      const actualizados = await api.getUsuarios();
-      setUsuarios(actualizados);
-      setFeedback(`Usuario "${nombre}" eliminado correctamente`);
-    } catch (err) {
-      setErrorFeedback(err.message);
-    }
-  }, [setFeedback, setErrorFeedback]);
+    setPendienteConfirmacion({ tipo: 'eliminar', userId, nombre });
+  }, []);
 
   const abrirModalCrearUsuario = useCallback(() => {
     setFormularioUsuario({ nombre_completo: '', correo_institucional: '', contrasena: '', id_rol: 1 });
@@ -190,6 +176,30 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     setErrorAdmin('');
   }, []);
 
+  const confirmarPendiente = useCallback(async () => {
+    if (!pendienteConfirmacion) return;
+    const p = pendienteConfirmacion;
+    setPendienteConfirmacion(null);
+    try {
+      if (p.tipo === 'bajaAlumno') {
+        await api.removeFromClub(p.userId);
+        const actualizados = await api.getUsuarios();
+        setUsuarios(actualizados);
+      } else if (p.tipo === 'eliminar') {
+        await api.deleteUser(p.userId);
+        const actualizados = await api.getUsuarios();
+        setUsuarios(actualizados);
+        setFeedback(`Usuario "${p.nombre}" eliminado correctamente`);
+      }
+    } catch (err) {
+      setErrorFeedback(err.message);
+    }
+  }, [pendienteConfirmacion, setFeedback, setErrorFeedback]);
+
+  const cancelarPendiente = useCallback(() => {
+    setPendienteConfirmacion(null);
+  }, []);
+
   return {
     usuarios,
     loading: cargando,
@@ -221,5 +231,8 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     abrirModalAdmin,
     manejarAdminAction,
     cerrarModalAdmin,
+    pendienteConfirmacion,
+    confirmarPendiente,
+    cancelarPendiente,
   };
 }

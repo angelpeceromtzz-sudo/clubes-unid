@@ -35,7 +35,7 @@ export function TarjetaClub({
     <div
       onClick={esProximamente ? undefined : onClick}
       className={`group rounded-2xl p-6 shadow-lg flex flex-col justify-between border cursor-pointer select-none ${
-        esProximamente ? '' : 'hover:shadow-2xl transition-all duration-300 active:scale-[0.98]'
+        esProximamente ? '' : 'hover:shadow-2xl hover:scale-[1.03] hover:z-10 transition-all duration-300 active:scale-[0.98]'
       } ${c.card}`}
     >
       <div className="flex flex-col flex-1">

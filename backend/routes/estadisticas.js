@@ -119,7 +119,7 @@ router.get('/clubes-detalle', async (req, res) => {
       SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
         c.cupo_maximo, c.id_presidente,
         COALESCE(u.nombre_completo, 'Sin asignar') AS presidente,
-        c.lugar, c.horario,
+        c.horario,
         c.id_estatus_club, e.nombre_estatus AS estatus,
         COALESCE((
           SELECT COUNT(*)::int FROM inscripciones i

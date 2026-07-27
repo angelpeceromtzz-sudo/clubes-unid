@@ -17,7 +17,7 @@ export function usePanelPresidente(usuario) {
 
         if (!montado) return;
 
-        if (!perfil.id_club || Number(perfil.id_presidente) !== Number(perfil.id_usuario)) {
+        if (!perfil.id_club || (Number(perfil.id_presidente) !== Number(perfil.id_usuario) && Number(perfil.id_vicepresidente) !== Number(perfil.id_usuario))) {
           setEstado({ club: null, miembros: [], loading: false, error: '' });
           return;
         }
@@ -34,7 +34,12 @@ export function usePanelPresidente(usuario) {
         }
 
         if (montado) {
-          setEstado({ club: { ...clubCompleto, id_presidente: perfil.id_presidente }, miembros, loading: false, error: '' });
+          const esPresidente = Number(perfil.id_presidente) === Number(perfil.id_usuario);
+          setEstado({
+            club: { ...clubCompleto, id_presidente: perfil.id_presidente, id_vicepresidente: perfil.id_vicepresidente },
+            miembros, loading: false, error: '',
+            esPresidente,
+          });
         }
       } catch (err) {
         if (montado) setEstado((prev) => ({ ...prev, loading: false, error: err.message }));
@@ -45,10 +50,15 @@ export function usePanelPresidente(usuario) {
     return () => { montado = false; };
   }, []);
 
+  function actualizarClub(cambios) {
+    setEstado(prev => ({ ...prev, club: { ...prev.club, ...cambios } }));
+  }
+
   return {
     vistaActiva,
     setVistaActiva,
     ...estado,
+    actualizarClub,
     isDark: esOscuro,
     tema,
     user: usuario,

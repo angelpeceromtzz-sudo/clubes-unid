@@ -10,7 +10,7 @@ import { MenuUsuario } from './MenuUsuario';
 import { ModalBase } from '../ui/ModalBase';
 
 const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
-const ESTADOS = ["Todos", "Abiertos", "Proximos", "Llenos"];
+const ESTADOS = ["Todos", "Abiertos", "Proximos", "Cerrados"];
 
 export function BarraNavegacion({
   categoriaActiva, setCategoriaActiva,
@@ -107,9 +107,14 @@ export function BarraNavegacion({
             >
               <img src={logoLobo} alt="Logo" id="navbar-logo" className={`w-10 h-10 lg:w-12 lg:h-12 shrink-0 transition-opacity duration-200 ${splashActivo ? 'opacity-0' : 'opacity-100'}`} />
               <div>
-                <span className={`text-sm sm:text-base lg:text-sm font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
-                  UNID
-                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className={`text-sm sm:text-base lg:text-sm font-black tracking-tight transition-colors duration-300 ${tema.logoText}`}>
+                    UNID
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] lg:text-[9px] uppercase tracking-widest text-white font-black leading-tight">
+                    Campeche
+                  </span>
+                </div>
                 <p className="text-[9px] sm:text-[10px] lg:text-[9px] uppercase tracking-widest text-amber-400 font-black leading-tight">
                   Clubs Lobos Rojos
                 </p>
@@ -118,7 +123,7 @@ export function BarraNavegacion({
           ) : (
             <button
               onClick={onLogoClick}
-              className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer active:scale-95"
+              className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 md:bg-amber-400/10 md:border md:border-amber-400/20 md:px-3 md:py-1.5 md:rounded-full transition-colors cursor-pointer active:scale-95"
             >
               <Icono nombre="arrow-left" className="h-3.5 w-3.5" strokeWidth={2.5} />
               Volver al Portal

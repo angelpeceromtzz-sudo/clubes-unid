@@ -1,7 +1,7 @@
 // Rutas de clubes — consulta pública y administración
 import { Router } from 'express';
 import pool from '../db.js';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requireClubLeader } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
 
@@ -89,7 +89,7 @@ router.get('/:id', async (req, res) => {
               c.cupo_maximo, c.id_presidente,
               p.nombre_completo AS presidente_nombre,
               p.correo_institucional AS presidente_correo,
-              c.imagen_portada, c.lugar, c.horario,
+              c.imagen_portada, c.horario, c.id_vicepresidente,
               c.id_estatus_club, e.nombre_estatus as estatus,
               c.estado_calculado,
               c.formularios_recibidos,
@@ -271,7 +271,7 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
 });
 
 // Obtiene configuración de convocatoria del club (presidente)
-router.get('/:id/convocatoria', authenticate, requireRole(2), async (req, res) => {
+router.get('/:id/convocatoria', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { id } = req.params;
     const club = await pool.query(
@@ -279,10 +279,10 @@ router.get('/:id/convocatoria', authenticate, requireRole(2), async (req, res) =
               c.fecha_apertura_programada, c.fecha_limite_cierre,
               c.formularios_recibidos
        FROM clubes_con_estado c
-       WHERE c.id_club = $1 AND c.id_presidente = $2`,
+       WHERE c.id_club = $1 AND (c.id_presidente = $2 OR c.id_vicepresidente = $2)`,
       [id, req.user.id],
     );
-    if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado o no eres el presidente' });
+    if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado o no eres presidente/vicepresidente' });
     res.json(club.rows[0]);
   } catch (err) {
     console.error('Error al obtener convocatoria:', err);
@@ -294,17 +294,16 @@ router.get('/:id/convocatoria', authenticate, requireRole(2), async (req, res) =
 // body: { fecha_apertura_programada, fecha_limite_cierre, max_postulaciones }
 // Si se envía una nueva fecha de apertura diferente a la actual,
 // resetea cerrada_manualmente = FALSE para reabrir la convocatoria.
-router.put('/:id/convocatoria', authenticate, requireRole(2), async (req, res) => {
+router.put('/:id/convocatoria', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { id } = req.params;
     const { fecha_apertura_programada, fecha_limite_cierre, max_postulaciones } = req.body;
 
     const club = await pool.query(
-      'SELECT id_presidente, nombre_club, fecha_apertura_programada, cerrada_manualmente FROM clubes WHERE id_club = $1',
-      [id],
+      'SELECT nombre_club, fecha_apertura_programada, cerrada_manualmente FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
+      [id, req.user.id],
     );
-    if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado' });
-    if (club.rows[0].id_presidente !== req.user.id) return res.status(403).json({ error: 'No eres el presidente' });
+    if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
 
     const curApertura = club.rows[0].fecha_apertura_programada;
     const curCerrada = club.rows[0].cerrada_manualmente;
@@ -382,16 +381,15 @@ router.put('/:id/convocatoria', authenticate, requireRole(2), async (req, res) =
 });
 
 // Cierra convocatoria manualmente (presidente)
-router.post('/:id/cerrar-convocatoria', authenticate, requireRole(2), async (req, res) => {
+router.post('/:id/cerrar-convocatoria', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { id } = req.params;
 
     const club = await pool.query(
-      'SELECT id_presidente, nombre_club FROM clubes WHERE id_club = $1',
-      [id],
+      'SELECT nombre_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
+      [id, req.user.id],
     );
-    if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado' });
-    if (club.rows[0].id_presidente !== req.user.id) return res.status(403).json({ error: 'No eres el presidente' });
+    if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
 
     await pool.query(
       'UPDATE clubes SET cerrada_manualmente = TRUE WHERE id_club = $1',
@@ -423,20 +421,47 @@ router.post('/:id/cerrar-convocatoria', authenticate, requireRole(2), async (req
   }
 });
 
-// Historial de membresía del club (altas y bajas)
-router.get('/:id/historial-membresia', authenticate, requireRole(2, 3), async (req, res) => {
+// Asigna o remueve vicepresidente del club (solo presidente)
+router.put('/:id/vicepresidente', authenticate, requireRole(2), async (req, res) => {
   try {
     const { id } = req.params;
+    const { id_usuario } = req.body;
 
-    if (req.user.id_rol === 2) {
-      const clubDelPresidente = await pool.query(
-        `SELECT id_club FROM clubes WHERE id_presidente = $1`,
-        [req.user.id]
+    const club = await pool.query(
+      'SELECT id_club, id_vicepresidente FROM clubes WHERE id_club = $1 AND id_presidente = $2',
+      [id, req.user.id]
+    );
+    if (club.rows.length === 0) {
+      return res.status(404).json({ error: 'Club no encontrado o no eres el presidente' });
+    }
+
+    if (id_usuario) {
+      const miembro = await pool.query(
+        'SELECT id_usuario FROM inscripciones WHERE id_club = $1 AND id_usuario = $2 AND id_estatus_inscripcion = 1',
+        [id, id_usuario]
       );
-      if (clubDelPresidente.rows.length === 0 || clubDelPresidente.rows[0].id_club !== parseInt(id)) {
-        return res.status(403).json({ error: 'No eres presidente de este club' });
+      if (miembro.rows.length === 0) {
+        return res.status(400).json({ error: 'El usuario no es miembro activo de este club' });
       }
     }
+
+    const result = await pool.query(
+      `UPDATE clubes SET id_vicepresidente = $1 WHERE id_club = $2
+       RETURNING id_club, id_vicepresidente`,
+      [id_usuario || null, id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al asignar vicepresidente:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Historial de membresía del club (altas y bajas)
+router.get('/:id/historial-membresia', authenticate, requireClubLeader, async (req, res) => {
+  try {
+    const { id } = req.params;
 
     const result = await pool.query(
       `SELECT

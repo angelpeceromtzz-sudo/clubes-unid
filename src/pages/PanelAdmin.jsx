@@ -18,6 +18,7 @@ import { TablaActividad } from '../components/admin/TablaActividad';
 import { ModalPasswordAdmin } from '../components/admin/ModalPasswordAdmin';
 import { SeccionDiapositivas } from '../components/admin/SeccionDiapositivas';
 import { Spinner } from '../components/ui/Spinner';
+import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { formatearNombre } from '../utils/formato';
 
@@ -215,6 +216,55 @@ export function PanelAdmin() {
             error={d.errorAdmin}
             onConfirm={d.manejarAdminAction}
             onClose={d.cerrarModalAdmin}
+          />
+
+          <ModalConfirmacion
+            show={!!d.pendienteConfirmacionClub}
+            titulo="Dar de baja club"
+            mensaje="¿Estás seguro de dar de baja este club? Los miembros serán notificados."
+            textoConfirmar="Dar de Baja"
+            varianteDanger
+            onConfirmar={d.confirmarPendienteClub}
+            onCancelar={d.cancelarPendienteClub}
+          />
+
+          <ModalConfirmacion
+            show={!!d.pendienteConfirmacionClub && d.pendienteConfirmacionClub?.tipo === 'editar'}
+            titulo="Guardar cambios"
+            mensaje={`¿Guardar los cambios en "${d.pendienteConfirmacionClub?.club?.nombre_club || ''}"?`}
+            textoConfirmar="Guardar"
+            onConfirmar={d.confirmarPendienteClub}
+            onCancelar={d.cancelarPendienteClub}
+          />
+
+          <ModalConfirmacion
+            show={!!d.pendienteConfirmacionUsuario && d.pendienteConfirmacionUsuario?.tipo === 'bajaAlumno'}
+            titulo="Dar de baja del club"
+            mensaje="¿Estás seguro de dar de baja a este alumno de su club?"
+            textoConfirmar="Dar de Baja"
+            varianteDanger
+            onConfirmar={d.confirmarPendienteUsuario}
+            onCancelar={d.cancelarPendienteUsuario}
+          />
+
+          <ModalConfirmacion
+            show={!!d.pendienteConfirmacionUsuario && d.pendienteConfirmacionUsuario?.tipo === 'eliminar'}
+            titulo="Eliminar usuario"
+            mensaje={`¿Estás seguro de eliminar permanentemente al usuario "${d.pendienteConfirmacionUsuario?.nombre || ''}"? Esta acción no se puede deshacer.`}
+            textoConfirmar="Eliminar"
+            varianteDanger
+            onConfirmar={d.confirmarPendienteUsuario}
+            onCancelar={d.cancelarPendienteUsuario}
+          />
+
+          <ModalConfirmacion
+            show={!!d.pendienteConfirmacionBanner}
+            titulo="Eliminar banner"
+            mensaje={`¿Eliminar el banner "${d.pendienteConfirmacionBanner?.titulo || ''}"?`}
+            textoConfirmar="Eliminar"
+            varianteDanger
+            onConfirmar={d.confirmarPendienteBanner}
+            onCancelar={d.cancelarPendienteBanner}
           />
       </NavegacionPanel>
     </RutaProtegida>

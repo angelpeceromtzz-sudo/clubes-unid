@@ -103,6 +103,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  updateVicepresidente: (idClub, idUsuario) =>
+    request(`/clubes/${idClub}/vicepresidente`, {
+      method: 'PUT',
+      body: JSON.stringify({ id_usuario: idUsuario || null }),
+    }),
+
   asignarClubAPresidente: (userId, clubId) =>
     request(`/usuarios/${userId}/asignar-club`, {
       method: 'PUT',

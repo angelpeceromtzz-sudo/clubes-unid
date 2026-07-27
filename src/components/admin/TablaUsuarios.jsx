@@ -1,8 +1,10 @@
 /* Tabla de gestión de usuarios: filtro, cambio de rol, asignación/desasignación de club. */
+import { useState } from 'react';
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
+import { ModalConfirmacion } from '../ui/ModalConfirmacion';
 
 export function TablaUsuarios({
   usuarios,
@@ -18,6 +20,7 @@ export function TablaUsuarios({
   onAdminAction,
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls } = useTheme();
+  const [confirmPendiente, setConfirmPendiente] = useState(null);
   const q = busqueda.toLowerCase().trim();
   const filtrados = q
     ? usuarios.filter(
@@ -51,12 +54,10 @@ export function TablaUsuarios({
               if (!clubId) return;
               const clubSel = clubesActivosList.find((c) => c.id_club === clubId);
               if (!clubSel) return;
-              if (clubActual) {
-                if (!window.confirm(`¿Reasignar a "${u.nombre_completo}" del club "${clubActual}" al club "${clubSel.nombre_club}"?`)) return;
-              } else {
-                if (!window.confirm(`¿Asignar a "${u.nombre_completo}" al club "${clubSel.nombre_club}"?`)) return;
-              }
-              onAsignarAlumnoClub(u.id_usuario, clubId);
+              const mensaje = clubActual
+                ? `¿Reasignar a "${u.nombre_completo}" del club "${clubActual}" al club "${clubSel.nombre_club}"?`
+                : `¿Asignar a "${u.nombre_completo}" al club "${clubSel.nombre_club}"?`;
+              setConfirmPendiente({ userId: u.id_usuario, clubId, mensaje });
             }}
             disabled={asignando[u.id_usuario] || u.id_usuario === currentUser.id}
             className={selectCls}
@@ -94,9 +95,9 @@ export function TablaUsuarios({
               const presidenteReemplazado = clubSeleccionado?.id_presidente && clubSeleccionado.id_presidente !== u.id_usuario;
               if (presidenteReemplazado) {
                 const nombrePresidente = usuarios.find((u2) => u2.id_usuario === clubSeleccionado.id_presidente)?.nombre_completo || 'otro usuario';
-                if (!window.confirm(`El club "${clubSeleccionado.nombre_club}" ya tiene un presidente asignado (${nombrePresidente}). ¿Estás seguro de que deseas reemplazarlo?`)) {
-                  return;
-                }
+                const mensaje = `El club "${clubSeleccionado.nombre_club}" ya tiene un presidente asignado (${nombrePresidente}). ¿Estás seguro de que deseas reemplazarlo?`;
+                setConfirmPendiente({ userId: u.id_usuario, clubId, mensaje, tipo: 'presidente' });
+                return;
               }
               onAsignarClub(u.id_usuario, clubId);
             }}
@@ -172,6 +173,17 @@ export function TablaUsuarios({
     );
   }
 
+  function confirmarAsignacion() {
+    if (!confirmPendiente) return;
+    const { userId, clubId, tipo } = confirmPendiente;
+    setConfirmPendiente(null);
+    if (tipo === 'presidente') {
+      onAsignarClub(userId, clubId);
+    } else {
+      onAsignarAlumnoClub(userId, clubId);
+    }
+  }
+
   return (
     <>
       {/* Desktop - tabla */}
@@ -228,6 +240,15 @@ export function TablaUsuarios({
           </div>
         ))}
       </div>
+
+      <ModalConfirmacion
+        show={!!confirmPendiente}
+        titulo="Confirmar asignación"
+        mensaje={confirmPendiente?.mensaje || ''}
+        textoConfirmar="Confirmar"
+        onConfirmar={confirmarAsignacion}
+        onCancelar={() => setConfirmPendiente(null)}
+      />
     </>
   );
 }

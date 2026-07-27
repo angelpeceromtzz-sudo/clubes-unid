@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requireClubLeader } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { calcularEstadoClub } from '../lib/estadoClub.js';
 
@@ -264,21 +264,17 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
 });
 
 // Devuelve todos los formularios de un club (solo para el presidente de ese club)
-router.get('/pendientes/:id_club', authenticate, requireRole(2), async (req, res) => {
+router.get('/pendientes/:id_club', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { id_club } = req.params;
 
     const club = await pool.query(
-      'SELECT id_presidente FROM clubes WHERE id_club = $1',
+      'SELECT id_club FROM clubes WHERE id_club = $1',
       [id_club],
     );
 
     if (club.rows.length === 0) {
       return res.status(404).json({ error: 'El club no existe' });
-    }
-
-    if (club.rows[0].id_presidente !== req.user.id) {
-      return res.status(403).json({ error: 'No eres el presidente de este club' });
     }
 
     const result = await pool.query(
@@ -307,21 +303,17 @@ router.get('/pendientes/:id_club', authenticate, requireRole(2), async (req, res
 
 // Devuelve TODOS los formularios de un club (incluyendo Miembro oficial y Rechazado)
 // con el historial de cambios, solo para el presidente de ese club
-router.get('/todos/:id_club', authenticate, requireRole(2), async (req, res) => {
+router.get('/todos/:id_club', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { id_club } = req.params;
 
     const club = await pool.query(
-      'SELECT id_presidente FROM clubes WHERE id_club = $1',
+      'SELECT id_club FROM clubes WHERE id_club = $1',
       [id_club],
     );
 
     if (club.rows.length === 0) {
       return res.status(404).json({ error: 'El club no existe' });
-    }
-
-    if (club.rows[0].id_presidente !== req.user.id) {
-      return res.status(403).json({ error: 'No eres el presidente de este club' });
     }
 
     const result = await pool.query(
@@ -348,7 +340,7 @@ router.get('/todos/:id_club', authenticate, requireRole(2), async (req, res) => 
 });
 
 // Actualiza el estatus de un formulario (presidente — transiciones individuales)
-router.put('/:id/estatus', authenticate, requireRole(2), async (req, res) => {
+router.put('/:id/estatus', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -358,7 +350,7 @@ router.put('/:id/estatus', authenticate, requireRole(2), async (req, res) => {
     }
 
     const formulario = await pool.query(
-      `SELECT f.*, c.id_presidente, c.nombre_club
+      `SELECT f.*, c.nombre_club
        FROM formularios f
        JOIN clubes c ON c.id_club = f.id_club
        WHERE f.id_formulario = $1`,
@@ -371,8 +363,12 @@ router.put('/:id/estatus', authenticate, requireRole(2), async (req, res) => {
 
     const form = formulario.rows[0];
 
-    if (form.id_presidente !== req.user.id) {
-      return res.status(403).json({ error: 'No eres el presidente de este club' });
+    const club = await pool.query(
+      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
+      [form.id_club, req.user.id]
+    );
+    if (club.rows.length === 0) {
+      return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
     }
 
     const transicionesPermitidas = ESTATUS_FLUJO[form.status];
@@ -442,7 +438,7 @@ router.put('/:id/estatus', authenticate, requireRole(2), async (req, res) => {
 });
 
 // Asignar bloque a un formulario (presidente)
-router.put('/:id/bloque', authenticate, requireRole(2), async (req, res) => {
+router.put('/:id/bloque', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { id } = req.params;
     const { bloque } = req.body;
@@ -452,9 +448,8 @@ router.put('/:id/bloque', authenticate, requireRole(2), async (req, res) => {
     }
 
     const formulario = await pool.query(
-      `SELECT f.*, c.id_presidente
+      `SELECT f.*
        FROM formularios f
-       JOIN clubes c ON c.id_club = f.id_club
        WHERE f.id_formulario = $1`,
       [id],
     );
@@ -463,8 +458,13 @@ router.put('/:id/bloque', authenticate, requireRole(2), async (req, res) => {
       return res.status(404).json({ error: 'El formulario no existe' });
     }
 
-    if (formulario.rows[0].id_presidente !== req.user.id) {
-      return res.status(403).json({ error: 'No eres el presidente de este club' });
+    const form = formulario.rows[0];
+    const club = await pool.query(
+      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
+      [form.id_club, req.user.id]
+    );
+    if (club.rows.length === 0) {
+      return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
     }
 
     const result = await pool.query(
@@ -555,7 +555,7 @@ router.patch('/:id/cancelar', authenticate, requireRole(1), async (req, res) => 
 });
 
 // Seleccionar ofertas finales para alumnos aprobados
-router.post('/seleccionar', authenticate, requireRole(2), async (req, res) => {
+router.post('/seleccionar', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { id_club, aceptados } = req.body;
     if (!id_club || !Array.isArray(aceptados)) {
@@ -563,11 +563,10 @@ router.post('/seleccionar', authenticate, requireRole(2), async (req, res) => {
     }
 
     const club = await pool.query(
-      'SELECT id_presidente, nombre_club FROM clubes WHERE id_club = $1',
-      [id_club],
+      'SELECT id_club, nombre_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
+      [id_club, req.user.id],
     );
-    if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado' });
-    if (club.rows[0].id_presidente !== req.user.id) return res.status(403).json({ error: 'No eres el presidente' });
+    if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
 
     const client = await pool.connect();
     try {
@@ -620,21 +619,17 @@ router.post('/seleccionar', authenticate, requireRole(2), async (req, res) => {
 });
 
 // Devuelve todas las ofertas de ingreso enviadas a postulantes del club (presidente)
-router.get('/ofertas/:id_club', authenticate, requireRole(2), async (req, res) => {
+router.get('/ofertas/:id_club', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { id_club } = req.params;
 
     const club = await pool.query(
-      'SELECT id_presidente FROM clubes WHERE id_club = $1',
+      'SELECT id_club FROM clubes WHERE id_club = $1',
       [id_club],
     );
 
     if (club.rows.length === 0) {
       return res.status(404).json({ error: 'El club no existe' });
-    }
-
-    if (club.rows[0].id_presidente !== req.user.id) {
-      return res.status(403).json({ error: 'No eres el presidente de este club' });
     }
 
     const result = await pool.query(

@@ -13,8 +13,8 @@ router.get('/', authenticate, async (req, res) => {
     let clubIdPresidente = null;
     let clubIdAlumno = null;
 
-    if (roleId === 2) {
-      const pres = await pool.query('SELECT id_club FROM clubes WHERE id_presidente = $1', [userId]);
+    if (roleId === 2 || roleId === 5) {
+      const pres = await pool.query('SELECT id_club FROM clubes WHERE id_presidente = $1 OR id_vicepresidente = $1', [userId]);
       if (pres.rows.length > 0) clubIdPresidente = pres.rows[0].id_club;
     }
 
@@ -118,13 +118,16 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'id_club es obligatorio para audiencia club' });
     }
 
-    if (roleId === 2) {
+    if (roleId === 2 || roleId === 5) {
       if (audiencia !== 'club') {
-        return res.status(403).json({ error: 'Los presidentes solo pueden enviar notificaciones a su club' });
+        return res.status(403).json({ error: 'Los presidentes y vicepresidentes solo pueden enviar notificaciones a su club' });
       }
-      const club = await pool.query('SELECT id_club FROM clubes WHERE id_presidente = $1', [userId]);
-      if (club.rows.length === 0 || club.rows[0].id_club !== id_club) {
-        return res.status(403).json({ error: 'No eres presidente de este club' });
+      const club = await pool.query(
+        'SELECT id_club, id_presidente, id_vicepresidente FROM clubes WHERE id_club = $1',
+        [id_club]
+      );
+      if (club.rows.length === 0 || (club.rows[0].id_presidente !== userId && club.rows[0].id_vicepresidente !== userId)) {
+        return res.status(403).json({ error: 'No eres líder de este club' });
       }
     }
 

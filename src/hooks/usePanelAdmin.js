@@ -112,6 +112,15 @@ export function usePanelAdmin(usuario) {
     abrirModalAdmin: usuarios.abrirModalAdmin,
     manejarAdminAction: usuarios.manejarAdminAction,
     cerrarModalAdmin: usuarios.cerrarModalAdmin,
+    pendienteConfirmacionClub: clubes.pendienteConfirmacion,
+    confirmarPendienteClub: clubes.confirmarPendiente,
+    cancelarPendienteClub: clubes.cancelarPendiente,
+    pendienteConfirmacionUsuario: usuarios.pendienteConfirmacion,
+    confirmarPendienteUsuario: usuarios.confirmarPendiente,
+    cancelarPendienteUsuario: usuarios.cancelarPendiente,
     hero: heroDiapositivas,
+    pendienteConfirmacionBanner: heroDiapositivas.pendienteConfirmacion,
+    confirmarPendienteBanner: heroDiapositivas.confirmarPendiente,
+    cancelarPendienteBanner: heroDiapositivas.cancelarPendiente,
   };
 }

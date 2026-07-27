@@ -7,6 +7,7 @@ import { calcularTiempoRestante } from '../../utils/fechas';
 import { InfoConvocatoria } from './InfoConvocatoria';
 import { OfertaCard } from './OfertaCard';
 import { BienvenidoCard } from './BienvenidoCard';
+import { ModalConfirmacion } from '../ui/ModalConfirmacion';
 import { api } from '../../services/api';
 
 const STATUS_CANCELABLES = ['En revisión', 'Preseleccionado', 'Convocado'];
@@ -14,6 +15,7 @@ const STATUS_CANCELABLES = ['En revisión', 'Preseleccionado', 'Convocado'];
 export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo }) {
   const { tema } = useTheme();
   const [cancelando, setCancelando] = useState(false);
+  const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
   const conf = CONFIG_ESTATUS[postulacion.status] || CONFIG_ESTATUS['Postulado'];
   const esOferta = postulacion.status === 'Oferta enviada';
   const esFinal = ['Miembro oficial', 'Rechazado'].includes(postulacion.status);
@@ -22,7 +24,11 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
   const cargandoRespuesta = respondiendo[postulacion.id_formulario];
 
   async function manejarCancelacion() {
-    if (!window.confirm('¿Estás seguro de que quieres cancelar esta postulación?')) return;
+    setMostrarConfirmar(true);
+  }
+
+  async function confirmarCancelacion() {
+    setMostrarConfirmar(false);
     setCancelando(true);
     try {
       await api.cancelarPostulacion(postulacion.id_formulario);
@@ -35,6 +41,7 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
   }
 
   return (
+    <>
     <div className={`rounded-2xl border overflow-hidden ${tema.isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`}>
       <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-4">
@@ -122,5 +129,16 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
         </div>
       </div>
     </div>
+
+      <ModalConfirmacion
+        show={mostrarConfirmar}
+        titulo="Cancelar postulación"
+        mensaje="¿Estás seguro de que quieres cancelar esta postulación?"
+        textoConfirmar="Cancelar postulación"
+        varianteDanger
+        onConfirmar={confirmarCancelacion}
+        onCancelar={() => setMostrarConfirmar(false)}
+      />
+    </>
   );
 }

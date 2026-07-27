@@ -295,14 +295,16 @@ router.get('/me', authenticate, async (req, res) => {
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
               u.institutional_id, u.id_rol, r.nombre_rol as rol,
-              COALESCE(cp.id_club, i.id_club) AS id_club,
-              COALESCE(cp.nombre_club, c.nombre_club) AS nombre_club,
-              COALESCE(cp.categoria, c.categoria) AS categoria,
-              COALESCE(cp.cupo_maximo, c.cupo_maximo) AS cupo_maximo,
-              cp.id_presidente
+              COALESCE(cp.id_club, cv.id_club, i.id_club) AS id_club,
+              COALESCE(cp.nombre_club, cv.nombre_club, c.nombre_club) AS nombre_club,
+              COALESCE(cp.categoria, cv.categoria, c.categoria) AS categoria,
+              COALESCE(cp.cupo_maximo, cv.cupo_maximo, c.cupo_maximo) AS cupo_maximo,
+              cp.id_presidente,
+              cv.id_vicepresidente
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
        LEFT JOIN clubes cp ON cp.id_presidente = u.id_usuario
+       LEFT JOIN clubes cv ON cv.id_vicepresidente = u.id_usuario AND cp.id_club IS NULL
        LEFT JOIN inscripciones i ON i.id_usuario = u.id_usuario AND i.id_estatus_inscripcion = 1
        LEFT JOIN clubes c ON c.id_club = i.id_club
        WHERE u.id_usuario = $1`,

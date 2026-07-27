@@ -6,7 +6,7 @@ import { useAutenticacion } from '../contexts/AuthContext';
 const ESTADO_MAP = {
   Abiertos: ['abierto'],
   Proximos: ['proximo'],
-  Llenos: ['lleno', 'cerrado'],
+  Cerrados: ['lleno', 'cerrado'],
 };
 
 export function useClubes() {

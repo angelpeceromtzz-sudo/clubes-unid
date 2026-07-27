@@ -9,7 +9,6 @@ import { HeroClub } from './sections/HeroClub';
 import { AprendizajeClub } from './sections/AprendizajeClub';
 import { RequisitosFAQClub } from './sections/RequisitosFAQClub';
 import { HorariosClub } from './sections/HorariosClub';
-import { LugarClub } from './sections/LugarClub';
 import { PresidenteClub } from './sections/PresidenteClub';
 import { EventosClub } from './sections/EventosClub';
 import { InfoAdicionalClub } from './sections/InfoAdicionalClub';
@@ -105,7 +104,6 @@ export function DetalleClub({ onLoginClick }) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <LugarClub lugar={club.lugar} modoOscuro={modoOscuro} />
           <HorariosClub club={club} modoOscuro={modoOscuro} />
           <EventosClub modoOscuro={modoOscuro} />
         </div>

@@ -35,7 +35,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const clubResult = await pool.query(
-      'SELECT id_presidente FROM clubes WHERE id_club = $1',
+      'SELECT id_presidente, id_vicepresidente FROM clubes WHERE id_club = $1',
       [id_club]
     );
 
@@ -45,10 +45,11 @@ router.post('/', authenticate, async (req, res) => {
 
     const club = clubResult.rows[0];
     const esPresidente = club.id_presidente === req.user.id;
+    const esVicepresidente = club.id_vicepresidente === req.user.id;
     const esAdmin = req.user.id_rol === 3;
 
-    if (!esPresidente && !esAdmin) {
-      return res.status(403).json({ error: 'Solo el presidente del club puede publicar avisos' });
+    if (!esPresidente && !esVicepresidente && !esAdmin) {
+      return res.status(403).json({ error: 'Solo el presidente, vicepresidente o admin pueden publicar avisos' });
     }
 
     const result = await pool.query(
@@ -82,7 +83,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     const { id } = req.params;
 
     const avisoResult = await pool.query(
-      'SELECT a.*, c.id_presidente FROM avisos_clubes a JOIN clubes c ON c.id_club = a.id_club WHERE a.id_aviso = $1',
+      'SELECT a.*, c.id_presidente, c.id_vicepresidente FROM avisos_clubes a JOIN clubes c ON c.id_club = a.id_club WHERE a.id_aviso = $1',
       [id]
     );
 
@@ -92,9 +93,10 @@ router.delete('/:id', authenticate, async (req, res) => {
 
     const aviso = avisoResult.rows[0];
     const esPresidente = aviso.id_presidente === req.user.id;
+    const esVicepresidente = aviso.id_vicepresidente === req.user.id;
     const esAdmin = req.user.id_rol === 3;
 
-    if (!esPresidente && !esAdmin) {
+    if (!esPresidente && !esVicepresidente && !esAdmin) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar este aviso' });
     }
 

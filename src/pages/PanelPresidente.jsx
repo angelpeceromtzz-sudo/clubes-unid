@@ -52,8 +52,8 @@ export function PanelPresidente() {
       >
         <div className="mb-6 md:mb-8">
             <EncabezadoPagina
-              titulo="Panel de Presidente"
-              subtitulo={`Bienvenido, ${d.user.nombre_completo} · Presidente de ${d.club.nombre_club}`}
+              titulo={d.esPresidente ? 'Panel de Presidente' : 'Panel de Vicepresidente'}
+              subtitulo={`Bienvenido, ${d.user.nombre_completo} · ${d.esPresidente ? 'Presidente' : 'Vicepresidente'} de ${d.club.nombre_club}`}
             />
           </div>
 
@@ -74,7 +74,7 @@ export function PanelPresidente() {
           )}
 
           {d.vistaActiva === 'miembros' && (
-            <VistaMiembros club={d.club} />
+            <VistaMiembros club={d.club} esPresidente={d.esPresidente} onActualizarClub={d.actualizarClub} />
           )}
 
           {d.vistaActiva === 'historial' && (
@@ -89,6 +89,7 @@ export function PanelPresidente() {
               esPresidente={true}
             />
           )}
+
       </NavegacionPanel>
     </RutaProtegida>
   );

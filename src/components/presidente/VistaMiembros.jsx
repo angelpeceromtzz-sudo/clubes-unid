@@ -5,14 +5,17 @@ import { AvatarInicial } from '../ui/AvatarInicial';
 import { Spinner } from '../ui/Spinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Alerta } from '../ui/Alerta';
+import { ModalConfirmacion } from '../ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../ui/EncabezadoPagina';
-import { Icono } from '../ui/Icono';
 
-export function VistaMiembros({ club }) {
+export function VistaMiembros({ club, esPresidente, onActualizarClub }) {
   const { tema, modoOscuro } = useTheme();
   const [miembros, setMiembros] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  const [asignando, setAsignando] = useState(null);
+  const [modalVP, setModalVP] = useState(null);
+  const [miembroABajar, setMiembroABajar] = useState(null);
 
   useEffect(() => {
     let montado = true;
@@ -32,7 +35,12 @@ export function VistaMiembros({ club }) {
   }, [club.id_club]);
 
   async function handleBajar(usuario) {
-    if (!window.confirm(`¿Dar de baja a ${usuario.nombre_completo} del club?`)) return;
+    setMiembroABajar(usuario);
+  }
+
+  async function confirmarBajarMiembro() {
+    const usuario = miembroABajar;
+    setMiembroABajar(null);
     try {
       await api.bajarMiembro(usuario.id_usuario);
       setMiembros((prev) => prev.filter((m) => m.id_usuario !== usuario.id_usuario));
@@ -41,7 +49,25 @@ export function VistaMiembros({ club }) {
     }
   }
 
+  async function confirmarVP() {
+    if (!modalVP) return;
+    const { usuario, accion } = modalVP;
+    const esQuitar = accion === 'quitar';
+    setAsignando(usuario.id_usuario);
+    setModalVP(null);
+    try {
+      const result = await api.updateVicepresidente(club.id_club, esQuitar ? null : usuario.id_usuario);
+      if (onActualizarClub) onActualizarClub({ id_vicepresidente: result.id_vicepresidente });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAsignando(null);
+    }
+  }
+
   if (cargando) return <Spinner />;
+
+  const tieneVP = club.id_vicepresidente != null;
 
   return (
     <div className="space-y-6">
@@ -57,11 +83,16 @@ export function VistaMiembros({ club }) {
       ) : (
         <div className="space-y-2">
           {miembros.map((m) => {
-            const esPresidente = club.id_presidente === m.id_usuario;
+            const esPresidenteDelClub = club.id_presidente === m.id_usuario;
+            const esVicepresidente = club.id_vicepresidente === m.id_usuario;
+
+            const puedeQuitarVP = esPresidente && esVicepresidente;
+            const puedeAsignarVP = esPresidente && !esPresidenteDelClub && !esVicepresidente && !tieneVP;
+
             return (
               <div
                 key={m.id_usuario}
-                className={`rounded-xl px-5 py-3 flex items-center justify-between ${
+                className={`group rounded-xl px-5 py-3 flex items-center justify-between ${
                   modoOscuro ? 'bg-[#0e162c] border border-slate-700/50' : 'bg-white border border-slate-200 shadow-sm'
                 }`}
               >
@@ -70,31 +101,109 @@ export function VistaMiembros({ club }) {
                   <div>
                     <p className={`text-sm font-medium ${tema.title}`}>
                       {m.nombre_completo}
-                      {esPresidente && (
+                      {esPresidenteDelClub && (
                         <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-400 font-bold">Presidente</span>
+                      )}
+                      {esVicepresidente && !esPresidenteDelClub && (
+                        <span className="ml-2 text-[10px] uppercase tracking-wider text-blue-400 font-bold">Vicepresidente</span>
                       )}
                     </p>
                     <p className="text-xs text-slate-500">{m.correo_institucional}</p>
                   </div>
                 </div>
 
-                {!esPresidente && (
-                  <button
-                    onClick={() => handleBajar(m)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                      modoOscuro
-                        ? 'text-red-400 hover:bg-red-500/10'
-                        : 'text-red-500 hover:bg-red-50'
-                    }`}
-                  >
-                    Dar de baja
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {(puedeQuitarVP || puedeAsignarVP) && (
+                    <button
+                      onClick={() => setModalVP({ usuario: m, accion: esVicepresidente ? 'quitar' : 'asignar' })}
+                      disabled={asignando === m.id_usuario}
+                      className={`opacity-0 group-hover:opacity-100 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full border transition-all duration-200 cursor-pointer
+                        ${asignando === m.id_usuario ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'}
+                        ${esVicepresidente
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20'
+                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                        }`}
+                    >
+                      {asignando === m.id_usuario ? '...' : esVicepresidente ? 'Quitar Vicepresidente' : 'Hacer Vicepresidente'}
+                    </button>
+                  )}
+                  {!esPresidenteDelClub && (
+                    <button
+                      onClick={() => handleBajar(m)}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                        modoOscuro
+                          ? 'text-red-400 hover:bg-red-500/10'
+                          : 'text-red-500 hover:bg-red-50'
+                      }`}
+                    >
+                      Dar de baja
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {modalVP && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setModalVP(null)} />
+          <div className={`relative w-full max-w-md rounded-2xl p-6 shadow-xl ${
+            modoOscuro ? 'bg-[#0e162c] border border-slate-700/50' : 'bg-white border border-slate-200'
+          }`}>
+            <div className="text-center">
+              <div className={`mx-auto mb-4 w-14 h-14 rounded-full flex items-center justify-center ${
+                modalVP.accion === 'asignar' ? 'bg-emerald-500/10' : 'bg-blue-500/10'
+              }`}>
+                <span className={`text-2xl ${modalVP.accion === 'asignar' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+              </div>
+              <h3 className={`text-lg font-bold ${tema.title}`}>
+                {modalVP.accion === 'asignar' ? 'Designar Vicepresidente' : 'Quitar Vicepresidente'}
+              </h3>
+              <p className={`mt-2 text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+                {modalVP.accion === 'asignar'
+                  ? `\u00BFSeguro que quieres designar a ${modalVP.usuario.nombre_completo} como Vicepresidente del club?`
+                  : `\u00BFSeguro que quieres quitar a ${modalVP.usuario.nombre_completo} como Vicepresidente?`}
+              </p>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setModalVP(null)}
+                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
+                  modoOscuro ? 'bg-slate-700 hover:bg-slate-600 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarVP}
+                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors cursor-pointer ${
+                  modalVP.accion === 'asignar'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {modalVP.accion === 'asignar' ? 'Designar' : 'Quitar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ModalConfirmacion
+        show={!!miembroABajar}
+        titulo="Dar de baja del club"
+        mensaje={miembroABajar ? `¿Dar de baja a ${miembroABajar.nombre_completo} del club?` : ''}
+        textoConfirmar="Dar de Baja"
+        varianteDanger
+        onConfirmar={confirmarBajarMiembro}
+        onCancelar={() => setMiembroABajar(null)}
+      />
     </div>
   );
 }

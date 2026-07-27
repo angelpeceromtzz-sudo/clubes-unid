@@ -11,6 +11,7 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [cargando, setCargando] = useState(true);
+  const [pendienteConfirmacion, setPendienteConfirmacion] = useState(null);
 
   useEffect(() => {
     api.getDiapositivasHeroAdmin()
@@ -74,15 +75,8 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
   }, [refetch, setErrorFeedback]);
 
   const eliminar = useCallback(async (diapositiva) => {
-    if (!window.confirm(`¿Eliminar el banner "${diapositiva.titulo}"?`)) return;
-    try {
-      await api.deleteDiapositivaHero(diapositiva.id_diapositiva);
-      setFeedback('Banner eliminado correctamente');
-      await refetch();
-    } catch (err) {
-      setErrorFeedback(err.message);
-    }
-  }, [refetch, setFeedback, setErrorFeedback]);
+    setPendienteConfirmacion(diapositiva);
+  }, []);
 
   const subirImagen = useCallback(async (file) => {
     try {
@@ -135,6 +129,23 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }, []);
 
+  const confirmarPendiente = useCallback(async () => {
+    if (!pendienteConfirmacion) return;
+    const d = pendienteConfirmacion;
+    setPendienteConfirmacion(null);
+    try {
+      await api.deleteDiapositivaHero(d.id_diapositiva);
+      setFeedback('Banner eliminado correctamente');
+      await refetch();
+    } catch (err) {
+      setErrorFeedback(err.message);
+    }
+  }, [pendienteConfirmacion, refetch, setFeedback, setErrorFeedback]);
+
+  const cancelarPendiente = useCallback(() => {
+    setPendienteConfirmacion(null);
+  }, []);
+
   return {
     diapositivas,
     diapositivasFiltradas,
@@ -155,5 +166,8 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
     handleFormChange,
     subirImagen,
     refetch,
+    pendienteConfirmacion,
+    confirmarPendiente,
+    cancelarPendiente,
   };
 }

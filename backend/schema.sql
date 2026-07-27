@@ -22,7 +22,8 @@ INSERT INTO cat_roles (id_rol, nombre_rol) VALUES
     (1, 'alumno'),
     (2, 'presidente'),
     (3, 'admin'),
-    (4, 'rectoria')
+    (4, 'rectoria'),
+    (5, 'vicepresidente')
 ON CONFLICT (id_rol) DO UPDATE SET nombre_rol = EXCLUDED.nombre_rol;
 
 CREATE TABLE IF NOT EXISTS cat_estatus_clubes (
@@ -87,10 +88,10 @@ CREATE TABLE IF NOT EXISTS clubes (
     categoria VARCHAR(50),
     cupo_maximo INT NOT NULL CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo > 0),
     id_presidente INT,
+    id_vicepresidente INT,
     imagen_portada VARCHAR(255),
     id_estatus_club INT NOT NULL DEFAULT 1,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    lugar VARCHAR(255) DEFAULT '',
     horario VARCHAR(100) DEFAULT '',
     max_postulaciones INTEGER DEFAULT NULL,
     postulaciones_actuales INTEGER DEFAULT 0,
@@ -98,6 +99,7 @@ CREATE TABLE IF NOT EXISTS clubes (
     fecha_apertura_programada TIMESTAMPTZ DEFAULT NULL,
     fecha_limite_cierre TIMESTAMPTZ DEFAULT NULL,
     CONSTRAINT fk_club_presidente FOREIGN KEY (id_presidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_club_vicepresidente FOREIGN KEY (id_vicepresidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_estatus FOREIGN KEY (id_estatus_club) REFERENCES cat_estatus_clubes(id_estatus_club) ON DELETE RESTRICT
 );
 

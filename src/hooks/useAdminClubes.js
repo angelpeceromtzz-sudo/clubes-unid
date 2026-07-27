@@ -11,6 +11,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [cargandoClubes, setCargandoClubes] = useState(true);
+  const [pendienteConfirmacion, setPendienteConfirmacion] = useState(null);
 
   useEffect(() => {
     api.getClubes()
@@ -43,7 +44,10 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
   }, []);
 
   const manejarCambioEstatus = useCallback(async (clubId, nuevoEstatusId) => {
-    if (nuevoEstatusId === 3 && !window.confirm('¿Estás seguro de dar de baja este club? Los miembros serán notificados.')) return;
+    if (nuevoEstatusId === 3) {
+      setPendienteConfirmacion({ tipo: 'baja', clubId, nuevoEstatusId });
+      return;
+    }
     try {
       await api.updateClubEstatus(clubId, nuevoEstatusId);
       const actualizados = await api.getClubes();
@@ -88,7 +92,11 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
       setErrorModal('La imagen del club es obligatoria');
       return;
     }
-    if (editandoClub && !window.confirm(`¿Guardar los cambios en "${editandoClub.nombre_club}"?`)) return;
+    if (editandoClub) {
+      setMostrarModalCrear(false);
+      setPendienteConfirmacion({ tipo: 'editar', club: editandoClub });
+      return;
+    }
     setEnviando(true);
     try {
       if (editandoClub) {
@@ -134,6 +142,47 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
     }
   }, []);
 
+  const confirmarPendiente = useCallback(async () => {
+    if (!pendienteConfirmacion) return;
+    const p = pendienteConfirmacion;
+    setPendienteConfirmacion(null);
+    if (p.tipo === 'baja') {
+      try {
+        await api.updateClubEstatus(p.clubId, p.nuevoEstatusId);
+        const actualizados = await api.getClubes();
+        setClubes(actualizados);
+      } catch (err) {
+        setErrorFeedback(err.message);
+      }
+    } else if (p.tipo === 'editar') {
+      setEnviando(true);
+      try {
+        await api.updateClub(p.club.id_club, {
+          nombre_club: formularioClub.nombre_club,
+          descripcion: formularioClub.descripcion,
+          categoria: formularioClub.categoria,
+          cupo_maximo: Number(formularioClub.cupo_maximo),
+          imagen_portada: formularioClub.imagen_portada || null,
+        });
+        setFeedback('Club actualizado correctamente');
+        const actualizados = await api.getClubes();
+        setClubes(actualizados);
+        setMostrarModalCrear(false);
+      } catch (err) {
+        setErrorModal(err.message);
+      } finally {
+        setEnviando(false);
+      }
+    }
+  }, [pendienteConfirmacion, formularioClub, setFeedback, setErrorFeedback]);
+
+  const cancelarPendiente = useCallback(() => {
+    if (pendienteConfirmacion?.tipo === 'editar') {
+      setMostrarModalCrear(true);
+    }
+    setPendienteConfirmacion(null);
+  }, [pendienteConfirmacion]);
+
   return {
     clubes,
     cargandoClubes,
@@ -155,5 +204,8 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
     handleClubFormChange: manejarCambioFormularioClub,
     subirImagen,
     refetchClubes,
+    pendienteConfirmacion,
+    confirmarPendiente,
+    cancelarPendiente,
   };
 }

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requireClubLeader } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
 
 const router = Router();
@@ -91,32 +91,30 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // Da de baja a un usuario de su club (presidente o admin)
-router.delete('/:userId', authenticate, requireRole(2, 3), async (req, res) => {
+router.delete('/:userId', authenticate, requireClubLeader, async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Si es presidente, verificar que el usuario pertenezca a SU club
-    if (req.user.id_rol === 2) {
-      const clubDelPresidente = await pool.query(
-        `SELECT id_club FROM clubes WHERE id_presidente = $1`,
-        [req.user.id]
-      );
+    // Verificar que el usuario pertenezca al club del presidente/vicepresidente
+    const clubDelLeader = await pool.query(
+      `SELECT id_club FROM clubes WHERE id_presidente = $1 OR id_vicepresidente = $1`,
+      [req.user.id]
+    );
 
-      if (clubDelPresidente.rows.length === 0) {
-        return res.status(403).json({ error: 'No eres presidente de ningún club' });
-      }
+    if (clubDelLeader.rows.length === 0) {
+      return res.status(403).json({ error: 'No eres presidente ni vicepresidente de ningún club' });
+    }
 
-      const idClub = clubDelPresidente.rows[0].id_club;
+    const idClub = clubDelLeader.rows[0].id_club;
 
-      const inscripcion = await pool.query(
-        `SELECT id_inscripcion FROM inscripciones
-         WHERE id_usuario = $1 AND id_club = $2 AND id_estatus_inscripcion = 1`,
-        [userId, idClub]
-      );
+    const inscripcion = await pool.query(
+      `SELECT id_inscripcion FROM inscripciones
+       WHERE id_usuario = $1 AND id_club = $2 AND id_estatus_inscripcion = 1`,
+      [userId, idClub]
+    );
 
-      if (inscripcion.rows.length === 0) {
-        return res.status(404).json({ error: 'El usuario no tiene una inscripción activa en tu club' });
-      }
+    if (inscripcion.rows.length === 0) {
+      return res.status(404).json({ error: 'El usuario no tiene una inscripción activa en tu club' });
     }
 
     const result = await pool.query(

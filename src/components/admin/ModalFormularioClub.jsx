@@ -39,14 +39,14 @@ export function ModalFormularioClub({
   };
 
   return (
-    <ModalBase show={show} onClose={onClose} maxWidth="max-w-md">
+    <ModalBase show={show} onClose={onClose} maxWidth="max-w-md" closeOnBackdrop={false}>
       <div className="flex items-center justify-between mb-6">
         <h2 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
           {editandoClub ? 'Editar Club' : 'Anexar Nuevo Club'}
         </h2>
         <button
           onClick={onClose}
-          className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
+          className={`transition-colors cursor-pointer ${modoOscuro ? 'text-white hover:text-amber-400' : 'text-slate-500 hover:text-slate-900'}`}
         >
           <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
         </button>

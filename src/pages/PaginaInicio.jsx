@@ -59,7 +59,7 @@ export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
             Explorar Clubes Disponibles
           </h2>
           <p className={`text-sm mt-1 transition-colors duration-300 ${tema.subtitle}`}>
-            Catálogo oficial UNID
+            Catálogo oficial UNID Campus Campeche
           </p>
         </div>
 

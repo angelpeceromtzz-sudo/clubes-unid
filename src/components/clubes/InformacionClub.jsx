@@ -21,10 +21,6 @@ export function InformacionClub({ club }) {
           <p className={`text-sm font-medium ${tema.title}`}>{club.categoria}</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-1">Lugar</p>
-          <p className={`text-sm font-medium ${tema.title}`}>{club.lugar || '—'}</p>
-        </div>
-        <div>
           <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-1">Cupo</p>
           <p className={`text-sm font-medium ${tema.title}`}>{club.cupo_maximo} lugares</p>
         </div>

@@ -15,7 +15,7 @@ export function EventosClub({ modoOscuro }) {
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${modoOscuro ? 'bg-amber-500/10' : 'bg-amber-100'}`}>
             <Icono nombre="calendar" strokeWidth={2} className={`h-5 w-5 ${modoOscuro ? 'text-amber-400' : 'text-amber-600'}`} />
           </div>
-          <h2 className={`text-xl font-black tracking-tight ${c.title}`}>Próximos Eventos</h2>
+          <h2 className={`text-sm font-black tracking-tight ${c.title}`}>Próximos Eventos</h2>
         </div>
         <span className={`text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-full border ${c.badge}`}>
           Próximamente

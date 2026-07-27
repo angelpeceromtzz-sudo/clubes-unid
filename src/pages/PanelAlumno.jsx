@@ -132,7 +132,7 @@ export function PanelAlumno() {
           )}
 
           {vistaAlumno === 'horarios' && (
-            <HorariosClub club={d.club} modoOscuro={modoOscuro} />
+            <HorariosClub club={d.club} modoOscuro={modoOscuro} esMiembro={esMiembroOficial} />
           )}
         </NavegacionPanel>
       ) : (

@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import pool from '../db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -34,4 +35,32 @@ export function requireRole(...roles) {
     }
     next();
   };
+}
+
+export function requireClubLeader(req, res, next) {
+  if (!req.user || (req.user.id_rol !== 2 && req.user.id_rol !== 5)) {
+    return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+  }
+
+  const clubId = req.params.id || req.params.id_club;
+  if (!clubId) {
+    return res.status(400).json({ error: 'id_club requerido' });
+  }
+
+  pool.query(
+    'SELECT id_presidente, id_vicepresidente FROM clubes WHERE id_club = $1',
+    [clubId]
+  ).then(({ rows }) => {
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Club no encontrado' });
+    }
+    const club = rows[0];
+    if (club.id_presidente !== req.user.id && club.id_vicepresidente !== req.user.id) {
+      return res.status(403).json({ error: 'No eres líder de este club' });
+    }
+    next();
+  }).catch(err => {
+    console.error('Error en requireClubLeader:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  });
 }
