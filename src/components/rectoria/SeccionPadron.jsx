@@ -1,5 +1,4 @@
 /* Padrón de alumnos filtrable por club, carrera o nombre con tabla de resultados. */
-import { useState } from 'react';
 import { Badge } from '../ui/Badge';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
@@ -10,9 +9,9 @@ export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clu
 
   async function exportarCSV() {
     if (padron.length === 0) return;
-    const headers = ['Nombre Completo', 'Matrícula', 'Carrera', 'Cuatrimestre', 'Turno', 'Club', 'Estado', 'Bloque'];
+    const headers = ['Nombre Completo', 'Matrícula', 'Carrera', 'Cuatrimestre', 'Club', 'Estado', 'Bloque'];
     const filas = padron.map(f => [
-      f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno, f.nombre_club, f.status, f.bloque_asignado || ''
+      f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.nombre_club, f.status, f.bloque_asignado || ''
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
 
     const csv = [headers.join(','), ...filas].join('\n');
@@ -50,16 +49,6 @@ export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clu
             placeholder="Filtrar por carrera"
             className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-40`} />
         </div>
-        <div>
-          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Turno</label>
-          <select value={filtrosPadron.turno} onChange={e => aplicarFiltrosPadron({ turno: e.target.value })}
-            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50`}>
-            <option value="">Todos</option>
-            <option value="Matutino">Matutino</option>
-            <option value="Vespertino">Vespertino</option>
-            <option value="Mixto">Mixto</option>
-          </select>
-        </div>
         <button onClick={exportarCSV} disabled={padron.length === 0}
           className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-all cursor-pointer">
           Exportar CSV
@@ -76,21 +65,20 @@ export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clu
                 <Th>Nombre</Th>
                 <Th>Matrícula</Th>
                 <Th>Carrera</Th>
-                <Th>Turno</Th>
+
                 <Th>Club</Th>
                 <Th>Estado</Th>
               </tr>
             </thead>
             <tbody>
               {padron.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-10 text-slate-500">Sin resultados</td></tr>
+                <tr><td colSpan={5} className="text-center py-10 text-slate-500">Sin resultados</td></tr>
               )}
               {padron.map(f => (
                 <tr key={`${f.id_formulario}-${f.id_club}`} className={`border-b ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/20' : 'border-slate-100 hover:bg-slate-50'} transition-colors`}>
                   <Td className="font-medium">{f.nombre_completo}</Td>
                   <Td className="font-mono text-xs">{f.matricula}</Td>
                   <Td>{f.carrera}</Td>
-                  <Td>{f.turno}</Td>
                   <Td>{f.nombre_club}</Td>
                   <Td><Badge texto={f.status} color={
                     f.status === 'Miembro oficial' || f.status === 'Oferta emitida' ? 'emerald' : f.status === 'Rechazado' || f.status === 'Oferta rechazada' ? 'red' : f.status === 'Postulado' ? 'amber' : 'blue'

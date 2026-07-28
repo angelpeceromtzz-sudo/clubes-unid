@@ -32,7 +32,7 @@ El sistema **no** incluye: módulo de pagos o cobro de cuotas; integración con 
 | **Presidente** | Perfil de usuario con `id_rol = 2`. Es el responsable de un club: revisa postulaciones, cambia estatus de formularios, genera convocatorias, envía ofertas, publica avisos y notificaciones a los miembros de su club. |
 | **Admin** | Perfil de usuario con `id_rol = 3`. Administrador global con acceso a gestión de usuarios (cambio de roles), creación/edición de clubes, cambio de estatus de clubes, asignación de presidentes a clubes, baja de inscripciones, y envío de anuncios globales. |
 | **Rectoría** | Perfil de usuario con `id_rol = 4`. Rol de consulta con acceso a estadísticas generales del ecosistema de clubes (ocupación, top clubes, total de alumnos), padrón de postulantes con filtros, y listados de asistencia. No puede modificar datos. |
-| **Formulario / Postulación** | Solicitud de ingreso que un alumno envía a un club. Contiene datos personales, académicos (matrícula, carrera, cuatrimestre, turno), motivo de ingreso y experiencia previa. Tiene un estatus que avanza por un flujo de estados definido. Límite de 3 postulaciones activas por alumno. Modelado en la tabla `formularios`. |
+| **Formulario / Postulación** | Solicitud de ingreso que un alumno envía a un club. Contiene datos personales, académicos (matrícula, carrera, cuatrimestre), motivo de ingreso y experiencia previa. Tiene un estatus que avanza por un flujo de estados definido. Límite de 3 postulaciones activas por alumno. Modelado en la tabla `formularios`. |
 | **Flujo de estatus de postulación** | Secuencia de transiciones de estado de un formulario: `En revisión → Preseleccionado → Convocado → Oferta enviada → Miembro oficial` (éxito) o `Rechazado` desde cualquier estado intermedio. Cada transición tiene reglas definidas en el backend. |
 | **Convocatoria** | Agrupación de alumnos preseleccionados en bloques (A, B, C, etc.) para evaluaciones presenciales. Cada bloque tiene hasta 20 alumnos. Incluye fecha, hora y lugar. Se genera automáticamente al distribuir equitativamente a los preseleccionados. |
 | **Oferta de ingreso** | Invitación formal que el presidente extiende a un alumno convocado después de la evaluación presencial. Tiene una vigencia de 3 días (72 horas) configurable (`DIAS_VIGENCIA_OFERTA`). Si vence sin respuesta, el sistema la rechaza automáticamente. |
@@ -318,7 +318,7 @@ Criterio de aceptación (Gherkin):
   Then visualiza: total de alumnos, alumnos inscritos, total de clubes, porcentaje de ocupación, y solicitudes agrupadas por estatus
 
   Given un usuario de rectoría en la sección padrón
-  When aplica filtros por club, búsqueda por nombre/matrícula, carrera o turno
+  When aplica filtros por club, búsqueda por nombre/matrícula o carrera
   Then el sistema devuelve los resultados filtrados en tiempo real
 
 ---

@@ -57,17 +57,19 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
           </button>
         )}
 
-        <button
-          onClick={estaAutenticado ? irPanel : onLoginClick}
-          className={`flex flex-col items-center gap-0.5 transition-colors duration-200 cursor-pointer ${estaAutenticado && enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
-        >
-          {estaAutenticado ? (
-            <Icono nombre="profile" strokeWidth={2} className="h-5 w-5" />
-          ) : (
-            <Icono nombre="logout" strokeWidth={2} className="h-5 w-5" />
-          )}
-          <span className="text-[10px] font-medium">{estaAutenticado ? 'Perfil' : 'Iniciar Sesión'}</span>
-        </button>
+        {(!estaAutenticado || !tieneInscripcionActiva) && (
+          <button
+            onClick={estaAutenticado ? irPanel : onLoginClick}
+            className={`flex flex-col items-center gap-0.5 transition-colors duration-200 cursor-pointer ${estaAutenticado && enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
+          >
+            {estaAutenticado ? (
+              <Icono nombre="profile" strokeWidth={2} className="h-5 w-5" />
+            ) : (
+              <Icono nombre="logout" strokeWidth={2} className="h-5 w-5" />
+            )}
+            <span className="text-[10px] font-medium">{estaAutenticado ? 'Mis Postulaciones' : 'Iniciar Sesión'}</span>
+          </button>
+        )}
       </div>
     </nav>
   );

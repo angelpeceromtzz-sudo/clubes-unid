@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS formularios (
     matricula VARCHAR(30) NOT NULL,
     carrera VARCHAR(100) NOT NULL,
     cuatrimestre INT NOT NULL,
-    turno VARCHAR(20) NOT NULL,
+
     telefono_contacto VARCHAR(20) NOT NULL,
     motivo_ingreso TEXT NOT NULL,
     experiencia_previa TEXT DEFAULT '',

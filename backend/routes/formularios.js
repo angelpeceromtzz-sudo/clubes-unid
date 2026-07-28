@@ -28,13 +28,13 @@ router.get('/debug-postulaciones', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_club, f.id_alumno, f.bloque_asignado, f.status,
-              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
-              f.fecha_envio, f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta,
-              c.nombre_club, c.categoria,
-              c.imagen_portada
-       FROM formularios f
-       JOIN clubes c ON c.id_club = f.id_club
-       ORDER BY f.id_alumno, f.fecha_envio DESC`
+              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
+               f.fecha_envio, f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta,
+               c.nombre_club, c.categoria,
+               c.imagen_portada
+        FROM formularios f
+        JOIN clubes c ON c.id_club = f.id_club
+        ORDER BY f.id_alumno, f.fecha_envio DESC`
     );
     res.json({
       total: result.rows.length,
@@ -75,11 +75,11 @@ router.get('/mis-postulaciones', authenticate, requireRole(1), async (req, res) 
     // 2. Obtener postulaciones completas
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_club, f.bloque_asignado, f.status,
-              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
-              f.fecha_envio, f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta,
-              c.nombre_club, c.categoria,
-              c.imagen_portada,
-              (SELECT row_to_json(datos) FROM (
+              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
+               f.fecha_envio, f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta,
+               c.nombre_club, c.categoria,
+               c.imagen_portada,
+               (SELECT row_to_json(datos) FROM (
                 SELECT cv.id_convocatoria, cv.bloque, cv.fecha, cv.hora, cv.lugar
                 FROM convocatorias cv WHERE cv.id_convocatoria = f.id_convocatoria
               ) AS datos) AS convocatoria,
@@ -110,7 +110,6 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
       matricula,
       carrera,
       cuatrimestre,
-      turno,
       telefono_contacto,
       motivo_ingreso,
       experiencia_previa,
@@ -130,7 +129,7 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
       matricula = institutionalIdDb;
     }
 
-    if (!id_club || !nombre_completo || !matricula || !carrera || !cuatrimestre || !turno || !telefono_contacto || !motivo_ingreso) {
+    if (!id_club || !nombre_completo || !matricula || !carrera || !cuatrimestre || !telefono_contacto || !motivo_ingreso) {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben estar llenos' });
     }
 
@@ -222,9 +221,9 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
 
       const result = await client.query(
         `INSERT INTO formularios (id_alumno, id_club, bloque_asignado,
-          nombre_completo, matricula, carrera, cuatrimestre, turno,
+          nombre_completo, matricula, carrera, cuatrimestre,
           telefono_contacto, motivo_ingreso, experiencia_previa)
-         VALUES ($1, $2, DEFAULT, $3, $4, $5, $6, $7, $8, $9, $10)
+         VALUES ($1, $2, DEFAULT, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
         [
           req.user.id,
@@ -233,7 +232,6 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
           matricula,
           carrera,
           cuatrimestre,
-          turno,
           telefono_contacto,
           motivo_ingreso,
           experiencia_previa || '',
@@ -279,17 +277,17 @@ router.get('/pendientes/:id_club', authenticate, requireClubLeader, async (req, 
 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
-              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
-              f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
-              f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
-              (SELECT json_agg(json_build_object(
+               f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
+               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
+               f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
+               (SELECT json_agg(json_build_object(
                 'status_anterior', hp.status_anterior,
                 'status_nuevo', hp.status_nuevo,
                 'fecha_cambio', hp.fecha_cambio
               ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
-       FROM formularios f
-       WHERE f.id_club = $1
-         AND f.status NOT IN ('Miembro oficial', 'Rechazado')
+        FROM formularios f
+        WHERE f.id_club = $1
+          AND f.status NOT IN ('Miembro oficial', 'Rechazado')
        ORDER BY f.fecha_envio DESC`,
       [id_club],
     );
@@ -318,17 +316,17 @@ router.get('/todos/:id_club', authenticate, requireClubLeader, async (req, res) 
 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
-              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.turno,
-              f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
-              f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
-              (SELECT json_agg(json_build_object(
-                'status_anterior', hp.status_anterior,
-                'status_nuevo', hp.status_nuevo,
-                'fecha_cambio', hp.fecha_cambio
-              ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
-       FROM formularios f
-       WHERE f.id_club = $1
-       ORDER BY f.fecha_envio DESC`,
+               f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
+               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
+               f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
+               (SELECT json_agg(json_build_object(
+                 'status_anterior', hp.status_anterior,
+                 'status_nuevo', hp.status_nuevo,
+                 'fecha_cambio', hp.fecha_cambio
+               ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
+        FROM formularios f
+        WHERE f.id_club = $1
+        ORDER BY f.fecha_envio DESC`,
       [id_club],
     );
 

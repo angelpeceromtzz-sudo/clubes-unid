@@ -84,10 +84,6 @@ export function HistorialPostulaciones({ club }) {
                   <p className={`text-sm ${tema.text}`}>{form.cuatrimestre}°</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Turno</p>
-                  <p className={`text-sm ${tema.text}`}>{form.turno}</p>
-                </div>
-                <div>
                   <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Bloque</p>
                   <p className={`text-sm font-bold ${tema.text}`}>{form.bloque_asignado || '-'}</p>
                 </div>

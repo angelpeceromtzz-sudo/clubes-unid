@@ -29,10 +29,6 @@ export function TarjetaSolicitud({ solicitud, onPreseleccionar, onRechazar, acci
               <p className={`text-sm truncate ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{solicitud.carrera}</p>
             </div>
             <div>
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Turno</span>
-              <p className={`text-sm ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{solicitud.turno}</p>
-            </div>
-            <div>
               <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Teléfono</span>
               <p className={`text-sm ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{solicitud.telefono_contacto}</p>
             </div>

@@ -143,12 +143,12 @@ router.get('/clubes-detalle', async (req, res) => {
 // Padrón completo de alumnos por club (con filtros)
 router.get('/padron', async (req, res) => {
   try {
-    const { id_club, busqueda, carrera, turno } = req.query;
+    const { id_club, busqueda, carrera } = req.query;
 
     let sql = `
       SELECT f.id_formulario, f.id_club, c.nombre_club,
         f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
-        f.turno, f.status, f.bloque_asignado
+        f.status, f.bloque_asignado
       FROM formularios f
       JOIN clubes c ON c.id_club = f.id_club
       WHERE 1=1
@@ -169,10 +169,6 @@ router.get('/padron', async (req, res) => {
       sql += ` AND f.carrera ILIKE $${idx++}`;
       params.push(`%${carrera}%`);
     }
-    if (turno) {
-      sql += ` AND f.turno = $${idx++}`;
-      params.push(turno);
-    }
 
     sql += ' ORDER BY c.nombre_club, f.nombre_completo';
 
@@ -191,7 +187,7 @@ router.get('/asistencia/:id_club', async (req, res) => {
 
     const result = await pool.query(`
       SELECT f.id_formulario, f.nombre_completo, f.matricula, f.carrera,
-        f.turno, f.bloque_asignado, f.status
+        f.bloque_asignado, f.status
       FROM formularios f
       WHERE f.id_club = $1
         AND f.status IN ('Miembro oficial')

@@ -19,15 +19,14 @@ const CARRERAS = [
   'Otra',
 ];
 
-const TURNOS = ['Matutino', 'Vespertino'];
+
 
 const ETIQUETAS = {
   nombre_completo: 'Nombre Completo',
   matricula: 'Matrícula',
   carrera: 'Carrera',
   cuatrimestre: 'Cuatrimestre',
-  turno: 'Turno',
-  telefono_contacto: 'Teléfono de Contacto',
+telefono_contacto: 'Teléfono de Contacto',
   motivo_ingreso: 'Motivo de Ingreso',
   experiencia_previa: 'Experiencia Previa',
 };
@@ -40,7 +39,7 @@ export function FormularioInscripcion({ club, onClose }) {
     matricula: usuario?.institutional_id || '',
     carrera: '',
     cuatrimestre: '',
-    turno: '',
+
     telefono_contacto: '',
     motivo_ingreso: '',
     experiencia_previa: '',
@@ -74,7 +73,7 @@ export function FormularioInscripcion({ club, onClose }) {
     } else if (parseInt(formulario.cuatrimestre) < 1) {
       errs.cuatrimestre = 'El cuatrimestre debe ser mayor a 0';
     }
-    if (!formulario.turno) errs.turno = 'Selecciona un turno';
+
     if (!formulario.telefono_contacto) {
       errs.telefono_contacto = 'El teléfono de contacto es obligatorio';
     } else if (!/^\d{10}$/.test(formulario.telefono_contacto)) {
@@ -227,10 +226,7 @@ export function FormularioInscripcion({ club, onClose }) {
 
             <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
 
-            <div className="grid grid-cols-2 gap-4">
-              <CampoSelect label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} opciones={['1','2','3','4','5','6','7','8','9']} placeholder="Selecciona" required error={errores.cuatrimestre} />
-              <CampoSelect label="Turno" name="turno" value={formulario.turno} onChange={manejarCambio} opciones={TURNOS} placeholder="Selecciona" required error={errores.turno} />
-            </div>
+            <CampoSelect label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} opciones={['1','2','3','4','5','6','7','8','9']} placeholder="Selecciona" required error={errores.cuatrimestre} />
 
             <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} maxLength={10} />
 

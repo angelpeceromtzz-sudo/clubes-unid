@@ -18,7 +18,7 @@ export function usePanelRectoria() {
     id_club: '',
     busqueda: '',
     carrera: '',
-    turno: '',
+
   });
 
   // Filtros para asistencia
@@ -64,8 +64,7 @@ export function usePanelRectoria() {
       if (filtros.id_club) params.set('id_club', filtros.id_club);
       if (filtros.busqueda) params.set('busqueda', filtros.busqueda);
       if (filtros.carrera) params.set('carrera', filtros.carrera);
-      if (filtros.turno) params.set('turno', filtros.turno);
-      const qs = params.toString();
+const qs = params.toString();
       const data = await api.get(`/estadisticas/padron${qs ? `?${qs}` : ''}`);
       setPadron(data);
     } catch {

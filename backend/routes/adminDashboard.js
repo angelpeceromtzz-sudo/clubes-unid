@@ -18,17 +18,17 @@ router.get('/dashboard-data', authenticate, requireRole(3), async (req, res) => 
          WHERE status IN ('Pendiente', 'En revisión')`
       ),
       pool.query(
-        `SELECT f.nombre_completo, c.nombre_club, f.fecha_creacion, f.status
+        `SELECT f.nombre_completo, c.nombre_club, f.fecha_envio, f.status
          FROM formularios f
          JOIN clubes c ON c.id_club = f.id_club
-         ORDER BY f.fecha_creacion DESC
+         ORDER BY f.fecha_envio DESC
          LIMIT 5`
       ),
       pool.query(
-        `SELECT to_char(f.fecha_creacion, 'YYYY-MM') AS mes,
-                COUNT(*)::int AS total
-         FROM formularios f
-         WHERE f.fecha_creacion >= NOW() - INTERVAL '6 months'
+        `SELECT to_char(f.fecha_envio, 'YYYY-MM') AS mes,
+                 COUNT(*)::int AS total
+          FROM formularios f
+          WHERE f.fecha_envio >= NOW() - INTERVAL '6 months'
          GROUP BY mes
          ORDER BY mes`
       ),
