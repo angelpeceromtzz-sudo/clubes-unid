@@ -310,6 +310,8 @@ END $$;
 -- VISTAS
 -- ============================================================
 
+DROP VIEW IF EXISTS clubes_con_estado;
+
 CREATE OR REPLACE VIEW clubes_con_estado AS
 SELECT
   cl.*,
