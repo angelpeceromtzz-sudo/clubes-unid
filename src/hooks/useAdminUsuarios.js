@@ -1,6 +1,8 @@
-/* Hook para gestión de usuarios: CRUD, filtros, modales de creación y acción admin. */
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useConfirmacionPendiente } from './useConfirmacionPendiente';
+import { useAdminActionModal } from './useAdminActionModal';
+import { filtrarUsuarios } from '../utils/filtros';
 
 export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   const [usuarios, setUsuarios] = useState([]);
@@ -14,10 +16,8 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   const [enviandoUsuario, setEnviandoUsuario] = useState(false);
   const [errorModalUsuario, setErrorModalUsuario] = useState('');
 
-  const [modalAdmin, setModalAdmin] = useState({ show: false, targetUser: null, accion: '' });
-  const [enviandoAdmin, setEnviandoAdmin] = useState(false);
-  const [errorAdmin, setErrorAdmin] = useState('');
-  const [pendienteConfirmacion, setPendienteConfirmacion] = useState(null);
+  const { pendiente: pendienteConfirmacion, solicitar: solicitarConfirmacion, confirmar: confirmarPendienteBase, cancelar: cancelarPendiente } = useConfirmacionPendiente();
+  const { modalAdmin, enviandoAdmin, errorAdmin, abrirModalAdmin, manejarAdminAction, cerrarModalAdmin } = useAdminActionModal();
 
   useEffect(() => {
     api.getUsuarios()
@@ -28,19 +28,7 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
 
   const totalAlumnos = usuarios.filter((u) => u.id_rol === 1).length;
   const totalInscripciones = usuarios.filter((u) => u.nombre_club).length;
-
-  const usuariosFiltrados = (() => {
-    const q = busqueda.toLowerCase().trim();
-    const porRol = filtroRol ? usuarios.filter((u) => String(u.id_rol) === filtroRol) : usuarios;
-    return q
-      ? porRol.filter(
-          (u) =>
-            String(u.id_usuario).includes(q) ||
-            u.nombre_completo.toLowerCase().includes(q) ||
-            u.correo_institucional.toLowerCase().includes(q)
-        )
-      : porRol;
-  })();
+  const usuariosFiltrados = filtrarUsuarios(usuarios, busqueda, filtroRol);
 
   const refetchUsuarios = useCallback(async () => {
     try {
@@ -62,9 +50,9 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     }
   }, [setFeedback, setErrorFeedback]);
 
-  const handleRemoveFromClub = useCallback(async (userId) => {
-    setPendienteConfirmacion({ tipo: 'bajaAlumno', userId });
-  }, []);
+  const handleRemoveFromClub = useCallback((userId) => {
+    solicitarConfirmacion({ tipo: 'bajaAlumno', userId });
+  }, [solicitarConfirmacion]);
 
   const handleAsignarClub = useCallback(async (userId, clubId) => {
     setAsignando((prev) => ({ ...prev, [userId]: true }));
@@ -104,9 +92,9 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     }
   }, [refetchClubes, setFeedback, setErrorFeedback]);
 
-  const handleEliminarUsuario = useCallback(async (userId, nombre) => {
-    setPendienteConfirmacion({ tipo: 'eliminar', userId, nombre });
-  }, []);
+  const handleEliminarUsuario = useCallback((userId, nombre) => {
+    solicitarConfirmacion({ tipo: 'eliminar', userId, nombre });
+  }, [solicitarConfirmacion]);
 
   const abrirModalCrearUsuario = useCallback(() => {
     setFormularioUsuario({ nombre_completo: '', correo_institucional: '', contrasena: '', id_rol: 1 });
@@ -145,17 +133,25 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     }
   }, [formularioUsuario, setFeedback]);
 
-  const abrirModalAdmin = useCallback((user, accion) => {
-    setModalAdmin({ show: true, targetUser: user, accion });
-    setErrorAdmin('');
-  }, []);
-
-  const manejarAdminAction = useCallback(async (password) => {
-    const { targetUser, accion } = modalAdmin;
-    setEnviandoAdmin(true);
-    setErrorAdmin('');
+  const confirmarPendiente = useCallback(async () => {
     try {
-      await api.adminAction(targetUser.id_usuario, accion, password);
+      await confirmarPendienteBase(async (p) => {
+        if (p.tipo === 'bajaAlumno') {
+          await api.removeFromClub(p.userId);
+        } else if (p.tipo === 'eliminar') {
+          await api.deleteUser(p.userId);
+          setFeedback(`Usuario "${p.nombre}" eliminado correctamente`);
+        }
+        const actualizados = await api.getUsuarios();
+        setUsuarios(actualizados);
+      });
+    } catch (err) {
+      setErrorFeedback(err.message);
+    }
+  }, [confirmarPendienteBase, setFeedback, setErrorFeedback]);
+
+  const handleManejarAdminAction = useCallback(async (password) => {
+    await manejarAdminAction(password, async (targetUser, accion) => {
       const actualizados = await api.getUsuarios();
       setUsuarios(actualizados);
       setFeedback(
@@ -163,42 +159,8 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
           ? `"${targetUser.nombre_completo}" ahora es administrador`
           : `"${targetUser.nombre_completo}" ya no es administrador`
       );
-      setModalAdmin({ show: false, targetUser: null, accion: '' });
-    } catch (err) {
-      setErrorAdmin(err.message);
-    } finally {
-      setEnviandoAdmin(false);
-    }
-  }, [modalAdmin, setFeedback]);
-
-  const cerrarModalAdmin = useCallback(() => {
-    setModalAdmin({ show: false, targetUser: null, accion: '' });
-    setErrorAdmin('');
-  }, []);
-
-  const confirmarPendiente = useCallback(async () => {
-    if (!pendienteConfirmacion) return;
-    const p = pendienteConfirmacion;
-    setPendienteConfirmacion(null);
-    try {
-      if (p.tipo === 'bajaAlumno') {
-        await api.removeFromClub(p.userId);
-        const actualizados = await api.getUsuarios();
-        setUsuarios(actualizados);
-      } else if (p.tipo === 'eliminar') {
-        await api.deleteUser(p.userId);
-        const actualizados = await api.getUsuarios();
-        setUsuarios(actualizados);
-        setFeedback(`Usuario "${p.nombre}" eliminado correctamente`);
-      }
-    } catch (err) {
-      setErrorFeedback(err.message);
-    }
-  }, [pendienteConfirmacion, setFeedback, setErrorFeedback]);
-
-  const cancelarPendiente = useCallback(() => {
-    setPendienteConfirmacion(null);
-  }, []);
+    });
+  }, [manejarAdminAction, setFeedback]);
 
   return {
     usuarios,
@@ -229,7 +191,7 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     enviandoAdmin,
     errorAdmin,
     abrirModalAdmin,
-    manejarAdminAction,
+    manejarAdminAction: handleManejarAdminAction,
     cerrarModalAdmin,
     pendienteConfirmacion,
     confirmarPendiente,

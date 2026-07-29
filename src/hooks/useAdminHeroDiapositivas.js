@@ -1,6 +1,7 @@
-/* Hook para gestión de banners principales: CRUD, filtros y modal de creación/edición. */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
+import { useConfirmacionPendiente } from './useConfirmacionPendiente';
+import { filtrarPorTexto } from '../utils/filtros';
 
 const MAX_BANNERS = 6;
 
@@ -13,7 +14,8 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [cargando, setCargando] = useState(true);
-  const [pendienteConfirmacion, setPendienteConfirmacion] = useState(null);
+
+  const { pendiente: pendienteConfirmacion, solicitar: solicitarConfirmacion, confirmar: confirmarPendienteBase, cancelar: cancelarPendiente } = useConfirmacionPendiente();
 
   useEffect(() => {
     api.getDiapositivasHeroAdmin()
@@ -22,16 +24,7 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
       .finally(() => setCargando(false));
   }, []);
 
-  const diapositivasFiltradas = (() => {
-    const q = busqueda.toLowerCase().trim();
-    return q
-      ? diapositivas.filter(
-          (d) =>
-            d.titulo.toLowerCase().includes(q) ||
-            (d.subtitulo && d.subtitulo.toLowerCase().includes(q))
-        )
-      : diapositivas;
-  })();
+  const diapositivasFiltradas = filtrarPorTexto(diapositivas, busqueda, ['titulo', 'subtitulo']);
 
   const posicionesDisponibles = useMemo(() => {
     const ocupadas = new Set(
@@ -93,9 +86,9 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
     }
   }, [refetch, setErrorFeedback]);
 
-  const eliminar = useCallback(async (diapositiva) => {
-    setPendienteConfirmacion(diapositiva);
-  }, []);
+  const eliminar = useCallback((diapositiva) => {
+    solicitarConfirmacion(diapositiva);
+  }, [solicitarConfirmacion]);
 
   const subirImagen = useCallback(async (file) => {
     try {
@@ -148,21 +141,16 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
   }, []);
 
   const confirmarPendiente = useCallback(async () => {
-    if (!pendienteConfirmacion) return;
-    const d = pendienteConfirmacion;
-    setPendienteConfirmacion(null);
     try {
-      await api.deleteDiapositivaHero(d.id_diapositiva);
-      setFeedback('Banner eliminado correctamente');
-      await refetch();
+      await confirmarPendienteBase(async (d) => {
+        await api.deleteDiapositivaHero(d.id_diapositiva);
+        setFeedback('Banner eliminado correctamente');
+        await refetch();
+      });
     } catch (err) {
       setErrorFeedback(err.message);
     }
-  }, [pendienteConfirmacion, refetch, setFeedback, setErrorFeedback]);
-
-  const cancelarPendiente = useCallback(() => {
-    setPendienteConfirmacion(null);
-  }, []);
+  }, [confirmarPendienteBase, refetch, setFeedback, setErrorFeedback]);
 
   return {
     diapositivas,

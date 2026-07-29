@@ -30,7 +30,7 @@ export function ThemeProvider({ children }) {
         dropdownBorder: 'border-slate-700',
         dropdownItem: 'hover:bg-slate-700/50',
         profileText: 'text-slate-200',
-        iconColor: 'text-slate-400',
+        iconColor: 'text-slate-300',
         logoText: 'text-white',
       }
     : {

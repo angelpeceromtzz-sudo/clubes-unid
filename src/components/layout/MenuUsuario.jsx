@@ -31,7 +31,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
 
       <button
         onClick={() => { setMenuAbierto((prev) => !prev); }}
-        className={`p-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${modoOscuro ? 'text-white hover:text-amber-400 md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : `${tema.iconColor} hover:text-amber-400`} ${user ? 'lg:hidden' : ''}`}
+        className={`p-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${modoOscuro ? `${tema.iconColor} hover:text-amber-400 md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70` : `${tema.iconColor} hover:text-amber-400`} ${user ? 'lg:hidden' : ''}`}
         aria-label="Menú"
       >
         {menuAbierto ? (

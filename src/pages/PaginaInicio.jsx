@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { TarjetaClub } from '../components/clubes/TarjetaClub';
+import { TarjetaClub } from '../components/clubes/tarjetas/TarjetaClub';
 import { Heroe } from '../components/clubes/Heroe';
 import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';

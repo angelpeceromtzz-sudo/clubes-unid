@@ -2,13 +2,13 @@
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePanelRectoria } from '../hooks/usePanelRectoria';
-import { NavegacionPanel } from '../components/layout/NavegacionPanel';
+import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
 import { ELEMENTOS_NAV_RECTORIA } from '../constants/navegacion';
 import { SeccionResumen } from '../components/rectoria/SeccionResumen';
 import { SeccionClubes } from '../components/rectoria/SeccionClubes';
 import { SeccionPadron } from '../components/rectoria/SeccionPadron';
 import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
-import { TablaActividad } from '../components/admin/TablaActividad';
+import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
 
 export function PanelRectoria() {
   const { usuario } = useAutenticacion();

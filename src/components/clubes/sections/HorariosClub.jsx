@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Icono } from '../../ui/Icono';
 import { Spinner } from '../../ui/Spinner';
 import { ModalConfirmacion } from '../../ui/ModalConfirmacion';
@@ -8,8 +8,9 @@ import { HorarioFormModal } from './horarios/HorarioFormModal';
 import { HorarioListModal } from './horarios/HorarioListModal';
 import { HorarioPreviewModal } from './horarios/HorarioPreviewModal';
 import { HorarioStackedView } from './horarios/HorarioStackedView';
-import { HORA_MIN_DEFAULT, HORA_MAX_DEFAULT, ROW_HEIGHT, COL_HORA_W } from '../../../constants/horario';
-import { horaStr, timeToMinutes } from '../../../utils/horario';
+import { ROW_HEIGHT, COL_HORA_W } from '../../../constants/horario';
+import { horaStr, calcularRangoHorario } from '../../../utils/horario';
+import { useHorariosActions } from './horarios/useHorariosActions';
 
 export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembro, expandirHorarios = false }) {
   const puedeVer = esAdmin || esPresidente;
@@ -49,20 +50,9 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
     finally { setCargando(false); }
   }
 
-  const { horaMin, horaMax } = useMemo(() => {
-    if (!horarios.length) return { horaMin: HORA_MIN_DEFAULT, horaMax: HORA_MAX_DEFAULT };
-    let min = 24 * 60, max = 0;
-    horarios.forEach(h => {
-      const ini = timeToMinutes(horaStr(h.hora_inicio));
-      const fin = timeToMinutes(horaStr(h.hora_fin));
-      if (ini < min) min = ini;
-      if (fin > max) max = fin;
-    });
-    const padding = 30;
-    const hMin = Math.floor(Math.max((min - padding) / 60, 6));
-    const hMax = Math.ceil(Math.min((max + padding) / 60, 23));
-    return { horaMin: hMin, horaMax: hMax };
-  }, [horarios]);
+  const { horaMin, horaMax } = useMemo(() =>
+    calcularRangoHorario(horarios), [horarios]
+  );
 
   function showToast(msg, tipo = 'error') {
     setToast({ msg, tipo });
@@ -147,40 +137,7 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
     } catch { /* silently handled */ }
   }
 
-  const handleMove = useCallback(async (id, data) => {
-    if (data.conflicto) {
-      showToast('Conflicto de horario: ya existe un entrenamiento en esa franja');
-      return;
-    }
-    try {
-      await api.updateHorario(id, {
-        dia_semana: data.dia_semana,
-        hora_inicio: data.hora_inicio,
-        hora_fin: data.hora_fin,
-      });
-      await cargarHorarios();
-    } catch (err) {
-      showToast(err?.error || 'Error al mover el horario');
-      await cargarHorarios();
-    }
-  }, []);
-
-  const handleResize = useCallback(async (id, data) => {
-    try {
-      await api.updateHorario(id, {
-        hora_inicio: data.hora_inicio,
-        hora_fin: data.hora_fin,
-      });
-      await cargarHorarios();
-    } catch (err) {
-      showToast(err?.error || 'Error al redimensionar');
-      await cargarHorarios();
-    }
-  }, []);
-
-  const handleCreate = useCallback((data) => {
-    abrirCrearDesdeGrid(data);
-  }, []);
+  const { handleMove, handleResize, handleCreate } = useHorariosActions({ cargarHorarios, showToast, abrirCrearDesdeGrid });
 
   return (
     <>

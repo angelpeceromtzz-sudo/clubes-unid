@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { FormularioInscripcion } from '../formularios/FormularioInscripcion';
+import { FormularioInscripcion } from '../formularios/inscripcion/FormularioInscripcion';
 import { Spinner } from '../ui/Spinner';
 import { api } from '../../services/api';
 import { HeroClub } from './sections/HeroClub';

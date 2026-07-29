@@ -36,3 +36,19 @@ export function hayConflicto(dia, inicio, fin, excludeId, horarios) {
     timeToMinutes(h.hora_fin) > inicio
   );
 }
+
+export function calcularRangoHorario(horarios, minDefault = 9, maxDefault = 21) {
+  if (!horarios.length) return { horaMin: minDefault, horaMax: maxDefault };
+  let min = 24 * 60, max = 0;
+  horarios.forEach(h => {
+    const ini = timeToMinutes(horaStr(h.hora_inicio));
+    const fin = timeToMinutes(horaStr(h.hora_fin));
+    if (ini < min) min = ini;
+    if (fin > max) max = fin;
+  });
+  const padding = 30;
+  return {
+    horaMin: Math.floor(Math.max((min - padding) / 60, 6)),
+    horaMax: Math.ceil(Math.min((max + padding) / 60, 23)),
+  };
+}
