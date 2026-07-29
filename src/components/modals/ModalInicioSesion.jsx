@@ -96,7 +96,6 @@ export function ModalInicioSesion({ onClose }) {
           <p>alumno.inscrito@unid.mx / 123456</p>
           <p>presidente@unid.mx / 123456</p>
           <p>admin@unid.mx / 123456</p>
-          <p>rectoria@unid.mx / 123456</p>
         </div>
       </div>
     </ModalBase>

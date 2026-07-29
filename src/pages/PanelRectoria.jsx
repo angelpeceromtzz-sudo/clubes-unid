@@ -3,7 +3,7 @@ import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePanelRectoria } from '../hooks/usePanelRectoria';
 import { NavegacionPanel } from '../components/layout/NavegacionPanel';
-import { ELEMENTOS_NAV_RECTORIA } from '../components/admin/elementosNavegacion';
+import { ELEMENTOS_NAV_RECTORIA } from '../constants/navegacion';
 import { SeccionResumen } from '../components/rectoria/SeccionResumen';
 import { SeccionClubes } from '../components/rectoria/SeccionClubes';
 import { SeccionPadron } from '../components/rectoria/SeccionPadron';

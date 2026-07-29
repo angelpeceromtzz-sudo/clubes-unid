@@ -1,4 +1,3 @@
-/* Grid semanal interactivo con drag & drop, resize y draw-to-create. */
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
   DndContext,
@@ -10,45 +9,8 @@ import {
 } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
 import { Icono } from '../../ui/Icono';
-
-const DIAS_SEMANA = [1, 2, 3, 4, 5, 6, 0];
-const DIAS_CORTO = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const SNAP_MINUTES = 15;
-
-function horaStr(h) { return h?.slice(0, 5) || '00:00'; }
-
-function timeToMinutes(t) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
-
-function minutesToTime(m) {
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-}
-
-function snapMinutesDown(minutes) {
-  return Math.floor(minutes / SNAP_MINUTES) * SNAP_MINUTES;
-}
-
-function snapMinutesNearest(minutes) {
-  return Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES;
-}
-
-function yToMinutes(y, rowHeight, horaMin) {
-  const raw = (y / rowHeight) * 60 + horaMin * 60;
-  return Math.max(0, snapMinutesDown(raw));
-}
-
-function hayConflicto(dia, inicio, fin, excludeId, horarios) {
-  return horarios.some(h =>
-    h.id_horario !== excludeId &&
-    h.dia_semana === dia &&
-    timeToMinutes(h.hora_inicio) < fin &&
-    timeToMinutes(h.hora_fin) > inicio
-  );
-}
+import { DIAS_SEMANA, DIAS_SEMANA_LABEL, SNAP_MINUTES } from '../../../constants/horario';
+import { horaStr, timeToMinutes, minutesToTime, snapMinutesDown, snapMinutesNearest, yToMinutes, hayConflicto } from '../../../utils/horario';
 
 /* ─── Bloque Draggable ─── */
 function BloqueDraggable({ bloque, rowHeight, horaMin, puedeVer, onEditar, onEliminar, onDoubleClick, modoOscuro, onResizeStart }) {
@@ -453,7 +415,7 @@ export function CalendarioGrid({
                     : modoOscuro ? 'text-slate-600 font-normal' : 'text-slate-400 font-normal'
                   }
                   ${modoOscuro ? 'border-slate-800' : 'border-slate-100'}`}>
-                  {DIAS_CORTO[DIAS_SEMANA.indexOf(dia)]}
+                  {DIAS_SEMANA_LABEL[DIAS_SEMANA.indexOf(dia)]}
                   {esHoy && <span className="block mx-auto mt-1 w-1 h-1 rounded-full bg-amber-400" />}
               </div>
             );

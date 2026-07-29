@@ -1,28 +1,17 @@
-/* Calendario semanal de horarios de entrenamiento del club. */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Icono } from '../../ui/Icono';
 import { Spinner } from '../../ui/Spinner';
-import { BotonAccion } from '../../ui/BotonAccion';
-import { SelectorMapa } from '../../ui/SelectorMapa';
 import { ModalConfirmacion } from '../../ui/ModalConfirmacion';
 import { api } from '../../../services/api';
 import { CalendarioGrid } from './CalendarioGrid';
+import { HorarioFormModal } from './horarios/HorarioFormModal';
+import { HorarioListModal } from './horarios/HorarioListModal';
+import { HorarioPreviewModal } from './horarios/HorarioPreviewModal';
+import { HorarioStackedView } from './horarios/HorarioStackedView';
+import { HORA_MIN_DEFAULT, HORA_MAX_DEFAULT, ROW_HEIGHT, COL_HORA_W } from '../../../constants/horario';
+import { horaStr, timeToMinutes } from '../../../utils/horario';
 
-const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const DIAS_CORTO = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
-const HORA_MIN_DEFAULT = 8;
-const HORA_MAX_DEFAULT = 18;
-const ROW_HEIGHT = 40;
-const COL_HORA_W = 36;
-
-function horaStr(h) { return h?.slice(0, 5) || '00:00'; }
-
-function timeToMinutes(t) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
-
-export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembro }) {
+export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembro, expandirHorarios = false }) {
   const puedeVer = esAdmin || esPresidente;
   const puedeVerNotas = esMiembro || puedeVer;
 
@@ -33,10 +22,11 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
-  const [mostrarTodos, setMostrarTodos] = useState(false);
+  const [mostrarTodos, setMostrarTodos] = useState(expandirHorarios);
   const [drawMode, setDrawMode] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [horarioAEliminar, setHorarioAEliminar] = useState(null);
+  const [showLista, setShowLista] = useState(false);
 
   const [form, setForm] = useState({
     dias_semana: [],
@@ -46,7 +36,6 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
     ubicacion_maps: '',
     descripcion: '',
   });
-  const [showLista, setShowLista] = useState(false);
 
   useEffect(() => {
     if (club?.id_club) cargarHorarios();
@@ -139,8 +128,7 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
       setDrawMode(false);
       await cargarHorarios();
     } catch (err) {
-      const msg = err?.message || err?.error || 'Error al guardar';
-      setError(msg);
+      setError(err?.message || err?.error || 'Error al guardar');
     } finally {
       setEnviando(false);
     }
@@ -159,7 +147,6 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
     } catch { /* silently handled */ }
   }
 
-  /* ─── Drag & Drop handlers ─── */
   const handleMove = useCallback(async (id, data) => {
     if (data.conflicto) {
       showToast('Conflicto de horario: ya existe un entrenamiento en esa franja');
@@ -195,13 +182,9 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
     abrirCrearDesdeGrid(data);
   }, []);
 
-  /* ─── Vista móvil (tap-to-select) ─── */
-  const [bloqueSeleccionado, setBloqueSeleccionado] = useState(null);
-
   return (
     <>
     <section className={`rounded-2xl border overflow-hidden ${modoOscuro ? 'bg-[#0e162c] border-slate-800' : 'bg-white border-slate-200'}`}>
-      {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-[60] px-4 py-2.5 rounded-xl border shadow-2xl text-sm font-medium transition-all
           ${toast.tipo === 'error'
@@ -212,7 +195,6 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
         </div>
       )}
 
-      {/* Header */}
       <div className="px-4 py-3 border-b flex items-center justify-between gap-2"
         style={{ borderColor: modoOscuro ? 'rgba(51,65,85,0.3)' : 'rgba(226,232,240,1)' }}>
         <div className="flex items-center gap-2.5">
@@ -234,13 +216,13 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
             {puedeVer && horarios.length > 0 && (
               <button onClick={() => setShowPreview(true)}
                 title="Vista previa del alumno"
-                className="p-1.5 rounded-lg bg-amber-400/10 border border-amber-400/20 text-amber-400 hover:bg-amber-400/20 transition-colors cursor-pointer">
+                className="hidden md:inline-flex p-1.5 rounded-lg bg-amber-400/10 border border-amber-400/20 text-amber-400 hover:bg-amber-400/20 transition-colors cursor-pointer">
                 <Icono nombre="eye" className="h-4 w-4" strokeWidth={2} />
               </button>
             )}
             <button onClick={() => setDrawMode(prev => !prev)}
               title={drawMode ? 'Desactivar modo dibujar' : 'Activar modo dibujar'}
-              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+              className={`hidden md:inline-flex p-1.5 rounded-lg border transition-all cursor-pointer ${
                 drawMode
                   ? 'bg-amber-400 text-white border-amber-400'
                   : 'bg-amber-400/10 border-amber-400/20 text-amber-400 hover:bg-amber-400/20'
@@ -261,184 +243,28 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
         )}
       </div>
 
-      {/* Formulario modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className={`relative w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden
-            ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'}`}
-            onClick={e => e.stopPropagation()}>
-            <div className={`px-5 py-4 border-b flex items-center justify-between
-              ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-              <h3 className={`text-sm font-bold ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-                {editando ? 'Editar horario' : 'Nuevo horario'}
-              </h3>
-              <button onClick={() => setShowForm(false)}
-                className={`p-1 rounded-lg transition-colors cursor-pointer
-                  ${modoOscuro ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
-                <Icono nombre="close" className="h-4 w-4" strokeWidth={2} />
-              </button>
-            </div>
+      <HorarioFormModal
+        show={showForm}
+        editando={editando}
+        form={form}
+        enviando={enviando}
+        error={error}
+        modoOscuro={modoOscuro}
+        onClose={() => setShowForm(false)}
+        onSubmit={guardar}
+        onFormChange={setForm}
+        onToggleDia={toggleDia}
+      />
 
-            <form onSubmit={guardar} className="p-5 space-y-4">
-              {error && (
-                <div className="px-3 py-2 rounded-lg text-sm font-medium bg-red-500/10 border border-red-500/30 text-red-400">
-                  {error}
-                </div>
-              )}
+      <HorarioListModal
+        show={showLista}
+        horarios={horarios}
+        modoOscuro={modoOscuro}
+        onClose={() => setShowLista(false)}
+        onEditar={abrirEditar}
+        onEliminar={eliminar}
+      />
 
-              <div>
-                <label className={`text-xs font-bold uppercase tracking-wider block mb-2 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Días de la semana
-                </label>
-                <div className="flex gap-1.5 flex-wrap">
-                  {DIAS.map((dia, i) => (
-                    <button key={i} type="button" onClick={() => toggleDia(i)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border
-                        ${form.dias_semana.includes(i)
-                          ? 'bg-amber-400 text-[#0e162c] border-amber-400'
-                          : modoOscuro
-                            ? 'bg-slate-800 text-slate-400 border-slate-700 hover:border-amber-400/50 hover:text-amber-400'
-                            : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-amber-400 hover:text-amber-600'
-                        }`}>
-                      {DIAS_CORTO[i]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={`text-xs font-bold uppercase tracking-wider block mb-1 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Hora inicio</label>
-                  <input type="time" value={form.hora_inicio} onChange={e => setForm({ ...form, hora_inicio: e.target.value })} required
-                    className={`w-full px-3 py-2 rounded-lg border text-sm font-medium outline-none focus:ring-2 focus:ring-amber-400/50
-                      ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`} />
-                </div>
-                <div>
-                  <label className={`text-xs font-bold uppercase tracking-wider block mb-1 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Hora fin</label>
-                  <input type="time" value={form.hora_fin} onChange={e => setForm({ ...form, hora_fin: e.target.value })} required
-                    className={`w-full px-3 py-2 rounded-lg border text-sm font-medium outline-none focus:ring-2 focus:ring-amber-400/50
-                      ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`} />
-                </div>
-              </div>
-
-              <div>
-                <label className={`text-xs font-bold uppercase tracking-wider block mb-1 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Lugar</label>
-                <input type="text" value={form.lugar} onChange={e => setForm({ ...form, lugar: e.target.value })} required
-                  placeholder="Ej: Cancha 1, Gimnasio..."
-                  className={`w-full px-3 py-2 rounded-lg border text-sm font-medium outline-none focus:ring-2 focus:ring-amber-400/50
-                    ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'}`} />
-              </div>
-
-              <div className="space-y-2">
-                <label className={`text-xs font-bold uppercase tracking-wider block ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Ubicación Maps <span className="font-normal">(opcional)</span>
-                </label>
-                <SelectorMapa
-                  valorLugar={form.lugar}
-                  valorUbicacion={form.ubicacion_maps}
-                  modoOscuro={modoOscuro}
-                  onCambio={({ lugar, ubicacion_maps }) => setForm(prev => ({
-                    ...prev,
-                    lugar: prev.lugar || lugar,
-                    ubicacion_maps,
-                  }))}
-                />
-                <input type="url" value={form.ubicacion_maps} onChange={e => setForm({ ...form, ubicacion_maps: e.target.value })}
-                  placeholder="O pega un link manual: https://maps.google.com/?q=..."
-                  className={`w-full px-3 py-2 rounded-lg border text-sm font-medium outline-none focus:ring-2 focus:ring-amber-400/50
-                    ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'}`} />
-              </div>
-
-              <div>
-                <label className={`text-xs font-bold uppercase tracking-wider block mb-1 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Notas <span className="font-normal">(opcional)</span>
-                </label>
-                <textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })}
-                  rows={2} maxLength={100} placeholder="Instrucciones, material, etc."
-                  className={`w-full px-3 py-2 rounded-lg border text-sm font-medium outline-none focus:ring-2 focus:ring-amber-400/50 resize-none
-                    ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'}`} />
-                <p className={`text-[10px] mt-1 text-right ${modoOscuro ? 'text-slate-600' : 'text-slate-400'}`}>
-                  {form.descripcion.length}/100
-                </p>
-              </div>
-
-              <div className="flex gap-2 pt-1">
-                <BotonAccion type="submit" disabled={enviando} variant="primary" size="sm">
-                  {enviando ? 'Guardando...' : editando ? 'Actualizar' : 'Agregar'}
-                </BotonAccion>
-                <BotonAccion onClick={() => setShowForm(false)} variant="outline" size="sm">Cancelar</BotonAccion>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Lista de horarios para editar */}
-      {showLista && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowLista(false)}>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className={`relative w-full max-w-md max-h-[70vh] rounded-2xl border shadow-2xl overflow-hidden flex flex-col
-            ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'}`}
-            onClick={e => e.stopPropagation()}>
-            <div className={`px-5 py-4 border-b flex items-center justify-between shrink-0
-              ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-              <h3 className={`text-sm font-bold ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-                Editar horarios
-              </h3>
-              <button onClick={() => setShowLista(false)}
-                className={`p-1 rounded-lg transition-colors cursor-pointer
-                  ${modoOscuro ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
-                <Icono nombre="close" className="h-4 w-4" strokeWidth={2} />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-4 space-y-2">
-              {horarios.length === 0 && (
-                <p className={`text-xs text-center py-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Sin horarios registrados
-                </p>
-              )}
-              {[1, 2, 3, 4, 5, 6, 0].map(dia => {
-                const bloques = horarios.filter(h => h.dia_semana === dia);
-                if (!bloques.length) return null;
-                return (
-                  <div key={dia}>
-                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-1
-                      ${modoOscuro ? 'text-amber-400' : 'text-amber-600'}`}>
-                      {DIAS[dia]}
-                    </p>
-                    {bloques.map(b => (
-                      <div key={b.id_horario}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-1 border
-                          ${modoOscuro ? 'bg-slate-800/50 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
-                        <Icono nombre="clock" className={`h-3.5 w-3.5 shrink-0 ${modoOscuro ? 'text-amber-400' : 'text-amber-500'}`} strokeWidth={2} />
-                        <span className={`text-xs font-bold ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-                          {horaStr(b.hora_inicio)} – {horaStr(b.hora_fin)}
-                        </span>
-                        <span className={`text-[11px] ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {b.lugar}
-                        </span>
-                        <div className="flex-1" />
-                        <button onClick={() => { setShowLista(false); abrirEditar(b); }}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer
-                            ${modoOscuro ? 'bg-slate-700 text-slate-300 hover:text-white' : 'bg-slate-200 text-slate-600 hover:text-slate-900'}`}>
-                          Editar
-                        </button>
-                        <button onClick={() => { setShowLista(false); eliminar(b.id_horario); }}
-                          className="px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer bg-red-500/10 text-red-400 hover:bg-red-500/20">
-                          Borrar
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Calendario */}
       {cargando ? (
         <Spinner className="py-12" />
       ) : horarios.length === 0 ? (
@@ -451,7 +277,6 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
         </div>
       ) : (
         <>
-          {/* Vista escritorio — CalendarioGrid (solo admin/presidente) */}
           {puedeVer && (
             <CalendarioGrid
               horarios={horarios}
@@ -470,186 +295,28 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
             />
           )}
 
-          {/* Vista apilada por día — siempre en mobile, y en desktop para alumno/pública */}
-          <div className={`${puedeVer ? 'md:hidden' : ''} space-y-3 p-4`}>
-            {(() => {
-              const diasConHorarios = [1, 2, 3, 4, 5, 6, 0].filter(dia => horarios.some(h => h.dia_semana === dia));
-              const diasVisibles = puedeVer || mostrarTodos ? diasConHorarios : diasConHorarios.slice(0, 1);
-              const hayMas = !puedeVer && diasConHorarios.length > 1 && !mostrarTodos;
-
-              return (
-                <>
-                  {diasVisibles.map(dia => {
-                    const bloques = horarios.filter(h => h.dia_semana === dia);
-                    return (
-                      <div key={dia}
-                        className={`rounded-xl border overflow-hidden
-                          ${modoOscuro ? 'border-slate-700/50 bg-slate-800/20' : 'border-slate-200 bg-slate-50'}`}>
-                        <div className={`px-4 py-2.5 border-b font-bold text-xs md:text-sm uppercase tracking-wider
-                          ${modoOscuro ? 'border-slate-700/50 text-amber-400' : 'border-slate-200 text-amber-600'}`}>
-                          {DIAS[dia]}
-                        </div>
-                  {bloques.map(b => {
-                    const seleccionado = bloqueSeleccionado === b.id_horario;
-                    return (
-                      <div key={b.id_horario}
-                        onClick={() => puedeVer ? setBloqueSeleccionado(seleccionado ? null : b.id_horario) : null}
-                        className={`px-4 py-3 border-b last:border-b-0 transition-colors
-                          ${puedeVer ? 'cursor-pointer' : ''}
-                          ${seleccionado ? modoOscuro ? 'bg-amber-400/10' : 'bg-amber-50' : ''}
-                          ${modoOscuro ? 'border-slate-700/30' : 'border-slate-200/60'}`}>
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <Icono nombre="clock" className="h-3.5 w-3.5 shrink-0 text-amber-400" strokeWidth={2} />
-                              <span className={`text-sm md:text-base font-bold ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-                                {horaStr(b.hora_inicio)} – {horaStr(b.hora_fin)}
-                              </span>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <Icono nombre="location" className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-400/60" strokeWidth={2} />
-                              <span className={`text-xs md:text-sm break-words ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>{b.lugar}</span>
-                            </div>
-                          </div>
-                          {(b.descripcion || b.ubicacion_maps) && (
-                            <div className="min-w-0 sm:text-right sm:shrink-0">
-                              {puedeVerNotas && b.descripcion && (
-                                <p className={`text-xs md:text-sm leading-snug line-clamp-3 sm:line-clamp-2 break-words ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-                                  {b.descripcion}
-                                </p>
-                              )}
-                              {b.ubicacion_maps && (
-                                <a href={b.ubicacion_maps} target="_blank" rel="noopener noreferrer"
-                                  onClick={e => e.stopPropagation()}
-                                  className={`inline-flex items-center gap-1 text-xs md:text-sm font-bold mt-0.5 transition-colors
-                                    ${modoOscuro ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'}`}>
-                                  <Icono nombre="location" className="h-3 w-3" strokeWidth={2} />
-                                  Ver ubicación
-                                </a>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        {puedeVer && seleccionado && (
-                          <div className={`flex gap-2 mt-2 pt-2 border-t
-                            ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                            <button onClick={(e) => { e.stopPropagation(); abrirEditar(b); }}
-                              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border
-                                ${modoOscuro ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white hover:border-slate-600' : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'}`}>
-                              Editar
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); eliminar(b.id_horario); }}
-                              className="flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/15">
-                              Eliminar
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  </div>
-                    );
-                  })}
-                  {hayMas && (
-                    <button onClick={() => setMostrarTodos(true)}
-                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer border
-                        ${modoOscuro
-                          ? 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:text-white hover:border-slate-600'
-                          : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300'}`}>
-                      Ver horario ({diasConHorarios.length - 1} {diasConHorarios.length - 1 === 1 ? 'día restante' : 'días restantes'})
-                    </button>
-                  )}
-                  {mostrarTodos && !puedeVer && diasConHorarios.length > 1 && (
-                    <button onClick={() => setMostrarTodos(false)}
-                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer border
-                        ${modoOscuro
-                          ? 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:text-white hover:border-slate-600'
-                          : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300'}`}>
-                      Mostrar menos
-                    </button>
-                  )}
-                </>
-              );
-            })()}
+          <div className={`${puedeVer ? 'md:hidden' : ''}`}>
+            <HorarioStackedView
+              horarios={horarios}
+              puedeVer={puedeVer}
+              puedeVerNotas={puedeVerNotas}
+              mostrarTodos={mostrarTodos}
+              modoOscuro={modoOscuro}
+              onToggleMostrar={() => setMostrarTodos(prev => !prev)}
+              onEditar={abrirEditar}
+              onEliminar={eliminar}
+            />
           </div>
         </>
       )}
     </section>
 
-      {/* Modal vista previa del alumno */}
-      {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPreview(false)} />
-          <div className={`relative w-full max-w-lg max-h-[90vh] rounded-2xl border shadow-2xl overflow-hidden flex flex-col
-            ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'}`}>
-            <div className={`px-5 py-4 border-b flex items-center justify-between shrink-0
-              ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-              <div>
-                <h3 className={`text-sm font-bold ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-                  Vista previa del alumno
-                </h3>
-                <p className={`text-[11px] mt-0.5 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Así verán el horario los miembros del club
-                </p>
-              </div>
-              <button onClick={() => setShowPreview(false)}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer
-                  ${modoOscuro ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
-                <Icono nombre="close" className="h-4 w-4" strokeWidth={2} />
-              </button>
-            </div>
-            <div className="overflow-auto p-4 space-y-3">
-              {(() => {
-                const diasConHorarios = [1, 2, 3, 4, 5, 6, 0].filter(dia => horarios.some(h => h.dia_semana === dia));
-                return diasConHorarios.map(dia => {
-                  const bloques = horarios.filter(h => h.dia_semana === dia);
-                  return (
-                    <div key={dia}
-                      className={`rounded-xl border overflow-hidden
-                        ${modoOscuro ? 'border-slate-700/50 bg-slate-800/20' : 'border-slate-200 bg-slate-50'}`}>
-                      <div className={`px-4 py-2.5 border-b font-bold text-xs uppercase tracking-wider
-                        ${modoOscuro ? 'border-slate-700/50 text-amber-400' : 'border-slate-200 text-amber-600'}`}>
-                        {DIAS[dia]}
-                      </div>
-                      {bloques.map(b => (
-                        <div key={b.id_horario}
-                          className={`px-4 py-3 border-b last:border-b-0
-                            ${modoOscuro ? 'border-slate-700/30' : 'border-slate-200/60'}`}>
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <Icono nombre="clock" className="h-3.5 w-3.5 shrink-0 text-amber-400" strokeWidth={2} />
-                              <span className={`text-sm font-bold ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-                                {horaStr(b.hora_inicio)} – {horaStr(b.hora_fin)}
-                              </span>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <Icono nombre="location" className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-400/60" strokeWidth={2} />
-                              <span className={`text-xs break-words ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>{b.lugar}</span>
-                            </div>
-                            {b.descripcion && (
-                              <p className={`text-xs leading-snug break-words whitespace-pre-wrap ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-                                {b.descripcion}
-                              </p>
-                            )}
-                            {b.ubicacion_maps && (
-                              <a href={b.ubicacion_maps} target="_blank" rel="noopener noreferrer"
-                                className={`inline-flex items-center gap-1 text-xs font-bold mt-0.5 transition-colors
-                                  ${modoOscuro ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'}`}>
-                                <Icono nombre="location" className="h-3 w-3" strokeWidth={2} />
-                                Ver ubicación
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
+      <HorarioPreviewModal
+        show={showPreview}
+        horarios={horarios}
+        modoOscuro={modoOscuro}
+        onClose={() => setShowPreview(false)}
+      />
 
       <ModalConfirmacion
         show={horarioAEliminar != null}

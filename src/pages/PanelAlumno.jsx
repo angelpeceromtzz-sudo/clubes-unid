@@ -14,7 +14,7 @@ import { usePanelAlumno } from '../hooks/usePanelAlumno';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { NavegacionPanel } from '../components/layout/NavegacionPanel';
-import { ELEMENTOS_NAV_ALUMNO } from '../components/admin/elementosNavegacion';
+import { ELEMENTOS_NAV_ALUMNO } from '../constants/navegacion';
 import { Alerta } from '../components/ui/Alerta';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 
@@ -132,7 +132,7 @@ export function PanelAlumno() {
           )}
 
           {vistaAlumno === 'horarios' && (
-            <HorariosClub club={d.club} modoOscuro={modoOscuro} esMiembro={esMiembroOficial} />
+            <HorariosClub club={d.club} modoOscuro={modoOscuro} esMiembro={esMiembroOficial} expandirHorarios={true} />
           )}
         </NavegacionPanel>
       ) : (

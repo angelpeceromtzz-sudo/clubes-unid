@@ -1,16 +1,13 @@
-/* Barra de navegación superior con logo, filtro de estado (pills), dropdown de categoría, acciones de usuario y badge de notificaciones. Se oculta al hacer scroll hacia abajo en móvil. */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import logoLobo from '../../assets/logo-lobo.svg';
 import { Icono } from '../ui/Icono';
 import { BadgeNotificaciones } from './BadgeNotificaciones';
 import { MenuUsuario } from './MenuUsuario';
-import { ModalBase } from '../ui/ModalBase';
-
-const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
-const ESTADOS = ["Todos", "Abiertos", "Proximos", "Cerrados"];
+import { FiltrosEstado } from './navegacion/FiltrosEstado';
+import { DesplegableCategoria } from './navegacion/DesplegableCategoria';
+import { ModalAyuda } from './navegacion/ModalAyuda';
 
 export function BarraNavegacion({
   categoriaActiva, setCategoriaActiva,
@@ -76,7 +73,6 @@ export function BarraNavegacion({
   }, [esMobile, menuCategoria]);
 
   const labelCategoria = categoriaActiva === 'Todos' ? 'Categorías' : `Categoría: ${categoriaActiva}`;
-
   const maxWidthClasses = { '7xl': 'max-w-7xl', '6xl': 'max-w-6xl' };
 
   return (
@@ -131,20 +127,8 @@ export function BarraNavegacion({
           )}
 
           {mostrarFiltros && (
-            <nav className="hidden md:flex items-center gap-1">
-              {ESTADOS.map((est) => (
-                <button
-                  key={est}
-                  onClick={() => setEstadoActivo(est)}
-                  className={`font-semibold text-xs lg:text-sm tracking-wide px-3 py-1.5 transition-all duration-200 cursor-pointer active:scale-95 ${
-                    estadoActivo === est
-                      ? 'rounded-full text-white bg-amber-500 shadow-sm shadow-amber-500/30'
-                      : `rounded-md ${modoOscuro ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-500 hover:text-slate-800 hover:bg-black/5'}`
-                  }`}
-                >
-                  {est}
-                </button>
-              ))}
+            <>
+              <FiltrosEstado estadoActivo={estadoActivo} setEstadoActivo={setEstadoActivo} variante="desktop" />
               <div className="relative hidden lg:block" ref={catDesktopRef}>
                 <button
                   onMouseDown={(e) => e.stopPropagation()}
@@ -158,28 +142,20 @@ export function BarraNavegacion({
                   {labelCategoria}
                   <Icono nombre="chevron-down" strokeWidth={2.5} className={`h-3 w-3 transition-transform duration-200 ${menuCategoria ? 'rotate-180' : ''}`} />
                 </button>
-                {menuCategoria && (
-                  <div
-                    className={`absolute left-0 top-full mt-1 z-50 w-48 rounded-xl border shadow-2xl py-1 transition-colors duration-300 ${tema.dropdownBg} ${tema.dropdownBorder}`}
-                    style={{ animation: 'dropdownIn 0.15s ease-out' }}
-                  >
-                    {CATEGORIAS.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => { setCategoriaActiva(cat); setMenuCategoria(false); }}
-                        className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg mx-1 cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center justify-between`}
-                        style={{ width: 'calc(100% - 8px)' }}
-                      >
-                        {cat}
-                        {categoriaActiva === cat && (
-                          <Icono nombre="check" strokeWidth={2.5} className="h-4 w-4 text-amber-400" />
-                        )}
-                      </button>
-                    ))}
+                {menuCategoria && !esMobile && (
+                  <div ref={catMobileRef}>
+                    <DesplegableCategoria
+                      categoriaActiva={categoriaActiva}
+                      setCategoriaActiva={setCategoriaActiva}
+                      menuCategoria={menuCategoria}
+                      setMenuCategoria={setMenuCategoria}
+                      esMobile={false}
+                      dropdownPos={dropdownPos}
+                    />
                   </div>
                 )}
               </div>
-            </nav>
+            </>
           )}
         </div>
 
@@ -216,71 +192,22 @@ export function BarraNavegacion({
               : `${tema.headerBg} ${tema.headerBorder} backdrop-blur-md`)
           : `${tema.headerBg} ${tema.headerBorder}`
       } ${mostrarHeader ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div
-          className="flex items-center gap-2.5 px-5 py-2.5 overflow-x-auto justify-center"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
-        >
-          <style>{`.nf-mobile-filter::-webkit-scrollbar { display: none; }`}</style>
-          {ESTADOS.map((est) => (
-            <button
-              key={est}
-              onClick={() => setEstadoActivo(est)}
-              className={`nf-mobile-filter shrink-0 font-bold text-xs tracking-wide px-4 py-2 rounded-full border transition-all duration-200 cursor-pointer active:scale-95 ${
-                estadoActivo === est ? tema.btnActive : tema.btnInactive
-              }`}
-            >
-              {est}
-            </button>
-          ))}
-        </div>
+        <FiltrosEstado estadoActivo={estadoActivo} setEstadoActivo={setEstadoActivo} variante="mobile" />
       </div>
     )}
 
-    {menuCategoria && esMobile && createPortal(
-      <div
-        className={`nf-mobile-cat-dropdown fixed z-50 w-48 rounded-xl border shadow-2xl py-1 ${tema.dropdownBg} ${tema.dropdownBorder}`}
-        style={{ top: dropdownPos.top, left: dropdownPos.left, animation: 'dropdownIn 0.15s ease-out' }}
-      >
-        {CATEGORIAS.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => { setCategoriaActiva(cat); setMenuCategoria(false); }}
-            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg mx-1 cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center justify-between`}
-            style={{ width: 'calc(100% - 8px)' }}
-          >
-            {cat}
-            {categoriaActiva === cat && (
-              <Icono nombre="check" strokeWidth={2.5} className="h-4 w-4 text-amber-400" />
-            )}
-          </button>
-        ))}
-      </div>,
-      document.body
+    {menuCategoria && esMobile && (
+      <DesplegableCategoria
+        categoriaActiva={categoriaActiva}
+        setCategoriaActiva={setCategoriaActiva}
+        menuCategoria={menuCategoria}
+        setMenuCategoria={setMenuCategoria}
+        esMobile={true}
+        dropdownPos={dropdownPos}
+      />
     )}
 
-    <ModalBase show={mostrarAyuda} onClose={() => setMostrarAyuda(false)} maxWidth="max-w-md">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>Ayuda</h3>
-        <button onClick={() => setMostrarAyuda(false)} className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>
-          <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
-        </button>
-      </div>
-      <div className={`space-y-4 text-sm leading-relaxed ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
-        <p>
-          <strong className="text-amber-400">Clubs UNID</strong> es la plataforma de registro y gestión de clubs universitarios.
-        </p>
-        <div className={`space-y-2 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-          <p><span className="text-amber-400 font-bold">•</span> Explora el catálogo y postúlate a hasta 3 clubs.</p>
-          <p><span className="text-amber-400 font-bold">•</span> Sigue el estado de tus postulaciones en tu panel.</p>
-          <p><span className="text-amber-400 font-bold">•</span> Si eres presidente, gestiona solicitudes y convocatorias desde el dashboard.</p>
-          <p><span className="text-amber-400 font-bold">•</span> Si eres administrador, gestiona usuarios, clubs y roles.</p>
-        </div>
-        <p className={`text-xs pt-2 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
-          ¿Dudas o reportes? Contacta al administrador del sistema.
-          contacto@red.unid.mx
-        </p>
-      </div>
-    </ModalBase>
+    <ModalAyuda show={mostrarAyuda} onClose={() => setMostrarAyuda(false)} />
     </>
   );
 }

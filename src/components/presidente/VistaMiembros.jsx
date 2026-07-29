@@ -107,18 +107,21 @@ export function VistaMiembros({ club, esPresidente, onActualizarClub }) {
                       {esVicepresidente && !esPresidenteDelClub && (
                         <span className="ml-2 text-[10px] uppercase tracking-wider text-blue-400 font-bold">Vicepresidente</span>
                       )}
+                      {!esPresidenteDelClub && !esVicepresidente && (
+                        <span className="ml-2 text-[10px] uppercase tracking-wider text-slate-400 font-bold">Miembro</span>
+                      )}
                     </p>
                     <p className="text-xs text-slate-500">{m.correo_institucional}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 flex-wrap sm:flex-nowrap">
                   {(puedeQuitarVP || puedeAsignarVP) && (
                     <button
                       onClick={() => setModalVP({ usuario: m, accion: esVicepresidente ? 'quitar' : 'asignar' })}
                       disabled={asignando === m.id_usuario}
-                      className={`opacity-0 group-hover:opacity-100 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full border transition-all duration-200 cursor-pointer
-                        ${asignando === m.id_usuario ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'}
+                      className={`max-sm:opacity-100 md:opacity-0 md:group-hover:opacity-100 text-xs sm:text-sm font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors cursor-pointer
+                        ${asignando === m.id_usuario ? 'opacity-50 cursor-not-allowed' : ''}
                         ${esVicepresidente
                           ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20'
                           : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
@@ -130,13 +133,13 @@ export function VistaMiembros({ club, esPresidente, onActualizarClub }) {
                   {!esPresidenteDelClub && (
                     <button
                       onClick={() => handleBajar(m)}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      className={`text-xs sm:text-sm font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors cursor-pointer ${
                         modoOscuro
                           ? 'text-red-400 hover:bg-red-500/10'
                           : 'text-red-500 hover:bg-red-50'
                       }`}
                     >
-                      Dar de baja
+                      Expulsar
                     </button>
                   )}
                 </div>
@@ -197,9 +200,9 @@ export function VistaMiembros({ club, esPresidente, onActualizarClub }) {
 
       <ModalConfirmacion
         show={!!miembroABajar}
-        titulo="Dar de baja del club"
-        mensaje={miembroABajar ? `¿Dar de baja a ${miembroABajar.nombre_completo} del club?` : ''}
-        textoConfirmar="Dar de Baja"
+        titulo="Expulsar del club"
+        mensaje={miembroABajar ? `¿Expulsar a ${miembroABajar.nombre_completo} del club?` : ''}
+        textoConfirmar="Expulsar"
         varianteDanger
         onConfirmar={confirmarBajarMiembro}
         onCancelar={() => setMiembroABajar(null)}

@@ -5,7 +5,7 @@ import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { FormularioNotificacion } from '../components/formularios/FormularioNotificacion';
 import { usePanelAdmin } from '../hooks/usePanelAdmin';
 import { NavegacionPanel } from '../components/layout/NavegacionPanel';
-import { ELEMENTOS_NAV_ADMIN } from '../components/admin/elementosNavegacion';
+import { ELEMENTOS_NAV_ADMIN } from '../constants/navegacion';
 import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
 import { DashboardAdmin } from '../components/admin/DashboardAdmin';
 import { BarraBusquedaUsuarios } from '../components/admin/BarraBusquedaUsuarios';

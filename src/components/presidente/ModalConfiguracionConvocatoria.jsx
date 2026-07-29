@@ -4,62 +4,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { Alerta } from '../ui/Alerta';
 import { Icono } from '../ui/Icono';
-
-const MAX_POSTULACIONES = 40;
-
-function BadgeEstado({ estado }) {
-  if (estado === 'abierto') {
-    return (
-      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
-        <Icono nombre="check-circle" strokeWidth={2} className="h-4 w-4" />
-        <span className="text-sm font-bold uppercase tracking-wider">Abierta</span>
-      </div>
-    );
-  }
-  if (estado === 'proximo') {
-    return (
-      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-amber-500/10 border-amber-500/30 text-amber-400">
-        <Icono nombre="clock" strokeWidth={2} className="h-4 w-4" />
-        <span className="text-sm font-bold uppercase tracking-wider">Abre pronto</span>
-      </div>
-    );
-  }
-  if (estado === 'lleno') {
-    return (
-      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-red-500/10 border-red-500/30 text-red-400">
-        <Icono nombre="alert-triangle" strokeWidth={2} className="h-4 w-4" />
-        <span className="text-sm font-bold uppercase tracking-wider">Cupo lleno</span>
-      </div>
-    );
-  }
-  return (
-    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border bg-red-500/10 border-red-500/30 text-red-400">
-      <Icono nombre="close" strokeWidth={2} className="h-4 w-4" />
-      <span className="text-sm font-bold uppercase tracking-wider">Cerrada</span>
-    </div>
-  );
-}
-
-function formatearFechaLegible(fechaIso) {
-  if (!fechaIso) return '';
-  const fecha = new Date(fechaIso);
-  return fecha.toLocaleDateString('es-MX', {
-    day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit',
-  });
-}
-
-function toDatetimeLocal(fechaIso) {
-  if (!fechaIso) return '';
-  const d = new Date(fechaIso);
-  const offset = d.getTimezoneOffset();
-  const local = new Date(d.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 16);
-}
-
-function fromDatetimeLocal(value) {
-  if (!value) return null;
-  return new Date(value).toISOString();
-}
+import { BadgeEstado } from './convocatoria/BadgeEstado';
+import { ConvocatoriaGuardarButton, ConvocatoriaCerrarButton, ConvocatoriaConfirmCerrarBox, ConvocatoriaConfirmSaveBox } from './convocatoria/ConvocatoriaAcciones';
+import { MAX_POSTULACIONES } from '../../constants/limites';
+import { toDatetimeLocal, fromDatetimeLocal, formatearFechaLegible } from '../../utils/fechas';
 
 export function ModalConfiguracionConvocatoria({ club }) {
   const { tema, modoOscuro } = useTheme();
@@ -134,31 +82,23 @@ export function ModalConfiguracionConvocatoria({ club }) {
   }
 
   function handleChangeApertura(e) {
-    const valor = e.target.value;
-    const nuevaApertura = fromDatetimeLocal(valor);
-    setConfig((p) => {
-      const actualizado = { ...p, fecha_apertura_programada: nuevaApertura };
-      return actualizado;
-    });
-    setErrores((prev) => ({ ...prev, fecha_apertura: '' }));
+    const nuevaApertura = fromDatetimeLocal(e.target.value);
+    setConfig(p => ({ ...p, fecha_apertura_programada: nuevaApertura }));
+    setErrores(prev => ({ ...prev, fecha_apertura: '' }));
   }
 
   function handleChangeCierre(e) {
-    const valor = e.target.value;
-    const nuevaCierre = fromDatetimeLocal(valor);
-    setConfig((p) => {
-      const actualizado = { ...p, fecha_limite_cierre: nuevaCierre };
-      return actualizado;
-    });
-    setErrores((prev) => ({ ...prev, fecha_cierre: '' }));
+    const nuevaCierre = fromDatetimeLocal(e.target.value);
+    setConfig(p => ({ ...p, fecha_limite_cierre: nuevaCierre }));
+    setErrores(prev => ({ ...prev, fecha_cierre: '' }));
   }
 
   function handleChangeMaxPost(e) {
     const valor = e.target.value;
     const nuevoMax = valor ? parseInt(valor, 10) : null;
-    setConfig((p) => ({ ...p, max_postulaciones: nuevoMax }));
+    setConfig(p => ({ ...p, max_postulaciones: nuevoMax }));
     if (nuevoMax === null) {
-      setErrores((prev) => ({ ...prev, max_postulaciones: '' }));
+      setErrores(prev => ({ ...prev, max_postulaciones: '' }));
     }
   }
 
@@ -222,6 +162,12 @@ export function ModalConfiguracionConvocatoria({ club }) {
   const actuales = config.postulaciones_actuales;
   const porcentaje = maxPost ? Math.round((actuales / maxPost) * 100) : 0;
   const estado = config.estado_calculado;
+  const estiloInput = `w-full rounded-xl border px-4 py-3 text-sm transition-all ${
+    modoOscuro
+      ? 'bg-[#18223f] border-slate-700/50 text-white focus:border-amber-400/50'
+      : 'bg-white border-slate-200 text-slate-900 focus:border-amber-400'
+  } focus:outline-none`;
+  const estiloCard = `rounded-2xl border p-6 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`;
 
   return (
     <div className="space-y-6">
@@ -233,7 +179,7 @@ export function ModalConfiguracionConvocatoria({ club }) {
       {error && <Alerta tipo="error" mensaje={error} />}
       {exito && <Alerta tipo="success" mensaje={exito} />}
 
-      <div className={`rounded-2xl border p-6 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`}>
+      <div className={estiloCard}>
         <div className="mb-4">
           <p className={`text-base font-bold ${tema.text}`}>Estado actual de la convocatoria</p>
           <p className={`text-sm ${tema.subtitle}`}>
@@ -249,7 +195,7 @@ export function ModalConfiguracionConvocatoria({ club }) {
         <BadgeEstado estado={estado} />
       </div>
 
-      <div className={`rounded-2xl border p-6 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`}>
+      <div className={estiloCard}>
         <div className="mb-4">
           <label className={`text-base font-bold ${tema.text}`}>Fecha de apertura programada</label>
           <p className={`text-sm ${tema.subtitle}`}>Cuándo empezará a recibir postulaciones. Si la convocatoria estaba cerrada manualmente, al guardar una nueva fecha se reabrirá.</p>
@@ -258,24 +204,16 @@ export function ModalConfiguracionConvocatoria({ club }) {
           type="datetime-local"
           value={toDatetimeLocal(config.fecha_apertura_programada)}
           onChange={handleChangeApertura}
-          onBlur={() => validarFormulario(
-            config.fecha_apertura_programada,
-            config.fecha_limite_cierre,
-            config.max_postulaciones,
-          )}
+          onBlur={() => validarFormulario(config.fecha_apertura_programada, config.fecha_limite_cierre, config.max_postulaciones)}
           disabled={guardando}
-          className={`w-full rounded-xl border px-4 py-3 text-sm transition-all ${
-            modoOscuro
-              ? 'bg-[#18223f] border-slate-700/50 text-white focus:border-amber-400/50'
-              : 'bg-white border-slate-200 text-slate-900 focus:border-amber-400'
-          } focus:outline-none ${errores.fecha_apertura ? 'border-red-500' : ''}`}
+          className={`${estiloInput} ${errores.fecha_apertura ? 'border-red-500' : ''}`}
         />
         {errores.fecha_apertura && (
           <p className="mt-2 text-xs text-red-400 font-medium">{errores.fecha_apertura}</p>
         )}
       </div>
 
-      <div className={`rounded-2xl border p-6 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`}>
+      <div className={estiloCard}>
         <div className="mb-4">
           <label className={`text-base font-bold ${tema.text}`}>Fecha límite de cierre</label>
           <p className={`text-sm ${tema.subtitle}`}>Cuándo dejará de recibir postulaciones. Déjalo vacío para no tener límite.</p>
@@ -284,24 +222,16 @@ export function ModalConfiguracionConvocatoria({ club }) {
           type="datetime-local"
           value={toDatetimeLocal(config.fecha_limite_cierre)}
           onChange={handleChangeCierre}
-          onBlur={() => validarFormulario(
-            config.fecha_apertura_programada,
-            config.fecha_limite_cierre,
-            config.max_postulaciones,
-          )}
+          onBlur={() => validarFormulario(config.fecha_apertura_programada, config.fecha_limite_cierre, config.max_postulaciones)}
           disabled={guardando}
-          className={`w-full rounded-xl border px-4 py-3 text-sm transition-all ${
-            modoOscuro
-              ? 'bg-[#18223f] border-slate-700/50 text-white focus:border-amber-400/50'
-              : 'bg-white border-slate-200 text-slate-900 focus:border-amber-400'
-          } focus:outline-none ${errores.fecha_cierre ? 'border-red-500' : ''}`}
+          className={`${estiloInput} ${errores.fecha_cierre ? 'border-red-500' : ''}`}
         />
         {errores.fecha_cierre && (
           <p className="mt-2 text-xs text-red-400 font-medium">{errores.fecha_cierre}</p>
         )}
       </div>
 
-      <div className={`rounded-2xl border p-6 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`}>
+      <div className={estiloCard}>
         <div className="mb-4">
           <label className={`text-base font-bold ${tema.text}`}>Límite de postulaciones</label>
           <p className={`text-sm ${tema.subtitle}`}>Número máximo de formularios que deseas recibir (máx. {MAX_POSTULACIONES}). Déjalo vacío y se usará {MAX_POSTULACIONES} por defecto.</p>
@@ -315,11 +245,7 @@ export function ModalConfiguracionConvocatoria({ club }) {
             placeholder={`${MAX_POSTULACIONES}`}
             value={config.max_postulaciones ?? ''}
             onChange={handleChangeMaxPost}
-            onBlur={() => validarFormulario(
-              config.fecha_apertura_programada,
-              config.fecha_limite_cierre,
-              config.max_postulaciones,
-            )}
+            onBlur={() => validarFormulario(config.fecha_apertura_programada, config.fecha_limite_cierre, config.max_postulaciones)}
             className={`w-32 rounded-xl border px-4 py-3 text-sm font-bold text-center transition-all ${
               modoOscuro
                 ? 'bg-[#18223f] border-slate-700/50 text-white focus:border-amber-400/50'
@@ -353,99 +279,38 @@ export function ModalConfiguracionConvocatoria({ club }) {
       </div>
 
       {confirmacionCerrar && (
-        <div className={`rounded-2xl border p-4 ${modoOscuro ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'}`}>
-          <p className={`text-sm font-medium mb-3 ${tema.text}`}>
-            ¿Cerrar la convocatoria ahora? Ya no se recibirán nuevas postulaciones. Los formularios que ya se recibieron no se verán afectados.
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={cerrarConvocatoria}
-              disabled={guardando}
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase tracking-widest rounded-xl px-4 py-3 transition-all cursor-pointer active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
-            >
-              {guardando ? (
-                <Spinner size="sm" color="border-white" className="!py-0" />
-              ) : (
-                <>
-                  <Icono nombre="close" className="h-4 w-4" strokeWidth={2.5} />
-                  Sí, cerrar
-                </>
-              )}
-            </button>
-            <button
-              onClick={() => setConfirmacionCerrar(false)}
-              disabled={guardando}
-              className={`px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer ${
-                modoOscuro
-                  ? 'border-slate-600 text-slate-300 hover:bg-slate-800'
-                  : 'border-slate-300 text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
+        <ConvocatoriaConfirmCerrarBox
+          guardando={guardando}
+          onConfirmar={cerrarConvocatoria}
+          onCancelar={() => setConfirmacionCerrar(false)}
+          modoOscuro={modoOscuro}
+          tema={tema}
+        />
       )}
 
       <div className="flex gap-3">
         {confirmacionPendiente ? (
-          <div className={`w-full rounded-2xl border p-4 ${modoOscuro ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'}`}>
-            <p className={`text-sm font-medium mb-3 ${tema.text}`}>
-              {construirResumenCambios()}
-            </p>
-            <p className={`text-xs font-medium mb-3 ${tema.subtitle}`}>¿Confirmar cambios?</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => { setConfirmacionPendiente(false); guardar(); }}
-                disabled={guardando || Object.values(errores).some(Boolean)}
-                className="flex-1 bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-4 py-3 transition-all cursor-pointer active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
-              >
-                {guardando ? (
-                  <Spinner size="sm" color="border-[#0e162c]" className="!py-0" />
-                ) : (
-                  <>
-                    <Icono nombre="check" className="h-4 w-4" strokeWidth={2.5} />
-                    Confirmar
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => setConfirmacionPendiente(false)}
-                disabled={guardando}
-                className={`px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer ${
-                  modoOscuro
-                    ? 'border-slate-600 text-slate-300 hover:bg-slate-800'
-                    : 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
+          <ConvocatoriaConfirmSaveBox
+            resumenCambios={construirResumenCambios()}
+            guardando={guardando}
+            errores={errores}
+            onConfirmar={() => { setConfirmacionPendiente(false); guardar(); }}
+            onCancelar={() => setConfirmacionPendiente(false)}
+            tema={tema}
+          />
         ) : (
           <>
-            <button
+            <ConvocatoriaGuardarButton
+              guardando={guardando}
+              errores={errores}
               onClick={() => setConfirmacionPendiente(true)}
-              disabled={guardando || Object.values(errores).some(Boolean)}
-              className="flex-1 bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl px-6 py-4 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <Icono nombre="check" className="h-5 w-5" strokeWidth={2.5} />
-              Guardar configuración
-            </button>
-
-            {estado === 'abierto' && (
-              <button
-                onClick={() => setConfirmacionCerrar(true)}
-                disabled={guardando}
-                className={`px-6 py-4 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed border ${
-                  modoOscuro
-                    ? 'border-red-500/50 text-red-400 hover:bg-red-500/10'
-                    : 'border-red-300 text-red-600 hover:bg-red-50'
-                }`}
-              >
-                Cerrar convocatoria ahora
-              </button>
-            )}
+            />
+            <ConvocatoriaCerrarButton
+              guardando={guardando}
+              estado={estado}
+              modoOscuro={modoOscuro}
+              onClick={() => setConfirmacionCerrar(true)}
+            />
           </>
         )}
       </div>

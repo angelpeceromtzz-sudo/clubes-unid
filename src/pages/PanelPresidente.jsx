@@ -6,7 +6,7 @@ import { SeccionAvisos } from '../components/presidente/SeccionAvisos';
 import { SeccionMiembros } from '../components/presidente/SeccionMiembros';
 import { usePanelPresidente } from '../hooks/usePanelPresidente';
 import { NavegacionPanel } from '../components/layout/NavegacionPanel';
-import { ELEMENTOS_NAV_PRESIDENTE } from '../components/admin/elementosNavegacion';
+import { ELEMENTOS_NAV_PRESIDENTE } from '../constants/navegacion';
 import { EstadoVacio } from '../components/presidente/EmptyState';
 import { VistaConvocatorias } from '../components/presidente/VistaConvocatorias';
 import { VistaMiembros } from '../components/presidente/VistaMiembros';

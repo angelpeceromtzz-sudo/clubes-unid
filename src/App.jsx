@@ -17,7 +17,7 @@ import { DetalleClub } from './components/clubes/DetalleClub';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
 import { SplashScreen } from './components/ui/SplashScreen';
-import { NAVBAR_HEIGHT } from './config/layout';
+import { NAVBAR_HEIGHT } from './constants/limites';
 
 function App() {
   const { estaAutenticado, authReady, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
