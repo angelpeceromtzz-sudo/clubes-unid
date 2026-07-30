@@ -13,8 +13,11 @@ export function generarListaAsistencia(nombreClub, bloque, fecha, hora, lugar, a
   .firma { width: 150px; }
   .info { margin-top: 20px; font-size: 12px; color: #777; }
   .info span { display: inline-block; margin-right: 30px; }
+  .btn-print { display: block; margin: 30px auto 0; padding: 10px 24px; background: #333; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
+  @media print { .btn-print { display: none; } }
 </style></head>
-<body>
+<body onload="window.print()">
+  <button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
   <h1>${nombreClub}</h1>
   <h2>Lista de Asistencia - Bloque ${bloque}</h2>
   <div class="info">
