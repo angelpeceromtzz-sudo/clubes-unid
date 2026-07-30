@@ -65,7 +65,6 @@ export const api = {
   getAllSolicitudes: inscripcionService.getAllSolicitudes,
   actualizarEstatusSolicitud: inscripcionService.actualizarEstatusSolicitud,
   getMisPostulaciones: inscripcionService.getMisPostulaciones,
-  cancelarPostulacion: inscripcionService.cancelarPostulacion,
 
   getNotificaciones: notificacionService.getNotificaciones,
   createNotificacion: notificacionService.createNotificacion,

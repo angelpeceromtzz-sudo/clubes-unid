@@ -136,9 +136,10 @@ export function FormularioInscripcion({ club, onClose }) {
               maxLength={8}
             />
 
-            <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
-
-            <CampoSelect label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} opciones={['1','2','3','4','5','6','7','8','9']} placeholder="Selecciona" required error={errores.cuatrimestre} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
+              <CampoSelect label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} opciones={['1','2','3','4','5','6','7','8','9']} placeholder="Selecciona" required error={errores.cuatrimestre} />
+            </div>
 
             <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} maxLength={10} />
 

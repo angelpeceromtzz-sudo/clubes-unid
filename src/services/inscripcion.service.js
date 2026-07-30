@@ -34,7 +34,4 @@ export const inscripcionService = {
     }),
 
   getMisPostulaciones: () => request('/formularios/mis-postulaciones'),
-
-  cancelarPostulacion: (id) =>
-    request(`/formularios/${id}/cancelar`, { method: 'PATCH' }),
 };
