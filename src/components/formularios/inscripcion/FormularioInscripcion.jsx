@@ -156,6 +156,10 @@ export function FormularioInscripcion({ club, onClose }) {
             >
               Revisar Formulario
             </button>
+
+            <p className={`text-xs text-center ${tema.isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              No puedes cancelar tu postulación una vez enviada
+            </p>
           </form>
         )}
       </ModalBase>
