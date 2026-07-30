@@ -48,7 +48,7 @@ router.get('/preview/:id_club', authenticate, requireClubLeader, async (req, res
 });
 
 // Generar convocatorias a partir de preseleccionados
-router.post('/generar', authenticate, requireClubLeader, async (req, res) => {
+router.post('/generar', authenticate, requireRole(2, 5), async (req, res) => {
   try {
     const { id_club } = req.body;
     if (!id_club) return res.status(400).json({ error: 'id_club es obligatorio' });
@@ -179,7 +179,7 @@ router.get('/:id_club', authenticate, requireClubLeader, async (req, res) => {
 });
 
 // Actualizar fecha, hora, lugar de una convocatoria
-router.put('/:id', authenticate, requireClubLeader, async (req, res) => {
+router.put('/:id', authenticate, requireRole(2, 5), async (req, res) => {
   try {
     const { id } = req.params;
     const { fecha, hora, lugar } = req.body;
@@ -218,7 +218,7 @@ router.put('/:id', authenticate, requireClubLeader, async (req, res) => {
 });
 
 // Enviar convocatoria a todo un bloque
-router.post('/:id/enviar', authenticate, requireClubLeader, async (req, res) => {
+router.post('/:id/enviar', authenticate, requireRole(2, 5), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -268,7 +268,7 @@ router.post('/:id/enviar', authenticate, requireClubLeader, async (req, res) => 
 });
 
 // Generar lista de asistencia para imprimir
-router.get('/:id/asistencia', authenticate, requireClubLeader, async (req, res) => {
+router.get('/:id/asistencia', authenticate, requireRole(2, 5), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -300,7 +300,7 @@ router.get('/:id/asistencia', authenticate, requireClubLeader, async (req, res) 
 });
 
 // Enviar ofertas a alumnos aprobados en selección final
-router.post('/ofertas', authenticate, requireClubLeader, async (req, res) => {
+router.post('/ofertas', authenticate, requireRole(2, 5), async (req, res) => {
   try {
     const { id_club, aprobados } = req.body;
     if (!id_club || !Array.isArray(aprobados)) {

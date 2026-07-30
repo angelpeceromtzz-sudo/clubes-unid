@@ -479,7 +479,7 @@ router.put('/:id/bloque', authenticate, requireRole(2, 5), async (req, res) => {
 
 
 // Seleccionar ofertas finales para alumnos aprobados
-router.post('/seleccionar', authenticate, requireClubLeader, async (req, res) => {
+router.post('/seleccionar', authenticate, requireRole(2, 5), async (req, res) => {
   try {
     const { id_club, aceptados } = req.body;
     if (!id_club || !Array.isArray(aceptados)) {
