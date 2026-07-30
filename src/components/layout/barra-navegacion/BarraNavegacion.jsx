@@ -105,7 +105,7 @@ export function BarraNavegacion({
                     <Icono nombre="chevron-down" strokeWidth={2.5} className={`h-3 w-3 transition-transform duration-200 ${menuCategoria ? 'rotate-180' : ''}`} />
                   </button>
                   {menuCategoria && !esMobile && (
-                    <div ref={catMobileRef}>
+                    <div ref={catMobileRef} className="absolute top-full left-0 mt-1 z-50">
                       <DesplegableCategoria
                         categoriaActiva={categoriaActiva}
                         setCategoriaActiva={setCategoriaActiva}
