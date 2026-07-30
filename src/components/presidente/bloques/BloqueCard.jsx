@@ -63,7 +63,7 @@ export function BloqueCard({ convocatoria, onActualizar, onEnviar, onImprimir })
           completo={completo}
           onToggleEdit={() => setEditando((p) => !p)}
           onEnviar={enviar}
-          onImprimir={onImprimir}
+          onImprimir={() => onImprimir(convocatoria.id_convocatoria)}
         />
       </div>
       <BloqueAlumnosList alumnos={convocatoria.alumnos} />
