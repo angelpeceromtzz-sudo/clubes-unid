@@ -100,17 +100,9 @@ INSERT INTO avisos_clubes (id_club, id_autor, titulo, contenido) VALUES
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- 6. DATOS DE PRUEBA PARA VOLEIBOL
+-- 6. FORMULARIOS DE PRUEBA PARA VOLEIBOL
 -- ============================================================
--- Presidente del club de Voleibol (id_club = 1)
-INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol) VALUES
-  ('Diego Alejandro Torres Silva', 'presidente.voleibol@unid.mx', '$2a$10$CtbaqnLet396yUp7Kn2QAOh55dakt4v9WJzprP9GfyeWKfNZUuM6.', 2)
-ON CONFLICT (correo_institucional) DO NOTHING;
-
-UPDATE clubes SET id_presidente = (
-    SELECT id_usuario FROM usuarios WHERE correo_institucional = 'presidente.voleibol@unid.mx'
-) WHERE id_club = 1 AND id_presidente IS NULL;
-
+-- Nota: El presidente de Voleibol se asigna desde la BD o panel admin.
 -- 5 alumnos de prueba para Voleibol (contraseña: 123456)
 INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol) VALUES
   ('Sofía Martínez López',        'alumno.voleibol1@unid.mx', '$2a$10$CtbaqnLet396yUp7Kn2QAOh55dakt4v9WJzprP9GfyeWKfNZUuM6.', 1),

@@ -29,6 +29,7 @@ import adminDashboardRoutes from './routes/adminDashboard.js';
 import diapositivasHeroRoutes from './routes/diapositivasHero.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 4000;
 
 const allowedOrigins = process.env.CORS_ORIGIN
