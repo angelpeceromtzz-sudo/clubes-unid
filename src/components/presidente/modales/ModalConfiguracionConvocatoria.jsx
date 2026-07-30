@@ -255,6 +255,7 @@ export function ModalConfiguracionConvocatoria({ club }) {
             onConfirmar={() => { setConfirmacionPendiente(false); guardar(); }}
             onCancelar={() => setConfirmacionPendiente(false)}
             tema={tema}
+            modoOscuro={modoOscuro}
           />
         ) : (
           <>

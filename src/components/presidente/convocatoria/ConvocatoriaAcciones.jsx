@@ -77,9 +77,9 @@ export function ConvocatoriaConfirmCerrarBox({ guardando, onConfirmar, onCancela
   );
 }
 
-export function ConvocatoriaConfirmSaveBox({ resumenCambios, guardando, errores, onConfirmar, onCancelar, tema }) {
+export function ConvocatoriaConfirmSaveBox({ resumenCambios, guardando, errores, onConfirmar, onCancelar, tema, modoOscuro }) {
   return (
-    <ConvocatoriaConfirmBox modoOscuro={false}>
+    <ConvocatoriaConfirmBox modoOscuro={modoOscuro}>
       <p className={`text-sm font-medium mb-3 ${tema.text}`}>
         {resumenCambios}
       </p>
@@ -103,7 +103,7 @@ export function ConvocatoriaConfirmSaveBox({ resumenCambios, guardando, errores,
           onClick={onCancelar}
           disabled={guardando}
           className={`px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer ${
-            false
+            modoOscuro
               ? 'border-slate-600 text-slate-300 hover:bg-slate-800'
               : 'border-slate-300 text-slate-700 hover:bg-slate-100'
           }`}
