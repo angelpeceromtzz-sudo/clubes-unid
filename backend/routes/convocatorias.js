@@ -114,7 +114,7 @@ router.post('/generar', authenticate, requireRole(2, 5), async (req, res) => {
           const form = preseleccionados.rows[idx];
           await client.query(
             `UPDATE formularios
-             SET status = 'Convocado', id_convocatoria = $1
+             SET id_convocatoria = $1
              WHERE id_formulario = $2`,
             [idConv, form.id_formulario],
           );
@@ -164,7 +164,7 @@ router.get('/:id_club', authenticate, requireClubLeader, async (req, res) => {
                 'nombre_completo', f.nombre_completo,
                 'matricula', f.matricula
               ) ORDER BY f.fecha_envio ASC)
-               FROM formularios f WHERE f.id_convocatoria = c.id_convocatoria AND f.status = 'Convocado') AS alumnos
+               FROM formularios f WHERE f.id_convocatoria = c.id_convocatoria) AS alumnos
        FROM convocatorias c
        WHERE c.id_club = $1
        ORDER BY c.bloque ASC`,
@@ -257,6 +257,11 @@ router.post('/:id/enviar', authenticate, requireRole(2, 5), async (req, res) => 
 
     await pool.query(
       'UPDATE convocatorias SET enviada = TRUE WHERE id_convocatoria = $1',
+      [id],
+    );
+
+    await pool.query(
+      `UPDATE formularios SET status = 'Convocado' WHERE id_convocatoria = $1 AND status = 'Preseleccionado'`,
       [id],
     );
 

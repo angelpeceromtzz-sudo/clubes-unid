@@ -10,6 +10,8 @@ export function ProveedorNotificacion({ children: hijos }) {
   const { estaAutenticado, usuario } = useAutenticacion();
   const [notificaciones, setNotificaciones] = useState([]);
   const refIntervalo = useRef(null);
+  const primeraCarga = useRef(true);
+  const prevNoLeidas = useRef(0);
 
   const obtenerNotificaciones = useCallback(async () => {
     if (!estaAutenticado) {
@@ -19,6 +21,21 @@ export function ProveedorNotificacion({ children: hijos }) {
     try {
       const data = await api.getNotificaciones();
       setNotificaciones(data);
+
+      const nuevas = data.filter((n) => !n.leido).length;
+      if (!primeraCarga.current && nuevas > prevNoLeidas.current) {
+        const cantidad = nuevas - prevNoLeidas.current;
+        if (Notification.permission === 'granted') {
+          const ultimas = data.filter((n) => !n.leido).slice(0, cantidad);
+          ultimas.forEach((n) => {
+            new Notification(n.titulo, { body: n.mensaje, icon: '/favicon.svg' });
+          });
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission();
+        }
+      }
+      prevNoLeidas.current = nuevas;
+      primeraCarga.current = false;
     } catch {
       if (refIntervalo.current) {
         setNotificaciones([]);
