@@ -338,7 +338,7 @@ router.get('/todos/:id_club', authenticate, requireClubLeader, async (req, res) 
 });
 
 // Actualiza el estatus de un formulario (presidente — transiciones individuales)
-router.put('/:id/estatus', authenticate, requireClubLeader, async (req, res) => {
+router.put('/:id/estatus', authenticate, requireRole(2, 5), async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -436,7 +436,7 @@ router.put('/:id/estatus', authenticate, requireClubLeader, async (req, res) => 
 });
 
 // Asignar bloque a un formulario (presidente)
-router.put('/:id/bloque', authenticate, requireClubLeader, async (req, res) => {
+router.put('/:id/bloque', authenticate, requireRole(2, 5), async (req, res) => {
   try {
     const { id } = req.params;
     const { bloque } = req.body;
