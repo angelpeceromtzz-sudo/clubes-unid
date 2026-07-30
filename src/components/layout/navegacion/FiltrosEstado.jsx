@@ -34,9 +34,7 @@ export function FiltrosEstado({ estadoActivo, setEstadoActivo, variante = 'deskt
           key={est}
           onClick={() => setEstadoActivo(est)}
           className={`font-semibold text-xs lg:text-sm tracking-wide px-3 py-1.5 transition-all duration-200 cursor-pointer active:scale-95 ${
-            estadoActivo === est
-              ? 'rounded-full text-white bg-amber-500 shadow-sm shadow-amber-500/30'
-              : `rounded-md ${tema.btnInactive}`
+            estadoActivo === est ? tema.btnActive : tema.btnInactive
           }`}
         >
           {est}

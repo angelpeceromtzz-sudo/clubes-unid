@@ -96,9 +96,7 @@ export function BarraNavegacion({
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={() => setMenuCategoria((v) => !v)}
                     className={`inline-flex items-center gap-1 font-semibold text-xs lg:text-sm tracking-wide px-3 py-1.5 transition-all duration-200 cursor-pointer active:scale-95 ${
-                      categoriaActiva !== 'Todos'
-                        ? 'rounded-full text-white bg-amber-500 shadow-sm shadow-amber-500/30'
-                        : `rounded-md ${modoOscuro ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-500 hover:text-slate-800 hover:bg-black/5'}`
+                      categoriaActiva !== 'Todos' ? tema.btnActive : tema.btnInactive
                     }`}
                   >
                     {labelCategoria}
