@@ -96,5 +96,47 @@ INSERT INTO avisos_clubes (id_club, id_autor, titulo, contenido) VALUES
   (4,
    (SELECT id_usuario FROM usuarios WHERE correo_institucional = 'presidente@unid.mx'),
    'Confirmación para torneo',
-   'Necesito que todos confirmen su asistencia al torneo del próximo mes a más tardar el viernes. Pasen conmigo a firmar la hoja de inscripción.')
+    'Necesito que todos confirmen su asistencia al torneo del próximo mes a más tardar el viernes. Pasen conmigo a firmar la hoja de inscripción.')
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 6. DATOS DE PRUEBA PARA VOLEIBOL
+-- ============================================================
+-- Presidente del club de Voleibol (id_club = 1)
+INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol) VALUES
+  ('Diego Alejandro Torres Silva', 'presidente.voleibol@unid.mx', '$2a$10$CtbaqnLet396yUp7Kn2QAOh55dakt4v9WJzprP9GfyeWKfNZUuM6.', 2)
+ON CONFLICT (correo_institucional) DO NOTHING;
+
+UPDATE clubes SET id_presidente = (
+    SELECT id_usuario FROM usuarios WHERE correo_institucional = 'presidente.voleibol@unid.mx'
+) WHERE id_club = 1 AND id_presidente IS NULL;
+
+-- 5 alumnos de prueba para Voleibol (contraseña: 123456)
+INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol) VALUES
+  ('Sofía Martínez López',        'alumno.voleibol1@unid.mx', '$2a$10$CtbaqnLet396yUp7Kn2QAOh55dakt4v9WJzprP9GfyeWKfNZUuM6.', 1),
+  ('Andrés García Hernández',     'alumno.voleibol2@unid.mx', '$2a$10$CtbaqnLet396yUp7Kn2QAOh55dakt4v9WJzprP9GfyeWKfNZUuM6.', 1),
+  ('Valentina Rodríguez Cruz',    'alumno.voleibol3@unid.mx', '$2a$10$CtbaqnLet396yUp7Kn2QAOh55dakt4v9WJzprP9GfyeWKfNZUuM6.', 1),
+  ('Emiliano Torres Medina',      'alumno.voleibol4@unid.mx', '$2a$10$CtbaqnLet396yUp7Kn2QAOh55dakt4v9WJzprP9GfyeWKfNZUuM6.', 1),
+  ('Ximena Flores Castillo',      'alumno.voleibol5@unid.mx', '$2a$10$CtbaqnLet396yUp7Kn2QAOh55dakt4v9WJzprP9GfyeWKfNZUuM6.', 1)
+ON CONFLICT (correo_institucional) DO NOTHING;
+
+-- Formularios de prueba para Voleibol (todos "En revisión")
+INSERT INTO formularios (id_alumno, id_club, nombre_completo, matricula, carrera, cuatrimestre, telefono_contacto, motivo_ingreso, experiencia_previa, status)
+SELECT u.id_usuario, 1, u.nombre_completo, m.matricula, m.carrera, m.cuatrimestre, m.telefono, m.motivo, m.experiencia, 'En revisión'
+FROM (
+  VALUES
+    ('alumno.voleibol1@unid.mx', 'UNID-2026-001', 'Lic. en Administración de Empresas', 3, '555-100-0001', 'Quiero desarrollar habilidades de trabajo en equipo y representar a la universidad en torneos.', 'Jugué voleibol en preparatoria durante 2 años'),
+    ('alumno.voleibol2@unid.mx', 'UNID-2026-002', 'Ing. en Sistemas Computacionales',   2, '555-100-0002', 'Me apasiona el voleibol y quiero mantenerme activo mientras estudio.', 'Entrené por mi cuenta, nunca en equipo formal'),
+    ('alumno.voleibol3@unid.mx', 'UNID-2026-003', 'Lic. en Contaduría Pública',          4, '555-100-0003', 'Busco formar parte de un equipo competitivo y hacer amigos con intereses similares.', 'Formé parte del equipo de mi secundaria'),
+    ('alumno.voleibol4@unid.mx', 'UNID-2026-004', 'Ing. en Mecatrónica',                  5, '555-100-0004', 'Quiero salir de la rutina académica y contribuir al equipo de voleibol de la UNID.', 'Ninguna experiencia previa, pero muchas ganas'),
+    ('alumno.voleibol5@unid.mx', 'UNID-2026-005', 'Lic. en Diseño Gráfico',               3, '555-100-0005', 'Me gustaría representar a la universidad en competencias y crecer como jugadora.', 'Jugué en el equipo estatal juvenil durante 3 años')
+) AS m(correo, matricula, carrera, cuatrimestre, telefono, motivo, experiencia)
+JOIN usuarios u ON u.correo_institucional = m.correo
+WHERE NOT EXISTS (
+  SELECT 1 FROM formularios f WHERE f.id_alumno = u.id_usuario AND f.id_club = 1
+);
+
+-- Actualizar contador de postulaciones del club Voleibol
+UPDATE clubes SET postulaciones_actuales = (
+  SELECT COUNT(*) FROM formularios WHERE id_club = 1 AND status NOT IN ('Rechazado', 'Miembro oficial')
+) WHERE id_club = 1;

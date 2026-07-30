@@ -70,6 +70,17 @@ router.post('/generar', authenticate, requireClubLeader, async (req, res) => {
       return res.status(400).json({ error: 'No hay alumnos preseleccionados' });
     }
 
+    const pendientes = await pool.query(
+      `SELECT COUNT(*) as total FROM formularios
+       WHERE id_club = $1 AND status = 'En revisión'`,
+      [id_club],
+    );
+    if (parseInt(pendientes.rows[0].total, 10) > 0) {
+      return res.status(400).json({
+        error: `Debes procesar todos los formularios (Preseleccionar o Rechazar) antes de generar las convocatorias. Quedan ${pendientes.rows[0].total} formulario(s) en revisión.`,
+      });
+    }
+
     const distribucion = distribuirEnBloques(preseleccionados.rows.length);
     const periodo = new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
     const client = await pool.connect();

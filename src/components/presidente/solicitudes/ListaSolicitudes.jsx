@@ -1,7 +1,7 @@
 import { Badge } from '../../ui/Badge';
 import { TarjetaSolicitud } from './TarjetaSolicitud';
 
-export function ListaSolicitudes({ titulo, solicitudes, color = 'blue', onPreseleccionar, onRechazar, accionando, themeTitle }) {
+export function ListaSolicitudes({ titulo, solicitudes, color = 'blue', seleccionados, onToggleSeleccion, themeTitle }) {
   if (solicitudes.length === 0) return null;
   return (
     <div>
@@ -14,9 +14,8 @@ export function ListaSolicitudes({ titulo, solicitudes, color = 'blue', onPresel
           <TarjetaSolicitud
             key={s.id_formulario ?? `sol-${i}`}
             solicitud={s}
-            onPreseleccionar={onPreseleccionar}
-            onRechazar={onRechazar}
-            accionando={accionando}
+            seleccionados={seleccionados}
+            onToggleSeleccion={onToggleSeleccion}
           />
         ))}
       </div>
