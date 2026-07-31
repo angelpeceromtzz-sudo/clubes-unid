@@ -66,5 +66,6 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
 
     inicializar();
     return () => { cancelado.current = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

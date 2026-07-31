@@ -27,7 +27,10 @@ export function TablaActividad() {
     }
   }, []);
 
-  useEffect(() => { cargar(pagina); }, [pagina, cargar]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargar(pagina);
+  }, [pagina, cargar]);
 
   return (
     <div>

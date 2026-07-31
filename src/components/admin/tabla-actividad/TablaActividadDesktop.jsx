@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { EventoIcon } from './EventoIcon';
 import { EVENTOS_CONFIG, DEFAULT_EVENTO, formatFecha } from '../../../constants/actividad';
 

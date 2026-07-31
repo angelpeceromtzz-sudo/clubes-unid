@@ -43,7 +43,7 @@ async function reverseGeocode(lat, lng) {
       const parts = [a.road, a.suburb || a.neighbourhood, a.city || a.town || a.village, a.state].filter(Boolean);
       return { direccion: parts.join(', '), completa: data.display_name };
     }
-  } catch {}
+  } catch { /* Geocoding no disponible */ }
   return { direccion: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, completa: '' };
 }
 

@@ -34,6 +34,7 @@ export function usePanelAlumno() {
   }, [obtenerDatosPanel, usuario]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargar();
   }, [cargar]);
 

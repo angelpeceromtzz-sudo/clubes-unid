@@ -19,24 +19,23 @@ export function DetalleClub({ onLoginClick }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { modoOscuro } = useTheme();
-  const { estaAutenticado, esAdmin, tieneInscripcionActiva, clubesPostulados, usuario } = useAutenticacion();
+  const { estaAutenticado, esAdmin, tieneInscripcionActiva, clubesPostulados } = useAutenticacion();
   const [club, setClub] = useState(location.state?.club || null);
   const [loading, setLoading] = useState(!club);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    if (!club) {
-      api.getClub(id)
-        .then((data) => setClub(data))
-        .catch(() => navigate('/'))
-        .finally(() => setLoading(false));
-    }
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    api.getClub(id)
+      .then((data) => setClub(data))
+      .catch(() => navigate('/'))
+      .finally(() => setLoading(false));
+  }, [id, navigate]);
 
   const esProximamente = club?.id_estatus_club === 2;
   const esInactivo = club?.id_estatus_club === 3;
-  const cupoActual = parseInt(club?.cupo_actual) || 0;
   const estado = !esProximamente ? club?.estado_calculado : null;
   const yaEnvio = clubesPostulados.includes(club?.id_club);
   const deshabilitado = (estado && estado !== 'abierto') || yaEnvio;

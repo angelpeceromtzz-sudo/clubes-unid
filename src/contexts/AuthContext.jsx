@@ -23,7 +23,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
     }
   }, []);
 
-  async function despuesDeLogin(data) {
+  const despuesDeLogin = useCallback(async (data) => {
     setSession({ token: data.token, user: data.user });
     setUsuario(data.user);
     try {
@@ -33,7 +33,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
       setTieneInscripcionActiva(false);
     }
     if (data.user.id_rol === 1) await obtenerMisFormularios();
-  }
+  }, [obtenerMisFormularios]);
 
   useInicializacionMsal({
     onLoggedIn: (data) => {
@@ -69,7 +69,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
     } catch (err) {
       return { ok: false, error: err.message };
     }
-  }, []);
+  }, [despuesDeLogin]);
 
   const iniciarSesionMicrosoft = useCallback(async (accessToken) => {
     try {
@@ -79,7 +79,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
     } catch (err) {
       return { ok: false, error: err.message };
     }
-  }, []);
+  }, [despuesDeLogin]);
 
   const cerrarSesion = useCallback(() => {
     setUsuario(null);
@@ -137,6 +137,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAutenticacion() {
   const ctx = useContext(ContextoAutenticacion);
   if (!ctx) throw new Error('useAutenticacion debe usarse dentro de ProveedorAutenticacion');

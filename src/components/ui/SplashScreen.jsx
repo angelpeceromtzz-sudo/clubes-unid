@@ -20,12 +20,15 @@ export function SplashScreen({ authReady, clubesLoading, onFinish }) {
 
   const logoRef = useRef(null);
   const bgRef = useRef(null);
+  // eslint-disable-next-line react-hooks/purity
   const startTime = useRef(Date.now());
   const dismissed = useRef(false);
   const authReadyRef = useRef(authReady);
   const clubesLoadingRef = useRef(clubesLoading);
 
+  // eslint-disable-next-line react-hooks/refs
   authReadyRef.current = authReady;
+  // eslint-disable-next-line react-hooks/refs
   clubesLoadingRef.current = clubesLoading;
 
   useEffect(() => {
@@ -85,6 +88,7 @@ export function SplashScreen({ authReady, clubesLoading, onFinish }) {
       if (authReadyRef.current && !clubesLoadingRef.current && !dismissed.current) dismiss();
     }, remaining);
     return () => clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, authReady, clubesLoading]);
 
   useEffect(() => {
@@ -93,6 +97,7 @@ export function SplashScreen({ authReady, clubesLoading, onFinish }) {
       if (authReadyRef.current && !dismissed.current) dismiss();
     }, TIMEOUT_MAXIMO_MS);
     return () => clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   if (phase === 'done') return null;

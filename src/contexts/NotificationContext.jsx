@@ -7,7 +7,7 @@ const ContextoNotificacion = createContext(null);
 const INTERVALO_POLL = 30000;
 
 export function ProveedorNotificacion({ children: hijos }) {
-  const { estaAutenticado, usuario } = useAutenticacion();
+  const { estaAutenticado } = useAutenticacion();
   const [notificaciones, setNotificaciones] = useState([]);
   const refIntervalo = useRef(null);
   const primeraCarga = useRef(true);
@@ -44,6 +44,7 @@ export function ProveedorNotificacion({ children: hijos }) {
   }, [estaAutenticado]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     obtenerNotificaciones();
     if (estaAutenticado) {
       refIntervalo.current = setInterval(obtenerNotificaciones, INTERVALO_POLL);
@@ -64,8 +65,7 @@ export function ProveedorNotificacion({ children: hijos }) {
       setNotificaciones((prev) =>
         prev.map((n) => (n.id_notificacion === id ? { ...n, leido: true } : n))
       );
-    } catch {
-    }
+    } catch { /* Silenciar error al marcar como le�da */ }
   }, []);
 
   const crearNotificacion = useCallback(async (titulo, mensaje, audiencia, id_club, id_destinatario) => {
@@ -78,8 +78,7 @@ export function ProveedorNotificacion({ children: hijos }) {
     try {
       await api.marcarTodasNotificacionesLeidas();
       setNotificaciones((prev) => prev.map((n) => ({ ...n, leido: true })));
-    } catch {
-    }
+    } catch { /* Silenciar error al marcar todas como le�das */ }
   }, []);
 
   const eliminarNotificacion = useCallback(async (id) => {
@@ -108,6 +107,7 @@ export function ProveedorNotificacion({ children: hijos }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useNotificaciones() {
   const ctx = useContext(ContextoNotificacion);
   if (!ctx) throw new Error('useNotificaciones debe usarse dentro de ProveedorNotificacion');

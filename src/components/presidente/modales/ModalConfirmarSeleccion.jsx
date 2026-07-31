@@ -1,6 +1,5 @@
 import { Icono } from '../../ui/Icono';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { BotonAccion } from '../../ui/BotonAccion';
 import { Spinner } from '../../ui/Spinner';
 
 export function ModalConfirmarSeleccion({ aceptados, noSeleccionados, onConfirmar, onCancelar, cargando }) {

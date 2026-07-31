@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../services/api';
-import { Icono } from '../../ui/Icono';
-import { useTheme } from '../../../contexts/ThemeContext';
 import { PreseleccionadosConBloque } from './PreseleccionadosConBloque';
 import { PreseleccionadosSinBloque } from './PreseleccionadosSinBloque';
 import { AlumnosConvocados } from './AlumnosConvocados';
@@ -11,7 +9,6 @@ import { EncabezadoPagina } from '../../ui/EncabezadoPagina';
 import { Alerta } from '../../ui/Alerta';
 
 export function SeccionBloquesHorarios({ club }) {
-  const { tema, modoOscuro } = useTheme();
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [convocando, setConvocando] = useState(false);

@@ -19,6 +19,7 @@ export function useAuthRedirect() {
         else if (id_rol === 3) navigate('/admin/dashboard', { replace: true });
         else if (id_rol === 2) navigate('/presidente/dashboard', { replace: true });
         else if (id_rol === 1 && tieneInscripcionActiva) navigate('/dashboard', { replace: true });
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         else if (id_rol === 1) setRedireccionPendiente(true);
         else navigate('/', { replace: true });
       }
@@ -29,6 +30,7 @@ export function useAuthRedirect() {
   useEffect(() => {
     if (redireccionPendiente && tieneInscripcionActiva) {
       navigate('/dashboard', { replace: true });
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRedireccionPendiente(false);
     }
   }, [redireccionPendiente, tieneInscripcionActiva, navigate]);

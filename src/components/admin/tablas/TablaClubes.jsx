@@ -7,7 +7,6 @@ export function TablaClubes({
   clubes,
   onStatusChange,
   onEditar,
-  onCrear,
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls, tema } = useTheme();
   return (

@@ -40,6 +40,7 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
 
   useEffect(() => {
     if (club?.id_club) cargarHorarios();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club?.id_club]);
 
   async function cargarHorarios() {

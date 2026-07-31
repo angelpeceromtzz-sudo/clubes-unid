@@ -20,7 +20,6 @@ function Timeline({ etapas, activa, onChange }) {
     <div className="flex items-center gap-1 overflow-x-auto pb-2 nav-tabs-hide-scroll" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
       {etapas.map((etapa, i) => {
         const esActiva = activa === etapa.key;
-        const completada = false;
         return (
           <div key={etapa.key} className="flex items-center gap-1 shrink-0">
             <button

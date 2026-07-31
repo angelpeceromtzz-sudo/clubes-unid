@@ -9,10 +9,6 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
 
   useClickOutside(dropdownRef, menuAbierto, () => setMenuAbierto(false));
 
-  const nombreTruncado = user?.nombre_completo?.length > 26
-    ? user.nombre_completo.slice(0, 26) + '...'
-    : user?.nombre_completo;
-
   return (
     <div className="relative flex items-center" ref={dropdownRef}>
       {user && (

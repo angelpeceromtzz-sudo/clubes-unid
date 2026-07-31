@@ -5,7 +5,7 @@ import { Icono } from '../../ui/Icono';
 import { obtenerUrlImagen } from '../../../utils/imagen';
 
 export function TarjetaClub({
-  nombre, descripcion, categoria, cupoMaximo, cupoActual,
+  nombre, descripcion, categoria,
   imagen, onClick,
   idEstatusClub, estadoCalculado,
 }) {

@@ -31,7 +31,7 @@ export function CalendarioGrid({
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStart, setDrawStart] = useState(null);
   const [drawEnd, setDrawEnd] = useState(null);
-  const [isResizing, setIsResizing] = useState(false);
+  const [, setIsResizing] = useState(false);
   const [resizeData, setResizeData] = useState(null);
   const [pointerPos, setPointerPos] = useState(null);
 
@@ -66,7 +66,9 @@ export function CalendarioGrid({
   }, [activeBloque]);
 
   const dragPreview = useMemo(() => {
+    // eslint-disable-next-line react-hooks/refs
     if (!activeBloque || !pointerPos || !gridRef.current) return null;
+    // eslint-disable-next-line react-hooks/refs
     const gridRect = gridRef.current.getBoundingClientRect();
     const pointerX = pointerPos.x - gridRect.left;
     const pointerY = pointerPos.y - gridRect.top;
@@ -92,7 +94,7 @@ export function CalendarioGrid({
     const height = (duracion / 60) * rowHeight;
 
     return { diaIndex, dia, inicio, fin, top, height };
-  }, [activeBloque, pointerPos, colHoraWidth, rowHeight, horaMin, horaMax]);
+  }, [activeBloque, pointerPos, colHoraWidth, rowHeight, horaMin, horaMax, horas.length]);
 
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
@@ -135,7 +137,7 @@ export function CalendarioGrid({
       hora_inicio: minutesToTime(nuevoInicio),
       hora_fin: minutesToTime(nuevoFin),
     });
-  }, [dragPreview, horarios, onMove]);
+  }, [dragPreview, horarios, onMove, pointerPos]);
 
   /* ─── Resize handlers ─── */
   const handleResizeStart = useCallback((bloque, edge, e) => {

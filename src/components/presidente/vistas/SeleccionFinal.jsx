@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { api } from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Spinner } from '../../ui/Spinner';
-import { EmptyState } from '../../ui/EmptyState';
 import { Alerta } from '../../ui/Alerta';
 import { EncabezadoPagina } from '../../ui/EncabezadoPagina';
 import { PantallaCompletado } from '../../ui/PantallaCompletado';
@@ -11,7 +10,7 @@ import { AlumnoSeleccionCard } from '../solicitudes/AlumnoSeleccionCard';
 import { BotonEnviarOfertas } from '../BotonEnviarOfertas';
 
 export function SeleccionFinal({ club }) {
-  const { tema, modoOscuro } = useTheme();
+  const { modoOscuro } = useTheme();
   const [convocados, setConvocados] = useState([]);
   const [preseleccionados, setPreseleccionados] = useState([]);
   const [cargando, setCargando] = useState(true);

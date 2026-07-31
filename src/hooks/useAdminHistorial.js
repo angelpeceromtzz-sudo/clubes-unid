@@ -16,6 +16,7 @@ export function useAdminHistorial(isActive) {
 
   useEffect(() => {
     if (isActive) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       cargarHistorial();
     }
   }, [isActive, cargarHistorial]);

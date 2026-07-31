@@ -1,7 +1,6 @@
 /* Sección de convocatorias del presidente: gestiona bloques y horarios del club. */
 import { useState, useEffect } from 'react';
 import { api } from '../../../services/api';
-import { useTheme } from '../../../contexts/ThemeContext';
 import { BloqueCard } from '../bloques/BloqueCard';
 import { Spinner } from '../../ui/Spinner';
 import { EmptyState } from '../../ui/EmptyState';
@@ -9,7 +8,6 @@ import { EncabezadoPagina } from '../../ui/EncabezadoPagina';
 import { Alerta } from '../../ui/Alerta';
 
 export function SeccionConvocatorias({ club }) {
-  const { tema } = useTheme();
   const [convocatorias, setConvocatorias] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -26,7 +24,9 @@ export function SeccionConvocatorias({ club }) {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargar();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club.id_club]);
 
   async function manejarActualizar(id, data) {

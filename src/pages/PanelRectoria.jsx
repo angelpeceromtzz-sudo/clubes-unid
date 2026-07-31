@@ -1,5 +1,4 @@
 /* Panel de rectoría: resumen estadístico, detalle de clubes, padrón y control de asistencia. */
-import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePanelRectoria } from '../hooks/usePanelRectoria';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
@@ -11,7 +10,6 @@ import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
 
 export function PanelRectoria() {
-  const { usuario } = useAutenticacion();
   const { tema } = useTheme();
   const d = usePanelRectoria();
 

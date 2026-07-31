@@ -30,7 +30,7 @@ export function PanelAlumno() {
 
   function descartarBanner() {
     setDismissMiembroBanner(true);
-    try { localStorage.setItem('dismiss_miembro_banner', 'true'); } catch {}
+    try { localStorage.setItem('dismiss_miembro_banner', 'true'); } catch { /* localStorage no disponible */ }
   }
 
   const redirigir = useRef(false);
@@ -49,13 +49,14 @@ export function PanelAlumno() {
     }
   }, [esPresidente, esAdmin, esRectoria, navigate]);
 
+  const recargarPostulaciones = useCallback(() => {
+    d.recargar();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d.recargar]);
+
   if (esPresidente || esAdmin || esRectoria) {
     return <Spinner className="py-32" />;
   }
-
-  const recargarPostulaciones = useCallback(() => {
-    d.recargar();
-  }, [d.recargar]);
 
   const esMiembroOficial = !!d.club;
 

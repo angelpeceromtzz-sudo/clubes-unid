@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '../../services/authConfig';
 
-export function BotonMicrosoft({ onSuccess }) {
+export function BotonMicrosoft() {
   const { instance } = useMsal();
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');

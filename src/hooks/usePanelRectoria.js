@@ -89,18 +89,23 @@ const qs = params.toString();
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (vistaActiva === 'resumen') cargarStats();
   }, [vistaActiva, cargarStats]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (vistaActiva === 'clubes') cargarClubes();
   }, [vistaActiva, cargarClubes]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (vistaActiva === 'padron') cargarPadron(filtrosPadron);
-  }, [vistaActiva]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vistaActiva]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (vistaActiva === 'asistencia' && clubAsistenciaId) cargarAsistencia(clubAsistenciaId);
   }, [vistaActiva, clubAsistenciaId, cargarAsistencia]);
 

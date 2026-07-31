@@ -12,7 +12,7 @@ import { obtenerUrlImagen } from '../utils/imagen';
 const ORDEN_ESTADO = ['abierto', 'proximo', 'lleno', 'cerrado'];
 const ORDEN_CATEGORIA = ['Deportes', 'Cultura', 'Tecnologia'];
 
-export function PaginaInicio({ clubes, clubesLoading, onLoginClick }) {
+export function PaginaInicio({ clubes, clubesLoading }) {
   const navigate = useNavigate();
   const { estaAutenticado } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();

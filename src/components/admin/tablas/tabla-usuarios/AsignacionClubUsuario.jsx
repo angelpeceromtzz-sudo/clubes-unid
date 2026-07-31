@@ -1,7 +1,7 @@
 import { Icono } from '../../../ui/Icono';
 import { Spinner } from '../../../ui/Spinner';
 
-export function AsignacionClubUsuario({ u, clubesActivosList, asignando, onRemoveFromClub, onAsignarClub, onAsignarAlumnoClub, usuarios, currentUser, selectCls, setConfirmPendiente }) {
+export function AsignacionClubUsuario({ u, clubesActivosList, asignando, onRemoveFromClub, onAsignarClub, usuarios, currentUser, selectCls, setConfirmPendiente }) {
   if (u.id_rol === 1) {
     const clubActual = u.nombre_club;
     return (
@@ -50,7 +50,6 @@ export function AsignacionClubUsuario({ u, clubesActivosList, asignando, onRemov
           onChange={(e) => {
             const clubId = e.target.value ? Number(e.target.value) : null;
             const clubSeleccionado = clubesActivosList.find((c) => c.id_club === clubId);
-            const clubActual = clubesActivosList.find((c) => c.nombre_club === u.nombre_club);
             const presidenteReemplazado = clubSeleccionado?.id_presidente && clubSeleccionado.id_presidente !== u.id_usuario;
             if (presidenteReemplazado) {
               const nombrePresidente = usuarios.find((u2) => u2.id_usuario === clubSeleccionado.id_presidente)?.nombre_completo || 'otro usuario';

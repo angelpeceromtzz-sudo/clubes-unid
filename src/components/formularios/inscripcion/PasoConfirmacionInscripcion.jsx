@@ -1,7 +1,7 @@
 import { ETIQUETAS } from '../../../constants/inscripcion';
 import { Alerta } from '../../ui/Alerta';
 
-export function PasoConfirmacionInscripcion({ formulario, errorApi, confirmado, setConfirmado, enviando, manejarEnvio, onEditar, modoOscuro, tema }) {
+export function PasoConfirmacionInscripcion({ formulario, errorApi, confirmado, setConfirmado, enviando, manejarEnvio, onEditar, modoOscuro }) {
   const resumenCls = `rounded-xl border p-4 ${modoOscuro ? 'bg-slate-800/30 border-slate-700/30' : 'bg-slate-50 border-slate-200'}`;
   const resumenLabelCls = 'text-[11px] font-bold uppercase tracking-wider text-slate-400';
   const resumenValCls = `text-sm font-medium mt-0.5 ${modoOscuro ? 'text-white' : 'text-slate-900'}`;

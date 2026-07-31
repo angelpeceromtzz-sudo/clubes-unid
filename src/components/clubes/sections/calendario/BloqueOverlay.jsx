@@ -1,6 +1,6 @@
 import { horaStr, timeToMinutes } from '../../../../utils/horario';
 
-export function BloqueOverlay({ bloque, rowHeight, horaMin, modoOscuro }) {
+export function BloqueOverlay({ bloque, rowHeight, modoOscuro }) {
   const iniMin = timeToMinutes(horaStr(bloque.hora_inicio));
   const finMin = timeToMinutes(horaStr(bloque.hora_fin));
   const height = ((finMin - iniMin) / 60) * rowHeight;

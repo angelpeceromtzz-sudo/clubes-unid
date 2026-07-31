@@ -15,7 +15,7 @@ export function BarraNavegacion({
   estadoActivo, setEstadoActivo,
   menuAbierto, setMenuAbierto, onLogoClick,
   user, onLoginClick, onLogout, onDashboardClick,
-  mostrarFiltros = true, onVolverCatalogo,
+  mostrarFiltros = true,
   heroVisible = true, contenidoMax,
   onScrollChange,
   splashActivo = false,
@@ -26,7 +26,7 @@ export function BarraNavegacion({
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
   const [menuCategoria, setMenuCategoria] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
-  const [esMobile, setEsMobile] = useState(() => window.innerWidth < 768);
+  const [esMobile, setEsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
   const catDesktopRef = useRef(null);
   const catMobileRef = useRef(null);
 
@@ -37,7 +37,6 @@ export function BarraNavegacion({
     const mq = window.matchMedia('(max-width: 767px)');
     const handler = (e) => setEsMobile(e.matches);
     mq.addEventListener('change', handler);
-    setEsMobile(mq.matches);
     return () => mq.removeEventListener('change', handler);
   }, []);
 

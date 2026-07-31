@@ -1,7 +1,7 @@
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Spinner } from '../../ui/Spinner';
 
-export function BloqueActions({ editando, guardando, enviando, completo, onToggleEdit, onEnviar, onImprimir }) {
+export function BloqueActions({ editando, enviando, completo, onToggleEdit, onEnviar, onImprimir }) {
   const { modoOscuro } = useTheme();
   return (
     <div className="flex flex-col sm:flex-row gap-2">

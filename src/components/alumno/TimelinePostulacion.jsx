@@ -1,5 +1,6 @@
 import { Icono } from '../ui/Icono';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const CONFIG_ESTATUS = {
   'Pendiente':        { color: 'text-yellow-400',  bg: 'bg-yellow-500/20',  border: 'border-yellow-500/30', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',                msg: 'Formulario enviado',                  label: 'Postulado' },
   'Postulado':        { color: 'text-yellow-400',  bg: 'bg-yellow-500/20',  border: 'border-yellow-500/30', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',                msg: 'Formulario enviado',                  label: 'Postulado' },

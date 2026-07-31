@@ -28,7 +28,7 @@ function App() {
   const { redirigirPostLogin } = useAuthRedirect();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [catalogoKey, setCatalogoKey] = useState(0);
+  const [catalogoKey] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
   const [splashDone, setSplashDone] = useState(false);
 
@@ -37,6 +37,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHeroVisible(window.scrollY <= 5);
   }, [location.pathname]);
 

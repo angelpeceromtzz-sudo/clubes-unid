@@ -34,6 +34,7 @@ export function usePanelAdmin(usuario) {
 
   useEffect(() => {
     if (vistaActiva === 'resumen') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       cargarDashboard();
     }
   }, [vistaActiva, cargarDashboard]);

@@ -29,6 +29,7 @@ export function Heroe({ onReady }) {
         setDiapositivas([]);
         onReady?.();
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const total = diapositivas.length;
