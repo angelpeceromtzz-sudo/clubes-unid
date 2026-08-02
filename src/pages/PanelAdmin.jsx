@@ -114,6 +114,7 @@ export function PanelAdmin() {
             onSave={d.guardarClub}
             onFormChange={d.handleClubFormChange}
             onUploadImage={d.subirImagen}
+            onToggleNivel={d.handleToggleNivel}
           />
 
           <ModalFormularioUsuario

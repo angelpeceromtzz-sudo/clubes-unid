@@ -95,6 +95,7 @@ export function usePanelAdmin(usuario) {
     cerrarModal: clubes.cerrarModal,
     guardarClub: clubes.guardarClub,
     handleClubFormChange: clubes.handleClubFormChange,
+    handleToggleNivel: clubes.toggleNivel,
     subirImagen: clubes.subirImagen,
     cargarHistorial: historial.cargarHistorial,
     showModalUsuario: usuarios.showModalUsuario,

@@ -11,6 +11,7 @@ import { RequisitosFAQClub } from './sections/RequisitosFAQClub';
 import { HorariosClub } from './sections/HorariosClub';
 import { PresidenteClub } from './sections/PresidenteClub';
 import { EventosClub } from './sections/EventosClub';
+import { ModalidadClub } from './sections/ModalidadClub';
 import { InfoAdicionalClub } from './sections/InfoAdicionalClub';
 import { PiePagina } from '../layout/PiePagina';
 
@@ -105,6 +106,7 @@ export function DetalleClub({ onLoginClick }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <HorariosClub club={club} modoOscuro={modoOscuro} />
           <EventosClub modoOscuro={modoOscuro} />
+          <ModalidadClub club={club} modoOscuro={modoOscuro} />
         </div>
 
         <InfoAdicionalClub club={club} modoOscuro={modoOscuro} />

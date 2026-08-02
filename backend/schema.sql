@@ -60,6 +60,17 @@ INSERT INTO cat_estatus_postulacion (nombre, orden, es_final) VALUES
     ('Rechazado',        6, TRUE)
 ON CONFLICT (nombre) DO NOTHING;
 
+CREATE TABLE IF NOT EXISTS cat_niveles (
+    id_nivel SERIAL PRIMARY KEY,
+    nombre_nivel VARCHAR(20) UNIQUE NOT NULL
+);
+
+INSERT INTO cat_niveles (id_nivel, nombre_nivel) VALUES
+    (1, 'principiante'),
+    (2, 'intermedio'),
+    (3, 'avanzado')
+ON CONFLICT (id_nivel) DO UPDATE SET nombre_nivel = EXCLUDED.nombre_nivel;
+
 -- ============================================================
 -- TABLAS PRINCIPALES
 -- ============================================================
@@ -86,6 +97,7 @@ CREATE TABLE IF NOT EXISTS clubes (
     nombre_club VARCHAR(100) NOT NULL,
     descripcion TEXT,
     categoria VARCHAR(50),
+    participacion VARCHAR(20) NOT NULL DEFAULT 'mixta' CONSTRAINT chk_club_participacion CHECK (participacion IN ('masculina', 'femenina', 'mixta')),
     cupo_maximo INT NOT NULL CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo > 0),
     id_presidente INT,
     id_vicepresidente INT,
@@ -305,6 +317,16 @@ BEGIN
     RAISE NOTICE 'Migración horarios_club completada: convertido a horario semanal recurrente';
   END IF;
 END $$;
+
+CREATE TABLE IF NOT EXISTS clubes_niveles (
+    id_club INT NOT NULL,
+    id_nivel INT NOT NULL,
+    PRIMARY KEY (id_club, id_nivel),
+    CONSTRAINT fk_club_nivel_club  FOREIGN KEY (id_club)  REFERENCES clubes(id_club)  ON DELETE CASCADE,
+    CONSTRAINT fk_club_nivel_nivel FOREIGN KEY (id_nivel) REFERENCES cat_niveles(id_nivel) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_clubes_niveles_nivel ON clubes_niveles(id_nivel);
 
 -- ============================================================
 -- VISTAS

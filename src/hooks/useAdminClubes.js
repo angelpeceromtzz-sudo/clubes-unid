@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { useConfirmacionPendiente } from './useConfirmacionPendiente';
 import { filtrarClubes } from '../utils/filtros';
+import { PARTICIPACION } from '../constants/clubes';
 
 export function useAdminClubes(setFeedback, setErrorFeedback) {
   const [clubes, setClubes] = useState([]);
   const [busquedaClubes, setBusquedaClubes] = useState('');
   const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
   const [editandoClub, setEditandoClub] = useState(null);
-  const [formularioClub, setFormularioClub] = useState({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '', imagen_portada: '' });
+  const [formularioClub, setFormularioClub] = useState({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '', imagen_portada: '', participacion: '', niveles: [] });
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [cargandoClubes, setCargandoClubes] = useState(true);
@@ -50,7 +51,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
   }, [solicitarConfirmacion, setErrorFeedback]);
 
   const abrirModalCrear = useCallback(() => {
-    setFormularioClub({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '', imagen_portada: '' });
+    setFormularioClub({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '', imagen_portada: '', participacion: '', niveles: [] });
     setEditandoClub(null);
     setErrorModal('');
     setMostrarModalCrear(true);
@@ -63,6 +64,8 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
       categoria: club.categoria,
       cupo_maximo: String(club.cupo_maximo),
       imagen_portada: club.imagen_portada || '',
+      participacion: club.participacion || '',
+      niveles: (club.niveles || []).map((n) => n.id_nivel),
     });
     setEditandoClub(club);
     setErrorModal('');
@@ -78,6 +81,14 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
     setErrorModal('');
     if (!formularioClub.nombre_club.trim() || !formularioClub.descripcion.trim() || !formularioClub.categoria.trim() || !formularioClub.cupo_maximo) {
       setErrorModal('Todos los campos son obligatorios');
+      return;
+    }
+    if (!PARTICIPACION.some((p) => p.valor === formularioClub.participacion)) {
+      setErrorModal('La participación es obligatoria');
+      return;
+    }
+    if (formularioClub.niveles.length === 0) {
+      setErrorModal('Selecciona al menos un nivel');
       return;
     }
     if (!editandoClub && !formularioClub.imagen_portada.trim()) {
@@ -97,6 +108,8 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
         categoria: formularioClub.categoria,
         cupo_maximo: Number(formularioClub.cupo_maximo),
         imagen_portada: formularioClub.imagen_portada || null,
+        participacion: formularioClub.participacion,
+        niveles: formularioClub.niveles,
       });
       setFeedback('Club creado correctamente');
       const actualizados = await api.getClubes();
@@ -112,6 +125,16 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
   const manejarCambioFormularioClub = useCallback((e) => {
     const { name, value } = e.target;
     setFormularioClub((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const toggleNivel = useCallback((idNivel) => {
+    setFormularioClub((prev) => {
+      const activo = prev.niveles.includes(idNivel);
+      return {
+        ...prev,
+        niveles: activo ? prev.niveles.filter((n) => n !== idNivel) : [...prev.niveles, idNivel],
+      };
+    });
   }, []);
 
   const subirImagen = useCallback(async (file) => {
@@ -137,6 +160,8 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
               categoria: formularioClub.categoria,
               cupo_maximo: Number(formularioClub.cupo_maximo),
               imagen_portada: formularioClub.imagen_portada || null,
+              participacion: formularioClub.participacion,
+              niveles: formularioClub.niveles,
             });
             setFeedback('Club actualizado correctamente');
             setMostrarModalCrear(false);
@@ -178,6 +203,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
     cerrarModal,
     guardarClub,
     handleClubFormChange: manejarCambioFormularioClub,
+    toggleNivel,
     subirImagen,
     refetchClubes,
     pendienteConfirmacion,

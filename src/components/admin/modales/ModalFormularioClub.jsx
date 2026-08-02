@@ -6,6 +6,7 @@ import { CampoTexto } from '../../ui/CampoTexto';
 import { ModalBase } from '../../ui/ModalBase';
 import { Spinner } from '../../ui/Spinner';
 import { SubirImagen } from '../../ui/SubirImagen';
+import { PARTICIPACION, NIVELES } from '../../../constants/clubes';
 
 export function ModalFormularioClub({
   show,
@@ -17,6 +18,7 @@ export function ModalFormularioClub({
   onSave,
   onFormChange,
   onUploadImage,
+  onToggleNivel,
 }) {
   const { modoOscuro, inputCls, labelCls, tema } = useTheme();
   if (!show) return null;
@@ -50,6 +52,41 @@ export function ModalFormularioClub({
             <option value="Cultura">Cultura</option>
             <option value="Tecnología">Tecnología</option>
           </select>
+        </div>
+
+        <div>
+          <label className={labelCls}>Participación <span className="text-red-400">*</span></label>
+          <select name="participacion" value={formClub.participacion} onChange={onFormChange} className={inputClasses} required>
+            <option value="" disabled>Selecciona una modalidad</option>
+            {PARTICIPACION.map((p) => (
+              <option key={p.valor} value={p.valor}>{p.etiqueta}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className={labelCls}>Niveles <span className="text-red-400">*</span></label>
+          <div className="flex gap-1.5 flex-wrap">
+            {NIVELES.map((n) => {
+              const activo = formClub.niveles.includes(n.id_nivel);
+              return (
+                <button
+                  key={n.id_nivel}
+                  type="button"
+                  onClick={() => onToggleNivel(n.id_nivel)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                    activo
+                      ? 'bg-amber-400 text-[#0e162c] border-amber-400'
+                      : modoOscuro
+                        ? 'bg-slate-800 text-slate-400 border-slate-700 hover:border-amber-400/50 hover:text-amber-400'
+                        : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-amber-400 hover:text-amber-600'
+                  }`}
+                >
+                  {n.etiqueta}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <CampoTexto label="Cupo Máximo" name="cupo_maximo" value={formClub.cupo_maximo} onChange={onFormChange} type="number" placeholder="Ej: 30" required />

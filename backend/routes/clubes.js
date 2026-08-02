@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
-              c.cupo_maximo, c.id_presidente,
+              c.cupo_maximo, c.id_presidente, c.participacion,
               p.nombre_completo AS presidente_nombre,
               c.imagen_portada,
               c.id_estatus_club, e.nombre_estatus as estatus,
@@ -36,10 +36,23 @@ router.get('/', async (req, res) => {
        ORDER BY c.id_club`
     );
 
+    const nivelesResult = await pool.query(
+      `SELECT cn.id_club, n.id_nivel, n.nombre_nivel
+       FROM clubes_niveles cn
+       JOIN cat_niveles n ON n.id_nivel = cn.id_nivel
+       ORDER BY cn.id_club, n.id_nivel`
+    );
+    const nivelesPorClub = new Map();
+    for (const fila of nivelesResult.rows) {
+      if (!nivelesPorClub.has(fila.id_club)) nivelesPorClub.set(fila.id_club, []);
+      nivelesPorClub.get(fila.id_club).push({ id_nivel: fila.id_nivel, nombre_nivel: fila.nombre_nivel });
+    }
+
     const rows = result.rows.map((r) => ({
       ...r,
       cupo_actual: parseInt(r.cupo_actual) || 0,
       formularios_recibidos: parseInt(r.formularios_recibidos) || 0,
+      niveles: nivelesPorClub.get(r.id_club) || [],
     }));
 
     res.json(rows);
@@ -85,7 +98,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
+      `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria, c.participacion,
               c.cupo_maximo, c.id_presidente,
               p.nombre_completo AS presidente_nombre,
               p.correo_institucional AS presidente_correo,
@@ -118,6 +131,16 @@ router.get('/:id', async (req, res) => {
     const club = result.rows[0];
     club.cupo_actual = parseInt(club.cupo_actual) || 0;
     club.formularios_recibidos = parseInt(club.formularios_recibidos) || 0;
+
+    const nivelesResult = await pool.query(
+      `SELECT n.id_nivel, n.nombre_nivel
+       FROM clubes_niveles cn
+       JOIN cat_niveles n ON n.id_nivel = cn.id_nivel
+       WHERE cn.id_club = $1
+       ORDER BY n.id_nivel`,
+      [id]
+    );
+    club.niveles = nivelesResult.rows;
 
     res.json(club);
   } catch (err) {
@@ -195,19 +218,40 @@ router.get('/:id/miembros', authenticate, async (req, res) => {
 
 // Crea un nuevo club (solo admin)
 router.post('/', authenticate, requireRole(3), async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada } = req.body;
+    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles } = req.body;
 
     if (!nombre_club || !descripcion || !categoria || !cupo_maximo) {
       return res.status(400).json({ error: 'Nombre, descripción, categoría y cupo máximo son obligatorios' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada)
-       VALUES ($1, $2, $3, $4, 1, $5)
-       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada`,
-      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null],
+    const PARTICIPACION_VALIDA = ['masculina', 'femenina', 'mixta'];
+    if (!participacion || !PARTICIPACION_VALIDA.includes(participacion)) {
+      return res.status(400).json({ error: 'Participación inválida' });
+    }
+
+    if (!Array.isArray(niveles) || niveles.length === 0 || !niveles.every((n) => [1, 2, 3].includes(Number(n)))) {
+      return res.status(400).json({ error: 'Debes seleccionar al menos un nivel válido' });
+    }
+
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion)
+       VALUES ($1, $2, $3, $4, 1, $5, $6)
+       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion`,
+      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, participacion],
     );
+
+    for (const idNivel of niveles) {
+      await client.query(
+        'INSERT INTO clubes_niveles (id_club, id_nivel) VALUES ($1, $2)',
+        [result.rows[0].id_club, Number(idNivel)]
+      );
+    }
+
+    await client.query('COMMIT');
 
     registrarHistorial({
       idAdmin: req.user.id,
@@ -216,37 +260,69 @@ router.post('/', authenticate, requireRole(3), async (req, res) => {
       descripcion: `${req.user.nombre_completo} creó el club "${nombre_club}"`,
       entidadTipo: 'club',
       entidadId: result.rows[0].id_club,
-      detalles: { nombre_club, categoria, cupo_maximo },
+      detalles: { nombre_club, categoria, cupo_maximo, participacion, niveles },
     });
 
-    res.status(201).json({ ...result.rows[0], estatus: 'activo', cupo_actual: 0 });
+    res.status(201).json({
+      ...result.rows[0],
+      estatus: 'activo',
+      cupo_actual: 0,
+      niveles: niveles.map((idNivel) => ({ id_nivel: Number(idNivel) })),
+    });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error al crear club:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    client.release();
   }
 });
 
 // Actualiza los datos de un club (solo admin)
 router.put('/:id', authenticate, requireRole(3), async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada } = req.body;
+    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles } = req.body;
 
     if (!nombre_club || !descripcion || !categoria || !cupo_maximo) {
       return res.status(400).json({ error: 'Nombre, descripción, categoría y cupo máximo son obligatorios' });
     }
 
-    const result = await pool.query(
+    const PARTICIPACION_VALIDA = ['masculina', 'femenina', 'mixta'];
+    if (!participacion || !PARTICIPACION_VALIDA.includes(participacion)) {
+      return res.status(400).json({ error: 'Participación inválida' });
+    }
+
+    if (!Array.isArray(niveles) || niveles.length === 0 || !niveles.every((n) => [1, 2, 3].includes(Number(n)))) {
+      return res.status(400).json({ error: 'Debes seleccionar al menos un nivel válido' });
+    }
+
+    await client.query('BEGIN');
+
+    const result = await client.query(
       `UPDATE clubes
-       SET nombre_club = $1, descripcion = $2, categoria = $3, cupo_maximo = $4, imagen_portada = COALESCE($5, imagen_portada)
-       WHERE id_club = $6
-       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada`,
-      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, id],
+       SET nombre_club = $1, descripcion = $2, categoria = $3, cupo_maximo = $4,
+           imagen_portada = COALESCE($5, imagen_portada), participacion = $6
+       WHERE id_club = $7
+       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion`,
+      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, participacion, id],
     );
 
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Club no encontrado' });
     }
+
+    await client.query('DELETE FROM clubes_niveles WHERE id_club = $1', [id]);
+    for (const idNivel of niveles) {
+      await client.query(
+        'INSERT INTO clubes_niveles (id_club, id_nivel) VALUES ($1, $2)',
+        [id, Number(idNivel)]
+      );
+    }
+
+    await client.query('COMMIT');
 
     const estatusResult = await pool.query(
       'SELECT nombre_estatus FROM cat_estatus_clubes WHERE id_estatus_club = $1',
@@ -260,13 +336,20 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
       descripcion: `${req.user.nombre_completo} actualizó los datos del club ID ${id}`,
       entidadTipo: 'club',
       entidadId: parseInt(id),
-      detalles: { nombre_club, categoria, cupo_maximo },
+      detalles: { nombre_club, categoria, cupo_maximo, participacion, niveles },
     });
 
-    res.json({ ...result.rows[0], estatus: estatusResult.rows[0]?.nombre_estatus || 'activo' });
+    res.json({
+      ...result.rows[0],
+      estatus: estatusResult.rows[0]?.nombre_estatus || 'activo',
+      niveles: niveles.map((idNivel) => ({ id_nivel: Number(idNivel) })),
+    });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error al actualizar club:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    client.release();
   }
 });
 
