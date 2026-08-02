@@ -14,12 +14,16 @@ router.post('/asignar-alumno', authenticate, requireRole(3), async (req, res) =>
     }
 
     const userResult = await pool.query(
-      'SELECT id_usuario, id_rol, nombre_completo FROM usuarios WHERE id_usuario = $1',
+      'SELECT id_usuario, id_rol, nombre_completo, deleted_at FROM usuarios WHERE id_usuario = $1',
       [id_usuario]
     );
 
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (userResult.rows[0].deleted_at) {
+      return res.status(400).json({ error: 'No puedes asignar un club a un usuario desactivado' });
     }
 
     if (userResult.rows[0].id_rol !== 1) {

@@ -15,6 +15,9 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   const [formularioUsuario, setFormularioUsuario] = useState({ nombre_completo: '', correo_institucional: '', contrasena: '', id_rol: 1 });
   const [enviandoUsuario, setEnviandoUsuario] = useState(false);
   const [errorModalUsuario, setErrorModalUsuario] = useState('');
+  const [desactivados, setDesactivados] = useState([]);
+  const [cargandoDesactivados, setCargandoDesactivados] = useState(true);
+  const [reactivando, setReactivando] = useState({});
 
   const { pendiente: pendienteConfirmacion, solicitar: solicitarConfirmacion, confirmar: confirmarPendienteBase, cancelar: cancelarPendiente } = useConfirmacionPendiente();
   const { modalAdmin, enviandoAdmin, errorAdmin, abrirModalAdmin, manejarAdminAction, cerrarModalAdmin } = useAdminActionModal();
@@ -24,6 +27,13 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
       .then(setUsuarios)
       .catch(() => setUsuarios([]))
       .finally(() => setCargando(false));
+  }, []);
+
+  useEffect(() => {
+    api.getUsuariosDesactivados()
+      .then(setDesactivados)
+      .catch(() => setDesactivados([]))
+      .finally(() => setCargandoDesactivados(false));
   }, []);
 
   const totalAlumnos = usuarios.filter((u) => u.id_rol === 1).length;
@@ -95,6 +105,24 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   const handleEliminarUsuario = useCallback((userId, nombre) => {
     solicitarConfirmacion({ tipo: 'eliminar', userId, nombre });
   }, [solicitarConfirmacion]);
+
+  const handleReactivarUsuario = useCallback(async (userId) => {
+    setReactivando((prev) => ({ ...prev, [userId]: true }));
+    try {
+      await api.reactivarUsuario(userId);
+      const [actualizados, desactivadosActualizados] = await Promise.all([
+        api.getUsuarios(),
+        api.getUsuariosDesactivados(),
+      ]);
+      setUsuarios(actualizados);
+      setDesactivados(desactivadosActualizados);
+      setFeedback('Usuario reactivado correctamente');
+    } catch (err) {
+      setErrorFeedback(err.message);
+    } finally {
+      setReactivando((prev) => ({ ...prev, [userId]: false }));
+    }
+  }, [setFeedback, setErrorFeedback]);
 
   const abrirModalCrearUsuario = useCallback(() => {
     setFormularioUsuario({ nombre_completo: '', correo_institucional: '', contrasena: '', id_rol: 1 });
@@ -179,6 +207,10 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     handleAsignarClub,
     handleAsignarAlumnoClub,
     handleEliminarUsuario,
+    handleReactivarUsuario,
+    desactivados,
+    cargandoDesactivados,
+    reactivando,
     showModalUsuario: mostrarModalUsuario,
     formUsuario: formularioUsuario,
     enviandoUsuario,

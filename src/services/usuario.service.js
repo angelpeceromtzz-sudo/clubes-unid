@@ -29,4 +29,9 @@ export const usuarioService = {
       method: 'POST',
       body: JSON.stringify({ id_usuario, id_club }),
     }),
+
+  getUsuariosDesactivados: () => request('/usuarios/desactivados'),
+
+  reactivarUsuario: (id) =>
+    request(`/usuarios/${id}/reactivar`, { method: 'PATCH' }),
 };

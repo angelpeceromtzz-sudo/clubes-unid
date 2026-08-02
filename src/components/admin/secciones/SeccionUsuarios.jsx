@@ -1,5 +1,6 @@
 import { BarraBusquedaUsuarios } from '../BarraBusquedaUsuarios';
 import { TablaUsuarios } from '../tablas/TablaUsuarios';
+import { SeccionUsuariosDesactivados } from './SeccionUsuariosDesactivados';
 
 export function SeccionUsuarios({ d }) {
   return (
@@ -38,6 +39,7 @@ export function SeccionUsuarios({ d }) {
         onEliminarUsuario={d.handleEliminarUsuario}
         onAdminAction={d.abrirModalAdmin}
       />
+      <SeccionUsuariosDesactivados d={d} />
     </div>
   );
 }

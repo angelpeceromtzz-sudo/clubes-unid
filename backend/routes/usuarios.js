@@ -2,10 +2,12 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
+import { ESTATUS_INSCRIPCION } from '../lib/estatusInscripcion.js';
 
 const router = Router();
 
-// Lista todos los usuarios (admin y rectoría)
+// Lista los usuarios activos (admin y rectoría). Los desactivados se ocultan;
+// se consultan por separado en GET /desactivados para su reactivación.
 router.get('/', authenticate, requireRole(3, 4), async (req, res) => {
   try {
     const result = await pool.query(
@@ -16,11 +18,33 @@ router.get('/', authenticate, requireRole(3, 4), async (req, res) => {
        JOIN cat_roles r ON r.id_rol = u.id_rol
        LEFT JOIN inscripciones i ON i.id_usuario = u.id_usuario AND i.id_estatus_inscripcion = 1
        LEFT JOIN clubes c ON c.id_club = i.id_club
+       WHERE u.deleted_at IS NULL
        ORDER BY u.id_usuario`
     );
     res.json(result.rows);
   } catch (err) {
     console.error('Error al listar usuarios:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Lista los usuarios desactivados (soft-deleted) para su reactivación manual.
+// Son los que ya no deben aparecer en GET /usuarios, pero el admin necesita
+// verlos aquí para poder reactivarlos con PATCH /:id/reactivar.
+router.get('/desactivados', authenticate, requireRole(3), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
+              u.id_rol, r.nombre_rol as rol,
+              u.deleted_at as fecha_baja
+       FROM usuarios u
+       JOIN cat_roles r ON r.id_rol = u.id_rol
+       WHERE u.deleted_at IS NOT NULL
+       ORDER BY u.deleted_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al listar usuarios desactivados:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
@@ -40,12 +64,16 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
     }
 
     const targetUser = await pool.query(
-      'SELECT id_rol FROM usuarios WHERE id_usuario = $1',
+      'SELECT id_rol, deleted_at FROM usuarios WHERE id_usuario = $1',
       [id]
     );
 
     if (targetUser.rows.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (targetUser.rows[0].deleted_at) {
+      return res.status(400).json({ error: 'No puedes modificar el rol de un usuario desactivado' });
     }
 
     if (targetUser.rows[0].id_rol === 3) {
@@ -108,12 +136,16 @@ router.put('/:id/asignar-club', authenticate, requireRole(3), async (req, res) =
     const { id_club } = req.body;
 
     const usuario = await pool.query(
-      'SELECT id_rol FROM usuarios WHERE id_usuario = $1',
+      'SELECT id_rol, deleted_at FROM usuarios WHERE id_usuario = $1',
       [id],
     );
 
     if (usuario.rows.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (usuario.rows[0].deleted_at) {
+      return res.status(400).json({ error: 'No puedes asignar un club a un usuario desactivado' });
     }
 
     if (usuario.rows[0].id_rol !== 2) {
@@ -296,6 +328,8 @@ router.post('/admin-action', authenticate, requireRole(3), async (req, res) => {
 // formularios que referencian al usuario. Si lo borrara de verdad, esas
 // FKs se romperían o habría que cascadear borrados no deseados.
 router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
+  const client = await pool.connect();
+  let enTransaccion = false;
   try {
     const { id } = req.params;
 
@@ -303,9 +337,9 @@ router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
       return res.status(403).json({ error: 'No puedes desactivarte a ti mismo' });
     }
 
-    // Aprovecho el LEFT JOIN con clubes para saber si el usuario es
-    // presidente de algún club y advertírselo al admin en la respuesta.
-    const usuario = await pool.query(
+    // LEFT JOIN con clubes para saber si el usuario es presidente de algún
+    // club y advertírselo al admin en la respuesta.
+    const usuario = await client.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional, u.deleted_at, u.id_rol,
               c.nombre_club
        FROM usuarios u
@@ -326,12 +360,31 @@ router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
       return res.status(400).json({ error: 'El usuario ya está desactivado' });
     }
 
-    // Solo marco la fecha, no borro nada. Si el usuario vuelve a iniciar
-    // sesión con Microsoft, login-microsoft lo rechazará con 403.
-    await pool.query(
+    await client.query('BEGIN');
+    enTransaccion = true;
+
+    // Baja atómica: marca la fecha, cierra la inscripción activa y libera
+    // presidencia/vicepresidencia. Todo o nada.
+    await client.query(
       `UPDATE usuarios SET deleted_at = NOW() WHERE id_usuario = $1`,
       [id],
     );
+    await client.query(
+      `UPDATE inscripciones SET id_estatus_inscripcion = ${ESTATUS_INSCRIPCION.BAJA}, fecha_baja = NOW()
+       WHERE id_usuario = $1 AND id_estatus_inscripcion = ${ESTATUS_INSCRIPCION.ACTIVO}`,
+      [id],
+    );
+    await client.query(
+      `UPDATE clubes SET id_presidente = NULL WHERE id_presidente = $1`,
+      [id],
+    );
+    await client.query(
+      `UPDATE clubes SET id_vicepresidente = NULL WHERE id_vicepresidente = $1`,
+      [id],
+    );
+
+    await client.query('COMMIT');
+    enTransaccion = false;
 
     registrarHistorial({
       idAdmin: req.user.id,
@@ -351,17 +404,22 @@ router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
       },
     };
 
-    // Si el usuario era presidente, su club se queda sin presidente.
-    // La FK en clubes tiene ON DELETE SET NULL, así que se limpia solo,
-    // pero el admin debería saberlo para asignar un reemplazo.
+    // Si era presidente, su club se queda sin presidente a propósito.
+    // Esto ya no depende del ON DELETE SET NULL: la baja es un UPDATE,
+    // así que esa FK (schema.sql:101) no se dispara.
     if (row.nombre_club) {
       respuesta.warning = `El usuario era presidente del club "${row.nombre_club}". El club se ha quedado sin presidente.`;
     }
 
     res.json(respuesta);
   } catch (err) {
+    if (enTransaccion) {
+      await client.query('ROLLBACK');
+    }
     console.error('Error al desactivar usuario:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    client.release();
   }
 });
 

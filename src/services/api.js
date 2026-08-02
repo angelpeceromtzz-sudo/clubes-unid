@@ -54,6 +54,8 @@ export const api = {
   updateUserRol: usuarioService.updateUserRol,
   adminAction: usuarioService.adminAction,
   asignarAlumnoClub: usuarioService.asignarAlumnoClub,
+  getUsuariosDesactivados: usuarioService.getUsuariosDesactivados,
+  reactivarUsuario: usuarioService.reactivarUsuario,
 
   getInscripcionActiva: inscripcionService.getInscripcionActiva,
   createInscripcion: inscripcionService.createInscripcion,
