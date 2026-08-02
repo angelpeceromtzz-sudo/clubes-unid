@@ -266,6 +266,10 @@ router.post('/register', authenticate, requireRole(3), async (req, res) => {
       return res.status(400).json({ error: 'nombre_completo, correo_institucional y contrasena son obligatorios' });
     }
 
+    if (id_rol != null && ![1, 2, 4].includes(id_rol)) {
+      return res.status(400).json({ error: 'Rol inválido' });
+    }
+
     const existe = await pool.query('SELECT id_usuario FROM usuarios WHERE correo_institucional = $1', [correo_institucional]);
     if (existe.rows.length > 0) {
       return res.status(409).json({ error: 'El correo ya está registrado' });

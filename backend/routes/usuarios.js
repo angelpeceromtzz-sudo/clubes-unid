@@ -55,7 +55,7 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
     const { id } = req.params;
     const { id_rol } = req.body;
 
-    if (![1, 2, 3, 4].includes(id_rol)) {
+    if (![1, 2, 4].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
 
