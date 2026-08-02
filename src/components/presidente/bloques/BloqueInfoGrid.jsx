@@ -7,7 +7,7 @@ export function BloqueInfoGrid({ fecha, hora, lugar }) {
       <div className={`rounded-xl p-3 ${modoOscuro ? 'bg-[#18223f]' : 'bg-slate-100'}`}>
         <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">Fecha</p>
         <p className={`text-sm font-semibold ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-          {fecha ? new Date(fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'}
+          {fecha ? new Date(fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '—'}
         </p>
       </div>
       <div className={`rounded-xl p-3 ${modoOscuro ? 'bg-[#18223f]' : 'bg-slate-100'}`}>

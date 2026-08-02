@@ -241,6 +241,17 @@ router.post('/:id/enviar', authenticate, requireRole(2, 5), async (req, res) => 
       [id],
     );
 
+    const fechaTexto = c.fecha
+      ? c.fecha.toLocaleDateString('es-MX', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: 'UTC',
+        })
+      : 'Por definir';
+    const horaTexto = c.hora ? c.hora.slice(0, 5) : 'Por definir';
+
     for (const alumno of alumnos.rows) {
       await pool.query(
         `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
@@ -248,7 +259,7 @@ router.post('/:id/enviar', authenticate, requireRole(2, 5), async (req, res) => 
         [
           req.user.id,
           `Convocatoria: ${c.nombre_club} - Bloque ${c.bloque}`,
-          `Has sido convocado a una evaluación presencial para "${c.nombre_club}".\nBloque: ${c.bloque}\nLugar: ${c.lugar}\nFecha: ${c.fecha}\nHora: ${c.hora}`,
+          `Has sido convocado a una evaluación presencial para "${c.nombre_club}".\nBloque: ${c.bloque}\nLugar: ${c.lugar}\nFecha: ${fechaTexto}\nHora: ${horaTexto}`,
           c.id_club,
           alumno.id_alumno,
         ],

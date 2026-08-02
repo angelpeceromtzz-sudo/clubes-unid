@@ -14,7 +14,7 @@ export function InfoConvocatoria({ convocatoria, tema }) {
           <div className="flex items-center gap-2">
             <span>📅</span>
             <span className={tema.isDark ? 'text-slate-300' : 'text-slate-700'}>
-              {new Date(convocatoria.fecha).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {new Date(convocatoria.fecha).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}
             </span>
           </div>
         )}

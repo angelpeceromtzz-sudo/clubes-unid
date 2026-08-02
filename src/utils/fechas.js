@@ -17,6 +17,7 @@ export function formatearFechaLegible(fechaIso) {
   const fecha = new Date(fechaIso);
   return fecha.toLocaleDateString('es-MX', {
     day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit',
+    timeZone: 'America/Mexico_City',
   });
 }
 

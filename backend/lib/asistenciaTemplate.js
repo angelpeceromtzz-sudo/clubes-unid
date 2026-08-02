@@ -1,4 +1,14 @@
 export function generarListaAsistencia(nombreClub, bloque, fecha, hora, lugar, alumnos) {
+  const fechaTexto = fecha
+    ? fecha.toLocaleDateString('es-MX', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'UTC',
+      })
+    : '—';
+  const horaTexto = hora ? hora.slice(0, 5) : '—';
   return `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><title>Lista de Asistencia - ${nombreClub} - Bloque ${bloque}</title>
@@ -21,8 +31,8 @@ export function generarListaAsistencia(nombreClub, bloque, fecha, hora, lugar, a
   <h1>${nombreClub}</h1>
   <h2>Lista de Asistencia - Bloque ${bloque}</h2>
   <div class="info">
-    <span><strong>Fecha:</strong> ${fecha || '—'}</span>
-    <span><strong>Hora:</strong> ${hora || '—'}</span>
+    <span><strong>Fecha:</strong> ${fechaTexto}</span>
+    <span><strong>Hora:</strong> ${horaTexto}</span>
     <span><strong>Lugar:</strong> ${lugar || '—'}</span>
   </div>
   <table>
