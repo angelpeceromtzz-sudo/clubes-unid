@@ -1,7 +1,7 @@
 export const PARTICIPACION = [
-  { valor: 'masculina', etiqueta: 'Masculina' },
-  { valor: 'femenina', etiqueta: 'Femenina' },
-  { valor: 'mixta', etiqueta: 'Mixta' },
+  { valor: 'masculina', etiqueta: 'Varonil' },
+  { valor: 'femenina', etiqueta: 'Femenil' },
+  { valor: 'mixta', etiqueta: 'Mixto' },
 ];
 
 export const NIVELES = [

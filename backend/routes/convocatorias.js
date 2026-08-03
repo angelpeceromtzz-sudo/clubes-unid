@@ -164,7 +164,9 @@ router.get('/:id_club', authenticate, requireClubLeader, async (req, res) => {
                 'nombre_completo', f.nombre_completo,
                 'matricula', f.matricula
               ) ORDER BY f.fecha_envio ASC)
-               FROM formularios f WHERE f.id_convocatoria = c.id_convocatoria) AS alumnos
+               FROM formularios f
+               WHERE f.id_convocatoria = c.id_convocatoria
+                 AND f.status IN ('Preseleccionado', 'Convocado')) AS alumnos
        FROM convocatorias c
        WHERE c.id_club = $1
        ORDER BY c.bloque ASC`,
