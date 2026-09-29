@@ -375,8 +375,8 @@ CREATE TRIGGER trg_historial_postulacion
     FOR EACH ROW
     EXECUTE FUNCTION fn_historial_postulacion();
 
--- Trigger: auto-actualizar fecha_actualizacion en diapositivas
-CREATE OR REPLACE FUNCTION fn_actualizar_fecha_diapositiva()
+-- Trigger: auto-actualizar fecha_actualizacion (genérica, reusada por encuestas)
+CREATE OR REPLACE FUNCTION fn_actualizar_fecha()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.fecha_actualizacion = NOW();
@@ -388,7 +388,9 @@ DROP TRIGGER IF EXISTS trg_actualizar_fecha_diapositiva ON diapositivas_hero;
 CREATE TRIGGER trg_actualizar_fecha_diapositiva
     BEFORE UPDATE ON diapositivas_hero
     FOR EACH ROW
-    EXECUTE FUNCTION fn_actualizar_fecha_diapositiva();
+    EXECUTE FUNCTION fn_actualizar_fecha();
+
+DROP FUNCTION IF EXISTS fn_actualizar_fecha_diapositiva();
 
 -- Trigger: impedir desactivar la última diapositiva activa
 CREATE OR REPLACE FUNCTION fn_proteger_ultima_diapositiva_activa()
@@ -419,3 +421,147 @@ CREATE TRIGGER trg_proteger_ultima_diapositiva
     BEFORE UPDATE OR DELETE ON diapositivas_hero
     FOR EACH ROW
     EXECUTE FUNCTION fn_proteger_ultima_diapositiva_activa();
+
+-- ============================================================
+-- MÓDULO DE ENCUESTAS (PBI-10)
+-- ============================================================
+-- Encuestas independientes para diagnosticar intereses de alumnos.
+-- Acceso público solo por enlace directo /encuesta/:slug (sin login).
+-- La URL usa 'slug' (aleatorio, no adivinable), nunca 'id_encuesta'.
+--Reversión manual en migrations/migrate-encuestas-down.sql
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS encuestas (
+    id_encuesta            SERIAL PRIMARY KEY,
+    slug                   VARCHAR(64) NOT NULL UNIQUE,
+    titulo                 VARCHAR(200) NOT NULL,
+    descripcion            TEXT,
+    mensaje_agradecimiento VARCHAR(300),
+    estado                 VARCHAR(12) NOT NULL DEFAULT 'borrador',
+    fecha_inicio           TIMESTAMPTZ,
+    fecha_fin              TIMESTAMPTZ,
+    -- Las encuestas son anónimas por defecto; sólo se pide matrícula si el
+    -- Coordinación lo activa. Valida el backend que exista si pide_matricula.
+    pide_matricula         BOOLEAN NOT NULL DEFAULT FALSE,
+    id_creador             INT NOT NULL,
+    fecha_creacion         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Longitud mínima de 16: impide slugs adivinables tipo 'encuesta-1'
+    CONSTRAINT chk_encuesta_slug      CHECK (slug ~ '^[a-z0-9-]{16,64}$'),
+    CONSTRAINT chk_encuesta_estado    CHECK (estado IN ('borrador', 'publicada', 'cerrada')),
+    -- Vigencia opcional; si se define ambos extremos, el fin va después del inicio
+    CONSTRAINT chk_encuesta_vigencia  CHECK (fecha_fin IS NULL OR fecha_inicio IS NULL OR fecha_fin > fecha_inicio),
+    CONSTRAINT fk_encuesta_creador    FOREIGN KEY (id_creador) REFERENCES usuarios(id_usuario) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS preguntas (
+    id_pregunta    SERIAL PRIMARY KEY,
+    id_encuesta    INT NOT NULL,
+    texto          VARCHAR(500) NOT NULL,
+    ayuda          TEXT,
+    tipo           VARCHAR(20) NOT NULL,
+    es_obligatoria BOOLEAN NOT NULL DEFAULT FALSE,
+    orden          INT NOT NULL,
+    -- Sólo la escala numérica usa min/max; el resto debe dejarlos en NULL
+    escala_min     INT,
+    escala_max     INT,
+    CONSTRAINT chk_pregunta_tipo   CHECK (tipo IN ('opcion_unica', 'opcion_multiple', 'texto_corto', 'texto_largo', 'escala')),
+    CONSTRAINT chk_pregunta_orden  CHECK (orden >= 1),
+    CONSTRAINT chk_pregunta_escala CHECK (
+        (tipo =  'escala' AND escala_min IS NOT NULL AND escala_max IS NOT NULL
+                 AND escala_min >= 0 AND escala_max <= 10 AND escala_max > escala_min)
+        OR
+        (tipo <> 'escala' AND escala_min IS NULL AND escala_max IS NULL)
+    ),
+    -- Deferrable para permitir reordenar preguntas dentro de una transacción
+    CONSTRAINT uq_pregunta_orden     UNIQUE (id_encuesta, orden) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT fk_pregunta_encuesta  FOREIGN KEY (id_encuesta) REFERENCES encuestas(id_encuesta) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS opciones_pregunta (
+    id_opcion   SERIAL PRIMARY KEY,
+    id_pregunta INT NOT NULL,
+    texto       VARCHAR(300) NOT NULL,
+    orden       INT NOT NULL,
+    -- Vínculo opcional con un club, para recomendar clubes tras la encuesta.
+    -- Si el club se elimina, el vínculo queda en NULL sin perder la respuesta.
+    id_club     INT,
+    CONSTRAINT chk_opcion_orden      CHECK (orden >= 1),
+    CONSTRAINT uq_opcion_orden       UNIQUE (id_pregunta, orden) DEFERRABLE INITIALLY DEFERRED,
+    -- Destino de la FK compuesta de detalle_respuestas: garantiza que la
+    -- opción registrada pertenezca a la pregunta registrada.
+    CONSTRAINT uq_opcion_pregunta    UNIQUE (id_opcion, id_pregunta),
+    CONSTRAINT fk_opcion_pregunta    FOREIGN KEY (id_pregunta) REFERENCES preguntas(id_pregunta) ON DELETE CASCADE,
+    CONSTRAINT fk_opcion_club        FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS respuestas_encuesta (
+    id_respuesta SERIAL PRIMARY KEY,
+    id_encuesta  INT NOT NULL,
+    -- Datos del alumno: opcionales siempre. En encuestas anónimas se guardan
+    -- sólo si el alumno los envía voluntariamente.
+    nombre       VARCHAR(150),
+    matricula    VARCHAR(30),
+    carrera      VARCHAR(100),
+    fecha_envio  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- NULL está permitido (respuesta anónima); cadena vacía no
+    CONSTRAINT chk_respuesta_matricula CHECK (matricula IS NULL OR char_length(btrim(matricula)) > 0),
+    -- En PostgreSQL los NULL no colisionan en un UNIQUE, así que las respuestas
+    -- anónimas coexisten sin restricción mientras la matrícula sí es única.
+    CONSTRAINT uq_respuesta_matricula  UNIQUE (id_encuesta, matricula),
+    -- RESTRICT: no se puede borrar una encuesta que ya tenga respuestas
+    CONSTRAINT fk_respuesta_encuesta   FOREIGN KEY (id_encuesta) REFERENCES encuestas(id_encuesta) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS detalle_respuestas (
+    id_detalle   SERIAL PRIMARY KEY,
+    id_respuesta INT NOT NULL,
+    id_pregunta  INT NOT NULL,
+    -- Exactamente uno de estos tres por fila. Opción múltiple genera una fila
+    -- por opción marcada; texto y escala generan una sola.
+    id_opcion    INT,
+    texto        TEXT,
+    numero       INT,
+    CONSTRAINT chk_detalle_valor CHECK (num_nonnulls(id_opcion, texto, numero) = 1),
+    CONSTRAINT chk_detalle_texto CHECK (char_length(texto) <= 2000),
+    CONSTRAINT fk_detalle_respuesta FOREIGN KEY (id_respuesta) REFERENCES respuestas_encuesta(id_respuesta) ON DELETE CASCADE,
+    -- Integridad histórica: con respuestas registradas, ni la pregunta ni la
+    -- opción se pueden borrar (RESTRICT, no CASCADE).
+    CONSTRAINT fk_detalle_pregunta  FOREIGN KEY (id_pregunta) REFERENCES preguntas(id_pregunta) ON DELETE RESTRICT,
+    CONSTRAINT fk_detalle_opcion    FOREIGN KEY (id_opcion, id_pregunta) REFERENCES opciones_pregunta(id_opcion, id_pregunta) ON DELETE RESTRICT
+);
+
+-- Índices para las consultas de resultados
+CREATE INDEX IF NOT EXISTS idx_preguntas_encuesta        ON preguntas(id_encuesta);
+CREATE INDEX IF NOT EXISTS idx_opciones_pregunta        ON opciones_pregunta(id_pregunta);
+CREATE INDEX IF NOT EXISTS idx_opciones_club            ON opciones_pregunta(id_club) WHERE id_club IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_encuestas_estado         ON encuestas(estado);
+CREATE INDEX IF NOT EXISTS idx_respuestas_encuesta_fecha ON respuestas_encuesta(id_encuesta, fecha_envio);
+CREATE INDEX IF NOT EXISTS idx_detalle_respuesta        ON detalle_respuestas(id_respuesta);
+CREATE INDEX IF NOT EXISTS idx_detalle_pregunta         ON detalle_respuestas(id_pregunta);
+CREATE INDEX IF NOT EXISTS idx_detalle_opcion           ON detalle_respuestas(id_opcion) WHERE id_opcion IS NOT NULL;
+
+-- Una misma opción no se marca dos veces en una respuesta
+CREATE UNIQUE INDEX IF NOT EXISTS uq_detalle_opcion ON detalle_respuestas(id_respuesta, id_pregunta, id_opcion) WHERE id_opcion IS NOT NULL;
+-- Un texto o una escala no se repite para la misma pregunta
+CREATE UNIQUE INDEX IF NOT EXISTS uq_detalle_texto_numero ON detalle_respuestas(id_respuesta, id_pregunta) WHERE id_opcion IS NULL;
+
+-- Trigger: reutiliza la función genérica de fecha_actualizacion
+DROP TRIGGER IF EXISTS trg_actualizar_fecha_encuesta ON encuestas;
+CREATE TRIGGER trg_actualizar_fecha_encuesta
+    BEFORE UPDATE ON encuestas
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_actualizar_fecha();
+
+-- ============================================================
+-- ROW LEVEL SECURITY — MÓDULO DE ENCUESTAS
+-- ============================================================
+-- Sin políticas a propósito: todo el acceso pasa por Express con credenciales
+-- de servidor. db.js conecta como propietario de las tablas, y los propietarios
+-- y superusuarios saltan RLS salvo con FORCE ROW LEVEL SECURITY, que no se usa
+-- (lo rompería). Esto bloquea los roles 'anon'/'authenticated' de Supabase.
+ALTER TABLE encuestas           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE preguntas           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opciones_pregunta   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE respuestas_encuesta ENABLE ROW LEVEL SECURITY;
+ALTER TABLE detalle_respuestas  ENABLE ROW LEVEL SECURITY;
