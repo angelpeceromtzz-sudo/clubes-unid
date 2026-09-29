@@ -55,10 +55,25 @@ npm run build
 npm run preview
 ```
 
-El servidor de desarrollo corre en `http://localhost:5173`. Las peticiones a `/api/*` se redirigen automáticamente a `http://localhost:4000/*`.
+El servidor de desarrollo corre en `http://localhost:5173`. Las peticiones a `/api/*` y `/uploads/*` se redirigen automáticamente a `http://localhost:4000/*`.
 
 ### Variables de entorno
-En producción, la API base apunta a `https://clubes-unid.onrender.com/api`. En desarrollo usa el proxy de Vite.
+
+El frontend resuelve el destino del backend con variables de Vite, sin URLs fijas en el código. Se declaran en la raíz del repo:
+
+| Variable | Desarrollo | Producción | Para qué |
+|----------|-----------|-------------|----------|
+| `VITE_API_URL` | `/api` | `https://clubes-unid.onrender.com/api` | Base de las llamadas a la API |
+| `VITE_BACKEND_URL` | *(vacío)* | `https://clubes-unid.onrender.com` | Origen de las imágenes servidas en `/uploads` |
+| `VITE_PROXY_TARGET` | `http://localhost:4000` | — | Destino del proxy de Vite (solo en `npm run dev`) |
+
+Archivos: `.env` (valores por defecto), `.env.development` y `.env.production` (uno por modo); `.env.example` documenta el contrato.
+
+En desarrollo `VITE_API_URL` es relativa a propósito: todo sale por el proxy y así no hace falta configurar CORS para el backend local.
+
+Si en algún momento cambias la URL de producción, actualiza `.env.production` y vuelve a compilar. Los valores se hornean en el bundle al hacer build, no se leen en tiempo de ejecución.
+
+Las variables del backend (`DB_*`, `JWT_SECRET`, `CLOUDINARY_URL`) viven aparte, en `backend/.env`, y Vite nunca las lee.
 
 ---
 
