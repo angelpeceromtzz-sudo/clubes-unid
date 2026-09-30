@@ -158,8 +158,8 @@ se guarda como `slug` aleatorio de 22 caracteres en la URL, nunca como un JWT.
 Quien tenga el enlace puede responder.
 
 > La interfaz que genera y reparte esos enlaces **todavía no está construida**
-> (ver `TODO.md`, sección 2). Hoy el enlace se consigue creándose la encuesta por
-> API o con el `seed.sql`.
+> (ver `PENDIENTES.md`, sección 2.1). Hoy el enlace se consigue creándose la
+> encuesta por API o con el `seed.sql`.
 
 - Se monta **fuera del layout autenticado**, así que no muestra la barra de
   navegación ni el botón de iniciar sesión. Quien nunca ha entrado a la
