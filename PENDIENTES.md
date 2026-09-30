@@ -10,130 +10,170 @@ importa** y **cómo se comprueba** que quedó cerrado.
 
 ## 1. Bloqueantes
 
-### 1.1 El alta de postulaciones está rota: el formulario manda `carrera` y el backend pide `id_licenciatura`
+### 1.1 Cerrado: el alta de postulaciones manda `id_licenciatura`
 
 `formularios.carrera` dejó de ser un `VARCHAR(100)` libre para ser una FK al
-catálogo, pero el frontend nunca se actualizó. `POST /api/formularios` valida
-`id_licenciatura` como entero positivo y lo contrasta contra `cat_licenciaturas`
-(`backend/routes/formularios.js:134-150`); el formulario manda `carrera`, así que
-la validación de "todos los campos obligatorios" salta y **nadie puede
-postular a un club** hasta que se arregle.
+catálogo, pero el frontend nunca se actualizó, así que `POST /api/formularios`
+respondía 400 y **nadie podía postular a un club**. Corregido el 30/09/2026.
 
-| Dónde | Qué hay |
-|-------|---------|
-| `src/components/formularios/inscripcion/FormularioInscripcion.jsx:21` | el estado inicial declara `carrera: ''` |
-| `src/components/formularios/inscripcion/FormularioInscripcion.jsx:140` | `<CampoSelect name="carrera" ... opciones={CARRERAS}>` |
-| `src/constants/inscripcion.js:1-9` | `CARRERAS`, lista de 7 textos hardcodeados |
-| `src/constants/inscripcion.js:14` | `ETIQUETAS.carrera: 'Carrera'` |
-| `src/utils/inscripcion.js:11` | valida `formulario.carrera` |
+| Dónde | Cambio |
+|-------|--------|
+| `FormularioInscripcion.jsx` | el campo es `id_licenciatura`, alimentado con `useLicenciaturas()`; el payload lo manda como `Number`, igual que `cuatrimestre` |
+| `FormularioInscripcion.jsx` | si el catálogo no carga, el `<select>` queda deshabilitado y sale una `Alerta` con botón de reintento, en vez de un "selecciona una carrera" que no se puede cumplir |
+| `constants/inscripcion.js` | borrada `CARRERAS` (7 textos hardcodeados); `ETIQUETAS.carrera` → `id_licenciatura: 'Licenciatura'` |
+| `utils/inscripcion.js:11` | valida `formulario.id_licenciatura` |
+| `PasoConfirmacionInscripcion.jsx` | el resumen muestra el nombre oficial del programa, no el id |
+| `CampoSelect.jsx` | acepta `disabled`, opcional |
 
-**Cómo se arregla:** `CampoSelect` ya acepta objetos `{ value, label }`, y
-`useLicenciaturas()` ya expone el catálogo público (`id_licenciatura`, `nombre`),
-así que no hace falta tocar componentes nuevos: se cambia `name`, se alimenta el
-`select` con `licenciaturas.map(l => ({ value: l.id_licenciatura, label: l.nombre }))`
-y se borra `CARRERAS`. La etiqueta debería decir "Licenciatura": el catálogo se
-llama así y la palabra "carrera" ya no corresponde a lo que se guarda.
+No se tocó lo que **lee**: los SELECT del backend siguen devolviendo la clave
+`carrera` (`LEFT JOIN cat_licenciaturas ... 'l.nombre AS carrera'`), así que
+padrón, solicitudes, historial y asistencia no cambian.
 
-**Lo que NO hay que romper:** todos los SELECT del backend hacen
-`LEFT JOIN cat_licenciaturas` con `'l.nombre AS carrera'` (`formularios.js:31,79,299,339,372`),
-así que el JSON conserva la clave `carrera`. Quien la lista para *mostrarla*
-(`SeccionPadron.jsx:81`, `TarjetaSolicitud.jsx:43`, `HistorialPostulaciones.jsx:80`,
-`AlumnoSeleccionCard.jsx:34`, `SeccionAsistencia.jsx:70`) sigue funcionando sin
-cambios. Solo cambia lo que se **escribe**.
+**Verificado contra la base real**, no sólo con el linter:
 
-**Cómo se comprueba:** con el backend arriba, un alumno completa el formulario y
-`POST /api/formularios` responde 201 y no 400.
+- `POST /api/formularios` con `id_licenciatura: 3` → **201** y la fila guarda el id.
+- `GET /api/formularios/mis-postulaciones` → `carrera: "Licenciatura en Arquitectura"`.
+- `id_licenciatura: 999` → 400 "La licenciatura seleccionada no existe".
+- Sin el campo → 400 "Todos los campos obligatorios deben estar llenos".
+- `npx eslint .` y `npx vite build` en verde.
 
-**Migración de base con datos.** Una vez, sobre una base que ya tenga filas:
+**Base de datos.** Se aplicó `backend/schema.sql` sobre `clubs_bd`, se borraron
+las filas viejas de `formularios` y se volvió a correr `backend/seed.sql`. Las
+filas viejas guardan abreviaturas (`Lic. en Contaduría Pública`) y al menos una
+(`Ing. en Mecatrónica`) no tiene programa en el catálogo, así que no se pueden
+mapear sin adivinar. Son datos de prueba: se descartaron en vez de migrarse.
+La base quedó con 10 clubes, 10 usuarios, 10 licenciaturas, 5 formularios y la
+encuesta `demo-intereses-clubes` con sus 5 preguntas y 8 opciones.
 
-```sql
-DELETE FROM formularios;
-```
+Tres cosas que salieron en el camino y quedaron corregidas:
 
-y volver a correr `backend/seed.sql`. Las filas viejas guardan abreviaturas
-(`Lic. en Contaduría Pública`, `Ing. en Sistemas Computacionales`) y al menos
-una —`Ing. en Mecatrónica`— no tiene programa en el catálogo, así que no se pueden
-mapear sin adivinar, y adivinar asignaría la carrera equivocada a un alumno. Son
-datos de prueba, por eso se descartan en vez de migrarse.
+- `schema.sql` no es idempotente para `clubes.participacion`: la columna sólo
+  existe en el `CREATE TABLE IF NOT EXISTS`, así que en una base creada antes
+  nunca se agrega y el `seed.sql` muere con "no existe la columna participacion
+  en la relación clubes". No afecta a una base nueva, pero rompe cualquier
+  máquina que ya tuviera el esquema viejo. **Falta el `ALTER TABLE clubes ADD
+  COLUMN IF NOT EXISTS participacion ...` en `schema.sql`**; aquí se aplicó a
+  mano y luego se reconstruyó la base desde cero.
+- `formularios.turno` (NOT NULL) quedaba de un esquema anterior y `schema.sql` ya
+  no lo declara, pero tampoco lo dropea: el seed moría con "el valor nulo en la
+  columna turno". Agregado el `ALTER TABLE formularios DROP COLUMN IF EXISTS turno`.
+- `seed.sql` traía 10 caracteres corruptos (U+FFFD), incluido el literal
+  `'En revisión'`, que viola `chk_status` y hacía fallar el seed entero.
+  Corregidos.
 
 ---
 
-## 2. PBI-10: módulo de encuestas incompleto
+## 2. PBI-10: módulo de encuestas
 
-Lo que ya está hecho y **no** hay que rehacer: el esquema de 5 tablas, el
+2.1 a 2.5 cerrados. El detalle de qué se hizo y por qué está en
+[`PB-10.md`](PB-10.md). 2.6 sigue abierto y es lo único del alcance que falta.
+
+Lo que ya estaba hecho y **no** hay que rehacer: el esquema de 5 tablas, el
 `GET/POST /api/encuestas/publico/:slug`, la pantalla `/encuesta/:slug`, el
 catálogo `/api/catalogos/licenciaturas`, el servicio frontend y el slug. Todo eso
-está commiteado; su límite real es que nunca se ha corrido contra una base de
-datos (ver sección 4).
+está commiteado y el esquema ya está aplicado en `clubs_bd` con la encuesta demo
+sembrada.
 
-### 2.1 No hay interfaz de administración: el módulo no se puede usar
+**Lo que sí queda es verificarlo desde el navegador** (sección 4). El código pasa
+el linter y el build, pero la parte de React de la sección de encuestas sólo se
+comprobó por lectura.
 
-La capa de servicio expone 9 métodos admin y **ningún componente los consume**.
+### 2.1 Cerrado: ya hay interfaz de administración
 
-| Método | Ruta |
-|--------|------|
-| `listar` | `GET /encuestas/admin` |
-| `obtener` | `GET /encuestas/admin/:id` |
-| `crear` | `POST /encuestas/admin` |
-| `actualizar` | `PUT /encuestas/admin/:id` |
-| `eliminar` | `DELETE /encuestas/admin/:id` |
-| `crearPregunta` | `POST /encuestas/admin/:id/preguntas` |
-| `actualizarPregunta` | `PUT /encuestas/admin/preguntas/:idPregunta` |
-| `eliminarPregunta` | `DELETE /encuestas/admin/preguntas/:idPregunta` |
-| `actualizarOpciones` | `PUT /encuestas/admin/preguntas/:idPregunta/opciones` |
+`src/components/admin/seccion-encuestas/` con lista, editor y resultados. El
+estado vive en `useSeccionEncuestas`; `PanelAdmin` monta la sección y
+`navegacion.js` tiene su entrada. Los 13 métodos admin del servicio ya tienen
+consumidor.
 
-Están en `src/services/encuesta.service.js:19-43`. En el otro extremo,
-`src/pages/PanelAdmin.jsx:63-68` solo monta usuarios, clubes, anuncios y
-diapositivas; `src/components/admin/` no tiene sección de encuestas. Hoy no hay
-forma de crear una encuesta desde el panel: el enlace solo se consigue por API o
-con el `seed.sql`.
+Dos arreglos que hizo falta en el camino, porque sin ellos el editor no
+funcionaba aunque el código pareciera correcto:
 
-Faltan las tres áreas: lista con filtro por estatus, editor de preguntas y
-opciones, y pantalla de resultados.
+- `Icono.jsx` no tenía `chevron-up`, que usan los botones de reordenar. El SVG
+  salía vacío.
+- `CampoSelect` no aceptaba `disabled`, y el editor se lo pasa en el `<select>`
+  de estado y fechas. La prop se ignoraba en silencio.
 
-**Cómo se comprueba:** entrar como admin, crear una encuesta con preguntas desde
-la interfaz, copiar el enlace y responderlo en ventana incógnita.
+**Cómo se comprueba:** sigue pendiente. Está en la sección 4.
 
-### 2.2 No existe endpoint de resultados
+### 2.2 Cerrado: `GET /encuestas/admin/:id/resultados`
 
-Sin fuente de datos para el área de resultados. `recharts` ya está declarado en
-`package.json` y no hay nada que graficar. Hay que decidir la forma de los
-agregados: distribución por opción, promedio de escala, y cómo se agrupan los
-tipos de texto libre (que no se pueden graficar sin leerlos).
+Roles 3 y 4. Devuelve totales, respondentes por día, por licenciatura y
+`sin_licenciatura`, más un resultado por pregunta **incluidas las ocultas**:
+ocultarlas es una decisión de publicación, no un borrado, y sus respuestas
+existen.
 
-### 2.3 No existe endpoint de duplicar
+Decisiones que hubo que tomar y que conviene no volver a abrir sin motivo:
 
-Clona encuesta con sus preguntas y opciones. Falta decidir si las respuestas se
-copian o se descartan; para el uso real (repetir una encuesta de un semestre)
-lo razonable es descartar, porque arrastrar respuestas falsearía los agregados.
+- Opción múltiple usa como base los respondientes, no el número de
+  selecciones. Si no, un alumno que marca tres opciones hace que la suma dé
+  300%.
+- Escala conserva los valores tal cual llegaron. Si se estrecha el rango
+  después de recibir respuestas, los valores fuera de rango se conservan y
+  salen como `fuera_de_rango`; al promediar sólo el subconjunto válido el
+  resultado mentía.
+- Textos libres se recortan a 200 por pregunta, con el total real y cuántos se
+  truncaron, para no fingir que se leyeron todos.
 
-### 2.4 No existe endpoint de reordenar, aunque el esquema ya lo permite
+`LIMIT 200` por pregunta para que un texto libre de 5 000 respuestas no arrastre
+la tabla entera en memoria.
 
-`schema.sql:542` declara `uq_pregunta_orden UNIQUE (id_encuesta, orden)
-DEFERRABLE INITIALLY DEFERRED`, con el comentario de que es "para permitir
-reordenar preguntas dentro de una transacción". La restricción está pensada para
-el caso de uso pero **la ruta nunca se escribió**: no existe `/orden` ni
-`reordenar` en `backend/routes/encuestas.js`, y `PUT /admin/:id` (que actualiza
-la encuesta) no toca el orden de sus preguntas. Lo mismo con las opciones de una
-pregunta (`uq_opcion_orden`, `schema.sql:572`).
+En el panel se usan barras horizontales propias y no `recharts`, porque el kit
+visual del panel ya trae sus clases de tema y `recharts` no las conoce.
 
-### 2.5 El endpoint de invalidar caché es inalcanzable
+### 2.3 Cerrado: `POST /encuestas/admin/:id/duplicar`
 
-`POST /api/catalogos/licenciaturas/cache` existe (`catalogos.js:47`, rol 3) pero
-`catalogoService` solo expone `getLicenciaturas` (`encuesta.service.js:48`).
-Nadie lo puede llamar. Nota: `useLicenciaturas()` ya trae un `invalidar()`
-local (`src/hooks/useLicenciaturas.js:83`) que descarta el caché del módulo, así
-que falta el método de servicio que pegue al backend.
+Copia encuesta, preguntas y opciones en una transacción. **Las respuestas no se
+copian** y no es una omisión: el uso real es repetir la encuesta de un semestre
+al siguiente, y arrastrar las respuestas viejas haría que los agregados de la
+copia sumaran dos poblaciones. La copia nace en `borrador` y sin fechas.
+
+Se copian también las preguntas ocultas: la copia es la misma encuesta, no una
+versión recortada.
+
+### 2.4 Cerrado: reordenar preguntas y opciones
+
+`PUT /encuestas/admin/:id/preguntas/orden` recibe el arreglo completo de ids en
+el orden deseado, no un desplazamiento, y valida que el conjunto sea el mismo
+que el de la base. Un solo `UPDATE` con un `CASE` por id resuelve el intercambio
+entero bajo `uq_pregunta_orden`, que es `DEFERRABLE INITIALLY DEFERRED`: por eso
+el BEGIN/COMMIT es obligatorio y no decorativo.
+
+`PUT /encuestas/admin/preguntas/:idPregunta/opciones/orden` **no estaba en este
+pendiente** y salió al implementarlo. La única vía previa para cambiar el orden
+de las opciones era el endpoint que reemplaza la lista entera, que borra y
+recrea las opciones con ids nuevos, y eso choca con `fk_detalle_opcion`
+(`ON DELETE RESTRICT`): en cuanto la pregunta tenía una respuesta, el
+reordenamiento se rechazaba con 409. Es decir, funcionaba sólo en encuestas
+nuevas, justo donde no importa. El endpoint nuevo sólo mueve la columna `orden`
+y no cambia ningún `id_opcion`, así que no necesita migración.
+
+En el panel el reordenamiento es con botones ↑/↓ y no con `@dnd-kit`: las
+dependencias están instaladas pero no se usan. Los botones funcionan con teclado
+y en móvil, y no hay que explicar un gesto de arrastre.
+
+Corregido de paso: el endpoint de preguntas pasaba `req.params.id` a la base sin
+validar, así que un id no numérico daba 500 en vez de 400.
+
+### 2.5 Cerrado: la invalidación de caché ya es alcanzable
+
+`catalogoService.invalidarLicenciaturas()` y `invalidarRemoto()` en
+`useLicenciaturas()`, que descarta el caché local y avisa al backend.
+
+**Sin consumidor todavía**, y es lo correcto: no hay un CRUD de catálogo de
+licenciaturas en el panel, así que no hay ninguna acción de usuario que lo
+dispare. La ruta es alcanzable y el método existe para cuando lo haya.
 
 ### 2.6 Entrega 2 del módulo, sin empezar
 
 `numero`, `ranking` y escalas Likert no están en el esquema ni en la API. El
 esquema actual cubre 5 tipos (`opcion_unica`, `opcion_multiple`, `texto_corto`,
-`texto_largo`, `escala`).
+`texto_largo`, `escala`). Fuera del alcance acordado.
 
 ---
 
 ## 3. Documentación del módulo
+
+El detalle de lo implementado está en [`PB-10.md`](PB-10.md).
 
 ### 3.1 El SRS no tiene requisitos del módulo de encuestas
 
@@ -150,33 +190,87 @@ la tabla de trazabilidad.
 
 ## 4. Verificación pendiente
 
-Nada del módulo de encuestas se ha probado contra PostgreSQL: la conexión local
-falla con `FATAL: la autenticación password falló para el usuario "postgres"` y no
-hay credenciales disponibles. El único control ejecutado es `npx eslint backend
-src` (exit 0), que no toca SQL ni contratos.
+**Corrección 30/09/2026.** La afirmación de que "no hay credenciales disponibles"
+era falsa: `backend/.env` tiene las que hacen falta y la conexión a `clubs_bd`
+funciona. Lo que pasa es que **el esquema nunca se había aplicado**: la base
+tenía 18 tablas y ninguna de las de encuestas, y `formularios.carrera` seguía
+siendo `character varying`. Al correr `schema.sql` + `seed.sql` (ver 1.1) todo
+eso queda arreglado, así que la base ya está disponible para probar.
 
-**Pendientes de verificación concreta:**
+Lo que **sí** se ha verificado contra PostgreSQL:
 
-- [ ] Levantar el esquema y el `seed.sql` contra una base real.
-- [ ] Responder la encuesta demo `/encuesta/demo-intereses-clubes` (5 tipos, una
-      pregunta oculta) desde el navegador. El slug es fijo y legible a propósito,
-      para tener un enlace estable de prueba.
+- [x] Esquema y `seed.sql` aplicados sobre `clubs_bd` (10 clubes, 10 usuarios,
+      10 licenciaturas, 5 formularios, encuesta demo con 5 preguntas).
+- [x] `POST /api/formularios` y `GET /api/formularios/mis-postulaciones`
+      (detalle en 1.1).
+- [x] `GET /api/encuestas/publico/demo-intereses-clubes`: devuelve 4 de las 5
+      preguntas; la oculta (`es_visible = false`) no viene.
+- [x] Los 5 tipos de pregunta se enviaron por la API y se aceptaron.
+- [x] `GET /encuestas/admin/1/resultados`: 6 respuestas, una sin licenciatura,
+      promedios y distribuciones que coinciden con el cálculo manual. También
+      sus 401, 400 y 404.
+- [x] `PUT /encuestas/admin/1/preguntas/orden` sobre una encuesta que ya tiene
+      respuestas, más sus 400.
+- [x] `POST /api/catalogos/licenciaturas/cache`: 401 sin token, 200 con admin.
+
+### 4.0 Bugs que bloqueaban todo lo anterior
+
+Ninguno estaba en este archivo y los dos impedían verificar el módulo:
+
+- **El GET y el POST públicos devolvían 500.** `comprobarVigencia()` devolvía
+  `null` en vez de un objeto cuando la encuesta **sí** estaba vigente, y los dos
+  callers hacían `vigencia.error`. Como `null.error` es `TypeError`, la encuesta
+  pública no se podía abrir.
+- **Ninguna pregunta de opción se podía responder.** `cargarDefiniciones()` no
+  seleccionaba `o.id_pregunta`, así que todos los `Set` de opciones salían
+  vacíos y la comprobación `ids.length > opciones.size` comparaba contra 0
+  ("Demasiadas opciones seleccionadas" en cualquier pregunta de opción).
+
+Ninguno de los dos lo detecta el linter. Salieron al probar contra la base real.
+
+### 4.1 Lo que falta verificar
+
+- [ ] Recorrer el flujo completo desde el panel: crear encuesta con los 5 tipos,
+      copiar el enlace, responder en incógnito, ver resultados. **El código
+      compila y pasa el linter, pero la parte de React sólo se comprobó por
+      lectura.**
+- [ ] Probar `duplicar` y `opciones/orden` en ejecución. Se escribieron al final
+      de la sesión y el backend quedó arrancado con el código anterior: hay que
+      reiniciarlo. `preguntas/orden` sí está probado.
+- [ ] Reordenar opciones en una pregunta **que ya tiene respuestas**. Es el caso
+      que motivó el endpoint de §2.4 y el que el reemplazo total no cubría.
 - [ ] Comprobar los 409 al borrar encuesta o pregunta que ya tienen respuestas.
 - [ ] Comprobar el 429 del límite de 5 envíos por hora, que hoy solo aplica con
       `NODE_ENV=production` (`encuestas.js:55`).
 
-**No se siembran respuestas** a propósito: son anónimas, así que un set de ejemplo
-no tendría a quién pertenecer y las gráficas del panel se verían igual de reales
-que las de verdad. Para ver resultados hay que responder la encuesta unas cuantas
-veces desde el navegador.
+**Las 6 respuestas de la encuesta demo se enviaron por la API** para poder
+verificar los agregados, y siguen ahí a propósito: son lo que permite ver el
+panel con datos de verdad. No borrarlas sin avisar.
 
-### 4.1 Faltan dependencias en `node_modules`
+### 4.1 Dependencias: resueltas
 
-`@dnd-kit/core`, `@dnd-kit/utilities`, `cloudinary`, `leaflet`,
-`multer-storage-cloudinary`, `react-leaflet` y `recharts` están declaradas en
-`package.json` pero no instaladas, así que `vite build` falla. No es un problema
-del código: `pnpm install` lo resuelve. Bloquea cualquier verificación del
-frontend, incluida la del punto 1.1.
+Las siete dependencias que faltaban (`@dnd-kit/core`, `@dnd-kit/utilities`,
+`cloudinary`, `leaflet`, `multer-storage-cloudinary`, `react-leaflet`, `recharts`)
+ya están instaladas y `vite build` pasa. Dos cosas que aparecieron al hacerlo:
+
+- `backend/node_modules` tampoco existía, así que el backend no arrancaba sin
+  `npm install` dentro de `backend/`. Al hacerlo, `package-lock.json` se
+  desincronizó de `package.json` (`cloudinary` y `multer-storage-cloudinary`
+  faltaban en el lock) y quedó corregido.
+- `seed.sql` **no era idempotente**: el `INSERT INTO clubes` terminaba en un
+  `ON CONFLICT DO NOTHING` sin destino que no frenaba nada, porque
+  `clubes.nombre_club` no es UNIQUE. Cada corrida duplicaba los 10 clubes (a la
+  tercera había 50). Corregido con un `WHERE NOT EXISTS` sobre el nombre; lo
+  mismo en `avisos_clubes`, que también repetía avisos.
+
+### 4.2 El `seed.sql` depende de ids fijos de club
+
+`clubes_niveles` inserta con ids literales (`(1, 1), (1, 2), ...`) y el bloque de
+`formularios` usa `id_club = 1` explícito, contando con que el primero sea
+"Equipo de Voleibol". Funciona en una base recién creada, pero en cuanto una fila
+se borra o se reordena, los niveles y los formularios de prueba se cuelgan del
+club equivocado. Deberían resolverse por nombre, como ya se hace con las
+licenciaturas (`seed.sql:143`).
 
 ---
 

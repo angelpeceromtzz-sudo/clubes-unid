@@ -84,5 +84,29 @@ export function useLicenciaturas() {
     cache = null;
   }, []);
 
-  return { licenciaturas, loading, error, recargar, invalidar };
+  // Invalida el catálogo de los dos lados: el del módulo y el del backend.
+  //
+  // El local solo no alcanza. El backend cachea 10 minutos y `obtener()` pide
+  // `/catalogos/licenciaturas`, así que olvidar ese caché dejaría el <select>
+  // sirviendo la lista vieja aunque este módulo ya la haya olvidado, que es
+  // justo el síntoma que la invalidación viene a evitar.
+  //
+  // Se limpia lo local antes de la llamada porque es instantáneo y no depende de
+  // la red. Si la remota falla, el error se devuelve en vez de tragárselo: el
+  // caché del backend se vence solo, así que un fallo aquí degrada la frescura
+  // del catálogo, no la exactitud de lo ya mostrado.
+  //
+  // @returns {Promise<{ok: boolean, error: Error|null}>}
+  const invalidarRemoto = useCallback(async () => {
+    cache = null;
+
+    try {
+      await catalogoService.invalidarLicenciaturas();
+      return { ok: true, error: null };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  }, []);
+
+  return { licenciaturas, loading, error, recargar, invalidar, invalidarRemoto };
 }

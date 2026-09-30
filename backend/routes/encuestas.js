@@ -34,6 +34,12 @@ const LONGITUD_TEXTO = {
 const MAX_PREGUNTAS_POR_ENCUESTA = 60;
 const MAX_OPCIONES_POR_PREGUNTA = 30;
 
+// Cuántos textos libres trae la respuesta de resultados. Es un techo de
+// transporte, no de datos: el conteo real siempre viaja completo en
+// `total_textos`, para que el panel pueda decir "mostrando 200 de 1,240" en vez
+// de presentar el recorte como si fuera el total.
+const LIMITE_TEXTOS_RESULTADOS = 200;
+
 // chk_encuesta_estado. 'borrador' no es visible para el público ni por enlace:
 // es el estado en el que el admin arma la encuesta antes de publicarla.
 const ESTADOS = ['borrador', 'publicada', 'cerrada'];
@@ -92,7 +98,11 @@ router.get('/publico/:slug', async (req, res) => {
     const e = encuesta.rows[0];
     const ventana = comprobarVigencia(e);
 
-    if (ventana.error) {
+    // `comprobarVigencia` devuelve null cuando la encuesta SÍ está en ventana, que
+    // es el caso normal de uso, así que se pregunta por el null y no por
+    // `ventana.error`: preguntar por .error sobre null tiraba el TypeError y el
+    // enlace público devolvía 500 en vez de servir la encuesta.
+    if (ventana) {
       return res.status(ventana.codigo).json({ error: ventana.error });
     }
 
@@ -150,7 +160,11 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
     const e = encuesta.rows[0];
     const ventana = comprobarVigencia(e);
 
-    if (ventana.error) {
+    // `comprobarVigencia` devuelve null cuando la encuesta SÍ está en ventana, que
+    // es el caso normal de uso, así que se pregunta por el null y no por
+    // `ventana.error`: preguntar por .error sobre null tiraba el TypeError y el
+    // enlace público devolvía 500 en vez de servir la encuesta.
+    if (ventana) {
       return res.status(ventana.codigo).json({ error: ventana.error });
     }
 
@@ -299,15 +313,23 @@ async function cargarDefiniciones(idEncuesta) {
   if (definiciones.size === 0) return definiciones;
 
   const opciones = await pool.query(
-    `SELECT o.id_opcion
+    `SELECT o.id_opcion, o.id_pregunta
      FROM opciones_pregunta o
      JOIN preguntas p ON p.id_pregunta = o.id_pregunta
      WHERE p.id_encuesta = $1 AND p.es_visible = TRUE`,
     [idEncuesta]
   );
 
+  // id_pregunta va en el SELECT por el agrupado del renglón de abajo, no por el
+  // JOIN: sin esa columna `definiciones.get(undefined)` devuelve undefined y el
+  // `?.` se come el error en silencio, dejando a cada pregunta con el Set de
+  // opciones vacío. El síntoma es un 400 "Demasiadas opciones seleccionadas" en
+  // cualquier pregunta de opción, porque `ids.length > opciones.size` compara
+  // contra 0. Si se quita la columna, se quita también el `?.`.
   for (const o of opciones.rows) {
-    definiciones.get(o.id_pregunta)?.opciones.add(o.id_opcion);
+    const definicion = definiciones.get(o.id_pregunta);
+
+    if (definicion) definicion.opciones.add(o.id_opcion);
   }
 
   return definiciones;
@@ -556,6 +578,366 @@ router.get('/admin/:id', authenticate, requireRole(...ROLES_LECTURA), async (req
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+
+/**
+ * GET /admin/:id/resultados — agregados de lo que ya respondieron.
+ *
+ * Sin resultados no hay nada que graficar, y una encuesta recién creada los
+ * tiene en cero: eso es un estado normal, así que una encuesta sin respuestas
+ * contesta 200 con totales en 0 y no un 404 ni un error.
+ *
+ * Son varias consultas y no una sola con joins. Cada agregado tiene su forma
+ * (distribución por opción, eje de escala, muestra de textos) y encajarlas en un
+ * mega-join produce un GROUP BY con una lista de columnas tan larga que hay que
+ * desarmarla a mano para leer. Aquí se consulta una cosa por query y se arma el
+ * objeto en JS, que es donde de todos modos hay que recorrer las preguntas para
+ * meterles los conteos.
+ *
+ * Sobre la base: `detalle_respuestas` guarda exactamente uno de id_opcion, texto
+ * o numero por fila (chk_detalle_valor), y una opción múltiple genera una fila
+ * por opción marcada. Por eso toda pregunta se cuenta con COUNT(DISTINCT
+ * id_respuesta) y no con COUNT(*): con COUNT(*) una pregunta de opción múltiple
+ * sumaría respondents y las preguntas del mismo tipo no serían comparables.
+ */
+router.get(
+  '/admin/:id/resultados',
+  authenticate,
+  requireRole(...ROLES_LECTURA),
+  async (req, res) => {
+    // Las otras rutas de admin pasan req.params.id crudo a la consulta, y un id
+    // no numérico revienta el cast de Postgres como 500. Se valida aquí porque
+    // esta ruta es la que el panel llama con un id que viene de la URL pegada.
+    const idEncuesta = Number(req.params.id);
+
+    if (!Number.isInteger(idEncuesta)) {
+      return res.status(400).json({ error: 'El id de la encuesta debe ser un número' });
+    }
+
+    try {
+      const encuesta = await pool.query(
+        `SELECT id_encuesta, titulo, slug, estado
+         FROM encuestas WHERE id_encuesta = $1`,
+        [idEncuesta]
+      );
+
+      if (encuesta.rows.length === 0) {
+        return res.status(404).json({ error: 'Encuesta no encontrada' });
+      }
+
+      // Definición completa, incluidas las ocultas. Los resultados sí las
+      // incluyen: al admin le sirven para ver una pregunta que|scale a la que
+      // dejó de exponer, y el panel las marca como ocultas al pintarlas.
+      const definicion = await pool.query(
+        `SELECT p.id_pregunta, p.texto, p.tipo, p.es_obligatoria, p.es_visible, p.orden,
+                p.escala_min, p.escala_max, p.escala_min_texto, p.escala_max_texto,
+                COALESCE(
+                  (SELECT json_agg(json_build_object('id', o.id_opcion, 'texto', o.texto,
+                                                    'orden', o.orden)
+                                   ORDER BY o.orden ASC)
+                    FROM opciones_pregunta o WHERE o.id_pregunta = p.id_pregunta),
+                  '[]'::json
+                ) AS opciones
+         FROM preguntas p
+         WHERE p.id_encuesta = $1
+         ORDER BY p.orden ASC`,
+        [idEncuesta]
+      );
+
+      // Un solo GROUP BY para los tres conteos que necesita cada pregunta:
+      // cuántas respuestas la tocaron, cuántas marcaron alguna opción (la base
+      // de los porcentajes de opción múltiple) y cuántos textos libres hay.
+      //
+      // Los ::int no son cosméticos: COUNT devuelve bigint y el driver de node
+      // lo entrega como string, así que sin el cast "conteo": "3" viaja al
+      // frontend como texto y cualquier cálculo o comparación numérica del
+      // panel falla en silencio.
+      const conteos = await pool.query(
+        `SELECT d.id_pregunta,
+                COUNT(DISTINCT d.id_respuesta)::int AS respuestas,
+                COUNT(DISTINCT d.id_respuesta) FILTER (WHERE d.id_opcion IS NOT NULL)::int
+                  AS respondientes,
+                COUNT(*) FILTER (WHERE d.texto IS NOT NULL)::int AS total_textos
+         FROM detalle_respuestas d
+         JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
+         WHERE r.id_encuesta = $1
+         GROUP BY d.id_pregunta`,
+        [idEncuesta]
+      );
+
+      // Sólo opciones que alguien marcó. Las que quedaron en cero se reponen
+      // desde la definición: el admin tiene que ver la lista completa, porque
+      // "nadie eligió esta opción" también es parte del resultado.
+      const conteoOpciones = await pool.query(
+        `SELECT d.id_pregunta, o.id_opcion, COUNT(DISTINCT d.id_respuesta)::int AS conteo
+         FROM detalle_respuestas d
+         JOIN opciones_pregunta o ON o.id_opcion = d.id_opcion
+         JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
+         WHERE r.id_encuesta = $1
+         GROUP BY d.id_pregunta, o.id_opcion`,
+        [idEncuesta]
+      );
+
+      // Distribución de la escala: un renglón por valor, con cuántas respuestas
+      // lo eligieron. El promedio NO se pide aquí a propósito: sale de esta misma
+      // distribución, ponderada por `conteo`, en `promedioEscala`.
+      const escala = await pool.query(
+        `SELECT d.id_pregunta, d.numero, COUNT(DISTINCT d.id_respuesta)::int AS conteo
+         FROM detalle_respuestas d
+         JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
+         WHERE r.id_encuesta = $1 AND d.numero IS NOT NULL
+         GROUP BY d.id_pregunta, d.numero
+         ORDER BY d.id_pregunta, d.numero`,
+        [idEncuesta]
+      );
+
+      // Muestra de textos: los más recientes de cada pregunta, no los primeros N
+      // del overall. ROW_NUMBER con PARTITION hace el corte por pregunta; un
+      // LIMIT a secas llenaría el cupo entero con la primera pregunta y dejaría
+      // las demás en blanco.
+      const textos = await pool.query(
+        `SELECT id_pregunta, texto, fecha_envio
+         FROM (
+           SELECT d.id_pregunta, d.texto, r.fecha_envio,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY d.id_pregunta
+                    ORDER BY r.fecha_envio DESC, d.id_detalle DESC
+                  ) AS rn
+           FROM detalle_respuestas d
+           JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
+           WHERE r.id_encuesta = $1 AND d.texto IS NOT NULL
+         ) t
+         WHERE rn <= $2
+         ORDER BY id_pregunta, fecha_envio DESC`,
+        [idEncuesta, LIMITE_TEXTOS_RESULTADOS]
+      );
+
+      const total = await pool.query(
+        'SELECT COUNT(*)::int AS total FROM respuestas_encuesta WHERE id_encuesta = $1',
+        [idEncuesta]
+      );
+
+      // Responses por día. to_char en vez de dejar que pg devuelva un timestamptz:
+      // el panel lo pinta como etiqueta de eje y un Date con zona horaria se
+      // corre un día al formatearlo en el navegador.
+      const porFecha = await pool.query(
+        `SELECT TO_CHAR(DATE_TRUNC('day', r.fecha_envio), 'YYYY-MM-DD') AS dia,
+                COUNT(*)::int AS respuestas
+         FROM respuestas_encuesta r
+         WHERE r.id_encuesta = $1
+         GROUP BY 1
+         ORDER BY 1`,
+        [idEncuesta]
+      );
+
+      // La licenciatura es el único dato del alumno que la encuesta guarda, y es
+      // para segmentar. Lo que no se reporta aquí no se guarda: sin nombre ni
+      // matrícula no hay nada más que agrupar.
+      const porLicenciatura = await pool.query(
+        `SELECT l.id_licenciatura, l.nombre, COUNT(*)::int AS respuestas
+         FROM respuestas_encuesta r
+         JOIN cat_licenciaturas l ON l.id_licenciatura = r.id_licenciatura
+         WHERE r.id_encuesta = $1
+         GROUP BY l.id_licenciatura, l.nombre
+         ORDER BY respuestas DESC, l.nombre ASC`,
+        [idEncuesta]
+      );
+
+      res.json({
+        encuesta: encuesta.rows[0],
+        total_respuestas: total.rows[0].total,
+        por_fecha: porFecha.rows,
+        por_licenciatura: porLicenciatura.rows,
+        // Las respuestas sin programa no se pierden: restan del total y se
+        // reportan aparte, porque "no dijo cuál" no es lo mismo que "dijo que sí".
+        sin_licenciatura:
+          total.rows[0].total -
+          porLicenciatura.rows.reduce((suma, fila) => suma + fila.respuestas, 0),
+        preguntas: armarResultadosPreguntas({
+          definicion: definicion.rows,
+          conteos: conteos.rows,
+          conteoOpciones: conteoOpciones.rows,
+          escala: escala.rows,
+          textos: textos.rows,
+        }),
+      });
+    } catch (err) {
+      console.error('Error al obtener resultados de la encuesta:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  }
+);
+
+/**
+ * Arma el arreglo `preguntas` de la respuesta, mezclando la definición de cada
+ * pregunta con sus conteos.
+ *
+ * Se separa del route handler porque ahí lo que se lee son consultas; lo que se
+ * decide son las bases de los porcentajes, y eso conviene poder leer de una vez.
+ *
+ * @returns {object[]} Una entrada por pregunta, en el mismo orden que la definición.
+ */
+function armarResultadosPreguntas({
+  definicion,
+  conteos,
+  conteoOpciones,
+  escala,
+  textos,
+}) {
+  const mapaConteos = new Map(conteos.map((fila) => [fila.id_pregunta, fila]));
+  const mapaTextos = new Map();
+  for (const fila of textos) {
+    if (!mapaTextos.has(fila.id_pregunta)) mapaTextos.set(fila.id_pregunta, []);
+    mapaTextos.get(fila.id_pregunta).push({
+      texto: fila.texto,
+      fecha: fila.fecha_envio,
+    });
+  }
+
+  return definicion.map((pregunta) => {
+    const conteo = mapaConteos.get(pregunta.id_pregunta);
+    const respuestas = conteo?.respuestas ?? 0;
+    const respondientes = conteo?.respondientes ?? 0;
+
+    const base = {
+      id_pregunta: pregunta.id_pregunta,
+      texto: pregunta.texto,
+      tipo: pregunta.tipo,
+      orden: pregunta.orden,
+      es_obligatoria: pregunta.es_obligatoria,
+      es_visible: pregunta.es_visible,
+      // Para las preguntas sin respuestas va en 0, no en null: el panel lo usa
+      // como denominador de los porcentajes y null se colaría en la aritmética.
+      respuestas,
+    };
+
+    if (pregunta.tipo === 'escala') {
+      return {
+        ...base,
+        escala_min: pregunta.escala_min,
+        escala_max: pregunta.escala_max,
+        escala_min_texto: pregunta.escala_min_texto,
+        escala_max_texto: pregunta.escala_max_texto,
+        promedio: promedioEscala(escala, pregunta.id_pregunta),
+        distribucion: distribucionEscala(escala, pregunta, respuestas),
+      };
+    }
+
+    if (pregunta.tipo === 'opcion_unica' || pregunta.tipo === 'opcion_multiple') {
+      const esMultiple = pregunta.tipo === 'opcion_multiple';
+
+      // En opción única la base es la pregunta completa. En múltiple es
+      // distinto: el porcentaje va sobre quienes marcaron algo, porque sumar
+      // varios códigos sobre el total de respuestas pasa del 100% y una gráfica
+      // de barras con eso arriba se vuelve inútil. Se manda `base` en la
+      // respuesta para que el panel rotule la gráfica y no haya que suponerlo.
+      const denominador = esMultiple ? respondientes : respuestas;
+
+      const conteoPorOpcion = new Map(
+        conteoOpciones
+          .filter((fila) => fila.id_pregunta === pregunta.id_pregunta)
+          .map((fila) => [fila.id_opcion, fila.conteo])
+      );
+
+      return {
+        ...base,
+        // Se manda sólo en múltiple: es el dato que explica el porcentaje, y en
+        // única sería ruido.
+        ...(esMultiple ? { respondientes, base: 'respondientes' } : {}),
+        opciones: (pregunta.opciones ?? []).map((opcion) => ({
+          id_opcion: opcion.id,
+          texto: opcion.texto,
+          orden: opcion.orden,
+          conteo: conteoPorOpcion.get(opcion.id) ?? 0,
+          porcentaje: porcentaje(conteoPorOpcion.get(opcion.id) ?? 0, denominador),
+        })),
+      };
+    }
+
+    // texto_corto y texto_largo: no hay distribución, sólo la muestra y el total
+    // real. El panel los lista y avisa si está recortando.
+    const totalTextos = conteo?.total_textos ?? 0;
+    const muestra = mapaTextos.get(pregunta.id_pregunta) ?? [];
+
+    return {
+      ...base,
+      total_textos: totalTextos,
+      // La lista puede traer menos que total_textos por dos motivos: el recorte
+      // del endpoint, o que la pregunta no esté entre las que se consultaron.
+      // El panel compara ambos números para decidir qué aviso mostrar.
+      truncados: totalTextos > muestra.length,
+      limite_textos: LIMITE_TEXTOS_RESULTADOS,
+      textos: muestra,
+    };
+  });
+}
+
+/**
+ * Eje de la escala: todos los valores del rango, con cero en los que nadie
+ * marcó, más los que se hayan quedado fuera del rango actual.
+ *
+ * Los que se escapan son un caso real, no paranoidía: `PUT /preguntas` deja
+ * cambiar escala_min y escala_max sin tocar lo ya respondido, así que un admin
+ * que estrecha 1-5 a 1-3 después de 50 respuestas deja 4 y 5 huérfanos. Si el
+ * eje se armara sólo con el rango nuevo, esos conteos desaparecerían del
+ * gráfico y la suma de las barras no cuadraría con las respuestas.
+ */
+function distribucionEscala(filas, pregunta, respuestas) {
+  const min = pregunta.escala_min;
+  const max = pregunta.escala_max;
+
+  const observados = new Map();
+  let promedio = null;
+
+  for (const fila of filas) {
+    if (fila.id_pregunta !== pregunta.id_pregunta) continue;
+    observados.set(fila.numero, fila.conteo);
+    promedio = fila.promedio;
+  }
+
+  const valores = new Set();
+  for (let v = min; v <= max; v++) valores.add(v);
+  for (const v of observados.keys()) valores.add(v);
+
+  return [...valores]
+    .sort((a, b) => a - b)
+    .map((valor) => ({
+      valor,
+      conteo: observados.get(valor) ?? 0,
+      porcentaje: porcentaje(observados.get(valor) ?? 0, respuestas),
+    }));
+}
+
+/**
+ * Promedio de la escala, ponderado por cuántas respuestas hay de cada valor.
+ *
+ * Se calcula aquí y no con AVG en SQL a propósito. Un `AVG(numero) OVER
+ * (PARTITION BY id_pregunta)` sobre la consulta ya agrupada promedia los
+ * VALORES DISTINTOS, no las respuestas: con valores 0, 3, 4 y 5 daría
+ * (0+3+4+5)/4 = 3, cuando el promedio de las 6 respuestas es 20/6 = 3.33. La
+ * media honesta necesita los pesos, y los pesos son justo lo que trae
+ * `conteo`.
+ *
+ * @returns {number|null} Dos decimales, o null si nadie respondió la escala.
+ */
+function promedioEscala(filas, idPregunta) {
+  let suma = 0;
+  let total = 0;
+
+  for (const fila of filas) {
+    if (fila.id_pregunta !== idPregunta) continue;
+    suma += fila.numero * fila.conteo;
+    total += fila.conteo;
+  }
+
+  if (total === 0) return null;
+  return Math.round((suma / total) * 100) / 100;
+}
+
+/** Porcentaje redondeado a un decimal. Base 0 devuelve 0 y no NaN. */
+function porcentaje(conteo, base) {
+  if (!base) return 0;
+  return Math.round((conteo / base) * 1000) / 10;
+}
 
 /**
  * PUT /admin/:id — editar metadatos, cambiar estado y abrir/cerrar.
@@ -957,6 +1339,342 @@ router.put(
       }
 
       console.error('Error al actualizar opciones:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+/**
+ * PUT /admin/:id/preguntas/orden — guardar el orden de las preguntas.
+ *
+ * Recibe el arreglo COMPLETO de ids en el orden deseado, no un desplazamiento.
+ * El panel manda los ids que ya tiene en pantalla, así que la validación de que
+ * el conjunto sea el mismo que el de la base es lo que evita perder una pregunta
+ * si alguien guarda un editor con la lista vieja.
+ *
+ * Sobre uq_pregunta_orden, que es UNIQUE (id_encuesta, orden) DEFERRABLE
+ * INITIALLY DEFERRED: por lo regular un intercambio directo fallaría, porque en
+ * algún momento intermedio hay dos preguntas con el mismo orden. Al ser
+ * DEFERRABLE la comprobación se hace en el COMMIT, no en cada sentencia, así que
+ * un solo UPDATE con un CASE para todas las filas resuelve el intercambio
+ * entero. Por eso el BEGIN/COMMIT es obligatorio y no decorativo.
+ */
+router.put(
+  '/admin/:id/preguntas/orden',
+  authenticate,
+  requireRole(...ROLES_ESCRITURA),
+  async (req, res) => {
+    const { orden } = req.body;
+    const idEncuesta = Number(req.params.id);
+
+    if (!Number.isInteger(idEncuesta)) {
+      return res.status(400).json({ error: 'El id de la encuesta no es un número' });
+    }
+
+    if (!Array.isArray(orden) || orden.length === 0) {
+      return res.status(400).json({ error: 'Se debe enviar la lista de preguntas en orden' });
+    }
+
+    const ids = orden.map(Number);
+
+    if (ids.some((id) => !Number.isInteger(id))) {
+      return res.status(400).json({ error: 'La lista contiene un id que no es un número' });
+    }
+
+    if (new Set(ids).size !== ids.length) {
+      return res.status(400).json({ error: 'La lista de preguntas trae ids repetidos' });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // FOR UPDATE porque entre leer el conjunto y escribir el orden otra
+      // petición podría agregar o borrar una pregunta. El bloqueo mantiene a las
+      // dos fuera hasta que esta termine.
+      const actuales = await client.query(
+        'SELECT id_pregunta FROM preguntas WHERE id_encuesta = $1 FOR UPDATE',
+        [idEncuesta]
+      );
+
+      if (actuales.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Encuesta no encontrada' });
+      }
+
+      const actualesIds = new Set(actuales.rows.map((f) => f.id_pregunta));
+      const iguales =
+        actualesIds.size === ids.length && ids.every((id) => actualesIds.has(id));
+
+      if (!iguales) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error:
+            'La lista de preguntas no corresponde a esta encuesta. Vuelve a cargar y reintenta.',
+        });
+      }
+
+      // Un CASE por id: una sola sentencia para todas las filas, que es lo que
+      // hace posible el intercambio bajo la restricción DEFERRABLE.
+      await client.query(
+        `UPDATE preguntas p
+         SET orden = nuevo.orden
+         FROM (
+           SELECT *
+           FROM UNNEST($1::int[], $2::int[]) AS u(id_pregunta, orden)
+         ) AS nuevo
+         WHERE p.id_pregunta = nuevo.id_pregunta`,
+        [ids, ids.map((_, i) => i + 1)]
+      );
+
+      await client.query('COMMIT');
+
+      // Se devuelve el arreglo pedido y no el RETURNING del UPDATE: el orden de
+      // salida de las filas de un UPDATE no está garantizado, y el cliente ya
+      // sabe cuál pidió. Devolverlo en otro orden lo haría parecer un fallo.
+      res.json({ orden: ids });
+    } catch (err) {
+      await client.query('ROLLBACK');
+
+      // 23505 = uq_pregunta_orden. Si salta aquí es porque se cerró la
+      // transacción sin recalcular la restricción; con DEFERRABLE eso no debería
+      // pasar, y conviene que se note en el log en vez de tragárselo.
+      if (err.code === '23505') {
+        console.error('Conflicto de orden al reordenar preguntas:', err);
+        return res.status(409).json({
+          error: 'No se pudo guardar el orden. Vuelve a intentarlo.',
+        });
+      }
+
+      if (err.code === '23503') {
+        return res.status(404).json({ error: 'Encuesta no encontrada' });
+      }
+
+      console.error('Error al reordenar preguntas:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+/**
+ * PUT /admin/preguntas/:idPregunta/opciones/orden — guardar el orden de las opciones.
+ *
+ * Existe aparte del endpoint que reemplaza la lista porque ese otro borra y
+ * vuelve a crear las opciones con ids nuevos, y fk_detalle_opcion es ON DELETE
+ * RESTRICT: en cuanto la pregunta tiene una respuesta registrada, cualquier
+ * reordenamiento se rechaza con 409. Aquí sólo se mueve la columna `orden` y los
+ * id_opcion no cambian, así que reordenar funciona aunque la pregunta ya tenga
+ * respuestas. Mismo criterio que el orden de las preguntas.
+ */
+router.put(
+  '/admin/preguntas/:idPregunta/opciones/orden',
+  authenticate,
+  requireRole(...ROLES_ESCRITURA),
+  async (req, res) => {
+    const { orden } = req.body;
+    const idPregunta = Number(req.params.idPregunta);
+
+    if (!Number.isInteger(idPregunta)) {
+      return res.status(400).json({ error: 'El id de la pregunta no es un número' });
+    }
+
+    if (!Array.isArray(orden) || orden.length === 0) {
+      return res.status(400).json({ error: 'Se debe enviar la lista de opciones en orden' });
+    }
+
+    const ids = orden.map(Number);
+
+    if (ids.some((id) => !Number.isInteger(id))) {
+      return res.status(400).json({ error: 'La lista contiene un id que no es un número' });
+    }
+
+    if (new Set(ids).size !== ids.length) {
+      return res.status(400).json({ error: 'La lista de opciones trae ids repetidos' });
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const pregunta = await client.query(
+        'SELECT tipo FROM preguntas WHERE id_pregunta = $1 FOR UPDATE',
+        [idPregunta]
+      );
+
+      if (pregunta.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Pregunta no encontrada' });
+      }
+
+      if (!TIPOS_CON_OPCIONES.includes(pregunta.rows[0].tipo)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Este tipo de pregunta no tiene opciones' });
+      }
+
+      const actuales = await client.query(
+        'SELECT id_opcion FROM opciones_pregunta WHERE id_pregunta = $1 FOR UPDATE',
+        [idPregunta]
+      );
+
+      const actualesIds = new Set(actuales.rows.map((o) => o.id_opcion));
+      const iguales = actualesIds.size === ids.length && ids.every((id) => actualesIds.has(id));
+
+      if (!iguales) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error:
+            'La lista de opciones no corresponde a esta pregunta. Vuelve a cargar y reintenta.',
+        });
+      }
+
+      // Un solo UPDATE para todas las filas, que es lo que hace posible el
+      // intercambio bajo uq_opcion_orden (DEFERRABLE INITIALLY DEFERRED).
+      await client.query(
+        `UPDATE opciones_pregunta o
+         SET orden = nuevo.orden
+         FROM (
+           SELECT *
+           FROM UNNEST($1::int[], $2::int[]) AS u(id_opcion, orden)
+         ) AS nuevo
+         WHERE o.id_opcion = nuevo.id_opcion AND o.id_pregunta = $3`,
+        [ids, ids.map((_, i) => i + 1), idPregunta]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({ orden: ids });
+    } catch (err) {
+      await client.query('ROLLBACK');
+
+      if (err.code === '23505') {
+        console.error('Conflicto de orden al reordenar opciones:', err);
+        return res.status(409).json({
+          error: 'No se pudo guardar el orden. Vuelve a intentarlo.',
+        });
+      }
+
+      console.error('Error al reordenar opciones:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+/**
+ * POST /admin/:id/duplicar — clonar encuesta con sus preguntas y opciones.
+ *
+ * Las respuestas NO se copian, y no es una omisión: el uso real es repetir la
+ * encuesta de un semestre al siguiente, y arrastrar las respuestas viejas haría
+ * que los agregados de la copia sumaran dos poblaciones distintas. La copia
+ * arranca en 'borrador' y sin fechas, para que el enlace nuevo no responda
+ * hasta que el admin lo publique.
+ *
+ * Todo en una transacción: si una de las opciones falla, no queda una encuesta a
+ * medio copiar.
+ */
+router.post(
+  '/admin/:id/duplicar',
+  authenticate,
+  requireRole(...ROLES_ESCRITURA),
+  async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const original = await client.query(
+        `SELECT titulo, descripcion, mensaje_agradecimiento
+         FROM encuestas
+         WHERE id_encuesta = $1`,
+        [req.params.id]
+      );
+
+      if (original.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Encuesta no encontrada' });
+      }
+
+      const o = original.rows[0];
+
+      // El título se recorta a 200 porque ' (copia)' puede empujarlo del límite y
+      // chk no lo revisa: es VARCHAR(200) y Postgres sí lo truncaría, pero
+      // truncado a ciegas es peor que decirlo.
+      const titulo = `${o.titulo} (copia)`.slice(0, 200);
+
+      const slug = await generarSlugLibre(pool);
+
+      const copia = await client.query(
+        `INSERT INTO encuestas (
+           slug, titulo, descripcion, mensaje_agradecimiento, estado,
+           fecha_inicio, fecha_fin, id_creador)
+         VALUES ($1, $2, $3, $4, 'borrador', NULL, NULL, $5)
+         RETURNING id_encuesta, slug, titulo, estado`,
+        [slug, titulo, o.descripcion, o.mensaje_agradecimiento, req.user.id]
+      );
+
+      const idNueva = copia.rows[0].id_encuesta;
+
+      // Se copian también las ocultas: la copia tiene que ser la misma encuesta,
+      // no una versión recortada. Si el admin no las quiere, las borra.
+      const preguntas = await client.query(
+        `SELECT id_pregunta, texto, ayuda, tipo, es_obligatoria, es_visible, orden,
+                escala_min, escala_max, escala_min_texto, escala_max_texto
+         FROM preguntas
+         WHERE id_encuesta = $1
+         ORDER BY orden ASC`,
+        [req.params.id]
+      );
+
+      for (const p of preguntas.rows) {
+        const nueva = await client.query(
+          `INSERT INTO preguntas (
+             id_encuesta, texto, ayuda, tipo, es_obligatoria, es_visible, orden,
+             escala_min, escala_max, escala_min_texto, escala_max_texto)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           RETURNING id_pregunta`,
+          [idNueva, p.texto, p.ayuda, p.tipo, p.es_obligatoria, p.es_visible,
+           p.orden, p.escala_min, p.escala_max, p.escala_min_texto, p.escala_max_texto]
+        );
+
+        if (!TIPOS_CON_OPCIONES.includes(p.tipo)) continue;
+
+        // El orden se reutiliza tal cual: es relativo a la encuesta y la copia
+        // tiene las mismas preguntas en la misma secuencia, así que el orden
+        // original sigue significando lo mismo.
+        const opciones = await client.query(
+          `SELECT texto, orden
+           FROM opciones_pregunta
+           WHERE id_pregunta = $1
+           ORDER BY orden ASC`,
+          [p.id_pregunta]
+        );
+
+        for (const [i, op] of opciones.rows.entries()) {
+          await client.query(
+            'INSERT INTO opciones_pregunta (id_pregunta, texto, orden) VALUES ($1, $2, $3)',
+            [nueva.rows[0].id_pregunta, op.texto, i + 1]
+          );
+        }
+      }
+
+      await client.query('COMMIT');
+
+      res.status(201).json(copia.rows[0]);
+    } catch (err) {
+      await client.query('ROLLBACK');
+
+      if (err.code === '23503') {
+        return res.status(404).json({ error: 'Encuesta no encontrada' });
+      }
+
+      console.error('Error al duplicar encuesta:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
     } finally {
       client.release();
