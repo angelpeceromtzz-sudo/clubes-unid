@@ -127,17 +127,20 @@ INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_r
 ON CONFLICT (correo_institucional) DO NOTHING;
 
 -- Formularios de prueba para Voleibol (todos "En revisión")
-INSERT INTO formularios (id_alumno, id_club, nombre_completo, matricula, carrera, cuatrimestre, telefono_contacto, motivo_ingreso, experiencia_previa, status)
-SELECT u.id_usuario, 1, u.nombre_completo, m.matricula, m.carrera, m.cuatrimestre, m.telefono, m.motivo, m.experiencia, 'En revisión'
+INSERT INTO formularios (id_alumno, id_club, nombre_completo, matricula, id_licenciatura, cuatrimestre, telefono_contacto, motivo_ingreso, experiencia_previa, status)
+SELECT u.id_usuario, 1, u.nombre_completo, m.matricula, l.id_licenciatura, m.cuatrimestre, m.telefono, m.motivo, m.experiencia, 'En revisi�n'
 FROM (
   VALUES
-    ('alumno.voleibol1@unid.mx', 'UNID-2026-001', 'Lic. en Administración de Empresas', 3, '555-100-0001', 'Quiero desarrollar habilidades de trabajo en equipo y representar a la universidad en torneos.', 'Jugué voleibol en preparatoria durante 2 años'),
-    ('alumno.voleibol2@unid.mx', 'UNID-2026-002', 'Ing. en Sistemas Computacionales',   2, '555-100-0002', 'Me apasiona el voleibol y quiero mantenerme activo mientras estudio.', 'Entrené por mi cuenta, nunca en equipo formal'),
-    ('alumno.voleibol3@unid.mx', 'UNID-2026-003', 'Lic. en Contaduría Pública',          4, '555-100-0003', 'Busco formar parte de un equipo competitivo y hacer amigos con intereses similares.', 'Formé parte del equipo de mi secundaria'),
-    ('alumno.voleibol4@unid.mx', 'UNID-2026-004', 'Ing. en Mecatrónica',                  5, '555-100-0004', 'Quiero salir de la rutina académica y contribuir al equipo de voleibol de la UNID.', 'Ninguna experiencia previa, pero muchas ganas'),
-    ('alumno.voleibol5@unid.mx', 'UNID-2026-005', 'Lic. en Diseño Gráfico',               3, '555-100-0005', 'Me gustaría representar a la universidad en competencias y crecer como jugadora.', 'Jugué en el equipo estatal juvenil durante 3 años')
+    ('alumno.voleibol1@unid.mx', 'UNID-2026-001', 'Licenciatura en Administración Empresarial', 3, '555-100-0001', 'Quiero desarrollar habilidades de trabajo en equipo y representar a la universidad en torneos.', 'Jugu� voleibol en preparatoria durante 2 a�os'),
+    ('alumno.voleibol2@unid.mx', 'UNID-2026-002', 'Licenciatura en Ingeniería de Software y Sistemas Computacionales', 2, '555-100-0002', 'Me apasiona el voleibol y quiero mantenerme activo mientras estudio.', 'Entren� por mi cuenta, nunca en equipo formal'),
+    ('alumno.voleibol3@unid.mx', 'UNID-2026-003', 'Licenciatura en Contabilidad y Finanzas', 4, '555-100-0003', 'Busco formar parte de un equipo competitivo y hacer amigos con intereses similares.', 'Form� parte del equipo de mi secundaria'),
+    ('alumno.voleibol4@unid.mx', 'UNID-2026-004', 'Licenciatura en Arquitectura', 5, '555-100-0004', 'Quiero salir de la rutina acad�mica y contribuir al equipo de voleibol de la UNID.', 'Ninguna experiencia previa, pero muchas ganas'),
+    ('alumno.voleibol5@unid.mx', 'UNID-2026-005', 'Licenciatura en Diseño Gráfico Digital', 3, '555-100-0005', 'Me gustar�a representar a la universidad en competencias y crecer como jugadora.', 'Jugu� en el equipo estatal juvenil durante 3 a�os')
 ) AS m(correo, matricula, carrera, cuatrimestre, telefono, motivo, experiencia)
 JOIN usuarios u ON u.correo_institucional = m.correo
+-- La licenciatura se resuelve por nombre contra el catálogo, no por id fijo: si
+-- alguien agrega o reordena programas, el seed sigue siendo válido.
+JOIN cat_licenciaturas l ON l.nombre = m.carrera
 WHERE NOT EXISTS (
   SELECT 1 FROM formularios f WHERE f.id_alumno = u.id_usuario AND f.id_club = 1
 );
@@ -146,3 +149,85 @@ WHERE NOT EXISTS (
 UPDATE clubes SET postulaciones_actuales = (
   SELECT COUNT(*) FROM formularios WHERE id_club = 1 AND status NOT IN ('Rechazado', 'Miembro oficial')
 ) WHERE id_club = 1;
+
+-- ============================================================
+-- ENCUESTAS (PBI-10)
+-- ============================================================
+-- Una encuesta publicada con los 5 tipos de la entrega 1, para probar el
+-- formulario p�blico sin tener que armar uno a mano. El slug es FIJO a
+-- proposito: los datos de prueba necesitan un enlace estable y legible
+-- ('demo-intereses-clubes'), y chk_encuesta_slug lo acepta (>= 16 chars).
+--
+-- Las respuestas NO se siembran a proposito: son anonimas, asi que un set de
+-- respuestas de ejemplo no tendria a quien pertenecer y las graficas del panel
+-- se verian igual de reales que las de verdad. Para ver resultados, responde
+-- la encuesta desde el navegador unas cuantas veces.
+
+INSERT INTO encuestas (slug, titulo, descripcion, mensaje_agradecimiento, estado, id_creador)
+SELECT 'demo-intereses-clubes',
+       'Intereses para clubes',
+       'Ayudanos a saber que buscas en un club. Son 2 minutos y tus respuestas son anonimas: no se guardan tu nombre ni tu matricula. Solo tu licenciatura, para poder comparar resultados entre programas.',
+       'Gracias por-tu tiempo.',
+       'publicada',
+       u.id_usuario
+FROM usuarios u
+WHERE u.correo_institucional = 'admin@unid.mx'
+  AND NOT EXISTS (SELECT 1 FROM encuestas e WHERE e.slug = 'demo-intereses-clubes');
+
+-- Se identifican por el titulo y no por id, porque el id depende del orden en
+-- que se creo la base. El slug identifiesa la encuesta, y las preguntas se
+--alen con el.
+WITH e AS (
+  SELECT id_encuesta FROM encuestas WHERE slug = 'demo-intereses-clubes'
+)
+INSERT INTO preguntas (id_encuesta, texto, ayuda, tipo, es_obligatoria, es_visible, orden)
+SELECT e.id_encuesta, v.texto, v.ayuda, v.tipo, v.obl, v.visible, v.orden
+-- Las 5 preguntas. Los campos de escala (min, max y sus dos etiquetas) van en
+-- el mismo INSERT y no en un UPDATE posterior: chk_pregunta_escala exige que
+-- una fila tipo 'escala' ya tenga min y max, asi que insertarla sin ellos
+-- aborta el seed entero.
+WITH e AS (
+  SELECT id_encuesta FROM encuestas WHERE slug = 'demo-intereses-clubes'
+)
+INSERT INTO preguntas (id_encuesta, texto, ayuda, tipo, es_obligatoria, es_visible, orden,
+                       escala_min, escala_max, escala_min_texto, escala_max_texto)
+SELECT e.id_encuesta, v.texto, v.ayuda, v.tipo, v.obl, v.visible, v.orden,
+       v.emin, v.emax, v.emin_txt, v.emax_txt
+FROM e
+CROSS JOIN (VALUES
+  ('Que areas te interesan mas',      'Marca todas las que apliquen.',           'opcion_multiple', TRUE,  TRUE,  1, NULL::int, NULL::int, NULL, NULL),
+  ('Como prefieres participar',       NULL,                                       'opcion_unica',   TRUE,  TRUE,  2, NULL::int, NULL::int, NULL, NULL),
+  ('Cuantas veces por semana',        'Una sesion de club se considera ~2 horas.', 'escala',        TRUE,  TRUE,  3, 0,          5,          'Nunca', 'Todos los dias'),
+  ('Por que quieres entrar',         'Unas lineas bastan.',                      'texto_largo',    FALSE, TRUE,  4, NULL::int, NULL::int, NULL, NULL),
+  ('Como te llamas',                  NULL,                                       'texto_corto',    FALSE, FALSE, 5, NULL::int, NULL::int, NULL, NULL)
+) AS v(texto, ayuda, tipo, obl, visible, orden, emin, emax, emin_txt, emax_txt)
+WHERE NOT EXISTS (
+  SELECT 1 FROM preguntas p WHERE p.id_encuesta = e.id_encuesta AND p.texto = v.texto
+);
+
+-- Opciones de las dos preguntas de opcion. Se localizan por el `orden` de la
+-- pregunta, no por id, porque el id depende del orden en que se creo la base.
+WITH o AS (
+  SELECT p.id_pregunta, p.orden
+  FROM preguntas p
+  JOIN encuestas e ON e.id_encuesta = p.id_encuesta
+  WHERE e.slug = 'demo-intereses-clubes'
+    AND p.tipo IN ('opcion_unica', 'opcion_multiple')
+)
+INSERT INTO opciones_pregunta (id_pregunta, texto, orden)
+SELECT o.id_pregunta, v.texto, v.pos
+FROM o
+CROSS JOIN (VALUES
+  (1, 1, 'Deportes'),
+  (1, 2, 'Tecnologia'),
+  (1, 3, 'Arte y diseno'),
+  (1, 4, 'Servicio social'),
+  (1, 5, 'Emprendimiento'),
+  (2, 1, 'Presencial en campus'),
+  (2, 2, 'Virtual o hibrido'),
+  (2, 3, 'No me importa')
+) AS v(orden_pregunta, pos, texto)
+WHERE o.orden = v.orden_pregunta
+  AND NOT EXISTS (
+    SELECT 1 FROM opciones_pregunta x WHERE x.id_pregunta = o.id_pregunta AND x.orden = v.pos
+  );

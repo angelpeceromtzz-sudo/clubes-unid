@@ -33,6 +33,14 @@ DROP TABLE IF EXISTS preguntas;
 DROP TABLE IF EXISTS encuestas;
 
 -- ============================================================
+-- CATÁLOGO DE LICENCIATURAS — OJO, NO SE BORRA AQUÍ
+-- ============================================================
+-- cat_licenciaturas NO es parte del módulo de encuestas: la comparte el
+-- formulario de inscripción a club (formularios.id_licenciatura), así que se
+-- deja intacta a propósito. Para revertir eso ver
+-- migrations/migrate-licenciaturas-down.sql.
+
+-- ============================================================
 -- NOTA SOBRE fn_actualizar_fecha()
 -- ============================================================
 -- El esquema renombró fn_actualizar_fecha_diapositiva() a fn_actualizar_fecha()

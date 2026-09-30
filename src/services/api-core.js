@@ -55,7 +55,12 @@ export async function request(endpoint, options = {}) {
   }
 
   if (!res.ok) {
-    throw new Error(data.error || `Error ${res.status} en la solicitud`);
+    const error = new Error(data.error || `Error ${res.status} en la solicitud`);
+    // Se adjunta el status para poder distinguir casos sin parsear el mensaje.
+    // El mensaje de la encuesta usa 410 (cerrada) contra 404 (no existe) y 403
+    // (aún no disponible), y los tres muestran pantallas distintas.
+    error.status = res.status;
+    throw error;
   }
 
   return data;

@@ -14,6 +14,7 @@ import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { DetalleClub } from './components/clubes/DetalleClub';
+import PaginaEncuesta from './pages/PaginaEncuesta';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
 import { SplashScreen } from './components/ui/SplashScreen';
@@ -53,6 +54,17 @@ function App() {
   }
 
   const mostrarFiltros = location.pathname === '/';
+
+  // La encuesta pública se monta FUERA del layout de abajo, a propósito: es la
+  // única ruta sin sesión, y un alumno que abre el enlace no tiene por qué ver
+  // la navbar con menús de administración ni el botón de iniciar sesión. Por eso
+  // va con un return temprano y no como un <Route> más.
+  //
+  // El key en el pathname hace que cambiar de enlace remonte el componente y
+  // que las respuestas de la encuesta anterior no queden pegadas.
+  if (location.pathname.startsWith('/encuesta/')) {
+    return <PaginaEncuesta key={location.pathname} />;
+  }
 
   function irADashboard() {
     if (esAdmin) {
