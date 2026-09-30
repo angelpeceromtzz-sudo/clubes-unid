@@ -145,6 +145,44 @@ Ruta: `/`
 - **Ubicación:** Lugar donde se reúne el club con mapa interactivo (Leaflet).
 - **Formulario de inscripción:** Visible si el alumno no está autenticado (se le pide iniciar sesión). Si está autenticado y no tiene club, puede postularse.
 
+### Encuesta por enlace (visitante)
+
+Ruta: `/encuesta/<slug>` — es la única ruta que vive **fuera del layout**.
+
+El catálogo (`/` y `/club/:id`) también se consulta sin sesión, pero se muestra
+dentro de la aplicación, con la navbar y el botón de iniciar sesión. La encuesta
+no: entra quien tiene el enlace y nada más.
+
+No hay navegación interna hacia una encuesta: se accede copiando el enlace, que
+se guarda como `slug` aleatorio de 22 caracteres en la URL, nunca como un JWT.
+Quien tenga el enlace puede responder.
+
+> La interfaz que genera y reparte esos enlaces **todavía no está construida**
+> (ver `TODO.md`, sección 2). Hoy el enlace se consigue creándose la encuesta por
+> API o con el `seed.sql`.
+
+- Se monta **fuera del layout autenticado**, así que no muestra la barra de
+  navegación ni el botón de iniciar sesión. Quien nunca ha entrado a la
+  plataforma no ve menús que no puede usar.
+- **La encuesta es anónima:** no se guarda el nombre ni la matrícula. Lo único que
+  se conserva del alumno es la licenciatura, y es opcional ("Prefiero no decir"),
+  para poder comparar resultados entre programas.
+- Tipos de pregunta: opción única, opción múltiple, texto corto, texto largo y
+  escala. Las preguntas ocultas por el administrador no llegan al navegador.
+- Límite de **5 envíos por hora y por IP** (se aplica en producción).
+- Al terminar muestra la pantalla de agradecimiento. No se puede volver a
+  enviar desde la misma pantalla, porque no hay forma de saber si alguien ya
+  respondió: ese es el precio de no guardar la identidad.
+
+Estados posibles del enlace, con pantallas distintas:
+
+| Situación | Código | Pantalla |
+| --- | --- | --- |
+| El enlace no existe o la encuesta sigue en borrador | 404 | "Encuesta no encontrada" |
+| Todavía no empieza su periodo de respuestas | 403 | "Todavía no está disponible", con botón de reintentar |
+| Ya cerró | 410 | "Esta encuesta ya se cerró", sin reintentar |
+| Se alcanzó el límite de envíos | 429 | "Alcanzaste el límite de envíos por hora" |
+
 ---
 
 ## 7. Panel del Alumno
@@ -294,8 +332,10 @@ clubes-unid/
 │   │   ├── audit.js              # Logging de acciones admin
 │   │   ├── clubActivity.js       # Logging de eventos del sistema
 │   │   ├── estadoClub.js         # Máquina de estados de convocatoria
+│   │   ├── slug.js               # Slug aleatorio para enlaces de encuesta
 │   │   └── asistenciaTemplate.js # Template HTML de asistencia
-│   ├── routes/                   # 17 archivos de rutas
+│   ├── routes/                   # 18 archivos de rutas
+│   ├── migrations/               # Bajas manuales (2 scripts, no los corre migrate.js)
 │   └── migrations_legacy/        # Migraciones históricas (22 scripts)
 ├── src/
 │   ├── main.jsx                  # Entry point (MSAL + Router + Contexts)
@@ -310,20 +350,22 @@ clubes-unid/
 │   │   ├── AuthContext.jsx        # Estado de autenticación
 │   │   ├── NotificationContext.jsx # Sistema de notificaciones
 │   │   └── ThemeContext.jsx       # Tema claro/oscuro
-│   ├── hooks/                    # 14 custom hooks
+│   ├── hooks/                    # 17 custom hooks
 │   ├── services/
-│   │   ├── api.js                # Capa de servicio API (~80 métodos)
+│   │   ├── api.js                # Capa de servicio API (~92 métodos)
+│   │   ├── encuesta.service.js   # Encuestas y catálogos
 │   │   └── authConfig.js         # Configuración MSAL (Azure AD)
 │   ├── utils/
 │   │   ├── formato.js            # Formateo de strings
 │   │   ├── fechas.js             # Utilidades de fecha
 │   │   └── imagen.js             # Resolución de URLs de imágenes
-│   ├── pages/                    # 5 páginas principales
+│   ├── pages/                    # 6 páginas principales
 │   └── components/
 │       ├── admin/                # ~15 componentes del panel admin
 │       ├── alumno/               # Componentes del panel del alumno
 │       ├── clubes/               # Catálogo y detalle de clubes
 │       │   └── sections/         # Subcomponentes (horarios, etc.)
+│       ├── encuestas/            # Render de cada tipo de pregunta
 │       ├── formularios/          # Formularios de inscripción
 │       ├── layout/               # 9 componentes de layout
 │       ├── modals/               # Modales (login, éxito)
@@ -463,6 +505,38 @@ clubes-unid/
 | GET | `/api/historial` | Historial de acciones admin |
 | POST | `/api/upload/imagen` | Subir imagen a Cloudinary |
 | GET | `/api/health` | Health check |
+
+### Encuestas
+
+Las públicas **no piden token**: es el único caso en el sistema.
+
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| GET | `/api/encuestas/publico/:slug` | público | Definición de la encuesta; solo si está publicada y dentro de su vigencia. Filtra `es_visible` en SQL |
+| POST | `/api/encuestas/publico/:slug` | público | Envío de respuestas. 5 por hora y por IP |
+| GET | `/api/encuestas/admin` | admin, rectoría | Lista con conteo de respuestas |
+| POST | `/api/encuestas/admin` | admin | Crea una encuesta en `borrador` y devuelve el `slug` |
+| GET | `/api/encuestas/admin/:id` | admin, rectoría | Encuesta completa, incluidas las preguntas ocultas |
+| PUT | `/api/encuestas/admin/:id` | admin | Edita metadatos, estado y vigencia |
+| DELETE | `/api/encuestas/admin/:id` | admin | Borra. Devuelve **409** si ya tiene respuestas |
+| POST | `/api/encuestas/admin/:id/preguntas` | admin | Añade una pregunta con sus opciones |
+| PUT | `/api/encuestas/admin/preguntas/:idPregunta` | admin | Edita una pregunta |
+| DELETE | `/api/encuestas/admin/preguntas/:idPregunta` | admin | Borra. Devuelve **409** si ya tiene respuestas |
+| PUT | `/api/encuestas/admin/preguntas/:idPregunta/opciones` | admin | Reemplaza la lista de opciones |
+
+| Método | Endpoint | Rol | Descripción |
+|--------|----------|-----|-------------|
+| GET | `/api/catalogos/licenciaturas` | público | Los 10 programas del catálogo, cacheados 10 min |
+
+Dos notas sobre las rutas de escritura:
+
+- **El 409 no es un error:** borrar algo que ya tiene respuestas violaría el
+  `RESTRICT` de `fk_detalle_pregunta` y `fk_respuesta_encuesta`. El mensaje dice
+  que se cierre u oculte en su lugar, que es lo que normalmente se quiere hacer:
+  *desactivar* es la operación reversible, borrar es la destructiva.
+- El tipo de una pregunta **no se cambia** desde el editor. Pasar de `texto_corto`
+  a `opcion_unica` dejaría la pregunta sin opciones; hay que borrarla y crearla
+  de nuevo.
 
 ---
 

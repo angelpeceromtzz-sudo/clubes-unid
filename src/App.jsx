@@ -56,9 +56,11 @@ function App() {
   const mostrarFiltros = location.pathname === '/';
 
   // La encuesta pública se monta FUERA del layout de abajo, a propósito: es la
-  // única ruta sin sesión, y un alumno que abre el enlace no tiene por qué ver
-  // la navbar con menús de administración ni el botón de iniciar sesión. Por eso
-  // va con un return temprano y no como un <Route> más.
+  // única ruta que no vive dentro de la aplicación. El catálogo ("/" y
+  // "/club/:id") también se puede ver sin sesión, pero se muestra con la navbar y
+  // el botón de iniciar sesión; quien abre un enlace de encuesta no tiene por qué
+  // ver menús que no puede usar. Por eso va con un return temprano y no como un
+  // <Route> más.
   //
   // El key en el pathname hace que cambiar de enlace remonte el componente y
   // que las respuestas de la encuesta anterior no queden pegadas.
