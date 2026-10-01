@@ -57,7 +57,8 @@ ON CONFLICT (correo_institucional) DO NOTHING;
 -- 3. CLUBES DE PRUEBA (10 clubes)
 -- ============================================================
 
-INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, id_estatus_club, participacion) VALUES
+INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, id_estatus_club, participacion)
+SELECT * FROM (VALUES
   ('Equipo de Voleibol',                     'Entrenamientos tácticos, fundamentos de voleo, remate y preparación para torneos interuniversitarios.',                         'Deportes',   40, 'https://images.unsplash.com/photo-1553005746-9245ba190489?q=80&w=1170&auto=format&fit=crop', 1, 'mixta'),
   ('Taller de Dibujo y Pintura Analítica',   'Desarrollo de técnicas artísticas básicas y avanzadas: uso de carboncillo, óleo, acuarela y composición visual.',             'Cultura',    20, 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=600&auto=format&fit=crop', 1, 'mixta'),
   ('Brigada de Apoyo Comunitario',           'Voluntariado social dedicado al desarrollo de proyectos de impacto, colectas y servicio a sectores vulnerables.',               'Cultura',    40, 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?q=80&w=1170&auto=format&fit=crop', 1, 'mixta'),
@@ -68,7 +69,11 @@ INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, imagen_por
   ('Club de Boxeo',                          'Sesiones de entrenamiento de boxeo, técnicas de defensa personal, acondicionamiento físico y preparación para competencias.',   'Deportes',   20, 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=600&auto=format&fit=crop', 1, 'masculina'),
   ('Club de Literatura y Escritura Creativa','Espacio para amantes de la literatura, donde se realizan lecturas, análisis de obras y talleres de escritura creativa.',       'Cultura',    20, 'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=600&auto=format&fit=crop', 3, 'mixta'),
   ('Equipo de Porristas',                    'Entrenamientos de coreografías, acrobacias y técnicas de animación para eventos deportivos y competencias de porristas.',       'Deportes',   50, 'https://images.unsplash.com/photo-1589748239338-afe695e833d7?q=80&w=1026&auto=format&fit=crop', 1, 'femenina')
-ON CONFLICT DO NOTHING;
+) AS v(nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, id_estatus_club, participacion)
+-- equipos.nombre_club no tiene UNIQUE, así que un "ON CONFLICT DO NOTHING" sin
+-- destino no frenaría nada y cada corrida duplicaría los 10 clubes. Por eso el
+-- filtro es explícito sobre el nombre.
+WHERE NOT EXISTS (SELECT 1 FROM clubes c WHERE c.nombre_club = v.nombre_club);
 
 -- Niveles aceptados por club
 INSERT INTO clubes_niveles (id_club, id_nivel) VALUES
@@ -102,7 +107,8 @@ ON CONFLICT DO NOTHING;
 -- 5. AVISOS DE PRUEBA
 -- ============================================================
 
-INSERT INTO avisos_clubes (id_club, id_autor, titulo, contenido) VALUES
+INSERT INTO avisos_clubes (id_club, id_autor, titulo, contenido)
+SELECT * FROM (VALUES
   (4,
    (SELECT id_usuario FROM usuarios WHERE correo_institucional = 'presidente@unid.mx'),
    'Horario especial esta semana',
@@ -111,7 +117,14 @@ INSERT INTO avisos_clubes (id_club, id_autor, titulo, contenido) VALUES
    (SELECT id_usuario FROM usuarios WHERE correo_institucional = 'presidente@unid.mx'),
    'Confirmación para torneo',
     'Necesito que todos confirmen su asistencia al torneo del próximo mes a más tardar el viernes. Pasen conmigo a firmar la hoja de inscripción.')
-ON CONFLICT DO NOTHING;
+) AS v(id_club, id_autor, titulo, contenido)
+-- Mismo caso que clubes: avisos_clubes.titulo no es UNIQUE, así que el
+-- ON CONFLICT no frenaba nada. La clave natural del aviso de prueba es
+-- (id_club, titulo): dos avisos reales sí pueden compartir título.
+WHERE NOT EXISTS (
+    SELECT 1 FROM avisos_clubes a
+    WHERE a.id_club = v.id_club AND a.titulo = v.titulo
+);
 
 -- ============================================================
 -- 6. FORMULARIOS DE PRUEBA PARA VOLEIBOL
@@ -128,14 +141,14 @@ ON CONFLICT (correo_institucional) DO NOTHING;
 
 -- Formularios de prueba para Voleibol (todos "En revisión")
 INSERT INTO formularios (id_alumno, id_club, nombre_completo, matricula, id_licenciatura, cuatrimestre, telefono_contacto, motivo_ingreso, experiencia_previa, status)
-SELECT u.id_usuario, 1, u.nombre_completo, m.matricula, l.id_licenciatura, m.cuatrimestre, m.telefono, m.motivo, m.experiencia, 'En revisi�n'
+SELECT u.id_usuario, 1, u.nombre_completo, m.matricula, l.id_licenciatura, m.cuatrimestre, m.telefono, m.motivo, m.experiencia, 'En revisión'
 FROM (
   VALUES
-    ('alumno.voleibol1@unid.mx', 'UNID-2026-001', 'Licenciatura en Administración Empresarial', 3, '555-100-0001', 'Quiero desarrollar habilidades de trabajo en equipo y representar a la universidad en torneos.', 'Jugu� voleibol en preparatoria durante 2 a�os'),
-    ('alumno.voleibol2@unid.mx', 'UNID-2026-002', 'Licenciatura en Ingeniería de Software y Sistemas Computacionales', 2, '555-100-0002', 'Me apasiona el voleibol y quiero mantenerme activo mientras estudio.', 'Entren� por mi cuenta, nunca en equipo formal'),
-    ('alumno.voleibol3@unid.mx', 'UNID-2026-003', 'Licenciatura en Contabilidad y Finanzas', 4, '555-100-0003', 'Busco formar parte de un equipo competitivo y hacer amigos con intereses similares.', 'Form� parte del equipo de mi secundaria'),
-    ('alumno.voleibol4@unid.mx', 'UNID-2026-004', 'Licenciatura en Arquitectura', 5, '555-100-0004', 'Quiero salir de la rutina acad�mica y contribuir al equipo de voleibol de la UNID.', 'Ninguna experiencia previa, pero muchas ganas'),
-    ('alumno.voleibol5@unid.mx', 'UNID-2026-005', 'Licenciatura en Diseño Gráfico Digital', 3, '555-100-0005', 'Me gustar�a representar a la universidad en competencias y crecer como jugadora.', 'Jugu� en el equipo estatal juvenil durante 3 a�os')
+    ('alumno.voleibol1@unid.mx', 'UNID-2026-001', 'Licenciatura en Administración Empresarial', 3, '555-100-0001', 'Quiero desarrollar habilidades de trabajo en equipo y representar a la universidad en torneos.', 'Jugué voleibol en preparatoria durante 2 años'),
+    ('alumno.voleibol2@unid.mx', 'UNID-2026-002', 'Licenciatura en Ingeniería de Software y Sistemas Computacionales', 2, '555-100-0002', 'Me apasiona el voleibol y quiero mantenerme activo mientras estudio.', 'Entrené por mi cuenta, nunca en equipo formal'),
+    ('alumno.voleibol3@unid.mx', 'UNID-2026-003', 'Licenciatura en Contabilidad y Finanzas', 4, '555-100-0003', 'Busco formar parte de un equipo competitivo y hacer amigos con intereses similares.', 'Formé parte del equipo de mi secundaria'),
+    ('alumno.voleibol4@unid.mx', 'UNID-2026-004', 'Licenciatura en Arquitectura', 5, '555-100-0004', 'Quiero salir de la rutina académica y contribuir al equipo de voleibol de la UNID.', 'Ninguna experiencia previa, pero muchas ganas'),
+    ('alumno.voleibol5@unid.mx', 'UNID-2026-005', 'Licenciatura en Diseño Gráfico Digital', 3, '555-100-0005', 'Me gustaría representar a la universidad en competencias y crecer como jugadora.', 'Jugué en el equipo estatal juvenil durante 3 años')
 ) AS m(correo, matricula, carrera, cuatrimestre, telefono, motivo, experiencia)
 JOIN usuarios u ON u.correo_institucional = m.correo
 -- La licenciatura se resuelve por nombre contra el catálogo, no por id fijo: si
@@ -154,7 +167,7 @@ UPDATE clubes SET postulaciones_actuales = (
 -- ENCUESTAS (PBI-10)
 -- ============================================================
 -- Una encuesta publicada con los 5 tipos de la entrega 1, para probar el
--- formulario p�blico sin tener que armar uno a mano. El slug es FIJO a
+-- formulario público sin tener que armar uno a mano. El slug es FIJO a
 -- proposito: los datos de prueba necesitan un enlace estable y legible
 -- ('demo-intereses-clubes'), y chk_encuesta_slug lo acepta (>= 16 chars).
 --
@@ -174,14 +187,8 @@ FROM usuarios u
 WHERE u.correo_institucional = 'admin@unid.mx'
   AND NOT EXISTS (SELECT 1 FROM encuestas e WHERE e.slug = 'demo-intereses-clubes');
 
--- Se identifican por el titulo y no por id, porque el id depende del orden en
--- que se creo la base. El slug identifiesa la encuesta, y las preguntas se
---alen con el.
-WITH e AS (
-  SELECT id_encuesta FROM encuestas WHERE slug = 'demo-intereses-clubes'
-)
-INSERT INTO preguntas (id_encuesta, texto, ayuda, tipo, es_obligatoria, es_visible, orden)
-SELECT e.id_encuesta, v.texto, v.ayuda, v.tipo, v.obl, v.visible, v.orden
+-- La encuesta se localiza por el slug y no por id, porque el id depende del
+-- orden en que se creo la base. Las preguntas se llenan con el.
 -- Las 5 preguntas. Los campos de escala (min, max y sus dos etiquetas) van en
 -- el mismo INSERT y no en un UPDATE posterior: chk_pregunta_escala exige que
 -- una fila tipo 'escala' ya tenga min y max, asi que insertarla sin ellos

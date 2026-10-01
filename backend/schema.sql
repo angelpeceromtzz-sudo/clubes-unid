@@ -195,7 +195,6 @@ CREATE TABLE IF NOT EXISTS formularios (
     motivo_rechazo VARCHAR(100),
     CONSTRAINT fk_formulario_alumno FOREIGN KEY (id_alumno) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
     CONSTRAINT fk_formulario_club FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE CASCADE,
-    CONSTRAINT fk_formulario_convocatoria FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria) ON DELETE SET NULL,
     CONSTRAINT fk_formulario_licenciatura FOREIGN KEY (id_licenciatura) REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE RESTRICT,
     CONSTRAINT chk_bloque CHECK (bloque_asignado IN ('A', 'B', 'E')),
     CONSTRAINT chk_cuatrimestre CHECK (cuatrimestre > 0),
@@ -225,6 +224,13 @@ ALTER TABLE formularios DROP COLUMN IF EXISTS carrera;
 ALTER TABLE formularios ADD COLUMN IF NOT EXISTS id_licenciatura INT
     REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE RESTRICT;
 
+-- 'turno' desapareció del modelo (el bloque A/B/E lo sustituye) pero el CREATE
+-- TABLE de arriba ya no lo declara, así que en una base creada antes el
+-- NOT NULL se queda y el seed revienta al no mandar el valor. Se quita igual
+-- que 'carrera': es lo que deja el INSERT de formularios.sql con la forma del
+-- esquema actual.
+ALTER TABLE formularios DROP COLUMN IF EXISTS turno;
+
 CREATE TABLE IF NOT EXISTS convocatorias (
     id_convocatoria SERIAL PRIMARY KEY,
     id_club INTEGER NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
@@ -239,6 +245,24 @@ CREATE TABLE IF NOT EXISTS convocatorias (
 );
 
 CREATE INDEX IF NOT EXISTS idx_conv_club ON convocatorias(id_club);
+
+-- El FK vive acá y no en el CREATE TABLE de formularios porque el orden del
+-- archivo lo crea después: declarar la constraint inline exigiría que
+-- 'convocatorias' ya existiera. Suele venir bien porque la base original se
+-- armó con migrations_legacy/ en otro orden, pero schema.sql tiene que
+-- ejecutarse de una sentada y en una base vacía (migrate() corre en cada
+-- arranque, así que el bloque tiene que ser idempotente).
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_formulario_convocatoria'
+    ) THEN
+        ALTER TABLE formularios
+            ADD CONSTRAINT fk_formulario_convocatoria
+            FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria)
+            ON DELETE SET NULL;
+    END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS notificaciones (
     id_notificacion SERIAL PRIMARY KEY,
