@@ -8,7 +8,7 @@ import { Alerta } from '../../ui/Alerta';
 import { CampoTexto } from '../../ui/CampoTexto';
 import { CampoSelect } from '../../ui/CampoSelect';
 import { ModalBase } from '../../ui/ModalBase';
-import { CARRERAS } from '../../../constants/inscripcion';
+import { useLicenciaturas } from '../../../hooks/useLicenciaturas';
 import { validarFormularioInscripcion } from '../../../utils/inscripcion';
 import { PasoConfirmacionInscripcion } from './PasoConfirmacionInscripcion';
 
@@ -18,13 +18,24 @@ export function FormularioInscripcion({ club, onClose }) {
     id_club: club.id_club || club.id,
     nombre_completo: usuario?.nombre_completo || '',
     matricula: usuario?.institutional_id || '',
-    carrera: '',
+    id_licenciatura: '',
     cuatrimestre: '',
 
     telefono_contacto: '',
     motivo_ingreso: '',
     experiencia_previa: '',
   });
+  // La licenciatura se guarda como id del catálogo, no como texto: el backend lo
+  // valida contra cat_licenciaturas y todas las lecturas lo traen con
+  // LEFT JOIN ... AS carrera.
+  const { licenciaturas, loading: cargandoCatalogos, error: errorCatalogos, recargar } = useLicenciaturas();
+  const opcionesLicenciatura = licenciaturas.map((l) => ({
+    value: String(l.id_licenciatura),
+    label: l.nombre,
+  }));
+  const nombreLicenciatura = licenciaturas.find(
+    (l) => String(l.id_licenciatura) === String(formulario.id_licenciatura),
+  )?.nombre;
   const idClubActual = club.id_club || club.id;
   const yaPostulado = clubesPostulados.includes(idClubActual);
   const limiteAlcanzado = clubesPostulados.length >= 3;
@@ -65,6 +76,7 @@ export function FormularioInscripcion({ club, onClose }) {
     try {
       await api.createFormulario({
         ...formulario,
+        id_licenciatura: Number(formulario.id_licenciatura),
         cuatrimestre: parseInt(formulario.cuatrimestre, 10),
       });
       await refrescarInscripcionActiva();
@@ -102,6 +114,7 @@ export function FormularioInscripcion({ club, onClose }) {
         {confirmando ? (
           <PasoConfirmacionInscripcion
             formulario={formulario}
+            nombreLicenciatura={nombreLicenciatura}
             errorApi={errorApi}
             confirmado={confirmado}
             setConfirmado={setConfirmado}
@@ -137,9 +150,31 @@ export function FormularioInscripcion({ club, onClose }) {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <CampoSelect label="Carrera" name="carrera" value={formulario.carrera} onChange={manejarCambio} opciones={CARRERAS} placeholder="Selecciona tu carrera" required error={errores.carrera} />
+              <CampoSelect
+                label="Licenciatura"
+                name="id_licenciatura"
+                value={formulario.id_licenciatura}
+                onChange={manejarCambio}
+                opciones={opcionesLicenciatura}
+                placeholder={cargandoCatalogos ? 'Cargando...' : 'Selecciona tu licenciatura'}
+                disabled={cargandoCatalogos}
+                required
+                error={errores.id_licenciatura}
+              />
               <CampoSelect label="Cuatrimestre" name="cuatrimestre" value={formulario.cuatrimestre} onChange={manejarCambio} opciones={['1','2','3','4','5','6','7','8','9']} placeholder="Selecciona" required error={errores.cuatrimestre} />
             </div>
+
+            {errorCatalogos && (
+              <Alerta tipo="error" mensaje="No se pudieron cargar las licenciaturas. Revisa tu conexión e inténtalo otra vez.">
+                <button
+                  type="button"
+                  onClick={() => recargar()}
+                  className="mt-2 underline font-bold cursor-pointer"
+                >
+                  Reintentar
+                </button>
+              </Alerta>
+            )}
 
             <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} maxLength={10} />
 

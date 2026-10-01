@@ -1,17 +1,10 @@
-export const CARRERAS = [
-  'Ingeniería en Software y Sist.',
-  'Administración de Empresas',
-  'Derecho',
-  'Arquitectura',
-  'Diseño Gráfico',
-  'Educación Física',
-  'Otra',
-];
-
+// La carrera ya no es una lista hardcodeada: es una FK a `cat_licenciaturas`
+// y las opciones las trae `useLicenciaturas()` desde /catalogos/licenciaturas.
+// Aquí sólo queda el texto con el que se etiqueta cada campo.
 export const ETIQUETAS = {
   nombre_completo: 'Nombre Completo',
   matricula: 'Matrícula',
-  carrera: 'Carrera',
+  id_licenciatura: 'Licenciatura',
   cuatrimestre: 'Cuatrimestre',
   telefono_contacto: 'Teléfono de Contacto',
   motivo_ingreso: 'Motivo de Ingreso',

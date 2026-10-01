@@ -71,6 +71,37 @@ INSERT INTO cat_niveles (id_nivel, nombre_nivel) VALUES
     (3, 'avanzado')
 ON CONFLICT (id_nivel) DO UPDATE SET nombre_nivel = EXCLUDED.nombre_nivel;
 
+-- Catálogo de licenciaturas de la UNID.
+--
+-- Fuente única de verdad para dos módulos muy distintos:
+--   - formularios (inscripción a un club): el alumno elige de esta lista.
+--   - respuestas_encuesta: se guarda la licenciatura para poder segmentar
+--     los resultados por programa.
+--
+-- No lleva el número de matrícula de ningún alumno, sólo el nombre oficial
+-- del programa. Ambas tablas lo referencian por FK, no como texto: cuando
+-- 'carrera' era VARCHAR(100) los valores se fragmentaban ('Ing. en Sistemas',
+-- 'Lic. en Contaduría', 'Lic. en Diseño Gráfico') y cualquier GROUP BY o
+-- filtro por carrera daba resultados que no cuadraban con nada.
+CREATE TABLE IF NOT EXISTS cat_licenciaturas (
+    id_licenciatura SERIAL PRIMARY KEY,
+    nombre         VARCHAR(120) NOT NULL UNIQUE,
+    orden          INT NOT NULL DEFAULT 0
+);
+
+INSERT INTO cat_licenciaturas (nombre, orden) VALUES
+    ('Licenciatura en Administración Empresarial', 1),
+    ('Licenciatura en Administración de Empresas Turísticas', 2),
+    ('Licenciatura en Arquitectura', 3),
+    ('Licenciatura en Ciencias y Técnicas de la Comunicación', 4),
+    ('Licenciatura en Contabilidad y Finanzas', 5),
+    ('Licenciatura en Derecho y Ciencias Jurídicas', 6),
+    ('Licenciatura en Diseño Gráfico Digital', 7),
+    ('Licenciatura en Educación Física, Recreación y Deporte', 8),
+    ('Licenciatura en Ingeniería de Software y Sistemas Computacionales', 9),
+    ('Licenciatura en Mercadotecnia Estratégica', 10)
+ON CONFLICT (nombre) DO UPDATE SET orden = EXCLUDED.orden;
+
 -- ============================================================
 -- TABLAS PRINCIPALES
 -- ============================================================
@@ -150,7 +181,8 @@ CREATE TABLE IF NOT EXISTS formularios (
     bloque_asignado CHAR(1) NOT NULL DEFAULT 'E',
     nombre_completo VARCHAR(150) NOT NULL,
     matricula VARCHAR(30) NOT NULL,
-    carrera VARCHAR(100) NOT NULL,
+    -- Referencia al catálogo, no texto libre: ver cat_licenciaturas.
+    id_licenciatura INT NOT NULL,
     cuatrimestre INT NOT NULL,
 
     telefono_contacto VARCHAR(20) NOT NULL,
@@ -163,7 +195,7 @@ CREATE TABLE IF NOT EXISTS formularios (
     motivo_rechazo VARCHAR(100),
     CONSTRAINT fk_formulario_alumno FOREIGN KEY (id_alumno) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
     CONSTRAINT fk_formulario_club FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE CASCADE,
-    CONSTRAINT fk_formulario_convocatoria FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria) ON DELETE SET NULL,
+    CONSTRAINT fk_formulario_licenciatura FOREIGN KEY (id_licenciatura) REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE RESTRICT,
     CONSTRAINT chk_bloque CHECK (bloque_asignado IN ('A', 'B', 'E')),
     CONSTRAINT chk_cuatrimestre CHECK (cuatrimestre > 0),
     CONSTRAINT chk_status CHECK (status IN (
@@ -171,6 +203,33 @@ CREATE TABLE IF NOT EXISTS formularios (
         'Oferta enviada', 'Miembro oficial', 'Rechazado'
     ))
 );
+
+-- Migración de 'carrera VARCHAR(100)' a 'id_licenciatura INT REFERENCES'.
+--
+-- Es DESTRUCTIVA sobre los datos viejos y no se puede automatizar: las filas
+-- existentes guardan abreviaturas ('Lic. en Contaduría Pública', 'Ing. en
+-- Sistemas Computacionales') que no corresponden a ningún nombre del catálogo,
+-- y al menos una ('Ing. en Mecatrónica') no tiene programa en la lista de 10.
+-- Mapearlas exigiría adivinar, y adivinar mal asignarle la carrera equivocada a
+-- un alumno es peor que no tener el dato.
+--
+-- El NOT NULL va sólo en el CREATE TABLE de arriba. Si se declarara aquí, el
+-- ALTER fallaría en cuanto la tabla tuviera filas, y como migrate.js manda todo
+-- schema.sql en un solo pool.query(), ese fallo hace rollback del esquema
+-- ENTERO y sólo queda un console.error que no dice qué lo causó.
+--
+-- En una base con filas viejas la columna queda nullable y hay que limpiarla a
+-- mano una vez:  DELETE FROM formularios;  y volver a correr seed.sql.
+ALTER TABLE formularios DROP COLUMN IF EXISTS carrera;
+ALTER TABLE formularios ADD COLUMN IF NOT EXISTS id_licenciatura INT
+    REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE RESTRICT;
+
+-- 'turno' desapareció del modelo (el bloque A/B/E lo sustituye) pero el CREATE
+-- TABLE de arriba ya no lo declara, así que en una base creada antes el
+-- NOT NULL se queda y el seed revienta al no mandar el valor. Se quita igual
+-- que 'carrera': es lo que deja el INSERT de formularios.sql con la forma del
+-- esquema actual.
+ALTER TABLE formularios DROP COLUMN IF EXISTS turno;
 
 CREATE TABLE IF NOT EXISTS convocatorias (
     id_convocatoria SERIAL PRIMARY KEY,
@@ -186,6 +245,24 @@ CREATE TABLE IF NOT EXISTS convocatorias (
 );
 
 CREATE INDEX IF NOT EXISTS idx_conv_club ON convocatorias(id_club);
+
+-- El FK vive acá y no en el CREATE TABLE de formularios porque el orden del
+-- archivo lo crea después: declarar la constraint inline exigiría que
+-- 'convocatorias' ya existiera. Suele venir bien porque la base original se
+-- armó con migrations_legacy/ en otro orden, pero schema.sql tiene que
+-- ejecutarse de una sentada y en una base vacía (migrate() corre en cada
+-- arranque, así que el bloque tiene que ser idempotente).
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_formulario_convocatoria'
+    ) THEN
+        ALTER TABLE formularios
+            ADD CONSTRAINT fk_formulario_convocatoria
+            FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria)
+            ON DELETE SET NULL;
+    END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS notificaciones (
     id_notificacion SERIAL PRIMARY KEY,
@@ -375,8 +452,8 @@ CREATE TRIGGER trg_historial_postulacion
     FOR EACH ROW
     EXECUTE FUNCTION fn_historial_postulacion();
 
--- Trigger: auto-actualizar fecha_actualizacion en diapositivas
-CREATE OR REPLACE FUNCTION fn_actualizar_fecha_diapositiva()
+-- Trigger: auto-actualizar fecha_actualizacion (genérica, reusada por encuestas)
+CREATE OR REPLACE FUNCTION fn_actualizar_fecha()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.fecha_actualizacion = NOW();
@@ -388,7 +465,9 @@ DROP TRIGGER IF EXISTS trg_actualizar_fecha_diapositiva ON diapositivas_hero;
 CREATE TRIGGER trg_actualizar_fecha_diapositiva
     BEFORE UPDATE ON diapositivas_hero
     FOR EACH ROW
-    EXECUTE FUNCTION fn_actualizar_fecha_diapositiva();
+    EXECUTE FUNCTION fn_actualizar_fecha();
+
+DROP FUNCTION IF EXISTS fn_actualizar_fecha_diapositiva();
 
 -- Trigger: impedir desactivar la última diapositiva activa
 CREATE OR REPLACE FUNCTION fn_proteger_ultima_diapositiva_activa()
@@ -419,3 +498,194 @@ CREATE TRIGGER trg_proteger_ultima_diapositiva
     BEFORE UPDATE OR DELETE ON diapositivas_hero
     FOR EACH ROW
     EXECUTE FUNCTION fn_proteger_ultima_diapositiva_activa();
+
+-- ============================================================
+-- MÓDULO DE ENCUESTAS (PBI-10)
+-- ============================================================
+-- Encuestas independientes para diagnosticar intereses de alumnos.
+-- Acceso público solo por enlace directo /encuesta/:slug (sin login).
+-- La URL usa 'slug' (aleatorio, no adivinable), nunca 'id_encuesta'.
+-- Las respuestas NO guardan nombre ni matrícula: la tabla no tiene columnas
+-- para eso. Ver el comentario de respuestas_encuesta.
+-- Reversión manual en migrations/migrate-encuestas-down.sql
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS encuestas (
+    id_encuesta            SERIAL PRIMARY KEY,
+    slug                   VARCHAR(64) NOT NULL UNIQUE,
+    titulo                 VARCHAR(200) NOT NULL,
+    descripcion            TEXT,
+    mensaje_agradecimiento VARCHAR(300),
+    estado                 VARCHAR(12) NOT NULL DEFAULT 'borrador',
+    fecha_inicio           TIMESTAMPTZ,
+    fecha_fin              TIMESTAMPTZ,
+    id_creador             INT NOT NULL,
+    fecha_creacion         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Longitud mínima de 16: impide slugs adivinables tipo 'encuesta-1'
+    CONSTRAINT chk_encuesta_slug      CHECK (slug ~ '^[a-z0-9-]{16,64}$'),
+    CONSTRAINT chk_encuesta_estado    CHECK (estado IN ('borrador', 'publicada', 'cerrada')),
+    -- Vigencia opcional; si se define ambos extremos, el fin va después del inicio
+    CONSTRAINT chk_encuesta_vigencia  CHECK (fecha_fin IS NULL OR fecha_inicio IS NULL OR fecha_fin > fecha_inicio),
+    CONSTRAINT fk_encuesta_creador    FOREIGN KEY (id_creador) REFERENCES usuarios(id_usuario) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS preguntas (
+    id_pregunta    SERIAL PRIMARY KEY,
+    id_encuesta    INT NOT NULL,
+    texto          VARCHAR(500) NOT NULL,
+    ayuda          TEXT,
+tipo           VARCHAR(20) NOT NULL,
+    es_obligatoria BOOLEAN NOT NULL DEFAULT FALSE,
+    -- No hay forma de esconder una pregunta sin borrarla: si está en la
+    -- encuesta, el alumno la ve. Para quitarle al alumno se borra la pregunta.
+    orden          INT NOT NULL,
+    -- Sólo la escala numérica usa min/max; el resto debe dejarlos en NULL
+    escala_min     INT,
+    escala_max     INT,
+    -- Etiquetas de los extremos de la escala ('1 = Nada', '5 = Todos los días').
+    -- Opcionales: una escala puede no tenerlas. Sólo la escala las usa.
+    escala_min_texto VARCHAR(80),
+    escala_max_texto VARCHAR(80),
+    CONSTRAINT chk_pregunta_tipo   CHECK (tipo IN ('opcion_unica', 'opcion_multiple', 'texto_corto', 'texto_largo', 'escala')),
+    CONSTRAINT chk_pregunta_orden  CHECK (orden >= 1),
+    CONSTRAINT chk_pregunta_escala CHECK (
+        (tipo =  'escala' AND escala_min IS NOT NULL AND escala_max IS NOT NULL
+                 AND escala_min >= 0 AND escala_max <= 10 AND escala_max > escala_min)
+        OR
+        (tipo <> 'escala' AND escala_min IS NULL AND escala_max IS NULL
+                      AND escala_min_texto IS NULL AND escala_max_texto IS NULL)
+    ),
+    -- Deferrable para permitir reordenar preguntas dentro de una transacción
+    CONSTRAINT uq_pregunta_orden     UNIQUE (id_encuesta, orden) DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT fk_pregunta_encuesta  FOREIGN KEY (id_encuesta) REFERENCES encuestas(id_encuesta) ON DELETE CASCADE
+);
+
+-- Columnas agregadas después del commit inicial del módulo.
+ALTER TABLE preguntas ADD COLUMN IF NOT EXISTS escala_min_texto VARCHAR(80);
+ALTER TABLE preguntas ADD COLUMN IF NOT EXISTS escala_max_texto VARCHAR(80);
+
+-- es_visible se quitó del módulo: no hay forma de esconder una pregunta sin
+-- borrarla. DROP y no sólo sacarlo del CREATE TABLE, porque migrate() corre este
+-- archivo entero en cada arranque y el CREATE TABLE es un no-op en bases que ya
+-- existen: sin esta línea la columna se quedaría ahí para siempre.
+ALTER TABLE preguntas DROP COLUMN IF EXISTS es_visible;
+
+ALTER TABLE preguntas DROP CONSTRAINT IF EXISTS chk_pregunta_escala;
+ALTER TABLE preguntas ADD CONSTRAINT chk_pregunta_escala CHECK (
+    (tipo =  'escala' AND escala_min IS NOT NULL AND escala_max IS NOT NULL
+             AND escala_min >= 0 AND escala_max <= 10 AND escala_max > escala_min)
+    OR
+    (tipo <> 'escala' AND escala_min IS NULL AND escala_max IS NULL
+                  AND escala_min_texto IS NULL AND escala_max_texto IS NULL)
+);
+
+CREATE TABLE IF NOT EXISTS opciones_pregunta (
+    id_opcion   SERIAL PRIMARY KEY,
+    id_pregunta INT NOT NULL,
+    texto       VARCHAR(300) NOT NULL,
+    orden       INT NOT NULL,
+    -- Vínculo opcional con un club, para recomendar clubes tras la encuesta.
+    -- Si el club se elimina, el vínculo queda en NULL sin perder la respuesta.
+    id_club     INT,
+    CONSTRAINT chk_opcion_orden      CHECK (orden >= 1),
+    CONSTRAINT uq_opcion_orden       UNIQUE (id_pregunta, orden) DEFERRABLE INITIALLY DEFERRED,
+    -- Destino de la FK compuesta de detalle_respuestas: garantiza que la
+    -- opción registrada pertenezca a la pregunta registrada.
+    CONSTRAINT uq_opcion_pregunta    UNIQUE (id_opcion, id_pregunta),
+    CONSTRAINT fk_opcion_pregunta    FOREIGN KEY (id_pregunta) REFERENCES preguntas(id_pregunta) ON DELETE CASCADE,
+    CONSTRAINT fk_opcion_club        FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS respuestas_encuesta (
+    id_respuesta SERIAL PRIMARY KEY,
+    id_encuesta  INT NOT NULL,
+    -- Encuesta anónima POR DISEÑO, no por convención: no existe columna para
+    -- nombre ni para matrícula, así que la identidad no se puede guardar ni
+    -- por accidente desde la API. La versión anterior de esta tabla traía
+    -- nombre/matricula/carrera opcionales; se quitaron porque una encuesta de
+    -- intereses no necesita saber quién respondió, sólo qué le gusta, y pedir
+    -- identidad bajaba la tasa de respuesta.
+    --
+    -- Lo único que se conserva del alumno es la licenciatura, para segmentar
+    -- resultados. Va como FK y no como texto: así no se puede escribir nada que
+    -- no sea un programa real del catálogo (ver cat_licenciaturas).
+    id_licenciatura INT,
+    fecha_envio  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- RESTRICT: no se puede borrar una encuesta que ya tenga respuestas
+    CONSTRAINT fk_respuesta_encuesta     FOREIGN KEY (id_encuesta) REFERENCES encuestas(id_encuesta) ON DELETE RESTRICT,
+    CONSTRAINT fk_respuesta_licenciatura FOREIGN KEY (id_licenciatura) REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE RESTRICT
+);
+
+-- Misma razón que en formularios: estas columnas no se pueden migrar sin
+-- adivinar (las filas viejas guardan abreviaturas, y una traía un programa que
+-- ni siquiera está en el catálogo), así que se descartan en vez de migrarse.
+-- Primero los constraints: dropear 'matricula' se lleva por delante cualquier
+-- índice o CHECK que la use, y el orden explícito evita depender de eso.
+ALTER TABLE respuestas_encuesta DROP CONSTRAINT IF EXISTS chk_respuesta_matricula;
+ALTER TABLE respuestas_encuesta DROP CONSTRAINT IF EXISTS uq_respuesta_matricula;
+ALTER TABLE respuestas_encuesta DROP COLUMN IF EXISTS nombre;
+ALTER TABLE respuestas_encuesta DROP COLUMN IF EXISTS matricula;
+ALTER TABLE respuestas_encuesta DROP COLUMN IF EXISTS carrera;
+ALTER TABLE respuestas_encuesta ADD COLUMN IF NOT EXISTS id_licenciatura INT
+    REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE RESTRICT;
+
+CREATE TABLE IF NOT EXISTS detalle_respuestas (
+    id_detalle   SERIAL PRIMARY KEY,
+    id_respuesta INT NOT NULL,
+    id_pregunta  INT NOT NULL,
+    -- Exactamente uno de estos tres por fila. Opción múltiple genera una fila
+    -- por opción marcada; texto y escala generan una sola.
+    id_opcion    INT,
+    texto        TEXT,
+    numero       INT,
+    CONSTRAINT chk_detalle_valor CHECK (num_nonnulls(id_opcion, texto, numero) = 1),
+    CONSTRAINT chk_detalle_texto CHECK (char_length(texto) <= 2000),
+    CONSTRAINT fk_detalle_respuesta FOREIGN KEY (id_respuesta) REFERENCES respuestas_encuesta(id_respuesta) ON DELETE CASCADE,
+    -- Integridad histórica: con respuestas registradas, ni la pregunta ni la
+    -- opción se pueden borrar (RESTRICT, no CASCADE).
+    CONSTRAINT fk_detalle_pregunta  FOREIGN KEY (id_pregunta) REFERENCES preguntas(id_pregunta) ON DELETE RESTRICT,
+    CONSTRAINT fk_detalle_opcion    FOREIGN KEY (id_opcion, id_pregunta) REFERENCES opciones_pregunta(id_opcion, id_pregunta) ON DELETE RESTRICT
+);
+
+-- Índices para las consultas de resultados
+CREATE INDEX IF NOT EXISTS idx_preguntas_encuesta        ON preguntas(id_encuesta);
+CREATE INDEX IF NOT EXISTS idx_opciones_pregunta        ON opciones_pregunta(id_pregunta);
+CREATE INDEX IF NOT EXISTS idx_opciones_club            ON opciones_pregunta(id_club) WHERE id_club IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_encuestas_estado         ON encuestas(estado);
+CREATE INDEX IF NOT EXISTS idx_respuestas_encuesta_fecha ON respuestas_encuesta(id_encuesta, fecha_envio);
+CREATE INDEX IF NOT EXISTS idx_detalle_respuesta        ON detalle_respuestas(id_respuesta);
+CREATE INDEX IF NOT EXISTS idx_detalle_pregunta         ON detalle_respuestas(id_pregunta);
+CREATE INDEX IF NOT EXISTS idx_detalle_opcion           ON detalle_respuestas(id_opcion) WHERE id_opcion IS NOT NULL;
+-- Segmentación de resultados por programa (el único dato del alumno que se guarda)
+CREATE INDEX IF NOT EXISTS idx_respuestas_licenciatura  ON respuestas_encuesta(id_licenciatura) WHERE id_licenciatura IS NOT NULL;
+
+-- Una misma opción no se marca dos veces en una respuesta
+CREATE UNIQUE INDEX IF NOT EXISTS uq_detalle_opcion ON detalle_respuestas(id_respuesta, id_pregunta, id_opcion) WHERE id_opcion IS NOT NULL;
+-- Un texto o una escala no se repite para la misma pregunta
+CREATE UNIQUE INDEX IF NOT EXISTS uq_detalle_texto_numero ON detalle_respuestas(id_respuesta, id_pregunta) WHERE id_opcion IS NULL;
+
+-- Trigger: reutiliza la función genérica de fecha_actualizacion
+DROP TRIGGER IF EXISTS trg_actualizar_fecha_encuesta ON encuestas;
+CREATE TRIGGER trg_actualizar_fecha_encuesta
+    BEFORE UPDATE ON encuestas
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_actualizar_fecha();
+
+-- ============================================================
+-- ROW LEVEL SECURITY — MÓDULO DE ENCUESTAS
+-- ============================================================
+-- Sin políticas a propósito: todo el acceso pasa por Express con credenciales
+-- de servidor. db.js conecta como propietario de las tablas, y los propietarios
+-- y superusuarios saltan RLS salvo con FORCE ROW LEVEL SECURITY, que no se usa
+-- (lo rompería). Esto bloquea los roles 'anon'/'authenticated' de Supabase.
+--
+-- OJO: esto NO protege las encuestas por sí solo. Como la conexión salta RLS,
+-- la única barrera real es que cada endpoint de routes/encuestas.js aplique
+-- authenticate + requireRole en el prefijo /admin. Un endpoint nuevo sin esa
+-- línea queda abierto y nada en la base de datos lo detecta.
+ALTER TABLE encuestas           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE preguntas           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opciones_pregunta   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE respuestas_encuesta ENABLE ROW LEVEL SECURITY;
+ALTER TABLE detalle_respuestas  ENABLE ROW LEVEL SECURITY;

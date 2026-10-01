@@ -28,6 +28,8 @@ dist-ssr
 
 # Environment
 .env
+.env.*.local
+# .env.development y .env.production SÍ se versionan (no contienen secretos)
 
 # Documents
 *.docx
