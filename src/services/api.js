@@ -11,6 +11,7 @@ import { convocatoriaService } from './convocatoria.service';
 import { ofertaService } from './oferta.service';
 import { horarioService } from './horario.service';
 import { diapositivaService } from './diapositiva.service';
+import { noticiaService } from './noticia.service';
 import { uploadService } from './upload.service';
 import { dashboardService } from './dashboard.service';
 
@@ -28,6 +29,7 @@ export { convocatoriaService } from './convocatoria.service';
 export { ofertaService } from './oferta.service';
 export { horarioService } from './horario.service';
 export { diapositivaService } from './diapositiva.service';
+export { noticiaService } from './noticia.service';
 export { uploadService } from './upload.service';
 export { dashboardService } from './dashboard.service';
 
@@ -110,6 +112,12 @@ export const api = {
   createDiapositivaHero: diapositivaService.createDiapositivaHero,
   updateDiapositivaHero: diapositivaService.updateDiapositivaHero,
   deleteDiapositivaHero: diapositivaService.deleteDiapositivaHero,
+
+  getNoticias: noticiaService.getNoticias,
+  getNoticiasAdmin: noticiaService.getNoticiasAdmin,
+  createNoticia: noticiaService.createNoticia,
+  updateNoticia: noticiaService.updateNoticia,
+  deleteNoticia: noticiaService.deleteNoticia,
 
   uploadImagen: uploadService.uploadImagen,
 
