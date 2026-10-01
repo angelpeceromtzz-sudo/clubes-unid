@@ -43,7 +43,7 @@ export function ModalNoticias() {
       </div>
 
       {destacada.url_imagen && (
-        <div className="w-full h-52 sm:h-64 mt-4 overflow-hidden rounded-xl">
+        <div className="w-full max-w-full h-52 sm:h-64 mt-4 overflow-hidden rounded-xl">
           <img
             src={obtenerUrlImagen(destacada.url_imagen)}
             alt={destacada.titulo}
@@ -52,7 +52,7 @@ export function ModalNoticias() {
         </div>
       )}
 
-      <p className={`mt-4 text-sm leading-relaxed whitespace-pre-line ${tema.subtitle}`}>
+      <p className={`mt-4 text-sm leading-relaxed whitespace-pre-line break-words ${tema.subtitle}`}>
         {destacada.contenido}
       </p>
 

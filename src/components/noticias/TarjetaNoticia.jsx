@@ -52,7 +52,7 @@ export function TarjetaNoticia({ noticia }) {
           {noticia.titulo}
         </h2>
 
-        <p className={`mt-3 text-sm leading-relaxed whitespace-pre-line ${tema.subtitle}`}>
+        <p className={`mt-3 text-sm leading-relaxed whitespace-pre-line break-words ${tema.subtitle}`}>
           {contenido}
         </p>
 
