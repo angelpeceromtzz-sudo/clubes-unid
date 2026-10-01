@@ -6,6 +6,7 @@ import { useTheme } from './contexts/ThemeContext';
 import { BarraNavegacion } from './components/layout/barra-navegacion/BarraNavegacion';
 import { PiePagina } from './components/layout/PiePagina';
 import { ModalInicioSesion } from './components/modals/ModalInicioSesion';
+import { ModalNoticias } from './components/noticias/ModalNoticias';
 import { NavegacionInferiorMovil } from './components/layout/paneles-navegacion/NavegacionInferiorMovil';
 import { RutaProtegida } from './components/layout/RutaProtegida';
 import { PanelAlumno } from './pages/PanelAlumno';
@@ -13,6 +14,7 @@ import { PanelPresidente } from './pages/PanelPresidente';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
+import { PaginaNoticias } from './pages/PaginaNoticias';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
@@ -81,8 +83,6 @@ function App() {
 
       <BarraNavegacion
         splashActivo={!splashDone}
-        categoriaActiva={categoriaActiva}
-        setCategoriaActiva={setCategoriaActiva}
         estadoActivo={estadoActivo}
         setEstadoActivo={setEstadoActivo}
         menuAbierto={menuAbierto}
@@ -99,6 +99,8 @@ function App() {
         onScrollChange={handleScrollChange}
       />
 
+      <ModalNoticias />
+
       {showLogin && (
         <ModalInicioSesion onClose={handleLoginSuccess} />
       )}
@@ -108,9 +110,14 @@ function App() {
           <PaginaInicio key={catalogoKey}
             clubes={clubesFiltrados}
             clubesLoading={clubesLoading}
+            categoriaActiva={categoriaActiva}
+            setCategoriaActiva={setCategoriaActiva}
+            estadoActivo={estadoActivo}
+            setEstadoActivo={setEstadoActivo}
             onLoginClick={() => setShowLogin(true)}
           />
         } />
+        <Route path="/noticias" element={<PaginaNoticias />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />
