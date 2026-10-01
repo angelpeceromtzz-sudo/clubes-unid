@@ -51,7 +51,7 @@ router.get('/', async (req, res) => {
 router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT ${CAMPOS}, autor_nombre
+      `SELECT ${CAMPOS}, u.nombre_completo AS autor_nombre
        FROM noticias
        LEFT JOIN usuarios u ON u.id_usuario = noticias.id_autor
        ORDER BY fecha_publicacion DESC, id_noticia DESC`
