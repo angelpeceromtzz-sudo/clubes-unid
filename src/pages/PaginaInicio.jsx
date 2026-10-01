@@ -5,6 +5,8 @@ import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { TarjetaClub } from '../components/clubes/tarjetas/TarjetaClub';
 import { Heroe } from '../components/clubes/Heroe';
+import { SelectorCategoria } from '../components/clubes/SelectorCategoria';
+import { FiltrosEstado } from '../components/layout/navegacion/FiltrosEstado';
 import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';
 import { obtenerUrlImagen } from '../utils/imagen';
@@ -12,7 +14,7 @@ import { obtenerUrlImagen } from '../utils/imagen';
 const ORDEN_ESTADO = ['abierto', 'proximo', 'lleno', 'cerrado'];
 const ORDEN_CATEGORIA = ['Deportes', 'Cultura', 'Tecnologia'];
 
-export function PaginaInicio({ clubes, clubesLoading }) {
+export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCategoriaActiva, estadoActivo, setEstadoActivo }) {
   const navigate = useNavigate();
   const { estaAutenticado } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();
@@ -60,13 +62,26 @@ export function PaginaInicio({ clubes, clubesLoading }) {
       )}
       <Heroe onReady={() => setHeroListo(true)} />
       <main id="catalogo" className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 py-12 pb-24 md:pb-12">
-        <div className="mb-10">
-          <h2 className={`text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>
-            Explorar Clubes Disponibles
-          </h2>
-          <p className={`text-sm mt-1 transition-colors duration-300 ${tema.subtitle}`}>
-            Catálogo oficial UNID Campus Campeche
-          </p>
+        <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="shrink-0">
+            <h2 className={`text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>
+              Explorar Clubes Disponibles
+            </h2>
+            <p className={`text-sm mt-1 transition-colors duration-300 ${tema.subtitle}`}>
+              Catálogo oficial UNID Campus Campeche
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 lg:items-end">
+            <FiltrosEstado estadoActivo={estadoActivo} setEstadoActivo={setEstadoActivo} variante="mobile" />
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-start lg:justify-end">
+              <FiltrosEstado estadoActivo={estadoActivo} setEstadoActivo={setEstadoActivo} variante="desktop" />
+              <SelectorCategoria
+                categoriaActiva={categoriaActiva}
+                setCategoriaActiva={setCategoriaActiva}
+              />
+            </div>
+          </div>
         </div>
 
         {!estaAutenticado && (
