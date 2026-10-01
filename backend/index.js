@@ -27,6 +27,7 @@ import horariosRoutes from './routes/horarios.js';
 import adminRoutes from './routes/admin.js';
 import adminDashboardRoutes from './routes/adminDashboard.js';
 import diapositivasHeroRoutes from './routes/diapositivasHero.js';
+import noticiasRoutes from './routes/noticias.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -70,6 +71,7 @@ app.use('/api/horarios', horariosRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', adminDashboardRoutes);
 app.use('/api/diapositivas-hero', diapositivasHeroRoutes);
+app.use('/api/noticias', noticiasRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

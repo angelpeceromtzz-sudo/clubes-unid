@@ -269,6 +269,22 @@ CREATE TABLE IF NOT EXISTS diapositivas_hero (
     fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS noticias (
+    id_noticia SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    contenido TEXT NOT NULL,
+    url_imagen VARCHAR(500),
+    destacada BOOLEAN NOT NULL DEFAULT FALSE,
+    publicada BOOLEAN NOT NULL DEFAULT TRUE,
+    id_autor INT,
+    fecha_publicacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_noticia_autor FOREIGN KEY (id_autor) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_noticias_publicada ON noticias(publicada);
+CREATE INDEX IF NOT EXISTS idx_noticias_fecha ON noticias(fecha_publicacion DESC);
+
 CREATE TABLE IF NOT EXISTS historial_postulacion (
     id_historial SERIAL PRIMARY KEY,
     id_formulario INT NOT NULL,
@@ -419,3 +435,18 @@ CREATE TRIGGER trg_proteger_ultima_diapositiva
     BEFORE UPDATE OR DELETE ON diapositivas_hero
     FOR EACH ROW
     EXECUTE FUNCTION fn_proteger_ultima_diapositiva_activa();
+
+-- Trigger: auto-actualizar fecha_actualizacion en noticias
+CREATE OR REPLACE FUNCTION fn_actualizar_fecha_noticia()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.fecha_actualizacion = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_actualizar_fecha_noticia ON noticias;
+CREATE TRIGGER trg_actualizar_fecha_noticia
+    BEFORE UPDATE ON noticias
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_actualizar_fecha_noticia();
