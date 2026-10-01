@@ -58,6 +58,8 @@ export function PanelAdmin() {
               clubes={d.clubes}
               historial={d.historial}
               historialLoading={d.historialLoading}
+              noticias={d.noticias.noticias}
+              noticiasLoading={d.noticias.cargando}
             />
           )}
 
