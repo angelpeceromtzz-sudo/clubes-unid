@@ -147,10 +147,11 @@ router.get('/padron', async (req, res) => {
 
     let sql = `
       SELECT f.id_formulario, f.id_club, c.nombre_club,
-        f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
+        f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
         f.status, f.bloque_asignado
       FROM formularios f
       JOIN clubes c ON c.id_club = f.id_club
+      LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
       WHERE 1=1
     `;
     const params = [];
@@ -166,7 +167,7 @@ router.get('/padron', async (req, res) => {
       idx++;
     }
     if (carrera) {
-      sql += ` AND f.carrera ILIKE $${idx++}`;
+      sql += ` AND l.nombre ILIKE $${idx++}`;
       params.push(`%${carrera}%`);
     }
 
@@ -186,9 +187,10 @@ router.get('/asistencia/:id_club', async (req, res) => {
     const { id_club } = req.params;
 
     const result = await pool.query(`
-      SELECT f.id_formulario, f.nombre_completo, f.matricula, f.carrera,
+      SELECT f.id_formulario, f.nombre_completo, f.matricula, l.nombre AS carrera,
         f.bloque_asignado, f.status
       FROM formularios f
+      LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
       WHERE f.id_club = $1
         AND f.status IN ('Miembro oficial')
       ORDER BY f.bloque_asignado, f.nombre_completo

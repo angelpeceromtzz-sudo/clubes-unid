@@ -1,6 +1,6 @@
 /* Sección de convocatorias del presidente: gestiona bloques y horarios del club. */
 import { useState, useEffect } from 'react';
-import { api } from '../../../services/api';
+import { api, API_BASE } from '../../../services/api';
 import { BloqueCard } from '../bloques/BloqueCard';
 import { Spinner } from '../../ui/Spinner';
 import { EmptyState } from '../../ui/EmptyState';
@@ -56,10 +56,7 @@ export function SeccionConvocatorias({ club }) {
         return null;
       }
     })();
-    const base = import.meta.env.MODE === 'production'
-      ? 'https://clubes-unid.onrender.com/api'
-      : '/api';
-    window.open(`${base}/convocatorias/${id}/asistencia?token=${token}`, '_blank');
+    window.open(`${API_BASE}/convocatorias/${id}/asistencia?token=${token}`, '_blank');
   }
 
   if (cargando) {

@@ -14,6 +14,7 @@ import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { DetalleClub } from './components/clubes/DetalleClub';
+import PaginaEncuesta from './pages/PaginaEncuesta';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
 import { SplashScreen } from './components/ui/SplashScreen';
@@ -53,6 +54,31 @@ function App() {
   }
 
   const mostrarFiltros = location.pathname === '/';
+
+  // La encuesta pública se monta FUERA del layout de abajo, a propósito: es la
+  // única ruta que no vive dentro de la aplicación. El catálogo ("/" y
+  // "/club/:id") también se puede ver sin sesión, pero se muestra con la navbar y
+  // el botón de iniciar sesión; quien abre un enlace de encuesta no tiene por qué
+  // ver menús que no puede usar. Por eso va con un return temprano y no como un
+  // <Route> más.
+  //
+  // Este return tiene que declarar su propio <Routes>. Montar la página suelta
+  // aquí fuera de cualquier <Route> la dejaba sin contexto de enrutado, y
+  // useParams() devolvía {}: el slug llegaba como undefined y la pantalla pedía
+  // `/api/encuestas/publico/undefined` aunque el enlace fuera correcto.
+  //
+  // El key en el pathname hace que cambiar de enlace remonte el componente y
+  // que las respuestas de la encuesta anterior no queden pegadas.
+  if (location.pathname.startsWith('/encuesta/')) {
+    return (
+      <Routes>
+        <Route
+          path="/encuesta/:slug"
+          element={<PaginaEncuesta key={location.pathname} />}
+        />
+      </Routes>
+    );
+  }
 
   function irADashboard() {
     if (esAdmin) {

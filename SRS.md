@@ -19,9 +19,9 @@ El SRS describe de manera completa y no ambigua el comportamiento esperado del s
 
 ### 1.2 Alcance
 
-El sistema **Clubs UNID** es una aplicación web para la gestión del ciclo de vida de clubes universitarios en la Universidad UNID. Sus funciones principales incluyen: el registro y autenticación de usuarios (alumnos, presidentes de club, administradores y rectoría) mediante credenciales locales o cuenta institucional Microsoft; la consulta y filtrado de un catálogo público de clubes; la inscripción de alumnos a clubes con control de cupo; un sistema de postulación y reclutamiento de miembros con flujo de revisión por parte del presidente del club; la generación de convocatorias por bloques para evaluaciones presenciales; el envío y respuesta de ofertas de ingreso con vencimiento temporal; la publicación de avisos por club; un sistema de notificaciones segmentadas por audiencia; paneles de administración con gestión de usuarios, roles y clubes; un panel de rectoría con estadísticas, padron de alumnos y reportes de ocupación; y un registro de auditoría de acciones administrativas.
+El sistema **Clubs UNID** es una aplicación web para la gestión del ciclo de vida de clubes universitarios en la Universidad UNID. Sus funciones principales incluyen: el registro y autenticación de usuarios (alumnos, presidentes de club, administradores y rectoría) mediante credenciales locales o cuenta institucional Microsoft; la consulta y filtrado de un catálogo público de clubes; la inscripción de alumnos a clubes con control de cupo; un sistema de postulación y reclutamiento de miembros con flujo de revisión por parte del presidente del club; la generación de convocatorias por bloques para evaluaciones presenciales; el envío y respuesta de ofertas de ingreso con vencimiento temporal; la publicación de avisos por club; un sistema de notificaciones segmentadas por audiencia; paneles de administración con gestión de usuarios, roles y clubes; un panel de rectoría con estadísticas, padron de alumnos y reportes de ocupación; un registro de auditoría de acciones administrativas; y un módulo de encuestas anónimas por enlace público, para representar los intereses de los alumnos sin requerir sesión ni datos personales.
 
-El sistema **no** incluye: módulo de pagos o cobro de cuotas; integración con sistemas SGA (Sistema de Gestión Académica) externos; aplicación móvil nativa; notificaciones push ni SMS; mensajería interna entre usuarios (chat); módulo de evaluaciones o calificaciones; sistema de encuestas; ni generación de certificados digitales.
+El sistema **no** incluye: módulo de pagos o cobro de cuotas; integración con sistemas SGA (Sistema de Gestión Académica) externos; aplicación móvil nativa; notificaciones push ni SMS; mensajería interna entre usuarios (chat); módulo de evaluaciones o calificaciones; ni generación de certificados digitales.
 
 ### 1.3 Glosario
 
@@ -384,9 +384,10 @@ Criterio de aceptación (Gherkin):
 |-----------|-------------|-------------------|
 | **Frontend** | React 19 con Vite 8 como bundler, Tailwind CSS v4 para estilos, React Router v7 para enrutamiento. | `package.json` (raíz): dependencias `react@^19.2.6`, `react-router-dom@^7.18.0`, devDependencies `vite@^8.0.12`, `tailwindcss@^4.3.0`. |
 | **Backend** | Node.js con Express 4 y módulos ES. PostgreSQL como base de datos con driver `pg`. | `backend/package.json`: `"type": "module"`, dependencias `express@^4.21.0`, `pg@^8.13.0`. |
-| **Proxy de desarrollo** | Vite proxy configura `/api` hacia `localhost:4000` en desarrollo. | `vite.config.js:11-16` — `server.proxy` |
+| **Proxy de desarrollo** | Vite proxy reenvía `/api` y `/uploads` hacia el backend local en desarrollo, sin requerir CORS. | `vite.config.js:15-24` — `server.proxy`, destino leído de `VITE_PROXY_TARGET` |
+| **Separación de entornos** | El destino del backend se resuelve con variables de Vite (`VITE_*`); no hay URLs fijas en el código fuente. | `.env.development` / `.env.production`; contrato en `.env.example` |
 | **Autenticación** | Integración con MSAL de Azure AD para OAuth. | `src/services/authConfig.js`: tenant `953420d2-c95e-4f65-9573-b601a94f4390`, clientId `89262870-12e6-41ab-b212-07f34b9bde0a`. |
-| **Despliegue** | Frontend desplegado en Vercel con framework Vite. Backend desplegado en Render. | `vercel.json`: framework `vite`, build command `vite build`. `src/services/api.js:2-4`: URL producción `https://clubes-unid.onrender.com/api`. |
+| **Despliegue** | Frontend desplegado en Vercel con framework Vite. Backend desplegado en Render. | `vercel.json`: framework `vite`, build command `vite build`. URL de producción declarada en `.env.production` (`VITE_API_URL`) y consumida en `src/services/api-core.js:1` vía `import.meta.env`. |
 | **Navegadores** | Debe ser compatible con navegadores modernos con soporte ES Modules (Vite target modern). | `index.html` y configuración Vite por defecto. |
 
 ### 3.4 Diagrama de Arquitectura
@@ -435,7 +436,7 @@ graph TB
     end
 
     A -->|fetch / axios| E
-    E -->|proxy dev: localhost:4000<br/>prod: clubs-unid.onrender.com| F
+    E -->|dev: proxy Vite a localhost:4000<br/>prod: VITE_API_URL desde .env.production| F
     
     F --> G
     G --> H

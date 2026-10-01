@@ -8,6 +8,7 @@ import { SeccionClubes } from '../components/rectoria/SeccionClubes';
 import { SeccionPadron } from '../components/rectoria/SeccionPadron';
 import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
+import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
 
 export function PanelRectoria() {
   const { tema } = useTheme();
@@ -51,6 +52,15 @@ export function PanelRectoria() {
           cargando={d.cargando}
         />
       )}
+        {d.vistaActiva === 'encuestas' && (
+          /* La misma sección que en PanelAdmin. No se bifurca por rol porque la
+             sección ya sabe qué es escritura: `useSeccionEncuestas` calcula
+             `esAdmin` del `id_rol` y esconde Nueva, Editar, Duplicar, Cerrar y
+             Eliminar cuando no lo es. Lo que sí se queda para rectoría es la
+             lectura completa: lista, resultados, vista previa y enlace público. */
+          <SeccionEncuestas d={d} />
+        )}
+
         {d.vistaActiva === 'actividad' && (
           <TablaActividad />
         )}

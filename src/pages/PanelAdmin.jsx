@@ -15,6 +15,7 @@ import { TablaHistorial } from '../components/admin/tablas/TablaHistorial';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
 import { ModalPasswordAdmin } from '../components/admin/modales/ModalPasswordAdmin';
 import { SeccionDiapositivas } from '../components/admin/seccion-diapositivas/SeccionDiapositivas';
+import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
 import { Spinner } from '../components/ui/Spinner';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -67,6 +68,8 @@ export function PanelAdmin() {
           {d.vistaActiva === 'anuncios' && (
             <SeccionAnuncios clubes={d.clubes} onSuccess={() => d.setFeedback('Anuncio publicado correctamente')} />
           )}
+
+          {d.vistaActiva === 'encuestas' && <SeccionEncuestas d={d} />}
 
           {d.vistaActiva === 'historial' && (
             <TablaHistorial

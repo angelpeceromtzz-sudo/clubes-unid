@@ -13,6 +13,7 @@ import { horarioService } from './horario.service';
 import { diapositivaService } from './diapositiva.service';
 import { uploadService } from './upload.service';
 import { dashboardService } from './dashboard.service';
+import { encuestaService, catalogoService } from './encuesta.service';
 
 export { API_BASE, getToken, setSession, clearSession, getSession, request } from './api-core';
 
@@ -30,6 +31,7 @@ export { horarioService } from './horario.service';
 export { diapositivaService } from './diapositiva.service';
 export { uploadService } from './upload.service';
 export { dashboardService } from './dashboard.service';
+export { encuestaService, catalogoService } from './encuesta.service';
 
 export const api = {
   get: (endpoint) => request(endpoint),
@@ -114,4 +116,20 @@ export const api = {
   uploadImagen: uploadService.uploadImagen,
 
   getDashboardData: dashboardService.getDashboardData,
+
+  obtenerEncuestaPublica: encuestaService.obtenerPublica,
+  enviarRespuestasEncuesta: encuestaService.enviarRespuestas,
+
+  getEncuestas: encuestaService.listar,
+  getEncuesta: encuestaService.obtener,
+  createEncuesta: encuestaService.crear,
+  updateEncuesta: encuestaService.actualizar,
+  deleteEncuesta: encuestaService.eliminar,
+
+  createPreguntaEncuesta: encuestaService.crearPregunta,
+  updatePreguntaEncuesta: encuestaService.actualizarPregunta,
+  deletePreguntaEncuesta: encuestaService.eliminarPregunta,
+  updateOpcionesPregunta: encuestaService.actualizarOpciones,
+
+  getLicenciaturas: catalogoService.getLicenciaturas,
 };

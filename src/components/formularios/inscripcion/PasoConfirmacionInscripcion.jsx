@@ -1,7 +1,7 @@
 import { ETIQUETAS } from '../../../constants/inscripcion';
 import { Alerta } from '../../ui/Alerta';
 
-export function PasoConfirmacionInscripcion({ formulario, errorApi, confirmado, setConfirmado, enviando, manejarEnvio, onEditar, modoOscuro }) {
+export function PasoConfirmacionInscripcion({ formulario, nombreLicenciatura, errorApi, confirmado, setConfirmado, enviando, manejarEnvio, onEditar, modoOscuro }) {
   const resumenCls = `rounded-xl border p-4 ${modoOscuro ? 'bg-slate-800/30 border-slate-700/30' : 'bg-slate-50 border-slate-200'}`;
   const resumenLabelCls = 'text-[11px] font-bold uppercase tracking-wider text-slate-400';
   const resumenValCls = `text-sm font-medium mt-0.5 ${modoOscuro ? 'text-white' : 'text-slate-900'}`;
@@ -19,11 +19,18 @@ export function PasoConfirmacionInscripcion({ formulario, errorApi, confirmado, 
           const valor = formulario[campo];
           const omitir = campo === 'experiencia_previa' && !valor;
           if (omitir) return null;
+          // La licenciatura se guarda como id del catálogo y el cuatrimestre
+          // como string de un dígito: en el resumen se muestra el nombre
+          // oficial del programa y el número con su grado, no el id.
+          const texto =
+            campo === 'id_licenciatura' ? nombreLicenciatura
+            : campo === 'cuatrimestre' ? (valor ? `${valor}°` : '')
+            : valor;
           return (
             <div key={campo} className={resumenCls}>
               <p className={resumenLabelCls}>{etiqueta}</p>
               <p className={resumenValCls}>
-                {campo === 'cuatrimestre' ? `${valor}°` : valor || <span className="italic text-slate-400">No especificado</span>}
+                {texto || <span className="italic text-slate-400">No especificado</span>}
               </p>
             </div>
           );

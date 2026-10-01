@@ -1,4 +1,4 @@
-const BASE_BACKEND = import.meta.env.VITE_BACKEND_URL || '';
+const BASE_BACKEND = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '');
 
 export function obtenerUrlImagen(path) {
   if (!path) return null;

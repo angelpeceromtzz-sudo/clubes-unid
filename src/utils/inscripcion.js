@@ -8,7 +8,7 @@ export function validarFormularioInscripcion(formulario, datosPrecargados) {
       errs.matricula = 'La matrícula debe contener solo números';
     }
   }
-  if (!formulario.carrera) errs.carrera = 'Selecciona una carrera';
+  if (!formulario.id_licenciatura) errs.id_licenciatura = 'Selecciona una licenciatura';
   if (!formulario.cuatrimestre) {
     errs.cuatrimestre = 'El cuatrimestre es obligatorio';
   } else if (parseInt(formulario.cuatrimestre) < 1) {

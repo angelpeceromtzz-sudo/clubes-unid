@@ -29,7 +29,9 @@ export function ModalConfirmacion({
         <button
           onClick={onCancelar}
           disabled={cargando}
-          className="absolute top-4 right-4 text-white hover:text-amber-400 transition-colors cursor-pointer"
+          className={`absolute top-4 right-4 transition-colors cursor-pointer ${
+            modoOscuro ? 'text-white hover:text-amber-400' : 'text-slate-400 hover:text-slate-900'
+          }`}
         >
           <Icono nombre="close" strokeWidth={2} className="h-5 w-5" />
         </button>
