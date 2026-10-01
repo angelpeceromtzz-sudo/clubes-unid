@@ -28,12 +28,13 @@ router.get('/debug-postulaciones', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_club, f.id_alumno, f.bloque_asignado, f.status,
-              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
+              f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
                f.fecha_envio, f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta,
                c.nombre_club, c.categoria,
                c.imagen_portada
         FROM formularios f
         JOIN clubes c ON c.id_club = f.id_club
+        LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
         ORDER BY f.id_alumno, f.fecha_envio DESC`
     );
     res.json({
@@ -74,22 +75,23 @@ router.get('/mis-postulaciones', authenticate, requireRole(1), async (req, res) 
 
     // 2. Obtener postulaciones completas
     const result = await pool.query(
-      `SELECT f.id_formulario, f.id_club, f.bloque_asignado, f.status,
-              f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
+`SELECT f.id_formulario, f.id_club, f.bloque_asignado, f.status,
+              f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
                f.fecha_envio, f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta,
                c.nombre_club, c.categoria,
                c.imagen_portada,
                (SELECT row_to_json(datos) FROM (
-                SELECT cv.id_convocatoria, cv.bloque, cv.fecha, cv.hora, cv.lugar
-                FROM convocatorias cv WHERE cv.id_convocatoria = f.id_convocatoria
-              ) AS datos) AS convocatoria,
-              (SELECT json_agg(json_build_object(
-                'status_anterior', hp.status_anterior,
-                'status_nuevo', hp.status_nuevo,
-                'fecha_cambio', hp.fecha_cambio
-              ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
+                 SELECT cv.id_convocatoria, cv.bloque, cv.fecha, cv.hora, cv.lugar
+                 FROM convocatorias cv WHERE cv.id_convocatoria = f.id_convocatoria
+               ) AS datos) AS convocatoria,
+               (SELECT json_agg(json_build_object(
+                 'status_anterior', hp.status_anterior,
+                 'status_nuevo', hp.status_nuevo,
+                 'fecha_cambio', hp.fecha_cambio
+               ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
        FROM formularios f
        JOIN clubes c ON c.id_club = f.id_club
+       LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
        WHERE f.id_alumno = $1
        ORDER BY f.fecha_envio DESC`,
       [req.user.id],
@@ -108,7 +110,7 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
       id_club,
       nombre_completo,
       matricula,
-      carrera,
+      id_licenciatura,
       cuatrimestre,
       telefono_contacto,
       motivo_ingreso,
@@ -129,8 +131,25 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
       matricula = institutionalIdDb;
     }
 
-    if (!id_club || !nombre_completo || !matricula || !carrera || !cuatrimestre || !telefono_contacto || !motivo_ingreso) {
+    if (!id_club || !nombre_completo || !matricula || !id_licenciatura || !cuatrimestre || !telefono_contacto || !motivo_ingreso) {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben estar llenos' });
+    }
+
+    // La carrera dejó de ser un VARCHAR libre para ser una FK al catálogo: sin
+    // esto cada postulación escribiría su propia variante ('Ing. en Sistemas',
+    // 'Ingeniería en Sistemas', ...) y después no se puede filtrar por programa.
+    // Mismo motivo que con la matrícula: no confío en el id que manda el cliente.
+    id_licenciatura = Number(id_licenciatura);
+    if (!Number.isInteger(id_licenciatura) || id_licenciatura <= 0) {
+      return res.status(400).json({ error: 'Selecciona una licenciatura válida' });
+    }
+
+    const licenciaturaValida = await pool.query(
+      'SELECT id_licenciatura FROM cat_licenciaturas WHERE id_licenciatura = $1',
+      [id_licenciatura],
+    );
+    if (licenciaturaValida.rows.length === 0) {
+      return res.status(400).json({ error: 'La licenciatura seleccionada no existe' });
     }
 
     const client = await pool.connect();
@@ -221,7 +240,7 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
 
       const result = await client.query(
         `INSERT INTO formularios (id_alumno, id_club, bloque_asignado,
-          nombre_completo, matricula, carrera, cuatrimestre,
+          nombre_completo, matricula, id_licenciatura, cuatrimestre,
           telefono_contacto, motivo_ingreso, experiencia_previa)
          VALUES ($1, $2, DEFAULT, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
@@ -230,7 +249,7 @@ router.post('/', authenticate, requireRole(1), async (req, res) => {
           id_club,
           nombre_completo,
           matricula,
-          carrera,
+          id_licenciatura,
           cuatrimestre,
           telefono_contacto,
           motivo_ingreso,
@@ -277,18 +296,19 @@ router.get('/pendientes/:id_club', authenticate, requireClubLeader, async (req, 
 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
-               f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
+f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
                f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
                f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
                (SELECT json_agg(json_build_object(
-                'status_anterior', hp.status_anterior,
-                'status_nuevo', hp.status_nuevo,
-                'fecha_cambio', hp.fecha_cambio
-              ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
-        FROM formularios f
-        WHERE f.id_club = $1
-          AND f.status NOT IN ('Miembro oficial', 'Rechazado')
-       ORDER BY f.fecha_envio DESC`,
+                 'status_anterior', hp.status_anterior,
+                 'status_nuevo', hp.status_nuevo,
+                 'fecha_cambio', hp.fecha_cambio
+               ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
+       FROM formularios f
+       LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
+       WHERE f.id_club = $1
+         AND f.status NOT IN ('Miembro oficial', 'Rechazado')
+      ORDER BY f.fecha_envio DESC`,
       [id_club],
     );
 
@@ -316,17 +336,18 @@ router.get('/todos/:id_club', authenticate, requireClubLeader, async (req, res) 
 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
-               f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre,
+               f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
                f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
                f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
                (SELECT json_agg(json_build_object(
                  'status_anterior', hp.status_anterior,
                  'status_nuevo', hp.status_nuevo,
                  'fecha_cambio', hp.fecha_cambio
-               ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
-        FROM formularios f
-        WHERE f.id_club = $1
-        ORDER BY f.fecha_envio DESC`,
+) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
+       FROM formularios f
+       LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
+       WHERE f.id_club = $1
+       ORDER BY f.fecha_envio DESC`,
       [id_club],
     );
 
@@ -348,9 +369,15 @@ router.put('/:id/estatus', authenticate, requireRole(2, 5), async (req, res) => 
     }
 
     const formulario = await pool.query(
-      `SELECT f.*, c.nombre_club
+      `SELECT f.*, c.nombre_club, l.nombre AS carrera,
+          (SELECT json_agg(json_build_object(
+            'status_anterior', hp.status_anterior,
+            'status_nuevo', hp.status_nuevo,
+            'fecha_cambio', hp.fecha_cambio
+          ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
        FROM formularios f
        JOIN clubes c ON c.id_club = f.id_club
+       LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
        WHERE f.id_formulario = $1`,
       [id],
     );

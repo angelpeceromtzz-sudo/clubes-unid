@@ -26,6 +26,8 @@ import uploadRoutes from './routes/upload.js';
 import horariosRoutes from './routes/horarios.js';
 import adminRoutes from './routes/admin.js';
 import adminDashboardRoutes from './routes/adminDashboard.js';
+import catalogosRoutes from './routes/catalogos.js';
+import encuestasRoutes from './routes/encuestas.js';
 import diapositivasHeroRoutes from './routes/diapositivasHero.js';
 
 const app = express();
@@ -70,6 +72,8 @@ app.use('/api/horarios', horariosRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', adminDashboardRoutes);
 app.use('/api/diapositivas-hero', diapositivasHeroRoutes);
+app.use('/api/catalogos', catalogosRoutes);
+app.use('/api/encuestas', encuestasRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
