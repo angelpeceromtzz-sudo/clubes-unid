@@ -6,6 +6,7 @@ import { msalInstance } from './services/authConfig';
 import './index.css';
 import { ProveedorAutenticacion } from './contexts/AuthContext';
 import { ProveedorNotificacion } from './contexts/NotificationContext';
+import { ProveedorNoticias } from './contexts/NoticiasContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import App from './App.jsx';
 
@@ -15,9 +16,11 @@ createRoot(document.getElementById('root')).render(
       <ProveedorAutenticacion>
         <BrowserRouter>
           <ProveedorNotificacion>
-            <ThemeProvider>
-              <App />
-            </ThemeProvider>
+            <ProveedorNoticias>
+              <ThemeProvider>
+                <App />
+              </ThemeProvider>
+            </ProveedorNoticias>
           </ProveedorNotificacion>
         </BrowserRouter>
       </ProveedorAutenticacion>
