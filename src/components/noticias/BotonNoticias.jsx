@@ -1,5 +1,5 @@
 /* Botón "Noticias" del navbar: ícono de libro a la izquierda y, a la derecha, un punto
-   con la cantidad de publicaciones sin ver (0 a 9, luego "+9"). Al pulsarlo navega a la
+   ámbar que solo aparece cuando hay publicaciones sin ver. Al pulsarlo navega a la
    página de noticias, donde se marca todo como visto. */
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -32,20 +32,12 @@ export function BotonNoticias({ className = '' }) {
         strokeWidth={2}
       />
       <span className="hidden sm:inline">Noticias</span>
-      <span
-        className={`relative flex items-center justify-center min-w-[16px] h-[16px] rounded-full text-[9px] font-black leading-none ${
-          hayNuevas ? 'bg-amber-500 text-slate-950' : `${tema.btnInactive} text-[9px]`
-        }`}
-      >
-        {hayNuevas ? (
-          <>
-            <span className="absolute inset-0 rounded-full bg-amber-500/40 animate-ping" />
-            <span className="relative px-[3px]">{noLeidas > 9 ? '+9' : noLeidas}</span>
-          </>
-        ) : (
-          <span className="px-[3px] opacity-60">0</span>
-        )}
-      </span>
+      {hayNuevas && (
+        <span className="relative flex items-center justify-center h-2 w-2 shrink-0">
+          <span className="absolute inset-0 rounded-full bg-amber-500/40 animate-ping" />
+          <span className="relative h-2 w-2 rounded-full bg-amber-500" />
+        </span>
+      )}
     </button>
   );
 }
