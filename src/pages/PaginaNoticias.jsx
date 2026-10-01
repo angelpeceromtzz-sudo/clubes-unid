@@ -18,23 +18,36 @@ export function PaginaNoticias() {
   return (
     <main className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 py-12 pb-24">
       <div className="max-w-3xl">
-        <h1 className={`text-3xl font-black tracking-tight ${tema.title}`}>
-          Noticias
-        </h1>
-        <p className={`text-sm mt-1 ${tema.subtitle}`}>
-          Novedades y comunicados de la Dirección de Clubes UNID Campus Campeche
-        </p>
+        <div className="flex items-center gap-3">
+          <span
+            className={`flex items-center justify-center h-11 w-11 shrink-0 rounded-xl ${
+              modoOscuro ? 'bg-slate-800/60 text-amber-400' : 'bg-amber-50 text-amber-500'
+            }`}
+          >
+            <Icono nombre="book" className="h-6 w-6" strokeWidth={2} />
+          </span>
+          <div>
+            <h1 className={`text-3xl font-black tracking-tight ${tema.title}`}>
+              Noticias
+            </h1>
+            <p className={`text-sm mt-0.5 ${tema.subtitle}`}>
+              Novedades y comunicados de la Dirección de Clubes UNID Campus Campeche
+            </p>
+          </div>
+        </div>
       </div>
 
       {cargando ? (
         <Spinner className="py-20" />
       ) : noticias.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24">
-          <Icono
-            nombre="newspaper"
-            className={`h-12 w-12 mb-3 ${modoOscuro ? 'text-slate-700' : 'text-slate-300'}`}
-            strokeWidth={1.5}
-          />
+          <span
+            className={`flex items-center justify-center h-20 w-20 mb-4 rounded-2xl ${
+              modoOscuro ? 'bg-slate-800/60 text-amber-400/70' : 'bg-amber-50 text-amber-400'
+            }`}
+          >
+            <Icono nombre="book" className="h-10 w-10" strokeWidth={1.5} />
+          </span>
           <p className={`text-sm ${tema.subtitle}`}>Todavía no hay noticias publicadas</p>
         </div>
       ) : (
