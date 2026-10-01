@@ -7,6 +7,7 @@ import { useAdminClubes } from './useAdminClubes';
 import { useAdminUsuarios } from './useAdminUsuarios';
 import { useAdminHistorial } from './useAdminHistorial';
 import { useAdminHeroDiapositivas } from './useAdminHeroDiapositivas';
+import { useAdminNoticias } from './useAdminNoticias';
 
 export function usePanelAdmin(usuario) {
   const { esOscuro, cardCls, tableBg, thCls, tdCls, tdTitle, sbBg, sbItemBase, sbItemActive, sbItemInactive, selectCls, inputCls, labelCls, tema } = useTheme();
@@ -19,6 +20,7 @@ export function usePanelAdmin(usuario) {
   const usuarios = useAdminUsuarios(clubes.refetchClubes, setFeedback, setErrorFeedback);
   const historial = useAdminHistorial(vistaActiva === 'historial');
   const heroDiapositivas = useAdminHeroDiapositivas(setFeedback, setErrorFeedback);
+  const noticias = useAdminNoticias(setFeedback, setErrorFeedback);
 
   const cargarDashboard = useCallback(async () => {
     setCargandoDashboard(true);
@@ -128,5 +130,9 @@ export function usePanelAdmin(usuario) {
     pendienteConfirmacionBanner: heroDiapositivas.pendienteConfirmacion,
     confirmarPendienteBanner: heroDiapositivas.confirmarPendiente,
     cancelarPendienteBanner: heroDiapositivas.cancelarPendiente,
+    noticias,
+    pendienteConfirmacionNoticia: noticias.pendienteConfirmacion,
+    confirmarPendienteNoticia: noticias.confirmarPendiente,
+    cancelarPendienteNoticia: noticias.cancelarPendiente,
   };
 }

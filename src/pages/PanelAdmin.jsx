@@ -15,6 +15,7 @@ import { TablaHistorial } from '../components/admin/tablas/TablaHistorial';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
 import { ModalPasswordAdmin } from '../components/admin/modales/ModalPasswordAdmin';
 import { SeccionDiapositivas } from '../components/admin/seccion-diapositivas/SeccionDiapositivas';
+import { SeccionNoticias } from '../components/admin/seccion-noticias/SeccionNoticias';
 import { Spinner } from '../components/ui/Spinner';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -66,6 +67,29 @@ export function PanelAdmin() {
 
           {d.vistaActiva === 'anuncios' && (
             <SeccionAnuncios clubes={d.clubes} onSuccess={() => d.setFeedback('Anuncio publicado correctamente')} />
+          )}
+
+          {d.vistaActiva === 'noticias' && (
+            <SeccionNoticias
+              noticias={d.noticias.noticias}
+              noticiasFiltradas={d.noticias.noticiasFiltradas}
+              cargando={d.noticias.cargando}
+              busqueda={d.noticias.busqueda}
+              setBusqueda={d.noticias.setBusqueda}
+              showModal={d.noticias.showModal}
+              editando={d.noticias.editando}
+              form={d.noticias.form}
+              enviando={d.noticias.enviando}
+              errorModal={d.noticias.errorModal}
+              abrirModalCrear={d.noticias.abrirModalCrear}
+              abrirModalEditar={d.noticias.abrirModalEditar}
+              cerrarModal={d.noticias.cerrarModal}
+              togglePublicada={d.noticias.togglePublicada}
+              eliminar={d.noticias.eliminar}
+              guardar={d.noticias.guardar}
+              handleFormChange={d.noticias.handleFormChange}
+              subirImagen={d.noticias.subirImagen}
+            />
           )}
 
           {d.vistaActiva === 'historial' && (
@@ -184,6 +208,15 @@ export function PanelAdmin() {
             varianteDanger
             onConfirmar={d.confirmarPendienteBanner}
             onCancelar={d.cancelarPendienteBanner}
+          />
+          <ModalConfirmacion
+            show={!!d.pendienteConfirmacionNoticia}
+            titulo="Eliminar noticia"
+            mensaje={`¿Eliminar la noticia "${d.pendienteConfirmacionNoticia?.titulo || ''}"? Esta acción no se puede deshacer.`}
+            textoConfirmar="Eliminar"
+            varianteDanger
+            onConfirmar={d.confirmarPendienteNoticia}
+            onCancelar={d.cancelarPendienteNoticia}
           />
       </NavegacionPanel>
     </RutaProtegida>

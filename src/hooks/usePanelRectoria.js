@@ -1,8 +1,12 @@
-/* Hook del panel de rectoría: carga estadísticas, detalle de clubes, padrón y asistencia. */
+/* Hook del panel de rectoría: carga estadísticas, detalle de clubes, padrón, asistencia y noticias. */
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useFeedback } from './useFeedback';
+import { useAdminNoticias } from './useAdminNoticias';
 
 export function usePanelRectoria() {
+  const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
+  const noticias = useAdminNoticias(setFeedback, setErrorFeedback);
   const [vistaActiva, setVistaActiva] = useState('resumen');
   const [stats, setStats] = useState(null);
   const [ocupacionClubes, setOcupacionClubes] = useState([]);
@@ -135,5 +139,11 @@ const qs = params.toString();
     aplicarFiltrosPadron,
     clubAsistenciaId,
     seleccionarClubAsistencia,
+    feedback,
+    errorFeedback,
+    noticias,
+    pendienteConfirmacionNoticia: noticias.pendienteConfirmacion,
+    confirmarPendienteNoticia: noticias.confirmarPendiente,
+    cancelarPendienteNoticia: noticias.cancelarPendiente,
   };
 }

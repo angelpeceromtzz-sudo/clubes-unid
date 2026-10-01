@@ -8,6 +8,9 @@ import { SeccionClubes } from '../components/rectoria/SeccionClubes';
 import { SeccionPadron } from '../components/rectoria/SeccionPadron';
 import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
+import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
+import { SeccionNoticias } from '../components/admin/seccion-noticias/SeccionNoticias';
+import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 
 export function PanelRectoria() {
   const { tema } = useTheme();
@@ -26,6 +29,8 @@ export function PanelRectoria() {
             <p className="text-sm text-red-400 font-medium">{d.error}</p>
           </div>
         )}
+
+        <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
 
         {d.vistaActiva === 'resumen' && (
           <SeccionResumen stats={d.stats} ocupacionClubes={d.ocupacionClubes} topClubes={d.topClubes} cargando={d.cargando} />
@@ -54,6 +59,38 @@ export function PanelRectoria() {
         {d.vistaActiva === 'actividad' && (
           <TablaActividad />
         )}
+        {d.vistaActiva === 'noticias' && (
+          <SeccionNoticias
+            noticias={d.noticias.noticias}
+            noticiasFiltradas={d.noticias.noticiasFiltradas}
+            cargando={d.noticias.cargando}
+            busqueda={d.noticias.busqueda}
+            setBusqueda={d.noticias.setBusqueda}
+            showModal={d.noticias.showModal}
+            editando={d.noticias.editando}
+            form={d.noticias.form}
+            enviando={d.noticias.enviando}
+            errorModal={d.noticias.errorModal}
+            abrirModalCrear={d.noticias.abrirModalCrear}
+            abrirModalEditar={d.noticias.abrirModalEditar}
+            cerrarModal={d.noticias.cerrarModal}
+            togglePublicada={d.noticias.togglePublicada}
+            eliminar={d.noticias.eliminar}
+            guardar={d.noticias.guardar}
+            handleFormChange={d.noticias.handleFormChange}
+            subirImagen={d.noticias.subirImagen}
+          />
+        )}
+
+        <ModalConfirmacion
+          show={!!d.pendienteConfirmacionNoticia}
+          titulo="Eliminar noticia"
+          mensaje={`¿Eliminar la noticia "${d.pendienteConfirmacionNoticia?.titulo || ''}"? Esta acción no se puede deshacer.`}
+          textoConfirmar="Eliminar"
+          varianteDanger
+          onConfirmar={d.confirmarPendienteNoticia}
+          onCancelar={d.cancelarPendienteNoticia}
+        />
     </NavegacionPanel>
   );
 }
