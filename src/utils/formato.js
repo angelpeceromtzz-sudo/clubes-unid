@@ -29,3 +29,18 @@ export function fechaCorta(fecha) {
     year: 'numeric',
   });
 }
+
+export function contarPalabras(texto) {
+  if (!texto) return 0;
+  return texto.trim().split(/\s+/).filter(Boolean).length;
+}
+
+// Recorta el texto a un máximo de palabras para la vista previa.
+// Al cortar por espacios, los saltos de línea del original se colapsan en espacios.
+export function recortarPalabras(texto, limite) {
+  if (!texto) return '';
+  if (contarPalabras(texto) <= limite) return texto;
+
+  const palabras = texto.trim().split(/\s+/);
+  return palabras.slice(0, limite).join(' ');
+}
