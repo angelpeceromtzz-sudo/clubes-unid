@@ -1,4 +1,5 @@
 export const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
+// export const API_BASE = 'https://clubes-unid.onrender.com/api'; (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
 
 export function getToken() {
   try {

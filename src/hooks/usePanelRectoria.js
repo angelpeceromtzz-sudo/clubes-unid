@@ -1,8 +1,16 @@
 /* Hook del panel de rectoría: carga estadísticas, detalle de clubes, padrón y asistencia. */
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useAutenticacion } from '../contexts/AuthContext';
 
 export function usePanelRectoria() {
+  // El usuario va al hook (y no se lee dentro de cada sección) porque
+  // `SeccionEncuestas` decide qué botones de escritura mostrar comparando
+  // `id_rol` contra `ROL_ADMIN`. Sin esto, `usuario` llegaría como `undefined` y
+  // la sección saldría en sólo lectura por accidente y no porque sepa quién
+  // eres: si mañana un admin entra a este panel, vería todo deshabilitado.
+  const { usuario } = useAutenticacion();
+
   const [vistaActiva, setVistaActiva] = useState('resumen');
   const [stats, setStats] = useState(null);
   const [ocupacionClubes, setOcupacionClubes] = useState([]);
@@ -123,6 +131,9 @@ const qs = params.toString();
   return {
     vistaActiva,
     setVistaActiva,
+    // Lo consumen las secciones que necesitan saber el rol para esconder lo que
+    // no sea de lectura. Es el mismo `user` que expone `usePanelAdmin`.
+    user: usuario,
     stats,
     ocupacionClubes,
     topClubes,

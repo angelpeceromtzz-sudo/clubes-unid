@@ -10,12 +10,20 @@
 //   texto_corto     -> string
 //   texto_largo     -> string
 //   escala          -> number
+import { useTheme } from '../../contexts/ThemeContext';
+
 export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado }) {
-  const base = `w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 ${
+  const { modoOscuro, tema } = useTheme();
+
+  const base = `w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 ${
     error
-      ? 'border-red-500 focus:ring-red-500/50'
-      : 'border-slate-300 dark:border-slate-700'
-  } bg-white dark:bg-[#18223f] text-slate-900 dark:text-slate-100`;
+      ? `border-red-500 focus:ring-red-500/50 ${modoOscuro ? 'bg-[#18223f] text-white' : 'bg-white text-slate-900'}`
+      : `focus:ring-amber-400/50 ${
+          modoOscuro
+            ? 'border-slate-700 bg-[#18223f] text-white'
+            : 'border-slate-300 bg-white text-slate-900'
+        }`
+  }`;
 
   switch (pregunta.tipo) {
     case 'opcion_unica':
@@ -27,7 +35,7 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
               className={`flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors ${
                 valor === opcion.id
                   ? 'border-amber-400 bg-amber-400/10'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-amber-400/50'
+                  : `${modoOscuro ? 'border-slate-700' : 'border-slate-200'} hover:border-amber-400/50`
               } ${deshabilitado ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <input
@@ -39,7 +47,7 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
                 disabled={deshabilitado}
                 className="accent-amber-400"
               />
-              <span className="text-sm text-slate-700 dark:text-slate-200">{opcion.texto}</span>
+              <span className={`text-sm ${tema.text}`}>{opcion.texto}</span>
             </label>
           ))}
         </div>
@@ -56,7 +64,7 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
                 className={`flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors ${
                   marcada
                     ? 'border-amber-400 bg-amber-400/10'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-amber-400/50'
+                    : `${modoOscuro ? 'border-slate-700' : 'border-slate-200'} hover:border-amber-400/50`
                 } ${deshabilitado ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <input
@@ -77,7 +85,7 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
                   disabled={deshabilitado}
                   className="accent-amber-400"
                 />
-                <span className="text-sm text-slate-700 dark:text-slate-200">{opcion.texto}</span>
+                <span className={`text-sm ${tema.text}`}>{opcion.texto}</span>
               </label>
             );
           })}
@@ -111,7 +119,7 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
           />
           {/* El backend corta en 2000 igual; el contador evita que se descubra
               al enviar y perder todo el formulario. */}
-          <p className="mt-1 text-right text-xs text-slate-400">
+          <p className={`mt-1 text-right text-xs ${tema.subtitle}`}>
             {(typeof valor === 'string' ? valor.length : 0)}/2000
           </p>
         </div>
@@ -137,6 +145,7 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
 // acertar y no muestra las etiquetas de los extremos, que son justamente lo que
 // el admin escribe para dar contexto ('Nunca' / 'Todos los días').
 function Escala({ pregunta, valor, onChange, deshabilitado }) {
+  const { modoOscuro, tema } = useTheme();
   const min = pregunta.escala_min ?? 0;
   const max = pregunta.escala_max ?? 5;
   const numeros = Array.from({ length: max - min + 1 }, (_, i) => min + i);
@@ -154,7 +163,11 @@ function Escala({ pregunta, valor, onChange, deshabilitado }) {
             className={`min-w-[2.5rem] rounded-lg border px-3 py-2 text-sm font-bold transition-colors ${
               valor === n
                 ? 'border-amber-400 bg-amber-400 text-[#0e162c]'
-                : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-amber-400/60'
+                : `${
+                    modoOscuro
+                      ? 'border-slate-700 text-slate-300'
+                      : 'border-slate-300 text-slate-600'
+                  } hover:border-amber-400/60`
             } ${deshabilitado ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {n}
@@ -163,7 +176,7 @@ function Escala({ pregunta, valor, onChange, deshabilitado }) {
       </div>
 
       {(pregunta.escala_min_texto || pregunta.escala_max_texto) && (
-        <div className="mt-2 flex justify-between text-xs text-slate-500">
+        <div className={`mt-2 flex justify-between text-xs ${tema.subtitle}`}>
           <span>{pregunta.escala_min_texto || ''}</span>
           <span>{pregunta.escala_max_texto || ''}</span>
         </div>

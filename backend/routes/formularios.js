@@ -23,8 +23,8 @@ const ESTATUS_FLUJO = {
   'Rechazado': [],
 };
 
-// DEBUG: endpoint sin auth para inspeccionar datos reales (SOLO LOCAL)
-router.get('/debug-postulaciones', async (req, res) => {
+// DEBUG: endpoint de inspección. Restringido a administradores para evitar fugas en producción.
+router.get('/debug-postulaciones', authenticate, requireRole(3), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_club, f.id_alumno, f.bloque_asignado, f.status,

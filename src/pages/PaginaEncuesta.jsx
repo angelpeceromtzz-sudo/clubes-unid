@@ -9,11 +9,13 @@ import { useParams, Link } from 'react-router-dom';
 import { encuestaService } from '../services/encuesta.service';
 import { useLicenciaturas } from '../hooks/useLicenciaturas';
 import { CampoPregunta } from '../components/encuestas/CampoPregunta';
+import { useTheme } from '../contexts/ThemeContext';
 
 // El backend distingue tres casos y cada uno merece su pantalla: 404 (el enlace
-// no existe), 403 (todavía no abrió) y 410 (ya cerró). Ver errorStatus().
+// no existe), 403 (todavía no abrió) y 410 (ya cerró). Ver PantallaError().
 export default function PaginaEncuesta() {
   const { slug } = useParams();
+  const { tema, cardCls, inputCls, modoOscuro } = useTheme();
 
   const [encuesta, setEncuesta] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -132,19 +134,15 @@ export default function PaginaEncuesta() {
   if (enviado) return <PantallaGracias encuesta={encuesta} />;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b111e] text-slate-800 dark:text-slate-200 py-10 px-4">
+    <div className={`min-h-screen py-10 px-4 ${tema.bg} ${tema.text}`}>
       <div className="max-w-2xl mx-auto">
         <header className="mb-8">
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-            {encuesta.titulo}
-          </h1>
+          <h1 className={`text-2xl font-black ${tema.title}`}>{encuesta.titulo}</h1>
           {encuesta.descripcion && (
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              {encuesta.descripcion}
-            </p>
+            <p className={`mt-2 text-sm ${tema.subtitle}`}>{encuesta.descripcion}</p>
           )}
           {encuesta.fecha_fin && (
-            <p className="mt-2 text-xs text-slate-500">
+            <p className={`mt-2 text-xs ${tema.subtitle}`}>
               Cierra el {new Date(encuesta.fecha_fin).toLocaleDateString('es-MX')}
             </p>
           )}
@@ -155,14 +153,16 @@ export default function PaginaEncuesta() {
             <section
               key={pregunta.id_pregunta}
               id={`pregunta-${pregunta.id_pregunta}`}
-              className={`rounded-xl border p-5 bg-white dark:bg-[#0e162c] ${
+              className={`${cardCls} rounded-xl border p-5 ${
                 errores[pregunta.id_pregunta]
-                  ? 'border-red-400 dark:border-red-500/60'
-                  : 'border-slate-200 dark:border-slate-700/50'
+                  ? modoOscuro
+                    ? 'border-red-500/60'
+                    : 'border-red-400'
+                  : ''
               }`}
             >
-              <h2 className="font-bold text-slate-900 dark:text-white">
-                <span className="text-slate-400 mr-2">{i + 1}.</span>
+              <h2 className={`font-bold ${tema.title}`}>
+                <span className={`text-slate-400 mr-2`}>{i + 1}.</span>
                 {pregunta.texto}
                 {pregunta.es_obligatoria && (
                   <span className="ml-2 text-red-500 text-sm">*</span>
@@ -170,7 +170,7 @@ export default function PaginaEncuesta() {
               </h2>
 
               {pregunta.ayuda && (
-                <p className="mt-1 text-xs text-slate-500">{pregunta.ayuda}</p>
+                <p className={`mt-1 text-xs ${tema.subtitle}`}>{pregunta.ayuda}</p>
               )}
 
               <div className="mt-3">
@@ -191,10 +191,10 @@ export default function PaginaEncuesta() {
             </section>
           ))}
 
-          <section className="rounded-xl border border-slate-200 dark:border-slate-700/50 p-5 bg-white dark:bg-[#0e162c]">
-            <label className="block text-sm font-bold text-slate-900 dark:text-white">
+          <section className={`${cardCls} rounded-xl border p-5`}>
+            <label className={`block text-sm font-bold ${tema.title}`}>
               Tu licenciatura
-              <span className="block mt-1 text-xs font-normal text-slate-500">
+              <span className={`block mt-1 text-xs font-normal ${tema.subtitle}`}>
                 Opcional. Sólo se usa para comparar resultados entre programas.
               </span>
             </label>
@@ -203,7 +203,7 @@ export default function PaginaEncuesta() {
               value={idLicenciatura}
               onChange={(e) => setIdLicenciatura(e.target.value)}
               disabled={cargandoCatalogos || enviando}
-              className="mt-2 w-full border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-[#18223f] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+              className={`mt-2 ${inputCls}`}
             >
               <option value="">
                 {cargandoCatalogos ? 'Cargando...' : 'Prefiero no decir'}
@@ -224,7 +224,7 @@ export default function PaginaEncuesta() {
             {enviando ? 'Enviando...' : 'Enviar respuestas'}
           </button>
 
-          <p className="text-center text-xs text-slate-500">
+          <p className={`text-center text-xs ${tema.subtitle}`}>
             Esta encuesta es anónima: no se guarda tu nombre ni tu matrícula.
           </p>
         </form>
@@ -234,9 +234,10 @@ export default function PaginaEncuesta() {
 }
 
 function PantallaCarga() {
+  const { tema } = useTheme();
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b111e] flex items-center justify-center">
-      <p className="text-sm text-slate-500">Cargando encuesta...</p>
+    <div className={`min-h-screen flex items-center justify-center ${tema.bg}`}>
+      <p className={`text-sm ${tema.subtitle}`}>Cargando encuesta...</p>
     </div>
   );
 }
@@ -245,6 +246,7 @@ function PantallaCarga() {
 // finales distintos y confundir al alumno con un error genérico hace que pida
 // ayuda por algo que ya no tiene solución.
 function PantallaError({ error, onReintentar }) {
+  const { tema } = useTheme();
   const status = error?.status;
   const titulo =
     status === 410 ? 'Esta encuesta ya se cerró'
@@ -257,10 +259,10 @@ function PantallaError({ error, onReintentar }) {
     : 'Revisa el enlace que te compartieron. Es posible que esté mal copiado.';
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b111e] flex items-center justify-center px-4">
+    <div className={`min-h-screen flex items-center justify-center px-4 ${tema.bg}`}>
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-black text-slate-900 dark:text-white">{titulo}</h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{detalle}</p>
+        <h1 className={`text-xl font-black ${tema.title}`}>{titulo}</h1>
+        <p className={`mt-2 text-sm ${tema.subtitle}`}>{detalle}</p>
 
         {status !== 410 && (
           <button
@@ -282,14 +284,15 @@ function PantallaError({ error, onReintentar }) {
 }
 
 function PantallaGracias({ encuesta }) {
+  const { tema } = useTheme();
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b111e] flex items-center justify-center px-4">
+    <div className={`min-h-screen flex items-center justify-center px-4 ${tema.bg}`}>
       <div className="max-w-md text-center">
         <div className="text-4xl">✓</div>
-        <h1 className="mt-4 text-xl font-black text-slate-900 dark:text-white">
+        <h1 className={`mt-4 text-xl font-black ${tema.title}`}>
           {encuesta.mensaje_agradecimiento || '¡Gracias por responder!'}
         </h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+        <p className={`mt-2 text-sm ${tema.subtitle}`}>
           Tus respuestas se guardaron de forma anónima.
         </p>
       </div>
