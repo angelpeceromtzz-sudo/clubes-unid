@@ -298,3 +298,59 @@ Ajena a PBI-10. Se registra aquí para que no se pierda.
       `trust proxy = 1` sí está (`backend/index.js:34`), que es lo que hace que
       `req.ip` resuelva bien detrás del proxy, pero conviene confirmarlo con un
       429 real.
+
+---
+
+## 5. Contexto: acceso a la base de datos desde desarrollo
+
+### 5.1 Un compañero escribió en producción sin contraseña
+
+Un compañero del equipo levantó el backend en su máquina, creó un usuario desde
+la interfaz, y esa fila apareció en la base de datos de producción en Supabase. No
+hubo hack ni bypass de autenticación: el diseño permitió el acceso exactamente como
+está documentado.
+
+**La cadena.** `backend/.env` (o el panel de Render) trae la cadena de conexión en
+`DATABASE_URL`. Cuando ese backend local arranca, `db.js:11` la usa tal cual y
+`pool` se conecta directo a producción. Desde ahí, cualquier escritura de la app —
+crear usuario, mover un estatus, generar convocatorias— va a la base real. No queda
+rastro en la API porque nunca hubo una petición externa: el proceso local escribió
+directo.
+
+**Por qué la analogía del "mesero y la cocina" no alcanza.** Esa descripción es
+correcta en lo arquitectónico: el navegador nunca habla con la base, y nadie necesita
+la contraseña para trabajar en la interfaz. Lo que no dice es *de dónde salió la
+llave*. No es un permiso abstracto del sistema — es una línea de texto en un `.env`
+que se puede copiar, mandar por chat o commitear. "El mesero tiene la llave desde
+siempre" suena a control del sistema; en la práctica es un secreto compartido entre
+personas, y los secretos compartidos se filtran. Ya hay uno filtrado:
+`debug_query.mjs:8` tiene `password: 'angel2007'` y está versionado en git.
+
+**La raíz es de entorno, no de código.** Mientras desarrollo y producción
+compartan la misma `DATABASE_URL`, cualquier backend local escribe en producción. Es
+una decisión de configuración, no un bug: por eso va a volver a pasar mientras siga
+así.
+
+**Pendiente de decidir con el equipo** (no es una tarea con dueño aún):
+
+- [ ] Qué base usa el backend local: Supabase con su propio esquema de pruebas, o
+      la de producción asumiendo que se escribe a ella.
+- [ ] Quiénes del equipo tienen la cadena de producción y por qué vía.
+- [ ] Si el frontend local debe apuntar a la API de Render por proxy, en vez de
+      levantar un backend contra la base real. Eso elimina la llave local por
+      completo, pero también deja de haber forma de probar escrituras sin tocar
+      producción.
+- [ ] Rotar los secretos de `backend/.env`. `JWT_SECRET`
+      (`clubes-unid-jwt-secret-2026`) y `ADMIN_SECRET` (`unid-admin-2026`) son
+      adivinables, y `ADMIN_SECRET` es la única barrera de
+      `POST /api/usuarios/admin-action`, que promueve a admin.
+
+**Lo que este ítem NO cubre**, y conviene decirlo para que no se lea como cerrado: hay
+una fuga abierta en `formularios.js:26-47`
+(`GET /api/formularios/debug-postulaciones`), sin `authenticate` ni `requireRole`,
+que en producción responde **200 con datos reales de alumnos** (nombre, matrícula,
+carrera, club). Está en `main`, que es la rama que Render despliega, así que está
+vivo en `https://clubes-unid.onrender.com`. El comentario del código dice "SOLO
+LOCAL", y esa suposición es lo que falló: no hay nada en el repo que impida que un
+endpoint de debug llegue a producción. Se documenta aparte porque es un fix de una
+línea, no una decisión de equipo.
