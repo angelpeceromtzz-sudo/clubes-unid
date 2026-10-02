@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+.scrollbar-amber::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-amber::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-amber::-webkit-scrollbar-thumb {
+  background: #f59e0b;
+  border-radius: 9999px;
+}
+.scrollbar-amber {
+  scrollbar-width: thin;
+  scrollbar-color: #f59e0b transparent;
+}
+
+@media print {
+  nav, aside, button {
+    display: none !important;
+  }
+  #lista-asistencia-print {
+    display: block !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 900px) {
+  #hero > div {
+    max-height: 55vh !important;
+  }
+}

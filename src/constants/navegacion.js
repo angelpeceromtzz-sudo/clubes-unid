@@ -1,0 +1,34 @@
+export const ELEMENTOS_NAV_ADMIN = [
+  { key: 'resumen', label: 'Resumen / Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { key: 'usuarios', label: 'Gestión de Usuarios', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+  { key: 'clubes', label: 'Gestión de Clubes', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { key: 'diapositivas', label: 'Banner Principal', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { key: 'anuncios', label: 'Anuncios Globales', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+  { key: 'noticias', label: 'Noticias', icon: 'M12 7.5h1.5m-1.5 3h1.5m-7.5 0h7.5m-7.5 0h1.5m-1.5 0h1.5m-1.5 0h1.5m3-6h1.5m-1.5 0h1.5m-7.5 0h7.5m-7.5 0h1.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { key: 'eventos', label: 'Eventos', icon: 'M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12H3V7a2 2 0 012-2z' },
+  { key: 'historial', label: 'Historial de Acciones', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { key: 'actividad', label: 'Actividad del Sistema', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+];
+
+export const ELEMENTOS_NAV_RECTORIA = [
+  { key: 'resumen', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { key: 'clubes', label: 'Consulta de Clubes', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { key: 'padron', label: 'Padrón de Alumnos', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+  { key: 'asistencia', label: 'Listas de Asistencia', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+  { key: 'noticias', label: 'Noticias', icon: 'M12 7.5h1.5m-1.5 3h1.5m-7.5 0h7.5m-7.5 0h1.5m-1.5 0h1.5m-1.5 0h1.5m3-6h1.5m-1.5 0h1.5m-7.5 0h7.5m-7.5 0h1.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { key: 'eventos', label: 'Eventos', icon: 'M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12H3V7a2 2 0 012-2z' },
+  { key: 'actividad', label: 'Actividad del Sistema', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+];
+
+export const ELEMENTOS_NAV_ALUMNO = [
+  { key: 'mi-club', label: 'Mi Club', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { key: 'horarios', label: 'Horarios', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+];
+
+export const ELEMENTOS_NAV_PRESIDENTE = [
+  { key: 'principal', label: 'Principal', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { key: 'miembros', label: 'Miembros del Club', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+  { key: 'horarios', label: 'Horario', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { key: 'convocatorias', label: 'Convocatorias', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { key: 'historial', label: 'Historial', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+];

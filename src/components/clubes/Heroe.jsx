@@ -1,0 +1,116 @@
+/* Hero con carrusel de imágenes de banner (fondo y navegación). */
+import { useState, useEffect, useRef } from 'react';
+import { Icono } from '../ui/Icono';
+import { api } from '../../services/api';
+import { obtenerUrlImagen } from '../../utils/imagen';
+
+export function Heroe({ onReady }) {
+  const [diapositivas, setDiapositivas] = useState([]);
+  const [slideActual, setSlideActual] = useState(0);
+  const temporizadorRef = useRef(null);
+  const imagenesListas = useRef(false);
+
+  useEffect(() => {
+    api.getDiapositivasHero()
+      .then((data) => {
+        setDiapositivas(data);
+        if (data.length > 0 && !imagenesListas.current) {
+          const img = new Image();
+          img.onload = () => {
+            imagenesListas.current = true;
+            onReady?.();
+          };
+          img.src = obtenerUrlImagen(data[0].url_imagen);
+        } else {
+          onReady?.();
+        }
+      })
+      .catch(() => {
+        setDiapositivas([]);
+        onReady?.();
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const total = diapositivas.length;
+
+  function reiniciarTemporizador() {
+    clearInterval(temporizadorRef.current);
+    temporizadorRef.current = setInterval(() => {
+      setSlideActual((prev) => (prev + 1) % total);
+    }, 8000);
+  }
+
+  function siguiente() {
+    setSlideActual((prev) => (prev + 1) % total);
+    reiniciarTemporizador();
+  }
+
+  function anterior() {
+    setSlideActual((prev) => (prev - 1 + total) % total);
+    reiniciarTemporizador();
+  }
+
+  useEffect(() => {
+    if (total === 0) return;
+    temporizadorRef.current = setInterval(() => {
+      setSlideActual((prev) => (prev + 1) % total);
+    }, 8000);
+    return () => clearInterval(temporizadorRef.current);
+  }, [total]);
+
+  if (total === 0) return (
+    <section id="hero" className="w-full">
+      <div className="min-h-[200px] sm:min-h-[320px] lg:aspect-[21/9] lg:min-h-[400px] max-h-[600px]" />
+    </section>
+  );
+
+  /*
+   * Imagen hero recomendada para el panel admin:
+   *   Dimensiones: 1920 × 800 px (relación ~12:5 ≈ 21:9)
+   *   Formato:     JPG/PNG/WebP, < 500 KB
+   *   Composición: sujeto principal centrado o en tercio superior,
+   *                dejando margen inferior para texto.
+   */
+  return (
+    <section id="hero" className="w-full">
+      <div className="group relative w-full overflow-hidden min-h-[200px] sm:min-h-[320px] lg:aspect-[21/9] lg:min-h-[400px] max-h-[600px]">
+
+        {diapositivas.map((slide, index) => (
+          <div
+            key={slide.id_diapositiva}
+            className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+              index === slideActual ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <div
+              className="absolute inset-0 bg-no-repeat bg-contain lg:bg-cover lg:bg-[center_30%]"
+              style={{ backgroundImage: `url(${obtenerUrlImagen(slide.url_imagen)})` }}
+            />
+
+          </div>
+        ))}
+
+        {total > 1 && (
+          <>
+            <button
+              onClick={anterior}
+              className="absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
+              aria-label="Anterior"
+            >
+              <Icono nombre="chevron-left" strokeWidth={2} className="h-6 w-6" />
+            </button>
+            <button
+              onClick={siguiente}
+              className="absolute right-4 lg:right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
+              aria-label="Siguiente"
+            >
+              <Icono nombre="chevron-right" strokeWidth={2} className="h-6 w-6" />
+            </button>
+          </>
+        )}
+
+      </div>
+    </section>
+  );
+}

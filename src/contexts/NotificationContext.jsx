@@ -1,0 +1,115 @@
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useAutenticacion } from './AuthContext';
+import { api } from '../services/api';
+
+const ContextoNotificacion = createContext(null);
+
+const INTERVALO_POLL = 30000;
+
+export function ProveedorNotificacion({ children: hijos }) {
+  const { estaAutenticado } = useAutenticacion();
+  const [notificaciones, setNotificaciones] = useState([]);
+  const refIntervalo = useRef(null);
+  const primeraCarga = useRef(true);
+  const prevNoLeidas = useRef(0);
+
+  const obtenerNotificaciones = useCallback(async () => {
+    if (!estaAutenticado) {
+      setNotificaciones([]);
+      return;
+    }
+    try {
+      const data = await api.getNotificaciones();
+      setNotificaciones(data);
+
+      const nuevas = data.filter((n) => !n.leido).length;
+      if (!primeraCarga.current && nuevas > prevNoLeidas.current) {
+        const cantidad = nuevas - prevNoLeidas.current;
+        if (Notification.permission === 'granted') {
+          const ultimas = data.filter((n) => !n.leido).slice(0, cantidad);
+          ultimas.forEach((n) => {
+            new Notification(n.titulo, { body: n.mensaje, icon: '/favicon.svg' });
+          });
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission();
+        }
+      }
+      prevNoLeidas.current = nuevas;
+      primeraCarga.current = false;
+    } catch {
+      if (refIntervalo.current) {
+        setNotificaciones([]);
+      }
+    }
+  }, [estaAutenticado]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    obtenerNotificaciones();
+    if (estaAutenticado) {
+      refIntervalo.current = setInterval(obtenerNotificaciones, INTERVALO_POLL);
+    }
+    return () => {
+      if (refIntervalo.current) {
+        clearInterval(refIntervalo.current);
+        refIntervalo.current = null;
+      }
+    };
+  }, [estaAutenticado, obtenerNotificaciones]);
+
+  const noLeidas = notificaciones.filter((n) => !n.leido).length;
+
+  const marcarComoLeida = useCallback(async (id) => {
+    try {
+      await api.marcarNotificacionLeida(id);
+      setNotificaciones((prev) =>
+        prev.map((n) => (n.id_notificacion === id ? { ...n, leido: true } : n))
+      );
+    } catch { /* Silenciar error al marcar como le�da */ }
+  }, []);
+
+  const crearNotificacion = useCallback(async (titulo, mensaje, audiencia, id_club, id_destinatario) => {
+    const data = await api.createNotificacion(titulo, mensaje, audiencia, id_club, id_destinatario);
+    obtenerNotificaciones().catch(() => {});
+    return data;
+  }, [obtenerNotificaciones]);
+
+  const marcarTodasLeidas = useCallback(async () => {
+    try {
+      await api.marcarTodasNotificacionesLeidas();
+      setNotificaciones((prev) => prev.map((n) => ({ ...n, leido: true })));
+    } catch { /* Silenciar error al marcar todas como le�das */ }
+  }, []);
+
+  const eliminarNotificacion = useCallback(async (id) => {
+    try {
+      await api.eliminarNotificacion(id);
+      setNotificaciones((prev) => prev.filter((n) => n.id_notificacion !== id));
+    } catch (err) {
+      console.error('Error al eliminar notificación:', err);
+    }
+  }, []);
+
+  return (
+    <ContextoNotificacion.Provider
+      value={{
+        notificaciones,
+        noLeidas,
+        marcarComoLeida,
+        crearNotificacion,
+        fetchNotificaciones: obtenerNotificaciones,
+        marcarTodasLeidas,
+        eliminarNotificacion,
+      }}
+    >
+      {hijos}
+    </ContextoNotificacion.Provider>
+  );
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useNotificaciones() {
+  const ctx = useContext(ContextoNotificacion);
+  if (!ctx) throw new Error('useNotificaciones debe usarse dentro de ProveedorNotificacion');
+  return ctx;
+}

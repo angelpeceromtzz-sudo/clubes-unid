@@ -1,0 +1,129 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useAutenticacion } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { FormularioInscripcion } from '../formularios/inscripcion/FormularioInscripcion';
+import { Spinner } from '../ui/Spinner';
+import { api } from '../../services/api';
+import { HeroClub } from './sections/HeroClub';
+import { AprendizajeClub } from './sections/AprendizajeClub';
+import { RequisitosFAQClub } from './sections/RequisitosFAQClub';
+import { HorariosClub } from './sections/HorariosClub';
+import { PresidenteClub } from './sections/PresidenteClub';
+import { EventosClub } from './sections/EventosClub';
+import { ModalidadClub } from './sections/ModalidadClub';
+import { InfoAdicionalClub } from './sections/InfoAdicionalClub';
+import { PiePagina } from '../layout/PiePagina';
+
+export function DetalleClub({ onLoginClick }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { modoOscuro } = useTheme();
+  const { estaAutenticado, esAdmin, tieneInscripcionActiva, clubesPostulados } = useAutenticacion();
+  const [club, setClub] = useState(location.state?.club || null);
+  const [loading, setLoading] = useState(!club);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    api.getClub(id)
+      .then((data) => setClub(data))
+      .catch(() => navigate('/'))
+      .finally(() => setLoading(false));
+  }, [id, navigate]);
+
+  const esProximamente = club?.id_estatus_club === 2;
+  const esInactivo = club?.id_estatus_club === 3;
+  const estado = !esProximamente ? club?.estado_calculado : null;
+  const yaEnvio = clubesPostulados.includes(club?.id_club);
+  const deshabilitado = (estado && estado !== 'abierto') || yaEnvio;
+
+  function formatearFecha(fechaIso) {
+    if (!fechaIso) return '';
+    const fecha = new Date(fechaIso);
+    return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function obtenerTextoBoton() {
+    if (esProximamente) return null;
+    if (esInactivo) return null;
+    if (yaEnvio) return 'SOLICITUD ENVIADA';
+    if (estado === 'proximo') return `Abre el ${formatearFecha(club?.fecha_apertura_programada)}`;
+    if (estado === 'lleno') return 'CUPO LLENO';
+    if (estado === 'cerrado') return 'CONVOCATORIA CERRADA';
+    if (!estaAutenticado) return 'INICIA SESIÓN PARA INSCRIBIRTE';
+    if (esAdmin) return null;
+    if (tieneInscripcionActiva) return null;
+    return 'INSCRIBIRME AHORA';
+  }
+
+  const botonTexto = obtenerTextoBoton();
+
+  function manejarClickBoton() {
+    if (deshabilitado) return;
+    if (!estaAutenticado) {
+      onLoginClick();
+    } else if (esAdmin) {
+      return;
+    } else if (tieneInscripcionActiva) {
+      alert("Ya eres miembro activo de un club.");
+    } else if (clubesPostulados.length >= 3) {
+      alert("Ya tienes 3 postulaciones en proceso. Espera una respuesta.");
+    } else {
+      setMostrarFormulario(true);
+    }
+  }
+
+  if (loading) {
+    return <Spinner className="py-20" />;
+  }
+
+  if (!club) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="max-w-7xl mx-auto px-6 py-8 pb-20 md:pb-8 space-y-10">
+        <HeroClub
+          club={club}
+          modoOscuro={modoOscuro}
+          onBotonClick={manejarClickBoton}
+          botonTexto={botonTexto}
+          estaAutenticado={estaAutenticado}
+          esAdmin={esAdmin}
+          tieneInscripcionActiva={tieneInscripcionActiva}
+          deshabilitado={deshabilitado}
+        />
+
+        <div className="md:hidden">
+          <AprendizajeClub modoOscuro={modoOscuro} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <HorariosClub club={club} modoOscuro={modoOscuro} />
+          <EventosClub modoOscuro={modoOscuro} />
+          <ModalidadClub club={club} modoOscuro={modoOscuro} />
+        </div>
+
+        <InfoAdicionalClub club={club} modoOscuro={modoOscuro} />
+
+        <PresidenteClub club={club} modoOscuro={modoOscuro} />
+
+        <RequisitosFAQClub modoOscuro={modoOscuro} />
+      </div>
+
+      {mostrarFormulario && (
+        <FormularioInscripcion
+          club={club}
+          onClose={() => setMostrarFormulario(false)}
+        />
+      )}
+
+      <PiePagina />
+    </>
+  );
+}

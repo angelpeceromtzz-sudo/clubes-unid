@@ -1,0 +1,138 @@
+/* Hook del panel de administración: orquesta sub-hooks de usuarios, clubes, historial y feedback. */
+import { useState, useEffect, useCallback } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
+import { api } from '../services/api';
+import { useFeedback } from './useFeedback';
+import { useAdminClubes } from './useAdminClubes';
+import { useAdminUsuarios } from './useAdminUsuarios';
+import { useAdminHistorial } from './useAdminHistorial';
+import { useAdminHeroDiapositivas } from './useAdminHeroDiapositivas';
+import { useAdminNoticias } from './useAdminNoticias';
+
+export function usePanelAdmin(usuario) {
+  const { esOscuro, cardCls, tableBg, thCls, tdCls, tdTitle, sbBg, sbItemBase, sbItemActive, sbItemInactive, selectCls, inputCls, labelCls, tema } = useTheme();
+  const [vistaActiva, setVistaActiva] = useState('resumen');
+  const [dashboardData, setDashboardData] = useState(null);
+  const [cargandoDashboard, setCargandoDashboard] = useState(true);
+
+  const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
+  const clubes = useAdminClubes(setFeedback, setErrorFeedback);
+  const usuarios = useAdminUsuarios(clubes.refetchClubes, setFeedback, setErrorFeedback);
+  const historial = useAdminHistorial(vistaActiva === 'historial');
+  const heroDiapositivas = useAdminHeroDiapositivas(setFeedback, setErrorFeedback);
+  const noticias = useAdminNoticias(setFeedback, setErrorFeedback);
+
+  const cargarDashboard = useCallback(async () => {
+    setCargandoDashboard(true);
+    try {
+      const data = await api.get('/admin/dashboard-data');
+      setDashboardData(data);
+    } catch {
+      setDashboardData(null);
+    } finally {
+      setCargandoDashboard(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (vistaActiva === 'resumen') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      cargarDashboard();
+    }
+  }, [vistaActiva, cargarDashboard]);
+
+  return {
+    vistaActiva,
+    setVistaActiva,
+    usuarios: usuarios.usuarios,
+    clubes: clubes.clubes,
+    loading: usuarios.loading || clubes.cargandoClubes,
+    asignando: usuarios.asignando,
+    showModalCrear: clubes.showModalCrear,
+    editandoClub: clubes.editandoClub,
+    formClub: clubes.formClub,
+    enviando: clubes.enviando,
+    modalError: clubes.modalError,
+    feedback,
+    setFeedback,
+    errorFeedback,
+    busqueda: usuarios.busqueda,
+    setBusqueda: usuarios.setBusqueda,
+    filtroRol: usuarios.filtroRol,
+    setFiltroRol: usuarios.setFiltroRol,
+    busquedaClubes: clubes.busquedaClubes,
+    setBusquedaClubes: clubes.setBusquedaClubes,
+    filtrados: usuarios.usuariosFiltrados,
+    usuariosFiltrados: usuarios.usuariosFiltrados,
+    clubesFiltrados: clubes.clubesFiltrados,
+    historial: historial.historial,
+    historialLoading: historial.historialLoading,
+    isDark: esOscuro,
+    totalAlumnos: usuarios.totalAlumnos,
+    clubesActivos: clubes.clubesActivos,
+    clubesActivosList: clubes.clubesActivosList,
+    totalInscripciones: usuarios.totalInscripciones,
+    dashboardData,
+    cargandoDashboard,
+    cardCls,
+    tableBg,
+    thCls,
+    tdCls,
+    tdTitle,
+    sbBg,
+    sbItemBase,
+    sbItemActive,
+    sbItemInactive,
+    selectCls,
+    inputCls,
+    labelCls,
+    tema,
+    user: usuario,
+    handleRoleChange: usuarios.handleRoleChange,
+    handleRemoveFromClub: usuarios.handleRemoveFromClub,
+    handleAsignarClub: usuarios.handleAsignarClub,
+    handleStatusChange: clubes.handleStatusChange,
+    abrirModalCrear: clubes.abrirModalCrear,
+    abrirModalEditar: clubes.abrirModalEditar,
+    cerrarModal: clubes.cerrarModal,
+    guardarClub: clubes.guardarClub,
+    handleClubFormChange: clubes.handleClubFormChange,
+    handleToggleNivel: clubes.toggleNivel,
+    subirImagen: clubes.subirImagen,
+    cargarHistorial: historial.cargarHistorial,
+    showModalUsuario: usuarios.showModalUsuario,
+    formUsuario: usuarios.formUsuario,
+    enviandoUsuario: usuarios.enviandoUsuario,
+    errorModalUsuario: usuarios.errorModalUsuario,
+    abrirModalCrearUsuario: usuarios.abrirModalCrearUsuario,
+    cerrarModalUsuario: usuarios.cerrarModalUsuario,
+    handleUsuarioFormChange: usuarios.handleUsuarioFormChange,
+    guardarUsuario: usuarios.guardarUsuario,
+    handleEliminarUsuario: usuarios.handleEliminarUsuario,
+    handleAsignarAlumnoClub: usuarios.handleAsignarAlumnoClub,
+    desactivados: usuarios.desactivados,
+    cargandoDesactivados: usuarios.cargandoDesactivados,
+    reactivando: usuarios.reactivando,
+    handleReactivarUsuario: usuarios.handleReactivarUsuario,
+    modalAdmin: usuarios.modalAdmin,
+    enviandoAdmin: usuarios.enviandoAdmin,
+    errorAdmin: usuarios.errorAdmin,
+    abrirModalAdmin: usuarios.abrirModalAdmin,
+    manejarAdminAction: usuarios.manejarAdminAction,
+    cerrarModalAdmin: usuarios.cerrarModalAdmin,
+    pendienteConfirmacionClub: clubes.pendienteConfirmacion,
+    confirmarPendienteClub: clubes.confirmarPendiente,
+    cancelarPendienteClub: clubes.cancelarPendiente,
+    pendienteConfirmacionUsuario: usuarios.pendienteConfirmacion,
+    confirmarPendienteUsuario: usuarios.confirmarPendiente,
+    cancelarPendienteUsuario: usuarios.cancelarPendiente,
+    hero: heroDiapositivas,
+    pendienteConfirmacionBanner: heroDiapositivas.pendienteConfirmacion,
+    confirmarPendienteBanner: heroDiapositivas.confirmarPendiente,
+    cancelarPendienteBanner: heroDiapositivas.cancelarPendiente,
+    noticias,
+    pendienteConfirmacionNoticia: noticias.pendienteConfirmacion,
+    confirmarPendienteNoticia: noticias.confirmarPendiente,
+    cancelarPendienteNoticia: noticias.cancelarPendiente,
+  };
+}

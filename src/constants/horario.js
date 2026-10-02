@@ -1,0 +1,9 @@
+export const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+export const DIAS_CORTO = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+export const DIAS_SEMANA = [1, 2, 3, 4, 5, 6, 0];
+export const DIAS_SEMANA_LABEL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+export const HORA_MIN_DEFAULT = 8;
+export const HORA_MAX_DEFAULT = 18;
+export const ROW_HEIGHT = 40;
+export const COL_HORA_W = 36;
+export const SNAP_MINUTES = 15;

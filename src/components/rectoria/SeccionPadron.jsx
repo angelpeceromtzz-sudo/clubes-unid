@@ -1,0 +1,95 @@
+/* Padrón de alumnos filtrable por club, carrera o nombre con tabla de resultados. */
+import { Badge } from '../ui/Badge';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Spinner } from '../ui/Spinner';
+import { Th, Td } from '../ui/CeldasTabla';
+
+export function SeccionPadron({ padron, filtrosPadron, aplicarFiltrosPadron, clubesDetalle, cargando }) {
+  const { modoOscuro } = useTheme();
+
+  async function exportarCSV() {
+    if (padron.length === 0) return;
+    const headers = ['Nombre Completo', 'Matrícula', 'Carrera', 'Cuatrimestre', 'Club', 'Estado', 'Bloque'];
+    const filas = padron.map(f => [
+      f.nombre_completo, f.matricula, f.carrera, f.cuatrimestre, f.nombre_club, f.status, f.bloque_asignado || ''
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+
+    const csv = [headers.join(','), ...filas].join('\n');
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `padron_clubes_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-3 items-end">
+        <div>
+          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Club</label>
+          <select value={filtrosPadron.id_club} onChange={e => aplicarFiltrosPadron({ id_club: e.target.value })}
+            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50`}>
+            <option value="">Todos</option>
+            {clubesDetalle.map(c => <option key={c.id_club} value={c.id_club}>{c.nombre_club}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Buscar</label>
+          <input type="text" value={filtrosPadron.busqueda} onChange={e => aplicarFiltrosPadron({ busqueda: e.target.value })}
+            placeholder="Nombre o matrícula"
+            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-48`} />
+        </div>
+        <div>
+          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Carrera</label>
+          <input type="text" value={filtrosPadron.carrera} onChange={e => aplicarFiltrosPadron({ carrera: e.target.value })}
+            placeholder="Filtrar por carrera"
+            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-40`} />
+        </div>
+        <button onClick={exportarCSV} disabled={padron.length === 0}
+          className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-all cursor-pointer">
+          Exportar CSV
+        </button>
+      </div>
+
+      {cargando ? (
+        <Spinner className="py-10" />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
+                <Th>Nombre</Th>
+                <Th>Matrícula</Th>
+                <Th>Carrera</Th>
+
+                <Th>Club</Th>
+                <Th>Estado</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {padron.length === 0 && (
+                <tr><td colSpan={5} className="text-center py-10 text-slate-500">Sin resultados</td></tr>
+              )}
+              {padron.map(f => (
+                <tr key={`${f.id_formulario}-${f.id_club}`} className={`border-b ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/20' : 'border-slate-100 hover:bg-slate-50'} transition-colors`}>
+                  <Td className="font-medium">{f.nombre_completo}</Td>
+                  <Td className="font-mono text-xs">{f.matricula}</Td>
+                  <Td>{f.carrera}</Td>
+                  <Td>{f.nombre_club}</Td>
+                  <Td><Badge texto={f.status} color={
+                    f.status === 'Miembro oficial' || f.status === 'Oferta emitida' ? 'emerald' : f.status === 'Rechazado' || f.status === 'Oferta rechazada' ? 'red' : f.status === 'Postulado' ? 'amber' : 'blue'
+                  } /></Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-slate-500 mt-2">{padron.length} registro(s)</p>
+        </div>
+      )}
+    </div>
+  );
+}
