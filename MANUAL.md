@@ -165,10 +165,17 @@ Quien tenga el enlace puede responder.
   navegación ni el botón de iniciar sesión. Quien nunca ha entrado a la
   plataforma no ve menús que no puede usar.
 - **La encuesta es anónima:** no se guarda el nombre ni la matrícula. Lo único que
-  se conserva del alumno es la licenciatura, y es opcional ("Prefiero no decir"),
-  para poder comparar resultados entre programas.
-- Tipos de pregunta: opción única, opción múltiple, texto corto, texto largo y
-  escala. Las preguntas ocultas por el administrador no llegan al navegador.
+  se conserva del alumno es el programa, y sólo si añade una pregunta de tipo
+  **Licenciatura**: no viene implícita, la crea él en el editor y es opcional
+  ("Prefiero no decir"), para poder comparar resultados entre programas. Como
+  cualquier otra pregunta, se puede mover de sitio, cambiar su texto y volverla
+  obligatoria.
+- Tipos de pregunta: opción única, opción múltiple, texto corto, texto largo,
+  escala numérica y **licenciatura** (el selector de programa). La de
+  licenciatura aparece sin número, y las demás empiezan en 1: no es una pregunta
+  que el alumno tenga que contar.
+- No hay preguntas ocultas: si está en la encuesta, el alumno la ve. Para
+  quitársela se borra.
 - Límite de **5 envíos por hora y por IP** (se aplica en producción).
 - Al terminar muestra la pantalla de agradecimiento. No se puede volver a
   enviar desde la misma pantalla, porque no hay forma de saber si alguien ya
@@ -512,11 +519,11 @@ Las públicas **no piden token**: es el único caso en el sistema.
 
 | Método | Endpoint | Rol | Descripción |
 |--------|----------|-----|-------------|
-| GET | `/api/encuestas/publico/:slug` | público | Definición de la encuesta; solo si está publicada y dentro de su vigencia. Filtra `es_visible` en SQL |
+| GET | `/api/encuestas/publico/:slug` | público | Definición de la encuesta; solo si está publicada y dentro de su vigencia |
 | POST | `/api/encuestas/publico/:slug` | público | Envío de respuestas. 5 por hora y por IP |
 | GET | `/api/encuestas/admin` | admin, rectoría | Lista con conteo de respuestas |
 | POST | `/api/encuestas/admin` | admin | Crea una encuesta en `borrador` y devuelve el `slug` |
-| GET | `/api/encuestas/admin/:id` | admin, rectoría | Encuesta completa, incluidas las preguntas ocultas |
+| GET | `/api/encuestas/admin/:id` | admin, rectoría | Encuesta completa con sus preguntas |
 | PUT | `/api/encuestas/admin/:id` | admin | Edita metadatos, estado y vigencia |
 | DELETE | `/api/encuestas/admin/:id` | admin | Borra. Devuelve **409** si ya tiene respuestas |
 | POST | `/api/encuestas/admin/:id/preguntas` | admin | Añade una pregunta con sus opciones |
@@ -532,11 +539,15 @@ Dos notas sobre las rutas de escritura:
 
 - **El 409 no es un error:** borrar algo que ya tiene respuestas violaría el
   `RESTRICT` de `fk_detalle_pregunta` y `fk_respuesta_encuesta`. El mensaje dice
-  que se cierre u oculte en su lugar, que es lo que normalmente se quiere hacer:
-  *desactivar* es la operación reversible, borrar es la destructiva.
+  que se cierre en su lugar, que es lo que normalmente se quiere hacer: *cerrar*
+  es la operación reversible, borrar es la destructiva.
 - El tipo de una pregunta **no se cambia** desde el editor. Pasar de `texto_corto`
   a `opcion_unica` dejaría la pregunta sin opciones; hay que borrarla y crearla
   de nuevo.
+- **Una encuesta sólo puede tener una pregunta de `licenciatura`.** Todas las
+  respuestas caen en la misma columna (`respuestas_encuesta.id_licenciatura`),
+  así que con dos la segunda pisaría a la primera. Lo cierra el índice parcial
+  único `uq_pregunta_licenciatura`; la API responde **400** con un mensaje claro.
 
 ---
 

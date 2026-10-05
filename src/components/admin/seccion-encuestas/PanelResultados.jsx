@@ -460,6 +460,11 @@ export function PanelResultados({ hook, cargando, resultados }) {
       )}
 
       {/* ── Quién respondió (por carrera) ────────────────────────────── */}
+      {/* Sigue en pie aunque la encuesta tenga pregunta de licenciatura, y la
+          tarjeta de esa pregunta muestre la misma gráfica. No es duplicado
+          exacto: aquí el porcentaje va sobre todas las respuestas, y el de la
+          pregunta sólo sobre quienes dijeron programa. Además esta es la única
+          tarjeta que explica el `sin_licenciatura` de abajo. */}
       {!carreraActiva && porLicenciatura.length > 0 && (
         <Tarjeta titulo="Quién respondió">
           <GraficaBarras
@@ -487,6 +492,10 @@ export function PanelResultados({ hook, cargando, resultados }) {
           if (pregunta.tipo === 'escala') return <ResultadoEscala key={pregunta.id_pregunta} pregunta={pregunta} />;
           if (pregunta.tipo === 'texto_corto' || pregunta.tipo === 'texto_largo')
             return <ResultadoTextos key={pregunta.id_pregunta} pregunta={pregunta} />;
+          // Aquí caen 'opcion_unica', 'opcion_multiple' y 'licenciatura'. Los
+          // tres llegan con la misma forma (`opciones` con conteo y porcentaje) y
+          // no hace falta que la gráfica sepa de qué tipo se trata. Para
+          // `licenciatura` el backend la arma desde `por_licenciatura`.
           return (
             <ResultadoOpciones
               key={pregunta.id_pregunta}

@@ -10,6 +10,7 @@ export const TIPOS_PREGUNTA = {
   TEXTO_CORTO: 'texto_corto',
   TEXTO_LARGO: 'texto_largo',
   ESCALA: 'escala',
+  LICENCIATURA: 'licenciatura',
 };
 
 // Etiquetas para el <select> del editor. Se guardan en el orden en que el admin
@@ -20,12 +21,14 @@ export const TIPOS_PREGUNTA_ETIQUETA = [
   { value: 'texto_largo', label: 'Texto largo' },
   { value: 'opcion_unica', label: 'Opción única' },
   { value: 'opcion_multiple', label: 'Opción múltiple' },
+  { value: 'licenciatura', label: 'Licenciatura' },
   { value: 'escala', label: 'Escala numérica' },
 ];
 
-// Los únicos dos que llevan lista de opciones. `escala` tiene un rango, no una
-// lista, así que no entra aquí: es la confusión más fácil de tener al escribir
-// el editor.
+// Los únicos dos que llevan lista de opciones editable. `escala` tiene un rango,
+// no una lista, y `licenciatura` sus opciones salen del catálogo
+// `cat_licenciaturas`, no de la tabla `opciones_pregunta`: ninguno de los dos
+// entra aquí. Es la confusión más fácil de tener al escribir el editor.
 export const TIPOS_CON_OPCIONES = ['opcion_unica', 'opcion_multiple'];
 
 // Techos de la UI. Deben coincidir con los del backend, que es quien los

@@ -18,17 +18,19 @@ import { ModalBase } from '../../ui/ModalBase';
 import { CampoPregunta } from '../../encuestas/CampoPregunta';
 import { etiquetaTipoPregunta } from '../../../constants/encuesta';
 import { infoEstadoEncuesta } from '../../../constants/estatus';
+import { numerosVisibles } from '../../../utils/encuesta';
 
 // `CampoPregunta` es controlado, así que hay que darle un `valor` aunque no se
 // pueda cambiar. El valor de arranque de cada tipo está en el contrato del
 // componente y basta uno solo: en solo lectura nada lo mueve, no hace falta
-// estado.
+// estado. `licenciatura` arranca en null, que es su estado de "Prefiero no decir".
 const VALOR_INICIAL = {
   opcion_unica: null,
   opcion_multiple: [],
   texto_corto: '',
   texto_largo: '',
   escala: null,
+  licenciatura: null,
 };
 
 export function VistaPreviaEncuesta({
@@ -42,6 +44,11 @@ export function VistaPreviaEncuesta({
   const { cardCls, tema } = useTheme();
 
   const valorDe = (pregunta) => VALOR_INICIAL[pregunta.tipo] ?? null;
+
+  // Se reutiliza el mismo helper que el formulario público, no una copia: la
+  // vista previa existe para mostrar lo que va a ver el alumno, y dos
+  // numeraciones distintas la convertirían en una pantalla que miente.
+  const numeros = numerosVisibles(preguntas);
 
   const info = infoEstadoEncuesta(encuesta?.estado);
 
@@ -107,7 +114,11 @@ export function VistaPreviaEncuesta({
           preguntas.map((pregunta, indice) => (
             <div key={pregunta.id_pregunta} className={`${cardCls} border rounded-xl p-4`}>
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className={`text-xs font-bold ${tema.subtitle}`}>{indice + 1}.</span>
+                {numeros[indice] !== null && (
+                  <span className={`text-xs font-bold ${tema.subtitle}`}>
+                    {numeros[indice]}.
+                  </span>
+                )}
                 <p className={`text-sm font-semibold flex-1 min-w-0 ${tema.text}`}>
                   {pregunta.texto}
                 </p>

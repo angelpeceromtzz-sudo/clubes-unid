@@ -346,6 +346,22 @@ CREATE TABLE IF NOT EXISTS diapositivas_hero (
     fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS noticias (
+    id_noticia SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    contenido TEXT NOT NULL,
+    url_imagen VARCHAR(500),
+    destacada BOOLEAN NOT NULL DEFAULT FALSE,
+    publicada BOOLEAN NOT NULL DEFAULT TRUE,
+    id_autor INT,
+    fecha_publicacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_noticia_autor FOREIGN KEY (id_autor) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_noticias_publicada ON noticias(publicada);
+CREATE INDEX IF NOT EXISTS idx_noticias_fecha ON noticias(fecha_publicacion DESC);
+
 CREATE TABLE IF NOT EXISTS historial_postulacion (
     id_historial SERIAL PRIMARY KEY,
     id_formulario INT NOT NULL,
@@ -499,6 +515,21 @@ CREATE TRIGGER trg_proteger_ultima_diapositiva
     FOR EACH ROW
     EXECUTE FUNCTION fn_proteger_ultima_diapositiva_activa();
 
+    -- Trigger: auto-actualizar fecha_actualizacion en noticias
+CREATE OR REPLACE FUNCTION fn_actualizar_fecha_noticia()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.fecha_actualizacion = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_actualizar_fecha_noticia ON noticias;
+CREATE TRIGGER trg_actualizar_fecha_noticia
+    BEFORE UPDATE ON noticias
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_actualizar_fecha_noticia();
+
 -- ============================================================
 -- MÓDULO DE ENCUESTAS (PBI-10)
 -- ============================================================
@@ -535,7 +566,7 @@ CREATE TABLE IF NOT EXISTS preguntas (
     id_encuesta    INT NOT NULL,
     texto          VARCHAR(500) NOT NULL,
     ayuda          TEXT,
-tipo           VARCHAR(20) NOT NULL,
+    tipo           VARCHAR(20) NOT NULL,
     es_obligatoria BOOLEAN NOT NULL DEFAULT FALSE,
     -- No hay forma de esconder una pregunta sin borrarla: si está en la
     -- encuesta, el alumno la ve. Para quitarle al alumno se borra la pregunta.
@@ -547,7 +578,10 @@ tipo           VARCHAR(20) NOT NULL,
     -- Opcionales: una escala puede no tenerlas. Sólo la escala las usa.
     escala_min_texto VARCHAR(80),
     escala_max_texto VARCHAR(80),
-    CONSTRAINT chk_pregunta_tipo   CHECK (tipo IN ('opcion_unica', 'opcion_multiple', 'texto_corto', 'texto_largo', 'escala')),
+    -- 'licenciatura' es el único tipo cuya respuesta NO vive en
+    -- detalle_respuestas: se guarda en respuestas_encuesta.id_licenciatura
+    -- porque chk_detalle_valor no tiene dónde poner un id de catálogo.
+    CONSTRAINT chk_pregunta_tipo   CHECK (tipo IN ('opcion_unica', 'opcion_multiple', 'texto_corto', 'texto_largo', 'escala', 'licenciatura')),
     CONSTRAINT chk_pregunta_orden  CHECK (orden >= 1),
     CONSTRAINT chk_pregunta_escala CHECK (
         (tipo =  'escala' AND escala_min IS NOT NULL AND escala_max IS NOT NULL
@@ -579,6 +613,23 @@ ALTER TABLE preguntas ADD CONSTRAINT chk_pregunta_escala CHECK (
     (tipo <> 'escala' AND escala_min IS NULL AND escala_max IS NULL
                   AND escala_min_texto IS NULL AND escala_max_texto IS NULL)
 );
+
+-- chk_pregunta_tipo se rehace por el mismo motivo que el de arriba: el CHECK del
+-- CREATE TABLE sólo aplica a las bases nuevas, así que sin estas dos líneas el
+-- tipo 'licenciatura' se rechazaría en toda base que ya tenga la tabla.
+ALTER TABLE preguntas DROP CONSTRAINT IF EXISTS chk_pregunta_tipo;
+ALTER TABLE preguntas ADD CONSTRAINT chk_pregunta_tipo CHECK (
+    tipo IN ('opcion_unica', 'opcion_multiple', 'texto_corto', 'texto_largo', 'escala', 'licenciatura')
+);
+
+-- Una encuesta puede tener como mucho una pregunta de licenciatura. No se puede
+-- expresar como CHECK (contaría filas, y un CHECK sólo ve su propia fila), así
+-- que va como índice parcial: sobre las filas de tipo 'licenciatura' el
+-- id_encuesta tiene que ser único. Las demás preguntas no entran y no se ven
+-- afectadas. Es el que de verdad cierra la puerta; el 400 de
+-- POST /admin/:id/preguntas es sólo el mensaje legible.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_pregunta_licenciatura
+    ON preguntas (id_encuesta) WHERE tipo = 'licenciatura';
 
 CREATE TABLE IF NOT EXISTS opciones_pregunta (
     id_opcion   SERIAL PRIMARY KEY,

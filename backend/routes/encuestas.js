@@ -16,12 +16,21 @@ const router = Router();
 const ROLES_ESCRITURA = [3];
 const ROLES_LECTURA = [3, 4];
 
-// Los 5 tipos de la entrega 1. Los de la entrega 2 (número, ranking, matriz)
-// se validan al añadir la interfaz: meterlos aquí sin frontend los dejaría
-// aceptables por la API pero no pintables por el panel.
-const TIPOS_VALIDOS = ['opcion_unica', 'opcion_multiple', 'texto_corto', 'texto_largo', 'escala'];
+// Los tipos de la entrega 1, más 'licenciatura'. Los de la entrega 2 (número,
+// ranking, matriz) se validan al añadir la interfaz: meterlos aquí sin frontend
+// los dejaría aceptables por la API pero no pintables por el panel.
+const TIPOS_VALIDOS = [
+  'opcion_unica',
+  'opcion_multiple',
+  'texto_corto',
+  'texto_largo',
+  'escala',
+  'licenciatura',
+];
 
-// Sólo estos dos llevan opciones. 'escala' tiene un rango, no una lista.
+// Sólo estos dos llevan opciones. 'escala' tiene un rango, no una lista, y
+// 'licenciatura' sus opciones vienen del catálogo cat_licenciaturas, no de
+// opciones_pregunta: por eso no entra en esta lista.
 const TIPOS_CON_OPCIONES = ['opcion_unica', 'opcion_multiple'];
 
 // Techo alineado con el esquema: detalle_respuestas.chk_detalle_texto corta en
@@ -136,13 +145,17 @@ router.get('/publico/:slug', async (req, res) => {
 /**
  * POST /publico/:slug — enviar respuestas.
  *
- * El cuerpo acepta sólo `id_licenciatura` y `respuestas`. Cualquier otro campo
- * se ignora en vez de guardarse: si mañana alguien manda `{ nombre: 'Juan' }`
- * no debe acabar en la base.
+ * El cuerpo acepta sólo `respuestas`. Cualquier otro campo se ignora en vez de
+ * guardarse: si mañana alguien manda `{ nombre: 'Juan' }` no debe acabar en la
+ * base.
+ *
+ * El programa ya no llega como campo aparte: viaja en `respuestas`, como la
+ * respuesta a la pregunta de tipo 'licenciatura'. Si la encuesta no tiene esa
+ * pregunta, no hay forma de mandar un programa y la columna queda en NULL.
  */
 router.post('/publico/:slug', limiteEnvio, async (req, res) => {
   const { slug } = req.params;
-  const { id_licenciatura, respuestas } = req.body;
+  const { respuestas } = req.body;
 
   try {
     const encuesta = await pool.query(
@@ -177,11 +190,6 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
       return res.status(400).json({ error: 'Demasiadas respuestas en un solo envío' });
     }
 
-    const idLicenciatura = await validarLicenciatura(id_licenciatura);
-    if (idLicenciatura.error) {
-      return res.status(400).json({ error: idLicenciatura.error });
-    }
-
     // Catálogo de la encuesta ya cargado. Este es el punto de control real: si llega
     // un id_pregunta de otra encuesta, no está en este mapa y el envío se rechaza.
     const definiciones = await cargarDefiniciones(e.id_encuesta);
@@ -189,6 +197,15 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
     const validado = validarRespuestas(respuestas, definiciones);
     if (validado.error) {
       return res.status(400).json({ error: validado.error });
+    }
+
+    // El id sale de la respuesta ya validada por formato, pero que exista de
+    // verdad se revisa aquí contra cat_licenciaturas y no antes: hacerlo al
+    // revés dejaría el chequeo del catálogo duplicado, y un null (encuesta sin
+    // pregunta de licenciatura) tiene que poder pasar sin problema.
+    const idLicenciatura = await validarLicenciatura(validado.idLicenciatura);
+    if (idLicenciatura.error) {
+      return res.status(400).json({ error: idLicenciatura.error });
     }
 
     const client = await pool.connect();
@@ -341,10 +358,15 @@ async function cargarDefiniciones(idEncuesta) {
  * Se valida todo ANTES de abrir la transacción: si algo está mal, no se ha
  * escrito nada todavía y no hace falta compensar a medias.
  *
- * @returns {{filas: object[]}|{error: string}}
+ * `idLicenciatura` sale aparte de `filas` porque no es una fila de detalle sino
+ * una columna de la respuesta. Una encuesta puede no tener pregunta de
+ * licenciatura, y entonces vuelve null.
+ *
+ * @returns {{filas: object[], idLicenciatura: number|null}|{error: string}}
  */
 function validarRespuestas(respuestas, definiciones) {
   const filas = [];
+  let idLicenciatura = null;
 
   for (const r of respuestas) {
     const idPregunta = Number(r?.id_pregunta);
@@ -365,6 +387,13 @@ function validarRespuestas(respuestas, definiciones) {
       continue;
     }
 
+    // La licenciatura no aporta filas: su valor va directo a la columna de la
+    // respuesta. Se marca `respondida` igual que las demás, para que el chequeo
+    // de obligatorias de abajo la trate como cualquier otra pregunta.
+    if (valor.idLicenciatura != null) {
+      idLicenciatura = valor.idLicenciatura;
+    }
+
     definicion.respondida = true;
     filas.push(...valor.filas);
   }
@@ -378,17 +407,17 @@ function validarRespuestas(respuestas, definiciones) {
     }
   }
 
-  return { filas };
+  return { filas, idLicenciatura };
 }
 
 /**
  * Valida el valor de una respuesta y devuelve las filas de detalle a insertar.
  *
  * Una pregunta puede producir varias filas (opción múltiple) o ninguna (queda
- * en blanco). Cada fila lleva exactamente uno de los tres valores, como exige
- * chk_detalle_valor.
+ * en blanco, o es de tipo 'licenciatura'). Cada fila lleva exactamente uno de
+ * los tres valores, como exige chk_detalle_valor.
  *
- * @returns {{vacio: boolean, filas: object[]}|{error: string}}
+ * @returns {{vacio: boolean, filas: object[], idLicenciatura?: number}|{error: string}}
  */
 function valorDeRespuesta(valorCrudo, definicion) {
   const { tipo, opciones } = definicion;
@@ -401,6 +430,23 @@ function valorDeRespuesta(valorCrudo, definicion) {
 
   if (vacio) {
     return { vacio: true, filas: [] };
+  }
+
+  // La licenciatura es el único tipo que no deja filas en detalle_respuestas: su
+  // respuesta va a respuestas_encuesta.id_licenciatura, que es una columna de la
+  // respuesta, no del detalle. chk_detalle_valor no tiene dónde meter un id de
+  // catálogo, así que reutilizar detalle_respuestas habría pedido una columna
+  // nueva, otro CHECK y otro índice para duplicar un dato que ya existe.
+  // Aquí sólo se revisa el formato: que el id exista de verdad lo comprueba
+  // validarLicenciatura(), que va contra cat_licenciaturas.
+  if (tipo === 'licenciatura') {
+    const id = Number(valorCrudo);
+
+    if (!Number.isInteger(id)) {
+      return { error: 'La respuesta de la licenciatura debe ser un id de programa' };
+    }
+
+    return { vacio: false, filas: [], idLicenciatura: id };
   }
 
   if (tipo === 'texto_corto' || tipo === 'texto_largo') {
@@ -741,6 +787,7 @@ router.get(
           conteoOpciones: conteoOpciones.rows,
           escala: escala.rows,
           textos: textos.rows,
+          porLicenciatura: porLicenciatura.rows,
         }),
       });
     } catch (err) {
@@ -765,6 +812,7 @@ function armarResultadosPreguntas({
   conteoOpciones,
   escala,
   textos,
+  porLicenciatura,
 }) {
   const mapaConteos = new Map(conteos.map((fila) => [fila.id_pregunta, fila]));
   const mapaTextos = new Map();
@@ -801,6 +849,34 @@ function armarResultadosPreguntas({
         escala_max_texto: pregunta.escala_max_texto,
         promedio: promedioEscala(escala, pregunta.id_pregunta),
         distribucion: distribucionEscala(escala, pregunta, respuestas),
+      };
+    }
+
+    // La licenciatura no tiene filas en detalle_respuestas, así que no aparece en
+    // `conteos` y su desglose es exactamente `porLicenciatura`, que el route ya
+    // consultó para el filtro por carrera. Se reusa en vez de repetir la misma
+    // consulta: los datos son los mismos por construcción, y dos consultas
+    // Parecidas divergen en cuanto una cambia y la otra no.
+    if (pregunta.tipo === 'licenciatura') {
+      const porPrograma = porLicenciatura ?? [];
+
+      // El total de la pregunta es el de quienes contestaron, no el de la
+      // encuesta: quien eligió "Prefiero no decir" no tiene programa, y meterlo
+      // en el denominador dejaría todas las barras abajo de 100 sin motivo. Los
+      // que no contestaron se reportan aparte, en `sin_licenciatura`.
+      const contestaron = porPrograma.reduce((suma, fila) => suma + fila.respuestas, 0);
+
+      return {
+        ...base,
+        respuestas: contestaron,
+        // Se devuelve con la misma forma que las opciones de una pregunta
+        // de opción para que el panel reutilice su gráfica sin saber el tipo.
+        opciones: porPrograma.map((fila) => ({
+          id_opcion: fila.id_licenciatura,
+          texto: fila.nombre,
+          conteo: fila.respuestas,
+          porcentaje: porcentaje(fila.respuestas, contestaron),
+        })),
       };
     }
 
@@ -1124,6 +1200,29 @@ router.post(
         });
       }
 
+      // Una encuesta sólo puede tener una pregunta de licenciatura, porque todas
+      // las respuestas caen en la misma columna
+      // (respuestas_encuesta.id_licenciatura): con dos, la segunda pisaría a la
+      // primera sin que nada avise. Este SELECT es sólo para dar un 400 legible;
+      // el que de verdad cierra la puerta en la base es el índice parcial único
+      // uq_pregunta_licenciatura de schema.sql, porque dos altas simultáneas
+      // pueden pasar las dos por aquí.
+      if (tipo === 'licenciatura') {
+        const existentes = await client.query(
+          `SELECT 1 FROM preguntas
+           WHERE id_encuesta = $1 AND tipo = 'licenciatura'
+           LIMIT 1`,
+          [req.params.id]
+        );
+
+        if (existentes.rows.length > 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            error: 'La encuesta ya tiene una pregunta de licenciatura',
+          });
+        }
+      }
+
       // `orden` es MAX+1 para que la pregunta salga al final. Se calcula en SQL y
       // no en JS para no depender del conteo que leyó el cliente.
       const pregunta = await client.query(
@@ -1160,6 +1259,15 @@ router.post(
       // 23503 = la encuesta no existe.
       if (err.code === '23503') {
         return res.status(404).json({ error: 'Encuesta no encontrada' });
+      }
+
+      // 23505 = uq_pregunta_licenciatura. Sólo llega si dos altas de la misma
+      // pregunta cruzaron el SELECT de arriba a la vez; el índice es el que
+      // cierra la puerta en serio, así que su mensaje sustituye al 500 genérico.
+      if (err.code === '23505') {
+        return res.status(400).json({
+          error: 'La encuesta ya tiene una pregunta de licenciatura',
+        });
       }
 
       console.error('Error al crear pregunta:', err);
