@@ -11,6 +11,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { encuestaService } from '../services/encuesta.service';
 import { TIPOS_CON_OPCIONES } from '../constants/encuesta';
+import { ESTADO_ENCUESTA } from '../constants/estatus';
+import { ROL_ADMIN } from '../constants/roles';
 import { useFeedback } from './useFeedback';
 
 // Filtro de la lista. `null` = todas.
@@ -29,7 +31,6 @@ const PREGUNTA_VACIA = {
   ayuda: '',
   tipo: 'texto_corto',
   es_obligatoria: false,
-  es_visible: true,
   escala_min: 0,
   escala_max: 5,
   escala_min_texto: '',
@@ -37,8 +38,14 @@ const PREGUNTA_VACIA = {
   opciones: ['', ''],
 };
 
-export function useSeccionEncuestas(setFeedbackExterno) {
+// `usuario` llega del panel para poder distinguir a rectoría (rol 4) de admin
+// (rol 3): el backend los deja leer las encuestas a los dos pero sólo deja
+// escribir al admin, así que el panel es quien tiene que esconder los botones de
+// escritura. Se compara con la constante y no con el 3 suelto.
+export function useSeccionEncuestas(setFeedbackExterno, usuario) {
   const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
+
+  const esAdmin = usuario?.id_rol === ROL_ADMIN;
 
   // El éxito también se manda al panel, para que el aviso salga en el lugar donde
   // el admin ya está mirando y no dentro de la sección.
@@ -52,6 +59,23 @@ export function useSeccionEncuestas(setFeedbackExterno) {
 
   const [vista, setVista] = useState('lista');
   const [filtro, setFiltro] = useState(SIN_FILTRO);
+
+  // Pestaña activa dentro de la encuesta abierta: 'preguntas' o 'resultados'.
+  // Vive aquí y no en el componente porque tiene que sobrevivir a que la vista
+  // siga siendo 'editor': cambiar de pestaña no es cambiar de `vista`.
+  const [pestana, setPestana] = useState('preguntas');
+
+  // El formulario de metadatos vive en `EditorEncuesta`, pero el aviso de
+  // "cambiaste de pestaña y hay cosas sin guardar" tiene que decidirlo el
+  // contenedor. Por eso el editor reporta su estado sucio acá en vez de resolver
+  // el cambio de pestaña él mismo.
+  const [metadatosSucios, setMetadatosSucios] = useState(false);
+
+  // Mismo problema con los modales de pregunta y de opciones: viven en
+  // `EditorPreguntas` y se desmontan al cambiar de pestaña, así que lo que el
+  // admin escribió en ellos se perdería sin avisar. El editor reporta si tiene
+  // algo abierto y el contenedor pregunta antes de dejarlo ir.
+  const [preguntasPendientes, setPreguntasPendientes] = useState(false);
 
   const [lista, setLista] = useState([]);
   const [cargandoLista, setCargandoLista] = useState(true);
@@ -72,14 +96,20 @@ export function useSeccionEncuestas(setFeedbackExterno) {
 
   // --- carga ---
 
+  // Devuelve las filas además de ponerlas en el estado: al abrir el editor o los
+  // resultados hay que resincronizar la encuesta elegida con el servidor, y leer
+  // `lista` después del setState daría todavía la versión anterior.
   const cargarLista = useCallback(async () => {
     setCargandoLista(true);
     setErrorLista(null);
 
     try {
-      setLista(await encuestaService.listar());
+      const filas = await encuestaService.listar();
+      setLista(filas);
+      return filas;
     } catch (err) {
       setErrorLista(err.message);
+      return [];
     } finally {
       setCargandoLista(false);
     }
@@ -94,6 +124,31 @@ export function useSeccionEncuestas(setFeedbackExterno) {
     cargarLista();
   }, [cargarLista]);
 
+  // Resincroniza la encuesta abierta con el servidor.
+  //
+  // Hace falta porque el panel decide varias cosas a partir de
+  // `total_respuestas` (si la estructura queda en solo lectura, si se puede
+  // borrar, si se puede editar) y ese número lo trae la fila de la lista, que
+  // quedó calculada cuando se cargó. Si un alumno contesta en medio de la sesión
+  // —o el admin publica y alguien responde enseguida— el panel razonaría con un
+  // conteo viejo y dejaría editar una estructura que ya está congelada.
+  //
+  // Se recarga la lista y no el detalle a propósito: `GET /admin/:id` no devuelve
+  // el conteo (sí el detalle y las preguntas), y `/resultados` lo devuelve pero
+  // son seis consultas de agregados para leer un integer. La lista es una sola
+  // consulta barata y ya se carga para la vista de lista.
+  const refrescarSeleccion = useCallback(
+    async (idEncuesta) => {
+      const filas = await cargarLista();
+      const fresca = filas.find((e) => e.id_encuesta === idEncuesta);
+
+      // Si el listado falla o la encuesta ya no está, se conserva la que había:
+      // perder la selección dejaría al admin en una vista sin encabezado.
+      if (fresca) setSeleccion(fresca);
+    },
+    [cargarLista]
+  );
+
   const cargarDetalle = useCallback(async (id) => {
     setCargandoDetalle(true);
 
@@ -106,12 +161,12 @@ export function useSeccionEncuestas(setFeedbackExterno) {
     }
   }, [setErrorFeedback]);
 
-  const cargarResultados = useCallback(async (id) => {
+  const cargarResultados = useCallback(async (id, carrera = null) => {
     setCargandoResultados(true);
     setResultados(null);
 
     try {
-      setResultados(await encuestaService.obtenerResultados(id));
+      setResultados(await encuestaService.obtenerResultados(id, carrera));
     } catch (err) {
       setErrorFeedback(err.message);
     } finally {
@@ -127,28 +182,78 @@ export function useSeccionEncuestas(setFeedbackExterno) {
     setDetalle(null);
     setResultados(null);
     setEditandoPregunta(null);
+    setMetadatosSucios(false);
+    setPreguntasPendientes(false);
+    setPestana('preguntas');
   }, []);
 
   const abrirEditor = useCallback(
-    (encuesta) => {
+    async (encuesta) => {
       setSeleccion(encuesta);
       setVista('editor');
       setResultados(null);
       setFormPregunta(PREGUNTA_VACIA);
       setEditandoPregunta(null);
+      // Siempre se entra por la pestaña de preguntas, aunque la última vez que
+      // se abrió esta encuesta se terminó en resultados: reaparecer donde se
+      // dejó sería raro al abrir desde la lista.
+      setPestana('preguntas');
+      setMetadatosSucios(false);
+      setPreguntasPendientes(false);
       cargarDetalle(encuesta.id_encuesta);
+      await refrescarSeleccion(encuesta.id_encuesta);
     },
-    [cargarDetalle]
+    [cargarDetalle, refrescarSeleccion]
   );
 
   const abrirResultados = useCallback(
-    (encuesta) => {
+    async (encuesta) => {
       setSeleccion(encuesta);
       setVista('resultados');
       setDetalle(null);
+      setMetadatosSucios(false);
+      setPreguntasPendientes(false);
+      setPestana('resultados');
       cargarResultados(encuesta.id_encuesta);
+      await refrescarSeleccion(encuesta.id_encuesta);
     },
-    [cargarResultados]
+    [cargarResultados, refrescarSeleccion]
+  );
+
+  /**
+   * Cambia la pestaña sin volver a la lista ni perder lo editado.
+   *
+   * Cambiar a resultados carga los agregados la primera vez; si ya estaban
+   * cargados se conservan, porque volver a pedirlos en cada cambio de pestaña
+   * son seis consultas de agregados por un viaje que el usuario no pidió.
+   */
+  const cambiarPestana = useCallback(
+    (nueva) => {
+      if (nueva === pestana) return;
+
+      // El formulario de metadatos y los modales de pregunta viven en la vista
+      // de preguntas. Si se cambia a resultados con algo a medias, todo eso se
+      // desmonta y lo escrito se pierde; quien llama es responsable de haber
+      // avisado antes.
+      if (pestana === 'preguntas' && nueva === 'resultados') {
+        setMetadatosSucios(false);
+        setPreguntasPendientes(false);
+      }
+
+      setPestana(nueva);
+
+      if (nueva === 'resultados' && !resultados && seleccion) {
+        cargarResultados(seleccion.id_encuesta);
+      }
+
+      // Al revés también hace falta: entrando por "Resultados" el detalle viene
+      // en null a propósito, y sin esto la pestaña de Preguntas abriría con el
+      // error de "no se pudo cargar la encuesta".
+      if (nueva === 'preguntas' && !detalle && seleccion) {
+        cargarDetalle(seleccion.id_encuesta);
+      }
+    },
+    [pestana, resultados, detalle, seleccion, cargarResultados, cargarDetalle]
   );
 
   // --- encuesta ---
@@ -184,19 +289,37 @@ export function useSeccionEncuestas(setFeedbackExterno) {
     }
   }, [formNueva, cargarLista, avisar, cargarDetalle, setErrorFeedback]);
 
-  const guardarMetadatos = useCallback(async () => {
+  // El formulario se recibe como argumento, no se lee de `detalle`. `detalle` es
+  // lo que devolvió el servidor en la última carga, así que leerlo aquí mandaba
+  // los valores viejos: el select de estado escribía en el borrador local pero el
+  // PUT enviaba el estado previo y el servidor lo reescribía con COALESCE,
+  // dejando el panel como estaba. Todos los campos del formulario sufrían lo mismo.
+  const guardarMetadatos = useCallback(async (formulario) => {
     if (!seleccion) return;
+
+    // Publicar sin preguntas no lo bloquea el backend (pendiente #4 de
+    // docs/pbi-10-pendientes-backend.md). La comprobación vive aquí y no sólo en
+    // el botón del editor para que ninguna otra vía de guardado --una tecla, un
+    // acceso directo, o el botón del futuro que alguien añada-- pueda mandar
+    // ese PUT. Se lee `detalle.preguntas`, que es lo que el backend acaba de
+    // devolver, en lugar del conteo de la fila del listado.
+    const sinPreguntas = (detalle?.preguntas?.length ?? 0) === 0;
+
+    if (formulario.estado === ESTADO_ENCUESTA.PUBLICADA && sinPreguntas) {
+      setErrorFeedback('No se puede publicar una encuesta sin preguntas');
+      return;
+    }
 
     setEnviando(true);
 
     try {
       const actualizada = await encuestaService.actualizar(seleccion.id_encuesta, {
-        titulo: detalle.titulo,
-        descripcion: detalle.descripcion,
-        mensaje_agradecimiento: detalle.mensaje_agradecimiento,
-        estado: detalle.estado,
-        fecha_inicio: detalle.fecha_inicio,
-        fecha_fin: detalle.fecha_fin,
+        titulo: formulario.titulo,
+        descripcion: formulario.descripcion,
+        mensaje_agradecimiento: formulario.mensaje_agradecimiento,
+        estado: formulario.estado,
+        fecha_inicio: formulario.fecha_inicio,
+        fecha_fin: formulario.fecha_fin,
       });
 
       // El detalle se reemplaza por lo que devolvió el servidor, no por el form:
@@ -215,6 +338,19 @@ export function useSeccionEncuestas(setFeedbackExterno) {
   // desde la fila de la lista, y ahí `seleccion` puede ser null o ser otra
   // encuesta. Con `seleccion` el botón "Eliminar" fallaba en silencio.
   const eliminar = useCallback(async (idEncuesta) => {
+    // El backend NO se pone a defender esta regla: DELETE /admin/:id hace un
+    // DELETE a secas y si hay respuestas revienta el RESTRICT de
+    // fk_respuesta_encuesta como 500. La UI decide antes de llamar, así que el
+    // 500 de abajo sólo es un respaldo.
+    const fila = lista.find((e) => e.id_encuesta === idEncuesta);
+
+    if (fila && fila.total_respuestas > 0) {
+      setErrorFeedback(
+        'Esta encuesta ya tiene respuestas, así que no se puede borrar. Ciérrala para que deje de recibir respuestas.'
+      );
+      return;
+    }
+
     setEnviando(true);
 
     try {
@@ -223,14 +359,70 @@ export function useSeccionEncuestas(setFeedbackExterno) {
       volverALista();
       avisar('Encuesta eliminada');
     } catch (err) {
-      // 409 = tiene respuestas. El mensaje del backend ya explica que hay que
-      // cerrarla en lugar de borrarla, y es más útil que uno propio: se muestra
-      // tal cual.
-      setErrorFeedback(err.message);
+      // El 500 sin mensaje útil es el caso de "tenía respuestas" que se coló
+      // entre los filtros. 409 sería lo correcto pero el backend no lo manda.
+      setErrorFeedback(
+        err.status === 500
+          ? 'No se pudo borrar. Si la encuesta ya tiene respuestas, ciérrala en lugar de borrarla.'
+          : err.message
+      );
     } finally {
       setEnviando(false);
     }
-  }, [cargarLista, volverALista, avisar, setErrorFeedback]);
+  }, [lista, cargarLista, volverALista, avisar, setErrorFeedback]);
+
+  /**
+   * Cambiar el estado (publicar, cerrar) sin perder los otros campos.
+   *
+   * `PUT /admin/:id` sólo protege con COALESCE el título y el estado:
+   * descripcion, mensaje_agradecimiento y las dos fechas son asignación directa,
+   * así que si no llegan se borran. Por eso aquí no se manda "el estado y ya" sino
+   * el objeto completo.
+   *
+   * El objeto de referencia sale de `detalle` cuando está cargado (el editor lo
+   * tiene). Desde resultados `detalle` es null, y la fila de la lista no trae
+   * `mensaje_agradecimiento`, así que se pide una lectura antes de escribir: sin
+   * ella, cerrar una encuesta le vaciaría la descripción y el agradecimiento.
+   */
+  const aplicarEstado = useCallback(
+    async (idEncuesta, nuevoEstado) => {
+      setEnviando(true);
+
+      try {
+        const base =
+          detalle?.id_encuesta === idEncuesta
+            ? detalle
+            : (await encuestaService.obtener(idEncuesta));
+
+        await encuestaService.actualizar(idEncuesta, {
+          titulo: base.titulo,
+          descripcion: base.descripcion,
+          mensaje_agradecimiento: base.mensaje_agradecimiento,
+          // Las fechas van tal cual vinieron (ISO). `validarFechas` las vuelve a
+          // pasar por `new Date`, y reenviar el mismo valor evita que un simple
+          // cambio de estado las mueva de día por el viaje de UTC.
+          fecha_inicio: base.fecha_inicio,
+          fecha_fin: base.fecha_fin,
+          estado: nuevoEstado,
+        });
+
+        await cargarLista();
+
+        // El detalle se refresca con la misma lectura para que el editor no siga
+        // mostrando el estado anterior.
+        if (detalle?.id_encuesta === idEncuesta) {
+          setDetalle(await encuestaService.obtener(idEncuesta));
+        }
+
+        avisar(nuevoEstado === 'cerrada' ? 'Encuesta cerrada' : 'Encuesta actualizada');
+      } catch (err) {
+        setErrorFeedback(err.message);
+      } finally {
+        setEnviando(false);
+      }
+    },
+    [detalle, cargarLista, avisar, setErrorFeedback]
+  );
 
   // --- preguntas ---
 
@@ -252,7 +444,6 @@ export function useSeccionEncuestas(setFeedbackExterno) {
           texto: formPregunta.texto,
           ayuda: formPregunta.ayuda,
           es_obligatoria: formPregunta.es_obligatoria,
-          es_visible: formPregunta.es_visible,
           escala_min: formPregunta.tipo === 'escala' ? Number(formPregunta.escala_min) : null,
           escala_max: formPregunta.tipo === 'escala' ? Number(formPregunta.escala_max) : null,
           escala_min_texto:
@@ -280,7 +471,6 @@ export function useSeccionEncuestas(setFeedbackExterno) {
           ayuda: formPregunta.ayuda,
           tipo: formPregunta.tipo,
           es_obligatoria: formPregunta.es_obligatoria,
-          es_visible: formPregunta.es_visible,
           opciones: TIPOS_CON_OPCIONES.includes(formPregunta.tipo)
             ? formPregunta.opciones
             : undefined,
@@ -439,6 +629,26 @@ export function useSeccionEncuestas(setFeedbackExterno) {
     setVista,
     volverALista,
 
+    // Pestaña activa de la encuesta abierta y su cambio. Cambiar de pestaña no
+    // vuelve a la lista ni recarga el detalle.
+    pestana,
+    cambiarPestana,
+
+    // El editor de metadatos reporta acá si el formulario tiene cambios sin
+    // guardar, para poder avisar antes de cambiar de pestaña y desmontarlo.
+    metadatosSucios,
+    setMetadatosSucios,
+    preguntasPendientes,
+    setPreguntasPendientes,
+
+    // Rol y capacidad de escritura. Rectoría entra al panel pero sólo lee:
+    // el backend le da acceso de lectura a las encuestas y no de escritura.
+    esAdmin,
+
+    // Refresca la encuesta abierta contra el servidor. Se usa al entrar al
+    // editor o a resultados, para no decidir con un conteo viejo.
+    refrescarSeleccion,
+
     filtro,
     setFiltro,
     lista: listaFiltrada,
@@ -452,16 +662,33 @@ export function useSeccionEncuestas(setFeedbackExterno) {
     cargandoDetalle,
     enviando,
 
+    // Una encuesta con respuestas ya no es un borrador: su estructura queda
+    // congelada en el panel porque el backend sólo bloquea a medias (deja
+    // editar el texto de la pregunta y deja publicar sin preguntas).
+    //
+    // Sale de `seleccion`, que `abrirEditor` y `abrirResultados` resincronizan
+    // con el servidor antes de llegar aquí, así que no es el conteo de cuando se
+    // cargó la lista. Y sale de la fila de la lista porque ni `GET /admin/:id`
+    // (que sí trae detalle y preguntas) ni nada más barato expone el conteo.
+    tieneRespuestas: (seleccion?.total_respuestas ?? 0) > 0,
+
     resultados,
     cargandoResultados,
     abrirResultados,
     abrirEditor,
+
+    // Recarga los agregados de la encuesta abierta. La usa el panel de
+    // resultados después de cerrar, porque el estado del badge y de la vigencia
+    // salen de la misma respuesta y si no se recarga quedarían diciendo
+    // "Publicada" con el enlace ya dead.
+    cargarResultados,
 
     formNueva,
     setFormNueva,
     crear,
 
     guardarMetadatos,
+    aplicarEstado,
     eliminar,
     duplicar,
 

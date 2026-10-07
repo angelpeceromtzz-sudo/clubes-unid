@@ -73,29 +73,28 @@ const limiteEnvio = rateLimit({
 /**
  * GET /publico/:slug — definición de la encuesta, sin datos de quién la creó.
  *
- * Sólo expone estado = 'publicada', y filtra `es_visible` en SQL a propósito:
- * si el filtro viviera en el frontend, un alumno leería una pregunta ocultada
- * por el admin con un simple GET al JSON y la encuesta se desarmaría.
+ * Sólo expone estado = 'publicada'. La lista de preguntas sale entera, sin
+ * filtros: si el admin Guardó la encuesta, todas sus preguntas son públicas. No
+ * hay ningún campo que permita esconder una sin borrarla.
  */
 router.get('/publico/:slug', async (req, res) => {
   const { slug } = req.params;
 
   try {
     const encuesta = await pool.query(
-      `SELECT id_encuesta, titulo, descripcion, mensaje_agradecimiento,
-              fecha_inicio, fecha_fin
-       FROM encuestas
-       WHERE slug = $1 AND estado = 'publicada'`,
+      `SELECT id_encuesta, titulo, descripcion, mensaje_agradecimiento, fecha_inicio, fecha_fin, estado FROM encuestas WHERE slug = $1`,
       [slug]
     );
 
     // Mismo 404 para "no existe" y para "existe pero está en borrador": no
     // revelamos la existencia de una encuesta que aún no se publicó.
-    if (encuesta.rows.length === 0) {
+    if (encuesta.rows.length === 0 || encuesta.rows[0].estado === 'borrador') {
       return res.status(404).json({ error: 'Encuesta no encontrada' });
     }
-
     const e = encuesta.rows[0];
+    if (e.estado === 'cerrada') {
+      return res.status(410).json({ error: 'Esta encuesta ya se cerró' });
+    }
     const ventana = comprobarVigencia(e);
 
     // `comprobarVigencia` devuelve null cuando la encuesta SÍ está en ventana, que
@@ -116,7 +115,7 @@ router.get('/publico/:slug', async (req, res) => {
                 '[]'::json
               ) AS opciones
        FROM preguntas p
-       WHERE p.id_encuesta = $1 AND p.es_visible = TRUE
+       WHERE p.id_encuesta = $1
        ORDER BY p.orden ASC`,
       [e.id_encuesta]
     );
@@ -153,11 +152,13 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
       [slug]
     );
 
-    if (encuesta.rows.length === 0) {
+    if (encuesta.rows.length === 0 || encuesta.rows[0].estado === 'borrador') {
       return res.status(404).json({ error: 'Encuesta no encontrada' });
     }
-
     const e = encuesta.rows[0];
+    if (e.estado === 'cerrada') {
+      return res.status(410).json({ error: 'Esta encuesta ya se cerró' });
+    }
     const ventana = comprobarVigencia(e);
 
     // `comprobarVigencia` devuelve null cuando la encuesta SÍ está en ventana, que
@@ -181,9 +182,8 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
       return res.status(400).json({ error: idLicenciatura.error });
     }
 
-    // Catálogo de la encuesta YA filtrado por es_visible. Este es el punto de
-    // control real: si llega un id_pregunta de otra encuesta, o de una pregunta
-    // oculta, no está en este mapa y el envío se rechaza.
+    // Catálogo de la encuesta ya cargado. Este es el punto de control real: si llega
+    // un id_pregunta de otra encuesta, no está en este mapa y el envío se rechaza.
     const definiciones = await cargarDefiniciones(e.id_encuesta);
 
     const validado = validarRespuestas(respuestas, definiciones);
@@ -287,7 +287,7 @@ async function validarLicenciatura(idLicenciatura) {
 }
 
 /**
- * Carga preguntas visibles y sus opciones en dos queries, no una por respuesta.
+ * Carga preguntas y sus opciones en dos queries, no una por respuesta.
  *
  * Devuelve un Map para que validar sea O(1) por respuesta y no necesite ir a la
  * base: un POST con 40 respuestas no debe disparar 80 queries.
@@ -298,7 +298,7 @@ async function cargarDefiniciones(idEncuesta) {
   const preguntas = await pool.query(
     `SELECT id_pregunta, tipo, es_obligatoria, escala_min, escala_max
      FROM preguntas
-     WHERE id_encuesta = $1 AND es_visible = TRUE
+     WHERE id_encuesta = $1
      ORDER BY orden ASC`,
     [idEncuesta]
   );
@@ -316,7 +316,7 @@ async function cargarDefiniciones(idEncuesta) {
     `SELECT o.id_opcion, o.id_pregunta
      FROM opciones_pregunta o
      JOIN preguntas p ON p.id_pregunta = o.id_pregunta
-     WHERE p.id_encuesta = $1 AND p.es_visible = TRUE`,
+     WHERE p.id_encuesta = $1`,
     [idEncuesta]
   );
 
@@ -426,8 +426,8 @@ function valorDeRespuesta(valorCrudo, definicion) {
       return { error: 'La respuesta de la escala debe ser un número entero' };
     }
 
-    // El rango se leyó de la fila ya filtrada por es_visible, así que no hace
-    // falta volver a consultarlo ni a confiar en lo que mandó el cliente.
+    // El rango viene de la fila que ya se cargó, así que no hace falta volver a
+    // consultarlo ni a confiar en lo que mandó el cliente.
     const min = definicion.escala_min ?? 0;
     const max = definicion.escala_max ?? 10;
 
@@ -488,8 +488,8 @@ router.get('/admin', authenticate, requireRole(...ROLES_LECTURA), async (req, re
               e.fecha_inicio, e.fecha_fin, e.fecha_creacion,
               (SELECT COUNT(*) FROM respuestas_encuesta r
                 WHERE r.id_encuesta = e.id_encuesta) AS total_respuestas,
-              (SELECT COUNT(*) FROM preguntas p
-                WHERE p.id_encuesta = e.id_encuesta AND p.es_visible = TRUE) AS total_preguntas
+(SELECT COUNT(*) FROM preguntas p
+                 WHERE p.id_encuesta = e.id_encuesta) AS total_preguntas
        FROM encuestas e
        ORDER BY e.fecha_creacion DESC`
     );
@@ -557,7 +557,7 @@ router.get('/admin/:id', authenticate, requireRole(...ROLES_LECTURA), async (req
     }
 
     const preguntas = await pool.query(
-      `SELECT p.id_pregunta, p.texto, p.ayuda, p.tipo, p.es_obligatoria, p.es_visible,
+      `SELECT p.id_pregunta, p.texto, p.ayuda, p.tipo, p.es_obligatoria,
               p.orden, p.escala_min, p.escala_max,
               p.escala_min_texto, p.escala_max_texto,
               COALESCE(
@@ -608,9 +608,13 @@ router.get(
     // no numérico revienta el cast de Postgres como 500. Se valida aquí porque
     // esta ruta es la que el panel llama con un id que viene de la URL pegada.
     const idEncuesta = Number(req.params.id);
+    const carreraFilter = req.query.carrera ? Number(req.query.carrera) : null;
 
     if (!Number.isInteger(idEncuesta)) {
       return res.status(400).json({ error: 'El id de la encuesta debe ser un número' });
+    }
+    if (req.query.carrera && !Number.isInteger(carreraFilter)) {
+      return res.status(400).json({ error: 'El filtro de carrera debe ser un número' });
     }
 
     try {
@@ -624,17 +628,18 @@ router.get(
         return res.status(404).json({ error: 'Encuesta no encontrada' });
       }
 
-      // Definición completa, incluidas las ocultas. Los resultados sí las
-      // incluyen: al admin le sirven para ver una pregunta que|scale a la que
-      // dejó de exponer, y el panel las marca como ocultas al pintarlas.
+      // WHERE clause extra para respuestas
+      const filterSQL = carreraFilter ? ' AND r.id_licenciatura = $2' : '';
+      const queryArgs = carreraFilter ? [idEncuesta, carreraFilter] : [idEncuesta];
+
+      // Todas las preguntas, con los conteos de cada una.
       const definicion = await pool.query(
-        `SELECT p.id_pregunta, p.texto, p.tipo, p.es_obligatoria, p.es_visible, p.orden,
+        `SELECT p.id_pregunta, p.texto, p.tipo, p.es_obligatoria, p.orden,
                 p.escala_min, p.escala_max, p.escala_min_texto, p.escala_max_texto,
                 COALESCE(
-                  (SELECT json_agg(json_build_object('id', o.id_opcion, 'texto', o.texto,
-                                                    'orden', o.orden)
+                  (SELECT json_agg(json_build_object('id', o.id_opcion, 'texto', o.texto, 'orden', o.orden)
                                    ORDER BY o.orden ASC)
-                    FROM opciones_pregunta o WHERE o.id_pregunta = p.id_pregunta),
+                   FROM opciones_pregunta o WHERE o.id_pregunta = p.id_pregunta),
                   '[]'::json
                 ) AS opciones
          FROM preguntas p
@@ -643,14 +648,6 @@ router.get(
         [idEncuesta]
       );
 
-      // Un solo GROUP BY para los tres conteos que necesita cada pregunta:
-      // cuántas respuestas la tocaron, cuántas marcaron alguna opción (la base
-      // de los porcentajes de opción múltiple) y cuántos textos libres hay.
-      //
-      // Los ::int no son cosméticos: COUNT devuelve bigint y el driver de node
-      // lo entrega como string, así que sin el cast "conteo": "3" viaja al
-      // frontend como texto y cualquier cálculo o comparación numérica del
-      // panel falla en silencio.
       const conteos = await pool.query(
         `SELECT d.id_pregunta,
                 COUNT(DISTINCT d.id_respuesta)::int AS respuestas,
@@ -659,41 +656,33 @@ router.get(
                 COUNT(*) FILTER (WHERE d.texto IS NOT NULL)::int AS total_textos
          FROM detalle_respuestas d
          JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
-         WHERE r.id_encuesta = $1
+         WHERE r.id_encuesta = $1 ${filterSQL}
          GROUP BY d.id_pregunta`,
-        [idEncuesta]
+        queryArgs
       );
 
-      // Sólo opciones que alguien marcó. Las que quedaron en cero se reponen
-      // desde la definición: el admin tiene que ver la lista completa, porque
-      // "nadie eligió esta opción" también es parte del resultado.
       const conteoOpciones = await pool.query(
         `SELECT d.id_pregunta, o.id_opcion, COUNT(DISTINCT d.id_respuesta)::int AS conteo
          FROM detalle_respuestas d
          JOIN opciones_pregunta o ON o.id_opcion = d.id_opcion
          JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
-         WHERE r.id_encuesta = $1
+         WHERE r.id_encuesta = $1 ${filterSQL}
          GROUP BY d.id_pregunta, o.id_opcion`,
-        [idEncuesta]
+        queryArgs
       );
 
-      // Distribución de la escala: un renglón por valor, con cuántas respuestas
-      // lo eligieron. El promedio NO se pide aquí a propósito: sale de esta misma
-      // distribución, ponderada por `conteo`, en `promedioEscala`.
       const escala = await pool.query(
         `SELECT d.id_pregunta, d.numero, COUNT(DISTINCT d.id_respuesta)::int AS conteo
          FROM detalle_respuestas d
          JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
-         WHERE r.id_encuesta = $1 AND d.numero IS NOT NULL
+         WHERE r.id_encuesta = $1 AND d.numero IS NOT NULL ${filterSQL}
          GROUP BY d.id_pregunta, d.numero
          ORDER BY d.id_pregunta, d.numero`,
-        [idEncuesta]
+        queryArgs
       );
 
-      // Muestra de textos: los más recientes de cada pregunta, no los primeros N
-      // del overall. ROW_NUMBER con PARTITION hace el corte por pregunta; un
-      // LIMIT a secas llenaría el cupo entero con la primera pregunta y dejaría
-      // las demás en blanco.
+      const textosArgs = carreraFilter ? [idEncuesta, 200, carreraFilter] : [idEncuesta, 200];
+      const textosFilterSQL = carreraFilter ? ' AND r.id_licenciatura = $3' : '';
       const textos = await pool.query(
         `SELECT id_pregunta, texto, fecha_envio
          FROM (
@@ -704,42 +693,36 @@ router.get(
                   ) AS rn
            FROM detalle_respuestas d
            JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
-           WHERE r.id_encuesta = $1 AND d.texto IS NOT NULL
+           WHERE r.id_encuesta = $1 AND d.texto IS NOT NULL ${textosFilterSQL}
          ) t
          WHERE rn <= $2
          ORDER BY id_pregunta, fecha_envio DESC`,
-        [idEncuesta, LIMITE_TEXTOS_RESULTADOS]
+        textosArgs
       );
 
       const total = await pool.query(
-        'SELECT COUNT(*)::int AS total FROM respuestas_encuesta WHERE id_encuesta = $1',
-        [idEncuesta]
+        `SELECT COUNT(*)::int AS total FROM respuestas_encuesta r WHERE r.id_encuesta = $1 ${filterSQL}`,
+        queryArgs
       );
 
-      // Responses por día. to_char en vez de dejar que pg devuelva un timestamptz:
-      // el panel lo pinta como etiqueta de eje y un Date con zona horaria se
-      // corre un día al formatearlo en el navegador.
       const porFecha = await pool.query(
         `SELECT TO_CHAR(DATE_TRUNC('day', r.fecha_envio), 'YYYY-MM-DD') AS dia,
                 COUNT(*)::int AS respuestas
          FROM respuestas_encuesta r
-         WHERE r.id_encuesta = $1
+         WHERE r.id_encuesta = $1 ${filterSQL}
          GROUP BY 1
          ORDER BY 1`,
-        [idEncuesta]
+        queryArgs
       );
 
-      // La licenciatura es el único dato del alumno que la encuesta guarda, y es
-      // para segmentar. Lo que no se reporta aquí no se guarda: sin nombre ni
-      // matrícula no hay nada más que agrupar.
       const porLicenciatura = await pool.query(
         `SELECT l.id_licenciatura, l.nombre, COUNT(*)::int AS respuestas
          FROM respuestas_encuesta r
          JOIN cat_licenciaturas l ON l.id_licenciatura = r.id_licenciatura
-         WHERE r.id_encuesta = $1
+         WHERE r.id_encuesta = $1 ${filterSQL}
          GROUP BY l.id_licenciatura, l.nombre
          ORDER BY respuestas DESC, l.nombre ASC`,
-        [idEncuesta]
+        queryArgs
       );
 
       res.json({
@@ -804,7 +787,6 @@ function armarResultadosPreguntas({
       tipo: pregunta.tipo,
       orden: pregunta.orden,
       es_obligatoria: pregunta.es_obligatoria,
-      es_visible: pregunta.es_visible,
       // Para las preguntas sin respuestas va en 0, no en null: el panel lo usa
       // como denominador de los porcentajes y null se colaría en la aritmética.
       respuestas,
@@ -946,6 +928,12 @@ function porcentaje(conteo, base) {
  */
 router.put('/admin/:id', authenticate, requireRole(...ROLES_ESCRITURA), async (req, res) => {
   const { titulo, descripcion, mensaje_agradecimiento, estado, fecha_inicio, fecha_fin } = req.body;
+    if (estado === 'publicada') {
+      const q = await pool.query('SELECT COUNT(*) as total FROM preguntas WHERE id_encuesta = $1', [req.params.id]);
+      if (parseInt(q.rows[0].total, 10) === 0) {
+        return res.status(400).json({ error: 'No se puede publicar una encuesta sin preguntas.' });
+      }
+    }
 
   if (estado !== undefined && !ESTADOS.includes(estado)) {
     return res.status(400).json({ error: `Estado inválido. Debe ser uno de: ${ESTADOS.join(', ')}` });
@@ -1066,7 +1054,6 @@ router.post(
       ayuda,
       tipo,
       es_obligatoria,
-      es_visible,
       escala_min,
       escala_max,
       escala_min_texto,
@@ -1141,16 +1128,15 @@ router.post(
       // no en JS para no depender del conteo que leyó el cliente.
       const pregunta = await client.query(
         `INSERT INTO preguntas (
-           id_encuesta, texto, ayuda, tipo, es_obligatoria, es_visible, orden,
+           id_encuesta, texto, ayuda, tipo, es_obligatoria, orden,
            escala_min, escala_max, escala_min_texto, escala_max_texto)
          VALUES (
-           $1, $2, $3, $4, $5, $6,
+           $1, $2, $3, $4, $5,
            COALESCE((SELECT MAX(orden) + 1 FROM preguntas WHERE id_encuesta = $1), 1),
-           $7, $8, $9, $10)
+           $6, $7, $8, $9)
          RETURNING id_pregunta`,
         [req.params.id, texto.trim(), ayuda?.trim() || null, tipo,
          Boolean(es_obligatoria),
-         es_visible === undefined ? true : Boolean(es_visible),
          min, max, minTexto, maxTexto]
       );
 
@@ -1187,10 +1173,9 @@ router.post(
 /**
  * PUT /admin/preguntas/:idPregunta — editar.
  *
- * `es_visible` y `es_obligatoria` se resuelven con COALESCE en vez de un
- * booleano plano: el panel los manda siempre, y calcular Boolean('false')
- * saldría true, así que una pregunta nunca se ocultaría ni dejaría de ser
- * obligatoria.
+ * `es_obligatoria` se resuelve con COALESCE en vez de un booleano plano: el panel
+ * lo manda siempre, y calcular Boolean('false') saldría true, así que una
+ * pregunta nunca dejaría de ser obligatoria.
  *
  * El tipo NO se cambia aquí. Cambiar 'texto_corto' por 'opcion_unica'
  * dejaría la pregunta sin opciones; el panel lo resuelve borrando y recreando.
@@ -1200,7 +1185,7 @@ router.put(
   authenticate,
   requireRole(...ROLES_ESCRITURA),
   async (req, res) => {
-    const { texto, ayuda, es_obligatoria, es_visible, escala_min, escala_max,
+    const { texto, ayuda, es_obligatoria, escala_min, escala_max,
             escala_min_texto, escala_max_texto } = req.body;
 
     try {
@@ -1209,19 +1194,17 @@ router.put(
          SET texto = COALESCE($2, texto),
              ayuda = $3,
              es_obligatoria = COALESCE($4, es_obligatoria),
-             es_visible = COALESCE($5, es_visible),
-             escala_min = COALESCE($6, escala_min),
-             escala_max = COALESCE($7, escala_max),
-             escala_min_texto = COALESCE($8, escala_min_texto),
-             escala_max_texto = COALESCE($9, escala_max_texto)
+             escala_min = COALESCE($5, escala_min),
+             escala_max = COALESCE($6, escala_max),
+             escala_min_texto = COALESCE($7, escala_min_texto),
+             escala_max_texto = COALESCE($8, escala_max_texto)
          WHERE id_pregunta = $1
-         RETURNING id_pregunta, texto, ayuda, tipo, es_obligatoria, es_visible,
+         RETURNING id_pregunta, texto, ayuda, tipo, es_obligatoria,
                    escala_min, escala_max, escala_min_texto, escala_max_texto`,
         [req.params.idPregunta,
          texto?.trim() ?? null,
          ayuda === undefined ? null : ayuda?.trim() || null,
          es_obligatoria === undefined ? null : Boolean(es_obligatoria),
-         es_visible === undefined ? null : Boolean(es_visible),
          escala_min ?? null,
          escala_max ?? null,
          escala_min_texto?.trim() || null,
@@ -1621,10 +1604,10 @@ router.post(
 
       const idNueva = copia.rows[0].id_encuesta;
 
-      // Se copian también las ocultas: la copia tiene que ser la misma encuesta,
-      // no una versión recortada. Si el admin no las quiere, las borra.
+      // Se copian todas: la copia tiene que ser la misma encuesta,
+      // no una versión recortada.
       const preguntas = await client.query(
-        `SELECT id_pregunta, texto, ayuda, tipo, es_obligatoria, es_visible, orden,
+        `SELECT id_pregunta, texto, ayuda, tipo, es_obligatoria, orden,
                 escala_min, escala_max, escala_min_texto, escala_max_texto
          FROM preguntas
          WHERE id_encuesta = $1
@@ -1635,11 +1618,11 @@ router.post(
       for (const p of preguntas.rows) {
         const nueva = await client.query(
           `INSERT INTO preguntas (
-             id_encuesta, texto, ayuda, tipo, es_obligatoria, es_visible, orden,
+             id_encuesta, texto, ayuda, tipo, es_obligatoria, orden,
              escala_min, escala_max, escala_min_texto, escala_max_texto)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            RETURNING id_pregunta`,
-          [idNueva, p.texto, p.ayuda, p.tipo, p.es_obligatoria, p.es_visible,
+          [idNueva, p.texto, p.ayuda, p.tipo, p.es_obligatoria,
            p.orden, p.escala_min, p.escala_max, p.escala_min_texto, p.escala_max_texto]
         );
 

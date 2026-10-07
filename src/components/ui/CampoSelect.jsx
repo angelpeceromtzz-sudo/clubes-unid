@@ -1,4 +1,4 @@
-/* Select reutilizable con label, placeholder, opciones (string[] u objetos {value, label}) y validación de error. */
+/* Select reutilizable con label, placeholder, opciones (string[] u objetos {value, label, disabled}) y validación de error. */
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function CampoSelect({ label, name, value, onChange, opciones, placeholder, required, error, disabled }) {
@@ -17,7 +17,12 @@ export function CampoSelect({ label, name, value, onChange, opciones, placeholde
         {opciones.map((op) => {
           const val = typeof op === 'string' ? op : op.value;
           const lbl = typeof op === 'string' ? op : op.label;
-          return <option key={val} value={val}>{lbl}</option>;
+// `disabled` por opción: hay estados que no se pueden elegir y no se
+          // pueden quitar del <select> (si no, quitarlo deja la encuesta en un
+          // estado que nadie eligió). Deshabilitar la opción lo explica sin
+          // tener que borrarla.
+          const optDisabled = typeof op === 'string' ? false : Boolean(op.disabled);
+          return <option key={val} value={val} disabled={optDisabled}>{lbl}</option>;
         })}
       </select>
       {error && <p className={errorCls}>{error}</p>}

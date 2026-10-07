@@ -535,16 +535,10 @@ CREATE TABLE IF NOT EXISTS preguntas (
     id_encuesta    INT NOT NULL,
     texto          VARCHAR(500) NOT NULL,
     ayuda          TEXT,
-    tipo           VARCHAR(20) NOT NULL,
+tipo           VARCHAR(20) NOT NULL,
     es_obligatoria BOOLEAN NOT NULL DEFAULT FALSE,
-    -- Oculta la pregunta a los alumnos sin borrarla. El filtro va en el SQL del
-    -- GET público, así que una pregunta oculta ni siquiera viaja al cliente.
-    -- Sirve para armar la encuesta por partes y publicarla cuando esté lista.
-    -- Los tres estados van en dos columnas independientes:
-    --   es_visible=1, es_obligatoria=1  → obligatoria
-    --   es_visible=1, es_obligatoria=0  → opcional
-    --   es_visible=0                    → oculta (da igual es_obligatoria)
-    es_visible     BOOLEAN NOT NULL DEFAULT TRUE,
+    -- No hay forma de esconder una pregunta sin borrarla: si está en la
+    -- encuesta, el alumno la ve. Para quitarle al alumno se borra la pregunta.
     orden          INT NOT NULL,
     -- Sólo la escala numérica usa min/max; el resto debe dejarlos en NULL
     escala_min     INT,
@@ -567,13 +561,15 @@ CREATE TABLE IF NOT EXISTS preguntas (
     CONSTRAINT fk_pregunta_encuesta  FOREIGN KEY (id_encuesta) REFERENCES encuestas(id_encuesta) ON DELETE CASCADE
 );
 
--- Columnas agregadas después del commit inicial del módulo. El NOT NULL de
--- es_visible va sólo en el CREATE TABLE: ponerlo aquí fallaría en bases que
--- ya tengan filas, y un fallo a mitad de schema.sql hace rollback del
--- esquema entero (migrate.js manda el archivo en un solo pool.query).
-ALTER TABLE preguntas ADD COLUMN IF NOT EXISTS es_visible BOOLEAN NOT NULL DEFAULT TRUE;
+-- Columnas agregadas después del commit inicial del módulo.
 ALTER TABLE preguntas ADD COLUMN IF NOT EXISTS escala_min_texto VARCHAR(80);
 ALTER TABLE preguntas ADD COLUMN IF NOT EXISTS escala_max_texto VARCHAR(80);
+
+-- es_visible se quitó del módulo: no hay forma de esconder una pregunta sin
+-- borrarla. DROP y no sólo sacarlo del CREATE TABLE, porque migrate() corre este
+-- archivo entero en cada arranque y el CREATE TABLE es un no-op en bases que ya
+-- existen: sin esta línea la columna se quedaría ahí para siempre.
+ALTER TABLE preguntas DROP COLUMN IF EXISTS es_visible;
 
 ALTER TABLE preguntas DROP CONSTRAINT IF EXISTS chk_pregunta_escala;
 ALTER TABLE preguntas ADD CONSTRAINT chk_pregunta_escala CHECK (

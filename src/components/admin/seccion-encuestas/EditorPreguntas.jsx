@@ -35,11 +35,13 @@ function Casilla({ etiqueta, checked, onChange, disabled, ayuda }) {
         checked={checked}
         onChange={onChange}
         disabled={disabled}
-        className="mt-0.5 accent-amber-400"
+        className="mt-0.5 h-4 w-4 shrink-0 accent-amber-400"
       />
-      <span>
-        <span className="text-sm">{etiqueta}</span>
-        {ayuda && <span className="block text-[11px] opacity-60">{ayuda}</span>}
+      <span className="min-w-0">
+        <span className="block text-sm">{etiqueta}</span>
+        {ayuda && (
+          <span className="block text-[11px] leading-relaxed opacity-60">{ayuda}</span>
+        )}
       </span>
     </label>
   );
@@ -169,14 +171,42 @@ function EditorOpciones({ opciones, onChange, disabled, onMover }) {
 }
 
 export function EditorPreguntas({ hook }) {
-  const { cardCls, labelCls } = useTheme();
+  const { cardCls, labelCls, tema } = useTheme();
   const { detalle, formPregunta, setFormPregunta, editandoPregunta, setEditandoPregunta,
     guardarPregunta, eliminarPregunta, guardarOpciones, reordenarOpciones, enviando,
-    errorFeedback } = hook;
+    errorFeedback, esAdmin, tieneRespuestas, setPreguntasPendientes } = hook;
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [borrando, setBorrando] = useState(null);
   const [editandoOpciones, setEditandoOpciones] = useState(null);
+
+  // Mientras haya un modal abierto hay algo que se perdería al cambiar de
+  // pestaña: en el de pregunta, lo que se está escribiendo; en el de opciones,
+  // los textos y el orden arrastrados. Se reporta al contenedor para que pida
+  // confirmación antes de desmontar todo esto.
+  //
+  // No se intenta adivinar si el formulario "cambió": abrir el modal para
+  // mirar una pregunta y cerrarlo sin escribir no ensucia nada, y un aviso ahí
+  // sería ruido.
+  useEffect(() => {
+    setPreguntasPendientes(modalAbierto || editandoOpciones !== null);
+  }, [modalAbierto, editandoOpciones, setPreguntasPendientes]);
+
+  // La estructura se congela cuando la encuesta ya tiene respuestas.
+  //
+  // El backend no lo exige en todo: deja editar el texto de una pregunta y
+  // reordenar. Lo que sí rompe es reemplazar las opciones de una pregunta que
+  // ya tiene respuestas (el endpoint borra todas y las rehace con ids nuevos, y
+  // hay respuestas apuntando a los ids viejos) y borrar una pregunta contestada.
+  // Pero aunque el servidor lo permitiera, reordenar o cambiar el texto después
+  // de que alguien contestó deja los resultados ya recolectados difíciles de
+  // leer. Por eso aquí se congela todo el bloque y no sólo lo que el servidor
+  // bloquea.
+  //
+  // El total se resincroniza al abrir el editor (`refrescarSeleccion`), así que
+  // `tieneRespuestas` no es el de la lista de hace un rato: si un alumno contestó
+  // mientras el panel estaba abierto, ya viene actualizado.
+  const editable = esAdmin && !tieneRespuestas;
 
   // Al cambiar de encuesta mientras el modal está abierto, el formulario dejaría
   // apuntando a la anterior. Se cierra al cambiar el id.
@@ -202,7 +232,6 @@ export function EditorPreguntas({ hook }) {
       // El tipo se pinta pero no se manda: ver la nota del formulario.
       tipo: pregunta.tipo,
       es_obligatoria: pregunta.es_obligatoria,
-      es_visible: pregunta.es_visible,
       escala_min: pregunta.escala_min ?? 0,
       escala_max: pregunta.escala_max ?? 5,
       escala_min_texto: pregunta.escala_min_texto ?? '',
@@ -225,124 +254,171 @@ export function EditorPreguntas({ hook }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-sm font-black uppercase tracking-wider">
             Preguntas ({preguntas.length}/{MAX_PREGUNTAS_POR_ENCUESTA})
           </h3>
-          <p className="text-[11px] opacity-60">
-            Las ocultas no las ve el alumno, pero sus respuestas sí se cuentan.
+          <p className={`text-[11px] ${tema.subtitle}`}>
+            Todas las preguntas son públicas: si guardas la encuesta, el alumno las
+            ve todas.
           </p>
         </div>
 
-        <BotonAccion
-          onClick={abrirNueva}
-          size="sm"
-          disabled={preguntas.length >= MAX_PREGUNTAS_POR_ENCUESTA || enviando}
-        >
-          <Icono nombre="plus" className="h-3.5 w-3.5" />
-          Nueva pregunta
-        </BotonAccion>
+        {editable && (
+          <BotonAccion
+            onClick={abrirNueva}
+            size="sm"
+            disabled={preguntas.length >= MAX_PREGUNTAS_POR_ENCUESTA || enviando}
+          >
+            <Icono nombre="plus" className="h-3.5 w-3.5" />
+            Nueva pregunta
+          </BotonAccion>
+        )}
       </div>
+
+      {/* El motivo del bloqueo se escribe aquí y no se deja que el admin lo
+          descubra por un 409: si ve que los botones desaparecieron sin
+          explicación, va a pensar que se rompió la pantalla. */}
+      {!editable && preguntas.length > 0 && (
+        <Alerta
+          tipo={esAdmin ? 'warning' : 'info'}
+          mensaje={
+            esAdmin
+              ? 'La estructura está congelada porque esta encuesta ya tiene respuestas.'
+              : 'Sólo lectura: puedes consultar la encuesta, no modificarla.'
+          }
+        >
+          <p className="text-xs mt-1">
+            {esAdmin
+              ? 'Para no descuadrar lo que ya respondieron no se pueden agregar, reordenar ni quitar preguntas, ni cambiar sus opciones. Los títulos, la descripción y las fechas de la encuesta sí se siguen pudiendo editar.'
+              : 'Las respuestas son anónimas, así que no se puede ver quiénlas mandó.'}
+          </p>
+        </Alerta>
+      )}
 
       {preguntas.length === 0 ? (
         <div className={`${cardCls} border rounded-2xl p-8 text-center`}>
-          <p className="text-sm opacity-70">
+          <p className={`text-sm ${tema.subtitle}`}>
             Esta encuesta todavía no tiene preguntas. Mientras esté vacía no hay nada que
             publicar.
           </p>
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {preguntas.map((pregunta, indice) => (
             <li
               key={pregunta.id_pregunta}
-              className={`${cardCls} border rounded-2xl p-4 flex items-start gap-3`}
+              className={`${cardCls} border rounded-2xl p-5 flex items-start gap-4`}
             >
-              <div className="flex flex-col items-center gap-0.5 shrink-0 pt-1">
-                <span className="text-[10px] font-black opacity-50 w-5 text-center">
+              <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
+                <span className={`text-[10px] font-black w-5 text-center ${tema.subtitle}`}>
                   {indice + 1}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => hook.moverPregunta(indice, -1)}
-                  disabled={indice === 0 || enviando}
-                  title="Subir"
-                  aria-label={`Subir la pregunta ${indice + 1}`}
-                  className="p-1 opacity-60 hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <Icono nombre="chevron-down" className="h-4 w-4 rotate-180" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => hook.moverPregunta(indice, 1)}
-                  disabled={indice === preguntas.length - 1 || enviando}
-                  title="Bajar"
-                  aria-label={`Bajar la pregunta ${indice + 1}`}
-                  className="p-1 opacity-60 hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <Icono nombre="chevron-down" className="h-4 w-4" />
-                </button>
+                {editable && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => hook.moverPregunta(indice, -1)}
+                      disabled={indice === 0 || enviando}
+                      title="Subir"
+                      aria-label={`Subir la pregunta ${indice + 1}`}
+                      className="p-1 opacity-60 hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      <Icono nombre="chevron-down" className="h-4 w-4 rotate-180" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => hook.moverPregunta(indice, 1)}
+                      disabled={indice === preguntas.length - 1 || enviando}
+                      title="Bajar"
+                      aria-label={`Bajar la pregunta ${indice + 1}`}
+                      className="p-1 opacity-60 hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      <Icono nombre="chevron-down" className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
               </div>
 
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium break-words">{pregunta.texto}</p>
+              {/* El texto de la pregunta va a text-base para que sea el elemento
+                  que domina la tarjeta, como en el editor de Forms. Con text-sm
+                  quedaba al mismo nivel de peso que los badges de abajo. */}
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <p className={`text-base font-medium break-words ${tema.title}`}>
+                  {pregunta.texto}
+                </p>
                 {pregunta.ayuda && (
-                  <p className="text-[11px] opacity-60 break-words">{pregunta.ayuda}</p>
+                  <p className={`text-[11px] ${tema.subtitle} break-words`}>
+                    {pregunta.ayuda}
+                  </p>
                 )}
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                   <Badge texto={etiquetaTipoPregunta(pregunta.tipo)} color="blue" />
                   {pregunta.es_obligatoria && <Badge texto="Obligatoria" color="red" />}
-                  {!pregunta.es_visible && <Badge texto="Oculta" color="slate" />}
                   {pregunta.tipo === 'escala' && (
                     <Badge texto={`${pregunta.escala_min}–${pregunta.escala_max}`} color="purple" />
                   )}
                   {TIPOS_CON_OPCIONES.includes(pregunta.tipo) && (
-                    <span className="text-[10px] opacity-60">
+                    <span className={`text-[10px] ${tema.subtitle}`}>
                       {(pregunta.opciones ?? []).length} opciones
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
-                {TIPOS_CON_OPCIONES.includes(pregunta.tipo) && (
+              {/* Las tres acciones comparten un marco para leerse como un grupo.
+                  Sueltas, el ícono de opciones y el de editar parecían el mismo
+                  botón repetido. */}
+              {/* El grupo de acciones no se pinta cuando no hay nada que hacer: un marco
+                  vacío al lado de cada pregunta se lee como un botón roto. */}
+              {editable && (
+                <div
+                  className={`flex items-center gap-0.5 shrink-0 rounded-xl border p-0.5 ${
+                    tema.isDark ? 'border-slate-700/60' : 'border-slate-200'
+                  }`}
+                >
+                  {TIPOS_CON_OPCIONES.includes(pregunta.tipo) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditandoOpciones({
+                          id: pregunta.id_pregunta,
+                          texto: pregunta.texto,
+                          // Se guardan los ids aparte de los textos porque el
+                          // reordenamiento se guarda por id. Si se guardara sólo el
+                          // texto, habría que volver a pedirlos al servidor.
+                          ids: (pregunta.opciones ?? []).map((o) => o.id_opcion),
+                          opciones: (pregunta.opciones ?? []).map((o) => o.texto),
+                        })
+                      }
+                      title="Editar opciones"
+                      aria-label={`Editar opciones de la pregunta ${indice + 1}`}
+                      className="p-2 opacity-60 hover:opacity-100 cursor-pointer"
+                    >
+                      <Icono nombre="clipboard" className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() =>
-                      setEditandoOpciones({
-                        id: pregunta.id_pregunta,
-                        texto: pregunta.texto,
-                        // Se guardan los ids aparte de los textos porque el
-                        // reordenamiento se guarda por id. Si se guardara sólo el
-                        // texto, habría que volver a pedirlos al servidor.
-                        ids: (pregunta.opciones ?? []).map((o) => o.id_opcion),
-                        opciones: (pregunta.opciones ?? []).map((o) => o.texto),
-                      })
-                    }
-                    title="Editar opciones"
+                    onClick={() => abrirEdicion(pregunta)}
+                    title="Editar"
+                    aria-label={`Editar la pregunta ${indice + 1}`}
                     className="p-2 opacity-60 hover:opacity-100 cursor-pointer"
                   >
-                    <Icono nombre="clipboard" className="h-4 w-4" />
+                    <Icono nombre="pencil" className="h-4 w-4" />
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => abrirEdicion(pregunta)}
-                  title="Editar"
-                  className="p-2 opacity-60 hover:opacity-100 cursor-pointer"
-                >
-                  <Icono nombre="pencil" className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBorrando(pregunta)}
-                  title="Eliminar"
-                  className="p-2 text-red-400 hover:text-red-300 cursor-pointer"
-                >
-                  <Icono nombre="trash" className="h-4 w-4" />
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => setBorrando(pregunta)}
+                    title="Eliminar"
+                    aria-label={`Eliminar la pregunta ${indice + 1}`}
+                    className="p-2 text-red-400 hover:text-red-300 cursor-pointer"
+                  >
+                    <Icono nombre="trash" className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -350,12 +426,12 @@ export function EditorPreguntas({ hook }) {
 
       {/* --- alta / edición de pregunta --- */}
       <ModalBase
-        show={modalAbierto}
+        show={modalAbierto && editable}
         onClose={cerrarModal}
         maxWidth="max-w-2xl"
         closeOnBackdrop={false}
       >
-        <h3 className="text-lg font-black uppercase tracking-wider mb-5">
+        <h3 className={`text-lg font-black uppercase tracking-wider mb-5 ${tema.title}`}>
           {editandoPregunta ? 'Editar pregunta' : 'Nueva pregunta'}
         </h3>
 
@@ -480,22 +556,16 @@ export function EditorPreguntas({ hook }) {
             </div>
           )}
 
-          <div className="space-y-2.5 pt-2">
+          {/* Sólo queda "Obligatoria". No hay forma de esconder una pregunta
+              sin borrarla: si está en la encuesta, el alumno la ve. Para
+              quitársela al alumno se borra la pregunta. */}
+          <div className="pt-2">
             <Casilla
               etiqueta="Obligatoria"
               ayuda="El alumno no puede enviarla en blanco."
               checked={formPregunta.es_obligatoria}
               onChange={(e) =>
                 setFormPregunta({ ...formPregunta, es_obligatoria: e.target.checked })
-              }
-              disabled={enviando}
-            />
-            <Casilla
-              etiqueta="Visible para el alumno"
-              ayuda="Desmárcala para ocultarla sin borrarla; sus respuestas siguen contando en los resultados."
-              checked={formPregunta.es_visible}
-              onChange={(e) =>
-                setFormPregunta({ ...formPregunta, es_visible: e.target.checked })
               }
               disabled={enviando}
             />
@@ -516,15 +586,19 @@ export function EditorPreguntas({ hook }) {
 
       {/* --- opciones de una pregunta existente --- */}
       <ModalBase
-        show={Boolean(editandoOpciones)}
+        show={Boolean(editandoOpciones) && editable}
         onClose={() => setEditandoOpciones(null)}
         maxWidth="max-w-lg"
         closeOnBackdrop={false}
       >
         {editandoOpciones && (
           <>
-            <h3 className="text-lg font-black uppercase tracking-wider mb-1">Opciones</h3>
-            <p className="text-xs opacity-60 mb-5 break-words">{editandoOpciones.texto}</p>
+            <h3 className={`text-lg font-black uppercase tracking-wider mb-1 ${tema.title}`}>
+              Opciones
+            </h3>
+            <p className={`text-xs mb-5 break-words ${tema.subtitle}`}>
+              {editandoOpciones.texto}
+            </p>
 
             <Alerta tipo="warning" mensaje="Guardar reemplaza la lista completa.">
               <p className="text-xs mt-1 opacity-80">
@@ -589,7 +663,7 @@ export function EditorPreguntas({ hook }) {
 
       {/* --- baja de pregunta --- */}
       <ModalConfirmacion
-        show={Boolean(borrando)}
+        show={Boolean(borrando) && editable}
         titulo="Eliminar pregunta"
         mensaje={
           borrando

@@ -189,25 +189,28 @@ WHERE u.correo_institucional = 'admin@unid.mx'
 
 -- La encuesta se localiza por el slug y no por id, porque el id depende del
 -- orden en que se creo la base. Las preguntas se llenan con el.
--- Las 5 preguntas. Los campos de escala (min, max y sus dos etiquetas) van en
+-- Las 4 preguntas. Los campos de escala (min, max y sus dos etiquetas) van en
 -- el mismo INSERT y no en un UPDATE posterior: chk_pregunta_escala exige que
 -- una fila tipo 'escala' ya tenga min y max, asi que insertarla sin ellos
 -- aborta el seed entero.
+--
+-- Ninguna pide el nombre del alumno: la encuesta es anonima y preguntar el
+-- nombre la contradiria. Antes esta pregunta existia oculta con es_visible=FALSE
+-- y se elimino junto con esa columna.
 WITH e AS (
   SELECT id_encuesta FROM encuestas WHERE slug = 'demo-intereses-clubes'
 )
-INSERT INTO preguntas (id_encuesta, texto, ayuda, tipo, es_obligatoria, es_visible, orden,
+INSERT INTO preguntas (id_encuesta, texto, ayuda, tipo, es_obligatoria, orden,
                        escala_min, escala_max, escala_min_texto, escala_max_texto)
-SELECT e.id_encuesta, v.texto, v.ayuda, v.tipo, v.obl, v.visible, v.orden,
+SELECT e.id_encuesta, v.texto, v.ayuda, v.tipo, v.obl, v.orden,
        v.emin, v.emax, v.emin_txt, v.emax_txt
 FROM e
 CROSS JOIN (VALUES
-  ('Que areas te interesan mas',      'Marca todas las que apliquen.',           'opcion_multiple', TRUE,  TRUE,  1, NULL::int, NULL::int, NULL, NULL),
-  ('Como prefieres participar',       NULL,                                       'opcion_unica',   TRUE,  TRUE,  2, NULL::int, NULL::int, NULL, NULL),
-  ('Cuantas veces por semana',        'Una sesion de club se considera ~2 horas.', 'escala',        TRUE,  TRUE,  3, 0,          5,          'Nunca', 'Todos los dias'),
-  ('Por que quieres entrar',         'Unas lineas bastan.',                      'texto_largo',    FALSE, TRUE,  4, NULL::int, NULL::int, NULL, NULL),
-  ('Como te llamas',                  NULL,                                       'texto_corto',    FALSE, FALSE, 5, NULL::int, NULL::int, NULL, NULL)
-) AS v(texto, ayuda, tipo, obl, visible, orden, emin, emax, emin_txt, emax_txt)
+  ('Que areas te interesan mas',      'Marca todas las que apliquen.',           'opcion_multiple', TRUE,  1, NULL::int, NULL::int, NULL, NULL),
+  ('Como prefieres participar',       NULL,                                       'opcion_unica',   TRUE,  2, NULL::int, NULL::int, NULL, NULL),
+  ('Cuantas veces por semana',        'Una sesion de club se considera ~2 horas.', 'escala',        TRUE,  3, 0,          5,          'Nunca', 'Todos los dias'),
+  ('Por que quieres entrar',         'Unas lineas bastan.',                      'texto_largo',    FALSE, 4, NULL::int, NULL::int, NULL, NULL)
+) AS v(texto, ayuda, tipo, obl, orden, emin, emax, emin_txt, emax_txt)
 WHERE NOT EXISTS (
   SELECT 1 FROM preguntas p WHERE p.id_encuesta = e.id_encuesta AND p.texto = v.texto
 );

@@ -62,10 +62,22 @@ function App() {
   // ver menús que no puede usar. Por eso va con un return temprano y no como un
   // <Route> más.
   //
+  // Este return tiene que declarar su propio <Routes>. Montar la página suelta
+  // aquí fuera de cualquier <Route> la dejaba sin contexto de enrutado, y
+  // useParams() devolvía {}: el slug llegaba como undefined y la pantalla pedía
+  // `/api/encuestas/publico/undefined` aunque el enlace fuera correcto.
+  //
   // El key en el pathname hace que cambiar de enlace remonte el componente y
   // que las respuestas de la encuesta anterior no queden pegadas.
   if (location.pathname.startsWith('/encuesta/')) {
-    return <PaginaEncuesta key={location.pathname} />;
+    return (
+      <Routes>
+        <Route
+          path="/encuesta/:slug"
+          element={<PaginaEncuesta key={location.pathname} />}
+        />
+      </Routes>
+    );
   }
 
   function irADashboard() {

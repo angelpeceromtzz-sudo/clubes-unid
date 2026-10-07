@@ -47,7 +47,7 @@ export const encuestaService = {
   // panel no recalcula nada de esto, porque los porcentajes de opción múltiple
   // tienen una base particular (los respondientes, no el total) que es más
   // fácil equivocarse en el cliente que en el servidor.
-  obtenerResultados: (id) => request(`/encuestas/admin/${id}/resultados`),
+  obtenerResultados: (id, carrera) => request(`/encuestas/admin/${id}/resultados${carrera ? '?carrera='+carrera : ''}`),
 
   // Guarda el orden de las preguntas de una encuesta. Se manda el arreglo
   // completo de ids en el orden deseado, no "sube la 2" o "baja la 4": con dos
