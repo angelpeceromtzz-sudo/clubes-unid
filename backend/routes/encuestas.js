@@ -1056,23 +1056,45 @@ router.put('/admin/:id', authenticate, requireRole(...ROLES_ESCRITURA), async (r
  * DELETE /admin/:id — borrar encuesta con preguntas y respuestas.
  *
  * Las FK del esquema son CASCADE hasta detalle_respuestas, así que una sola
- * sentencia basta. Ojo: la de respuestas_encuesta es RESTRICT, y por eso borrar
- * una encuesta con respuestas tiene que desactivar (`estado = 'cerrada'`), no
- * borrar.
+ * sentencia basta. Ojo: la de respuestas_encuesta es RESTRICT, y por eso una
+ * encuesta con respuestas normalmente no se puede borrar: hay que desactivarla
+ * (`estado = 'cerrada'`), no borrarla.
+ *
+ * La excepción es el borrador: por diseño no recibe respuestas por su enlace
+ * (el backend sólo sirve el estado publicada), así que las que tenga son
+ * residuo de una prueba. Para poder descartarlo se borran primero sus
+ * respuestas (CASCADE a detalle_respuestas) y luego la encuesta, todo en la
+ * misma transacción. En publicada/cerrada con respuestas el RESTRICT se queda
+ * y revienta con 23503 → 409.
  */
 router.delete('/admin/:id', authenticate, requireRole(...ROLES_ESCRITURA), async (req, res) => {
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
-      'DELETE FROM encuestas WHERE id_encuesta = $1 RETURNING id_encuesta',
+    await client.query('BEGIN');
+
+    const encuesta = await client.query(
+      'SELECT estado FROM encuestas WHERE id_encuesta = $1 FOR UPDATE',
       [req.params.id]
     );
 
-    if (result.rows.length === 0) {
+    if (encuesta.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Encuesta no encontrada' });
     }
 
+    if (encuesta.rows[0].estado === 'borrador') {
+      await client.query(
+        'DELETE FROM respuestas_encuesta WHERE id_encuesta = $1',
+        [req.params.id]
+      );
+    }
+
+    await client.query('DELETE FROM encuestas WHERE id_encuesta = $1', [req.params.id]);
+    await client.query('COMMIT');
+
     res.json({ ok: true });
   } catch (err) {
+    await client.query('ROLLBACK');
     if (err.code === '23503') {
       return res.status(409).json({
         error: 'No se puede borrar una encuesta que ya tiene respuestas. Ciérrala en su lugar.',
@@ -1080,6 +1102,8 @@ router.delete('/admin/:id', authenticate, requireRole(...ROLES_ESCRITURA), async
     }
     console.error('Error al eliminar encuesta:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    client.release();
   }
 });
 
@@ -1651,121 +1675,6 @@ router.put(
       }
 
       console.error('Error al reordenar opciones:', err);
-      res.status(500).json({ error: 'Error interno del servidor' });
-    } finally {
-      client.release();
-    }
-  }
-);
-
-/**
- * POST /admin/:id/duplicar — clonar encuesta con sus preguntas y opciones.
- *
- * Las respuestas NO se copian, y no es una omisión: el uso real es repetir la
- * encuesta de un semestre al siguiente, y arrastrar las respuestas viejas haría
- * que los agregados de la copia sumaran dos poblaciones distintas. La copia
- * arranca en 'borrador' y sin fechas, para que el enlace nuevo no responda
- * hasta que el admin lo publique.
- *
- * Todo en una transacción: si una de las opciones falla, no queda una encuesta a
- * medio copiar.
- */
-router.post(
-  '/admin/:id/duplicar',
-  authenticate,
-  requireRole(...ROLES_ESCRITURA),
-  async (req, res) => {
-    const client = await pool.connect();
-
-    try {
-      await client.query('BEGIN');
-
-      const original = await client.query(
-        `SELECT titulo, descripcion, mensaje_agradecimiento
-         FROM encuestas
-         WHERE id_encuesta = $1`,
-        [req.params.id]
-      );
-
-      if (original.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'Encuesta no encontrada' });
-      }
-
-      const o = original.rows[0];
-
-      // El título se recorta a 200 porque ' (copia)' puede empujarlo del límite y
-      // chk no lo revisa: es VARCHAR(200) y Postgres sí lo truncaría, pero
-      // truncado a ciegas es peor que decirlo.
-      const titulo = `${o.titulo} (copia)`.slice(0, 200);
-
-      const slug = await generarSlugLibre(pool);
-
-      const copia = await client.query(
-        `INSERT INTO encuestas (
-           slug, titulo, descripcion, mensaje_agradecimiento, estado,
-           fecha_inicio, fecha_fin, id_creador)
-         VALUES ($1, $2, $3, $4, 'borrador', NULL, NULL, $5)
-         RETURNING id_encuesta, slug, titulo, estado`,
-        [slug, titulo, o.descripcion, o.mensaje_agradecimiento, req.user.id]
-      );
-
-      const idNueva = copia.rows[0].id_encuesta;
-
-      // Se copian todas: la copia tiene que ser la misma encuesta,
-      // no una versión recortada.
-      const preguntas = await client.query(
-        `SELECT id_pregunta, texto, ayuda, tipo, es_obligatoria, orden,
-                escala_min, escala_max, escala_min_texto, escala_max_texto
-         FROM preguntas
-         WHERE id_encuesta = $1
-         ORDER BY orden ASC`,
-        [req.params.id]
-      );
-
-      for (const p of preguntas.rows) {
-        const nueva = await client.query(
-          `INSERT INTO preguntas (
-             id_encuesta, texto, ayuda, tipo, es_obligatoria, orden,
-             escala_min, escala_max, escala_min_texto, escala_max_texto)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-           RETURNING id_pregunta`,
-          [idNueva, p.texto, p.ayuda, p.tipo, p.es_obligatoria,
-           p.orden, p.escala_min, p.escala_max, p.escala_min_texto, p.escala_max_texto]
-        );
-
-        if (!TIPOS_CON_OPCIONES.includes(p.tipo)) continue;
-
-        // El orden se reutiliza tal cual: es relativo a la encuesta y la copia
-        // tiene las mismas preguntas en la misma secuencia, así que el orden
-        // original sigue significando lo mismo.
-        const opciones = await client.query(
-          `SELECT texto, orden
-           FROM opciones_pregunta
-           WHERE id_pregunta = $1
-           ORDER BY orden ASC`,
-          [p.id_pregunta]
-        );
-
-        for (const [i, op] of opciones.rows.entries()) {
-          await client.query(
-            'INSERT INTO opciones_pregunta (id_pregunta, texto, orden) VALUES ($1, $2, $3)',
-            [nueva.rows[0].id_pregunta, op.texto, i + 1]
-          );
-        }
-      }
-
-      await client.query('COMMIT');
-
-      res.status(201).json(copia.rows[0]);
-    } catch (err) {
-      await client.query('ROLLBACK');
-
-      if (err.code === '23503') {
-        return res.status(404).json({ error: 'Encuesta no encontrada' });
-      }
-
-      console.error('Error al duplicar encuesta:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
     } finally {
       client.release();

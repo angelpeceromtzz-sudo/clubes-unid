@@ -13,7 +13,7 @@ export function TablaHistorial({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-black uppercase tracking-wider">Historial de Acciones</h2>
+        <h2 className="text-lg font-black uppercase tracking-wider">Actividad de Clubes</h2>
         <button
           onClick={onRefresh}
           className="text-xs font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"

@@ -67,12 +67,6 @@ export const encuestaService = {
       method: 'PUT',
       body: JSON.stringify({ orden: ids }),
     }),
-
-  // Clona encuesta, preguntas y opciones. Las respuestas no se copian y la copia
-  // nace en borrador: es la forma de repetir la misma encuesta otro semestre sin
-  // que los agregados mezclen dos poblaciones.
-  duplicar: (idEncuesta) =>
-    request(`/encuestas/admin/${idEncuesta}/duplicar`, { method: 'POST' }),
 };
 
 // Catálogos de solo lectura.

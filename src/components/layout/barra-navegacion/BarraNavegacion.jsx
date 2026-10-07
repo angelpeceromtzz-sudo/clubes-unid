@@ -16,6 +16,7 @@ export function BarraNavegacion({
   menuAbierto, setMenuAbierto, onLogoClick,
   user, onLoginClick, onLogout, onDashboardClick,
   mostrarFiltros = true,
+  mostrarLogo = false,
   heroVisible = true, contenidoMax,
   onScrollChange,
   splashActivo = false,
@@ -55,6 +56,10 @@ export function BarraNavegacion({
   const labelCategoria = categoriaActiva === 'Todos' ? 'Categorías' : `Categoría: ${categoriaActiva}`;
   const maxWidthClasses = { '7xl': 'max-w-7xl', '6xl': 'max-w-6xl' };
 
+  // El logotipo se muestra donde caben los filtros (el catálogo) y en los cuatro
+  // paneles; donde no, se muestra la variante compacta "Volver al Portal".
+  const muestroLogo = mostrarFiltros || mostrarLogo;
+
   return (
     <>
       <style>{`
@@ -72,9 +77,19 @@ export function BarraNavegacion({
             }`
           : `${tema.headerBg} ${tema.headerBorder}`
       }`}>
-        <div className={`${contenidoMax ? `${maxWidthClasses[contenidoMax]} mx-auto px-6` : 'w-full px-6 sm:px-8 lg:px-10 xl:px-16'} ${mostrarFiltros ? 'py-2.5 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-4 lg:gap-6`}>
+        {/* En los paneles el logo se alinea con los íconos/texto del sidebar: su
+            nav usa px-3 y cada ítem px-4, o sea 28px desde el borde (pl-7). El
+            padding derecho sigue siendo responsive; sólo cambia el izquierdo.
+            En móvil el sidebar no existe, así que se conserva el px-6 base. */}
+        <div className={`${
+          contenidoMax
+            ? `${maxWidthClasses[contenidoMax]} mx-auto px-6`
+            : mostrarLogo
+              ? 'w-full pl-6 md:pl-7 pr-6 sm:pr-8 lg:pr-10 xl:pr-16'
+              : 'w-full px-6 sm:px-8 lg:px-10 xl:px-16'
+        } ${muestroLogo ? 'py-2.5 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-4 lg:gap-6`}>
           <div className="flex items-center gap-4 md:gap-6">
-            {mostrarFiltros ? (
+            {muestroLogo ? (
               <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={onLogoClick}>
                 <Logotipo splashActivo={splashActivo} />
               </div>

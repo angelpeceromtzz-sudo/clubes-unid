@@ -17,10 +17,34 @@ import { EmptyState } from '../../ui/EmptyState';
 import { GraficaBarras } from './GraficaBarras';
 import { etiquetaTipoPregunta } from '../../../constants/encuesta';
 import { infoEstadoEncuesta } from '../../../constants/estatus';
-import { enlacePublicoEncuesta, textoVigenciaEncuesta } from '../../../utils/encuesta';
+import { enlacePublicoEncuesta } from '../../../utils/encuesta';
 
 // Respuestas por debajo de las cuales los porcentajes no significan gran cosa.
 const UMBRAL_REPRESENTATIVO = 30;
+
+/**
+ * Explica por qué quedan respuestas fuera de la gráfica de programas.
+ *
+ * Vive en una función y no escrito en cada sitio porque lo dicen dos: la tarjeta
+ * de la pregunta de licenciatura y, cuando la encuesta no tiene esa pregunta
+ * (respuestas anteriores a que fuera un tipo), la tarjeta "Quién respondió".
+ * Dicho dos veces a mano, una de las dos se queda con la versión vieja el día
+ * que cambie el texto.
+ */
+function notaSinPrograma(n) {
+  return `${n} ${n === 1 ? 'respuesta' : 'respuestas'} sin programa. Se omiten de la gráfica porque no hay un lugar al que atribuirlas: no se sabe a qué pertenecen.`;
+}
+
+// Fecha corta ("12 ene") para el rango de actividad del resumen. Se deja sin año
+// a propósito: el rango se lee junto al total de respuestas y la mayoría de las
+// encuestas viven dentro de un mismo curso; el año completo sólo alargaría la
+// cifra para un caso que casi no se da.
+function formatearDiaCorto(iso) {
+  if (!iso) return '';
+  const fecha = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(fecha.getTime())) return iso;
+  return fecha.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+}
 
 function Tarjeta({ titulo, children, extra }) {
   const { cardCls } = useTheme();
@@ -94,6 +118,7 @@ function ResultadoOpciones({ pregunta, escalaBase }) {
           <p className="text-[11px] opacity-60 mt-3">{notaBase}</p>
         </>
       )}
+
     </Tarjeta>
   );
 }
@@ -330,6 +355,20 @@ export function PanelResultados({ hook, cargando, resultados }) {
   const sinRespuestas = total === 0;
   const infoEstado = infoEstadoEncuesta(encuesta.estado);
 
+  // `por_fecha` viene en orden ascendente (ORDER BY 1 en el backend), así que el
+  // primer y el último elemento son la primera y la última respuesta. Sólo se
+  // calculan con respuestas: sin ellas el arreglo está vacío y el bloque de
+  // resumen ni siquiera se pinta.
+  const primerDia = porFecha[0]?.dia;
+  const ultimoDia = porFecha[porFecha.length - 1]?.dia;
+  const rangoActividad =
+    primerDia && ultimoDia
+      ? primerDia === ultimoDia
+        ? formatearDiaCorto(primerDia)
+        : `${formatearDiaCorto(primerDia)} – ${formatearDiaCorto(ultimoDia)}`
+      : '—';
+  const promedioPorDia = porFecha.length > 0 ? (total / porFecha.length).toFixed(1) : '—';
+
   // Las licenciaturas para el <select>: las completas si las tenemos, o las del
   // resultado actual como fallback.
   const licenciaturasParaFiltro = licenciaturasTodas ?? porLicenciatura;
@@ -421,9 +460,9 @@ export function PanelResultados({ hook, cargando, resultados }) {
           <div className="grid grid-cols-2 gap-5 md:grid-cols-3">
             <Metrica etiqueta="Respuestas" valor={total} />
 
-            <Metrica etiqueta="Vigencia" valor={textoVigenciaEncuesta(encuesta)} texto />
+            <Metrica etiqueta="Primera y última respuesta" valor={rangoActividad} texto />
 
-            <Metrica etiqueta="Días con actividad" valor={porFecha.length} />
+            <Metrica etiqueta="Promedio por día" valor={promedioPorDia} nota="sobre días con actividad" />
           </div>
         )}
       </Tarjeta>
@@ -460,28 +499,32 @@ export function PanelResultados({ hook, cargando, resultados }) {
       )}
 
       {/* ── Quién respondió (por carrera) ────────────────────────────── */}
-      {/* Sigue en pie aunque la encuesta tenga pregunta de licenciatura, y la
-          tarjeta de esa pregunta muestre la misma gráfica. No es duplicado
-          exacto: aquí el porcentaje va sobre todas las respuestas, y el de la
-          pregunta sólo sobre quienes dijeron programa. Además esta es la única
-          tarjeta que explica el `sin_licenciatura` de abajo. */}
-      {!carreraActiva && porLicenciatura.length > 0 && (
+      {/* Es el único lugar donde se ve la distribución por programa de la
+          encuesta: la pregunta "Escoge tu licenciatura" no se pinta abajo, esta
+          tarjeta es esa gráfica con otro título. Sí se queda en el listado
+          cuando hay un filtro de carrera activo: ahí es la que muestra la vista
+          filtrada y esta tarjeta se oculta.
+
+          La base de los porcentajes aquí es el total de respuestas de la
+          encuesta; la de la pregunta sería `contestaron` (quienes eligieron
+          programa). Sólo se separan cuando hay respuestas sin programa, y esa
+          diferencia la explica la nota que sigue a la gráfica. */}
+      {!carreraActiva && (porLicenciatura.length > 0 || sinLicenciatura > 0) && (
         <Tarjeta titulo="Quién respondió">
-          <GraficaBarras
-            filas={porLicenciatura.map((fila) => ({
-              etiqueta: fila.nombre,
-              conteo: fila.respuestas,
-              porcentaje: total > 0 ? Math.round((fila.respuestas / total) * 100) : 0,
-            }))}
-          />
+          {porLicenciatura.length === 0 ? (
+            <p className="text-sm opacity-60 py-6 text-center">Nadie respondió con su programa todavía.</p>
+          ) : (
+            <GraficaBarras
+              filas={porLicenciatura.map((fila) => ({
+                etiqueta: fila.nombre,
+                conteo: fila.respuestas,
+                porcentaje: total > 0 ? Math.round((fila.respuestas / total) * 100) : 0,
+              }))}
+            />
+          )}
 
           {sinLicenciatura > 0 && (
-            <p className={`text-[11px] ${tema.subtitle} mt-3`}>
-              {sinLicenciatura}{' '}
-              {sinLicenciatura === 1 ? 'respuesta' : 'respuestas'} sin programa. Se omiten de la
-              gráfica porque no hay un lugar al que atribuirlas: no se sabe a qué
-              pertenecen.
-            </p>
+            <p className={`text-[11px] ${tema.subtitle} mt-3`}>{notaSinPrograma(sinLicenciatura)}</p>
           )}
         </Tarjeta>
       )}
@@ -492,10 +535,13 @@ export function PanelResultados({ hook, cargando, resultados }) {
           if (pregunta.tipo === 'escala') return <ResultadoEscala key={pregunta.id_pregunta} pregunta={pregunta} />;
           if (pregunta.tipo === 'texto_corto' || pregunta.tipo === 'texto_largo')
             return <ResultadoTextos key={pregunta.id_pregunta} pregunta={pregunta} />;
-          // Aquí caen 'opcion_unica', 'opcion_multiple' y 'licenciatura'. Los
-          // tres llegan con la misma forma (`opciones` con conteo y porcentaje) y
-          // no hace falta que la gráfica sepa de qué tipo se trata. Para
-          // `licenciatura` el backend la arma desde `por_licenciatura`.
+          // Aquí caen 'opcion_unica' y 'opcion_multiple', que llegan con la
+          // misma forma (`opciones` con conteo y porcentaje), así que no hace
+          // falta que la gráfica sepa de qué tipo se trata. La de 'licenciatura'
+          // no se pinta aquí: su gráfica es la tarjeta "Quién respondió". Sólo
+          // con un filtro de carrera activo se muestra, filtrada como las demás.
+          if (pregunta.tipo === 'licenciatura' && !carreraActiva) return null;
+
           return (
             <ResultadoOpciones
               key={pregunta.id_pregunta}

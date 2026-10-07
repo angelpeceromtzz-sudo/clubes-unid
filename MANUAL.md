@@ -288,10 +288,10 @@ Ruta: `/admin/dashboard`
 ### Anuncios Globales
 - Formulario para redactar y enviar anuncios a todos los usuarios o a un club específico.
 
-### Historial de Acciones
+### Actividad de Clubes
 - Tabla con fecha, administrador, acción y descripción de todos los cambios realizados en el sistema.
 
-### Actividad del Sistema
+### Historial de Acciones
 - Feed en tiempo real de eventos del sistema (creación de clubes, postulaciones, cambios de estatus, etc.).
 
 ---
@@ -318,7 +318,7 @@ Ruta: `/rectoria/dashboard`
 - **Selector de club:** Elige el club a consultar.
 - **Tabla de asistencia:** Alumnos con bloque asignado y estatus.
 
-### Actividad del Sistema
+### Historial de Acciones
 - Feed de eventos del sistema similar al del panel de administración.
 
 ---

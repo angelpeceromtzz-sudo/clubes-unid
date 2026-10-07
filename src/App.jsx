@@ -18,7 +18,7 @@ import PaginaEncuesta from './pages/PaginaEncuesta';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
 import { SplashScreen } from './components/ui/SplashScreen';
-import { NAVBAR_HEIGHT } from './constants/limites';
+import { NAVBAR_HEIGHT, NAVBAR_HEIGHT_LOGO } from './constants/limites';
 
 function App() {
   const { estaAutenticado, authReady, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
@@ -54,6 +54,12 @@ function App() {
   }
 
   const mostrarFiltros = location.pathname === '/';
+
+  // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
+  // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
+  // coincide con NAVBAR_HEIGHT y no con la del logotipo de NAVBAR_HEIGHT_LOGO.
+  const esRutaPanel = ['/dashboard', '/presidente/dashboard', '/admin/dashboard', '/rectoria/dashboard'].includes(location.pathname);
+  const alturaNavbar = esRutaPanel ? NAVBAR_HEIGHT_LOGO : NAVBAR_HEIGHT;
 
   // La encuesta pública se monta FUERA del layout de abajo, a propósito: es la
   // única ruta que no vive dentro de la aplicación. El catálogo ("/" y
@@ -101,7 +107,7 @@ function App() {
   return (
     <div
       className={`min-h-screen font-sans transition-colors duration-300 pb-16 lg:pb-0 lg:pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
-      style={{ '--navbar-height': modoOscuro && location.pathname !== '/' ? `${NAVBAR_HEIGHT}px` : '0px' }}
+      style={{ '--navbar-height': modoOscuro && location.pathname !== '/' ? `${alturaNavbar}px` : '0px' }}
     >
       <SplashScreen authReady={authReady} clubesLoading={clubesLoading} onFinish={() => setSplashDone(true)} />
 
@@ -119,6 +125,7 @@ function App() {
         onLogout={handleLogout}
         onDashboardClick={irADashboard}
         mostrarFiltros={mostrarFiltros}
+        mostrarLogo={esRutaPanel}
         onVolverCatalogo={irACatalogo}
         contenidoMax={location.pathname.startsWith('/club/') ? '7xl' : null}
         heroVisible={heroVisible}
