@@ -338,13 +338,15 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
   // desde la fila de la lista, y ahí `seleccion` puede ser null o ser otra
   // encuesta. Con `seleccion` el botón "Eliminar" fallaba en silencio.
   const eliminar = useCallback(async (idEncuesta) => {
-    // El backend NO se pone a defender esta regla: DELETE /admin/:id hace un
-    // DELETE a secas y si hay respuestas revienta el RESTRICT de
-    // fk_respuesta_encuesta como 500. La UI decide antes de llamar, así que el
-    // 500 de abajo sólo es un respaldo.
+    // La misma regla que decide el botón en la lista: una encuesta con respuestas
+    // no se borra... salvo en borrador, donde el backend descarta esas respuestas
+    // antes de borrar la encuesta (son residuo de una prueba: un borrador no
+    // recibe respuestas por su enlace). Aquí se replica la regla por si el borrado
+    // se dispara por otra vía; el backend responde 409 si se cuela una
+    // publicada/cerrada con respuestas.
     const fila = lista.find((e) => e.id_encuesta === idEncuesta);
 
-    if (fila && fila.total_respuestas > 0) {
+    if (fila && fila.estado !== 'borrador' && fila.total_respuestas > 0) {
       setErrorFeedback(
         'Esta encuesta ya tiene respuestas, así que no se puede borrar. Ciérrala para que deje de recibir respuestas.'
       );
@@ -359,8 +361,9 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
       volverALista();
       avisar('Encuesta eliminada');
     } catch (err) {
-      // El 500 sin mensaje útil es el caso de "tenía respuestas" que se coló
-      // entre los filtros. 409 sería lo correcto pero el backend no lo manda.
+      // El 409 llega si una publicada/cerrada con respuestas se coló entre los
+      // filtros; no se descartan respuestas fuera de un borrador. El mensaje ya
+      // viene útil del backend.
       setErrorFeedback(
         err.status === 500
           ? 'No se pudo borrar. Si la encuesta ya tiene respuestas, ciérrala en lugar de borrarla.'
@@ -539,25 +542,6 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     ? lista.filter((e) => e.estado === filtro)
     : lista;
 
-  const duplicar = useCallback(
-    async (encuesta) => {
-      setEnviando(true);
-
-      try {
-        const copia = await encuestaService.duplicar(encuesta.id_encuesta);
-        await cargarLista();
-        avisar(`"${copia.titulo}" creada en borrador, sin respuestas`);
-        return copia;
-      } catch (err) {
-        setErrorFeedback(err.message);
-        return null;
-      } finally {
-        setEnviando(false);
-      }
-    },
-    [cargarLista, avisar, setErrorFeedback]
-  );
-
   // --- orden de las preguntas ---
 
   const moverPregunta = useCallback(
@@ -690,7 +674,6 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     guardarMetadatos,
     aplicarEstado,
     eliminar,
-    duplicar,
 
     formPregunta,
     setFormPregunta,

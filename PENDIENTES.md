@@ -166,8 +166,17 @@ dispare. La ruta es alcanzable y el método existe para cuando lo haya.
 ### 2.6 Entrega 2 del módulo, sin empezar
 
 `numero`, `ranking` y escalas Likert no están en el esquema ni en la API. El
-esquema actual cubre 5 tipos (`opcion_unica`, `opcion_multiple`, `texto_corto`,
-`texto_largo`, `escala`). Fuera del alcance acordado.
+esquema actual cubre 6 tipos (`opcion_unica`, `opcion_multiple`, `texto_corto`,
+`texto_largo`, `escala`, `licenciatura`). Fuera del alcance acordado.
+
+`licenciatura` no es un tipo más: es el que hace de la pregunta de programa, que
+antes era un bloque fijo al final del formulario público. Ahora se crea desde el
+editor como cualquier otra, así que el admin decide si la pone, dónde y si
+obliga. Su respuesta se sigue guardando en
+`respuestas_encuesta.id_licenciatura` y **no** en `detalle_respuestas`, porque
+`chk_detalle_valor` no tiene dónde meter un id de catálogo. Lo que garantiza que
+no haya dos en la misma encuesta es el índice parcial único
+`uq_pregunta_licenciatura`.
 
 ---
 

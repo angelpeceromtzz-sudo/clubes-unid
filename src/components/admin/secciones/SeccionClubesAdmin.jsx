@@ -1,4 +1,6 @@
 import { TablaClubes } from '../tablas/TablaClubes';
+import { BotonAccion } from '../../ui/BotonAccion';
+import { Icono } from '../../ui/Icono';
 
 export function SeccionClubesAdmin({ d }) {
   return (
@@ -22,13 +24,13 @@ export function SeccionClubesAdmin({ d }) {
             }`}
           />
         </div>
-        <button
+        <BotonAccion
           onClick={d.abrirModalCrear}
-          className="flex-1 sm:flex-none bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0"
+          className="flex-1 sm:flex-none shrink-0"
         >
-          <span className="text-lg leading-none">+</span>
+          <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
           Agregar Nuevo Club
-        </button>
+        </BotonAccion>
       </div>
       <TablaClubes
         clubes={d.clubesFiltrados}

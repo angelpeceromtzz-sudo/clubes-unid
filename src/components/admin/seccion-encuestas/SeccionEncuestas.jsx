@@ -38,7 +38,7 @@ import { VistaPreviaEncuesta } from './VistaPreviaEncuesta';
  * Vive fuera del componente porque son reglas, no marcado: las dos
  * presentaciones de la fila (ancha y angosta) tienen que mostrar exactamente lo
  * mismo. Si se escribieran dentro del JSX, cualquier cambio en una se olvidaría
- * de la otra y aparecería el bug clásico de "en móvil está Duplicar y en
+ * de la otra y aparecería el bug clásico de "en móvil está Cerrar y en
  * escritorio no".
  *
  * Tres grupos porque tienen tres tratamientos:
@@ -56,7 +56,6 @@ function accionesDeEncuesta({
   abrirEditor,
   abrirResultados,
   copiarEnlace,
-  duplicar,
 }) {
   const principales = [];
 
@@ -90,7 +89,7 @@ function accionesDeEncuesta({
     });
   }
 
-  // Las tres siguientes son lectura y se ven igual para los dos roles.
+  // Las siguientes son de lectura y se ven igual para los dos roles.
   secundarias.push({
     clave: 'previa',
     icono: 'eye',
@@ -110,15 +109,8 @@ function accionesDeEncuesta({
   }
 
   if (esAdmin) {
-    secundarias.push({
-      clave: 'duplicar',
-      icono: 'clipboard',
-      texto: 'Duplicar',
-      onClick: () => duplicar(encuesta),
-    });
-
-    // Cerrar sustituye a eliminar cuando ya hay respuestas: es lo único que el
-    // backend deja hacer. Sólo si está abierta.
+    // Cerrar sustituye a eliminar cuando hay respuestas en publicada/cerrada:
+    // es lo único que el backend deja hacer. Sólo si está abierta.
     if (encuesta.estado === 'publicada') {
       secundarias.push({
         clave: 'cerrar',
@@ -129,11 +121,13 @@ function accionesDeEncuesta({
     }
   }
 
-  // Borrar sólo sin respuestas. Con respuestas el botón no aparece en vez de
-  // fallar: el DELETE revienta el RESTRICT del backend con un 500.
+  // Borrar: sin respuestas siempre; en borrador también aunque las tenga,
+  // porque el backend descarta las respuestas de un borrador antes de borrarlo
+  // (residuos de prueba: un borrador no recibe respuestas por su enlace). Con
+  // respuestas fuera de un borrador el botón no aparece en vez de fallar.
   const peligrosas = [];
 
-  if (esAdmin && !tieneRespuestas) {
+  if (esAdmin && (encuesta.estado === 'borrador' || !tieneRespuestas)) {
     peligrosas.push({
       clave: 'eliminar',
       icono: 'trash',
@@ -162,9 +156,9 @@ function ListaEncuestas({ hook }) {
   const [viendoPrevia, setViendoPrevia] = useState(null);
   const [enlaceCopiado, setEnlaceCopiado] = useState(false);
 
-  // Una encuesta que ya tiene respuestas no se borra: se cierra. La decisión se
-  // toma acá para que el botón ni aparezca, y `eliminar` vuelve a comprobarla en
-  // el hook por si se dispara por otra vía.
+  // Una encuesta con respuestas fuera de un borrador no se borra: se cierra.
+  // La decisión se toma acá para que el botón ni aparezca, y `eliminar` vuelve
+  // a comprobarla en el hook por si se dispara por otra vía.
   const conRespuestas = (e) => e.total_respuestas > 0;
 
   const copiarEnlace = async (encuesta) => {
@@ -199,8 +193,8 @@ function ListaEncuestas({ hook }) {
         subtitulo="Diagnóstico de intereses de los alumnos. El enlace es público y no pide sesión."
         accion={
           esAdmin && (
-            <BotonAccion onClick={() => setCreando(true)} disabled={enviando}>
-              <Icono nombre="plus" className="h-3.5 w-3.5" />
+            <BotonAccion onClick={() => setCreando(true)} disabled={enviando} className="px-8">
+              <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
               Nueva
             </BotonAccion>
           )
@@ -263,7 +257,6 @@ function ListaEncuestas({ hook }) {
               abrirEditor,
               abrirResultados,
               copiarEnlace,
-              duplicar: hook.duplicar,
             });
 
             return (
@@ -290,7 +283,7 @@ function ListaEncuestas({ hook }) {
                   </p>
                 </div>
 
-                {/* Las acciones van con texto, no sólo con icono: con iconos, "Duplicar" y
+                {/* Las acciones van con texto, no sólo con icono: con iconos, "Editar" y
                     "Cerrar" se confundían entre sí porque ambos son un recuadro
                     con un dibujito y nada más los distingue.
 
@@ -432,8 +425,8 @@ function ListaEncuestas({ hook }) {
       </ModalBase>
 
       {/* --- baja --- */}
-      {/* El botón de eliminar ya no aparece con respuestas, así que este mensaje
-          no necesita admitir ese caso: si llegara aquí es porque no las tiene. */}
+      {/* El botón de eliminar sólo aparece sin respuestas o en borrador; el
+          mensaje de abajo refleja ambos casos. */}
       <ModalConfirmacion
         show={Boolean(borrando)}
         titulo="Eliminar encuesta"
@@ -441,7 +434,13 @@ function ListaEncuestas({ hook }) {
           borrando
             ? `Se eliminará "${borrando.titulo}" con sus ${borrando.total_preguntas} ${
                 borrando.total_preguntas === 1 ? 'pregunta' : 'preguntas'
-              }. No tiene respuestas, así que se puede borrar sin dejar nada atrás.`
+              }.${
+                borrando.estado === 'borrador' && borrando.total_respuestas > 0
+                  ? ` Sus ${borrando.total_respuestas} ${
+                      borrando.total_respuestas === 1 ? 'respuesta' : 'respuestas'
+                    } anónimas también se descartarán.`
+                  : ' No tiene respuestas, así que se puede borrar sin dejar nada atrás.'
+              }`
             : ''
         }
         textoConfirmar="Eliminar"
@@ -486,7 +485,8 @@ function ListaEncuestas({ hook }) {
       <p className={`text-[11px] ${tema.subtitle}`}>
         <span className="opacity-70">Las respuestas son anónimas por diseño:</span> la encuesta
         no guarda nombre ni matrícula, sólo el programa que el alumno elige. Por eso una
-        encuesta con respuestas no se puede borrar, sólo cerrar.
+        encuesta con respuestas sólo se puede borrar si está en borrador — ahí sus respuestas
+        se descartan —; en las demás no, sólo cerrar.
       </p>
     </div>
   );

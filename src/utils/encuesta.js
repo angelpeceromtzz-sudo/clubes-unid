@@ -90,6 +90,33 @@ export function enlacePublicoUtilizable(encuesta) {
   return true;
 }
 
+/**
+ * El número que lleva cada pregunta en pantalla, o `null` si va sin número.
+ *
+ * La pregunta de tipo 'licenciatura' no se numera: es un dato de contexto (qué
+ * programa estudias), no una pregunta que el alumno tenga que contar. Pero el
+ * contador NO avanza con ella, y esa es la parte que importa: si avanzara, un
+ * alumno que ve la licenciatura primero leería "2.", "3.", "4." en lo que para él
+ * es su primera pregunta.
+ *
+ * Vive aquí y no copiado en las dos pantallas que lo pintan (el formulario
+ * público y la vista previa del panel) porque la vista previa no puede quedar
+ * desfasada del formulario real: si las dos numeraran distinto, el admin
+ * aprobaría un orden que el alumno no ve igual.
+ *
+ * @param {{tipo: string}[]} preguntas Ya ordenadas por `orden`.
+ * @returns {(number|null)[]} Una entrada por pregunta, en el mismo orden.
+ */
+export function numerosVisibles(preguntas) {
+  let vistas = 0;
+
+  return (preguntas ?? []).map((p) => {
+    if (p.tipo === 'licenciatura') return null;
+    vistas += 1;
+    return vistas;
+  });
+}
+
 /** Días enteros que faltan para una fecha, contando el de hoy como 0. */
 function diasRestantes(fecha) {
   const objetivo = new Date(fecha);

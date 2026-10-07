@@ -55,7 +55,7 @@ export function PanelRectoria() {
         {d.vistaActiva === 'encuestas' && (
           /* La misma sección que en PanelAdmin. No se bifurca por rol porque la
              sección ya sabe qué es escritura: `useSeccionEncuestas` calcula
-             `esAdmin` del `id_rol` y esconde Nueva, Editar, Duplicar, Cerrar y
+             `esAdmin` del `id_rol` y esconde Nueva, Editar, Cerrar y
              Eliminar cuando no lo es. Lo que sí se queda para rectoría es la
              lectura completa: lista, resultados, vista previa y enlace público. */
           <SeccionEncuestas d={d} />

@@ -1,6 +1,8 @@
 import { BarraBusquedaUsuarios } from '../BarraBusquedaUsuarios';
 import { TablaUsuarios } from '../tablas/TablaUsuarios';
 import { SeccionUsuariosDesactivados } from './SeccionUsuariosDesactivados';
+import { BotonAccion } from '../../ui/BotonAccion';
+import { Icono } from '../../ui/Icono';
 
 export function SeccionUsuarios({ d }) {
   return (
@@ -18,13 +20,13 @@ export function SeccionUsuarios({ d }) {
           <option value="3">Admins</option>
           <option value="4">Rectoría</option>
         </select>
-        <button
+        <BotonAccion
           onClick={d.abrirModalCrearUsuario}
-          className="flex-1 sm:flex-none bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0"
+          className="flex-1 sm:flex-none shrink-0"
         >
-          <span className="text-lg leading-none">+</span>
+          <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
           Crear Usuario
-        </button>
+        </BotonAccion>
       </div>
       <TablaUsuarios
         usuarios={d.usuariosFiltrados}

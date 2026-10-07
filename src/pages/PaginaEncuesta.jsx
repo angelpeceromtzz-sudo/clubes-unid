@@ -7,27 +7,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { encuestaService } from '../services/encuesta.service';
-import { useLicenciaturas } from '../hooks/useLicenciaturas';
 import { CampoPregunta } from '../components/encuestas/CampoPregunta';
+import { numerosVisibles } from '../utils/encuesta';
 import { useTheme } from '../contexts/ThemeContext';
 
 // El backend distingue tres casos y cada uno merece su pantalla: 404 (el enlace
 // no existe), 403 (todavía no abrió) y 410 (ya cerró). Ver PantallaError().
 export default function PaginaEncuesta() {
   const { slug } = useParams();
-  const { tema, cardCls, inputCls, modoOscuro } = useTheme();
+  const { tema, cardCls, modoOscuro } = useTheme();
 
   const [encuesta, setEncuesta] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
   const [respuestas, setRespuestas] = useState({});
-  const [idLicenciatura, setIdLicenciatura] = useState('');
   const [errores, setErrores] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
 
-  const { licenciaturas, loading: cargandoCatalogos } = useLicenciaturas();
+  // El programa ya no es un bloque aparte: es una pregunta de tipo
+  // 'licenciatura' dentro de `preguntas`, con su sitio en el orden que le haya
+  // dado el admin. Su respuesta viaja en `respuestas` igual que las demás.
 
   // `cargando` arranca en true y `cargar` NO pone el spinner al entrar: si lo
   // hiciera, el effect haría setState de forma síncrona y React avisa de
@@ -107,7 +108,6 @@ export default function PaginaEncuesta() {
     setEnviando(true);
     try {
       await encuestaService.enviarRespuestas(slug, {
-        id_licenciatura: idLicenciatura === '' ? null : Number(idLicenciatura),
         respuestas: encuesta.preguntas
           .filter((p) => respuestas[p.id_pregunta] !== undefined)
           .map((p) => ({
@@ -132,6 +132,10 @@ export default function PaginaEncuesta() {
   if (!encuesta) return null;
 
   if (enviado) return <PantallaGracias encuesta={encuesta} />;
+
+  // La licenciatura no lleva número y el contador no cuenta con ella: el helper
+  // está en utils porque la vista previa del panel tiene que numerar igual.
+  const numeros = numerosVisibles(encuesta.preguntas);
 
   return (
     <div className={`min-h-screen py-10 px-4 ${tema.bg} ${tema.text}`}>
@@ -162,7 +166,10 @@ export default function PaginaEncuesta() {
               }`}
             >
               <h2 className={`font-bold ${tema.title}`}>
-                <span className={`text-slate-400 mr-2`}>{i + 1}.</span>
+                {/* `null` es la pregunta de licenciatura, que va sin número. */}
+                {numeros[i] !== null && (
+                  <span className="text-slate-400 mr-2">{numeros[i]}.</span>
+                )}
                 {pregunta.texto}
                 {pregunta.es_obligatoria && (
                   <span className="ml-2 text-red-500 text-sm">*</span>
@@ -190,31 +197,6 @@ export default function PaginaEncuesta() {
               )}
             </section>
           ))}
-
-          <section className={`${cardCls} rounded-xl border p-5`}>
-            <label className={`block text-sm font-bold ${tema.title}`}>
-              Tu licenciatura
-              <span className={`block mt-1 text-xs font-normal ${tema.subtitle}`}>
-                Opcional. Sólo se usa para comparar resultados entre programas.
-              </span>
-            </label>
-
-            <select
-              value={idLicenciatura}
-              onChange={(e) => setIdLicenciatura(e.target.value)}
-              disabled={cargandoCatalogos || enviando}
-              className={`mt-2 ${inputCls}`}
-            >
-              <option value="">
-                {cargandoCatalogos ? 'Cargando...' : 'Prefiero no decir'}
-              </option>
-              {licenciaturas.map((l) => (
-                <option key={l.id_licenciatura} value={l.id_licenciatura}>
-                  {l.nombre}
-                </option>
-              ))}
-            </select>
-          </section>
 
           <button
             type="submit"

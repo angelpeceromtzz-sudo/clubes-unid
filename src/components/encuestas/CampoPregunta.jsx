@@ -1,6 +1,6 @@
 // Render de un campo de encuesta según su tipo.
 //
-// Un solo componente para los 5 tipos: la forma de la respuesta vive en el
+// Un solo componente para todos los tipos: la forma de la respuesta vive en el
 // estado del formulario (un objeto plano), no en el estado de cada input. Así el
 // envío es trivial y no hay que sincronizar N inputs sueltos.
 //
@@ -10,7 +10,13 @@
 //   texto_corto     -> string
 //   texto_largo     -> string
 //   escala          -> number
+//   licenciatura     -> number|null   (un id_licenciatura del catálogo)
+//
+// `licenciatura` es el único tipo sin lista de opciones propia: las suyas salen
+// del catálogo `cat_licenciaturas`, que se pide aquí con useLicenciaturas. El
+// `null` significa "Prefiero no decir" y el backend lo guarda como NULL.
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLicenciaturas } from '../../hooks/useLicenciaturas';
 
 export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado }) {
   const { modoOscuro, tema } = useTheme();
@@ -135,10 +141,70 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
         />
       );
 
+    case 'licenciatura':
+      return (
+        <SelectorLicenciatura
+          valor={valor}
+          onChange={onChange}
+          deshabilitado={deshabilitado}
+          base={base}
+        />
+      );
+
     default:
       // No debería llegar: el backend ya filtró los tipos que no existen.
       return null;
   }
+}
+
+/**
+ * Programa del alumno.
+ *
+ * Va en su propio componente y no suelto en el switch porque es el único caso
+ * que necesita pedir datos: el resto de tipos traen sus opciones ya en la
+ * definición de la pregunta.
+ *
+ * El catálogo se cachea a nivel de módulo, así que la vista previa del panel y
+ * el formulario público comparten la misma petición si se abren a la vez.
+ */
+function SelectorLicenciatura({ valor, onChange, deshabilitado, base }) {
+  const { licenciaturas, loading, error } = useLicenciaturas();
+
+  // `?? ''` y no un cast: el contrato dice number|null, y null es justo el valor
+  // que el <select> necesita para quedarse en la opción vacía. Un `|| ''` haría
+  // lo mismo aquí, pero también se tragaría un 0, que no es un id válido.
+  const seleccionado = valor ?? '';
+
+  return (
+    <div>
+      <select
+        value={seleccionado}
+        onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
+        disabled={deshabilitado || loading}
+        className={base}
+        aria-label="Tu licenciatura"
+      >
+        {/* La opción vacía es la respuesta por defecto y también la que
+            representa "Prefiero no decir". Se rotula distinto mientras carga
+            para que el alumno no la tome por una respuesta ya guardada. */}
+        <option value="">{loading ? 'Cargando...' : 'Prefiero no decir'}</option>
+        {licenciaturas.map((l) => (
+          <option key={l.id_licenciatura} value={l.id_licenciatura}>
+            {l.nombre}
+          </option>
+        ))}
+      </select>
+
+      {/* El fallo se dice abajo y no sobre el <select> porque el campo se puede
+          dejar vacío: la encuesta sigue siendo enviable sin programa, así que
+          un error aquí no debe parecer que bloquea el envío. */}
+      {error && (
+        <p className="mt-1 text-xs text-red-500">
+          No se pudo cargar la lista de programas. La respuesta quedará sin registrar.
+        </p>
+      )}
+    </div>
+  );
 }
 
 // Escala como botones: un <input type="range"> con 0..10 es casi imposible de

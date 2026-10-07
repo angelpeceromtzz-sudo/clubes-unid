@@ -1,6 +1,7 @@
 /* Sección de gestión de banners principales: tabla con CRUD y modal de creación/edición. */
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Icono } from '../../ui/Icono';
+import { BotonAccion } from '../../ui/BotonAccion';
 import { TablaDiapositivasDesktop } from './TablaDiapositivasDesktop';
 import { TarjetasDiapositivasMobile } from './TarjetasDiapositivasMobile';
 import { ModalFormularioDiapositiva } from './ModalFormularioDiapositiva';
@@ -48,18 +49,18 @@ export function SeccionDiapositivas({
             }`}
           />
         </div>
-        <button
+        <BotonAccion
           onClick={abrirModalCrear}
           disabled={limiteAlcanzado}
-          className={`flex-1 sm:flex-none font-black text-xs uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0 ${
+          className={`flex-1 sm:flex-none shrink-0 ${
             limiteAlcanzado
-              ? 'bg-slate-600 text-slate-400 cursor-not-allowed active:scale-100'
-              : 'bg-amber-400 hover:bg-amber-500 text-[#0e162c]'
+              ? '!bg-slate-600 !text-slate-400 disabled:opacity-100'
+              : ''
           }`}
         >
           <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
           Agregar Banner
-        </button>
+        </BotonAccion>
       </div>
       {limiteAlcanzado && (
         <p className={`text-xs mb-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
