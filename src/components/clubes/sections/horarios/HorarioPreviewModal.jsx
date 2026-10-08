@@ -1,4 +1,5 @@
 import { Icono } from '../../../ui/Icono';
+import { BotonCerrar } from '../../../ui/BotonCerrar';
 import { DIAS } from '../../../../constants/horario';
 import { horaStr } from '../../../../utils/horario';
 
@@ -22,11 +23,7 @@ export function HorarioPreviewModal({ show, horarios, modoOscuro, onClose }) {
               Así verán el horario los miembros del club
             </p>
           </div>
-          <button onClick={onClose}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer
-              ${modoOscuro ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
-            <Icono nombre="close" className="h-4 w-4" strokeWidth={2} />
-          </button>
+          <BotonCerrar onClick={onClose} />
         </div>
         <div className="overflow-auto p-4 space-y-3">
           {diasConHorarios.map(dia => {

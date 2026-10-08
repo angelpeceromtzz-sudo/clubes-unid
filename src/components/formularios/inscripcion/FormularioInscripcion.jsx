@@ -3,7 +3,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { ModalExito } from '../../modals/ModalExito';
 import { api } from '../../../services/api';
 import { useAutenticacion } from '../../../contexts/AuthContext';
-import { Icono } from '../../ui/Icono';
+import { BotonCerrar } from '../../ui/BotonCerrar';
 import { Alerta } from '../../ui/Alerta';
 import { CampoTexto } from '../../ui/CampoTexto';
 import { CampoSelect } from '../../ui/CampoSelect';
@@ -100,12 +100,7 @@ export function FormularioInscripcion({ club, onClose }) {
             <h2 className={`text-xl font-black ${tema.title}`}>Formulario de Inscripción</h2>
             <p className={`text-sm mt-0.5 ${tema.subtitle}`}>{club.nombre_club}</p>
           </div>
-          <button
-            onClick={onClose}
-            className={`transition-colors cursor-pointer ${modoOscuro ? 'text-amber-300 hover:text-amber-200' : 'text-amber-500 hover:text-amber-600'}`}
-          >
-            <Icono nombre="close" strokeWidth={2} className="h-7 w-7" />
-          </button>
+          <BotonCerrar onClick={onClose} etiqueta="Cerrar formulario" />
         </div>
 
         {limiteAlcanzado && <Alerta tipo="error" mensaje="Has alcanzado el límite de 3 postulaciones. No puedes enviar más formularios." />}

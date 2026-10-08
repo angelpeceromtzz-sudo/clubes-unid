@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { BotonMicrosoft } from '../ui/BotonMicrosoft';
+import { BotonCerrar } from '../ui/BotonCerrar';
 import { Icono } from '../ui/Icono';
 import { CampoTexto } from '../ui/CampoTexto';
 import { ModalBase } from '../ui/ModalBase';
@@ -41,12 +42,7 @@ export function ModalInicioSesion({ onClose }) {
     <ModalBase show={true} onClose={onClose} maxWidth="max-w-md">
       <div className="flex items-center justify-between mb-6">
         <h2 className={`text-2xl font-black ${esOscuro ? 'text-white' : 'text-slate-900'}`}>Iniciar Sesión</h2>
-        <button
-          onClick={onClose}
-          className={`${esOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'} transition-colors cursor-pointer`}
-        >
-          <Icono nombre="close" strokeWidth={2} className="h-6 w-6 text-slate-400" />
-        </button>
+        <BotonCerrar onClick={onClose} />
       </div>
 
       {mostrarFormulario ? (

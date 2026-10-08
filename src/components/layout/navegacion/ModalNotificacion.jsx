@@ -1,16 +1,11 @@
 import { ModalBase } from '../../ui/ModalBase';
 import { Icono } from '../../ui/Icono';
+import { BotonCerrar } from '../../ui/BotonCerrar';
 
 export function ModalNotificacion({ notif, onClose, tema, modoOscuro, onEliminar }) {
   if (!notif) return null;
   return (
     <ModalBase show={!!notif} onClose={onClose} maxWidth="max-w-lg">
-      <button
-        onClick={onClose}
-        className={`absolute top-3 left-3 z-10 transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
-      >
-        <Icono nombre="close" strokeWidth={2} className="h-5 w-5" />
-      </button>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full ${
@@ -29,6 +24,9 @@ export function ModalNotificacion({ notif, onClose, tema, modoOscuro, onEliminar
             </span>
           </div>
         </div>
+        {/* En el mismo renglón del título y a la derecha, como en los demás
+            modales: antes era una X suelta en la esquina izquierda. */}
+        <BotonCerrar onClick={onClose} etiqueta="Cerrar notificación" />
       </div>
       <p className={`text-sm leading-relaxed whitespace-pre-wrap ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
         {notif.mensaje}

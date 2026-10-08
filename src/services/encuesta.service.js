@@ -49,21 +49,18 @@ export const encuestaService = {
   // fácil equivocarse en el cliente que en el servidor.
   obtenerResultados: (id, carrera) => request(`/encuestas/admin/${id}/resultados${carrera ? '?carrera='+carrera : ''}`),
 
+  // Sondeo del panel "en vivo": sólo el total de respuestas, con una consulta
+  // del servidor. El panel lo usa para decidir si vale la pena recargar los
+  // resultados completos.
+  respuestasRecientes: (id, carrera) =>
+    request(`/encuestas/admin/${id}/respuestas-recientes${carrera ? '?carrera='+carrera : ''}`),
+
   // Guarda el orden de las preguntas de una encuesta. Se manda el arreglo
   // completo de ids en el orden deseado, no "sube la 2" o "baja la 4": con dos
   // personas editando a la vez el segundo formato aplicaría un movimiento sobre
   // una lista que ya cambió, y el arreglo completo no deja lugar a eso.
   reordenarPreguntas: (idEncuesta, ids) =>
     request(`/encuestas/admin/${idEncuesta}/preguntas/orden`, {
-      method: 'PUT',
-      body: JSON.stringify({ orden: ids }),
-    }),
-
-  // Orden de las opciones. Va aparte del reemplazo de la lista completa porque
-  // ese borra las opciones y las recrea con ids nuevos, lo que el servidor
-  // rechaza en cuanto la pregunta tiene respuestas.
-  reordenarOpciones: (idPregunta, ids) =>
-    request(`/encuestas/admin/preguntas/${idPregunta}/opciones/orden`, {
       method: 'PUT',
       body: JSON.stringify({ orden: ids }),
     }),

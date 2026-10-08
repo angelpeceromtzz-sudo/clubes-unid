@@ -18,6 +18,11 @@ import { useFeedback } from './useFeedback';
 // Filtro de la lista. `null` = todas.
 const SIN_FILTRO = null;
 
+// Cadencia del sondeo de respuestas nuevas en el panel de resultados
+// (6-8 segundos pedidos: 7 queda en medio). Sólo consulta el total; el panel
+// completo se recarga únicamente si ese total cambió.
+const CHEQUEO_MS = 7000;
+
 const ENCUESTA_VACIA = {
   titulo: '',
   descripcion: '',
@@ -94,6 +99,13 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
   const [resultados, setResultados] = useState(null);
   const [cargandoResultados, setCargandoResultados] = useState(false);
 
+  // Filtro de carrera del panel de resultados y fecha de la respuesta más
+  // reciente. Vive aquí (y no en el panel) porque el sondeo de tiempo real
+  // necesita las dos: compara el total con el mismo filtro con el que se cargó,
+  // y la hora de la última respuesta la trae él.
+  const [carreraActiva, setCarreraActiva] = useState(SIN_FILTRO);
+  const [ultimaRespuesta, setUltimaRespuesta] = useState(null);
+
   // --- carga ---
 
   // Devuelve las filas además de ponerlas en el estado: al abrir el editor o los
@@ -163,16 +175,72 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
 
   const cargarResultados = useCallback(async (id, carrera = null) => {
     setCargandoResultados(true);
-    setResultados(null);
+    // `resultados` no se borra antes de recargar: el panel se refresca solo
+    // cada pocos segundos (sondeo de tiempo real) y vaciarlo haría que todo el
+    // contenido parpadeara a Spinner en cada ciclo. El spinner inicial se ve
+    // igual porque `resultados` arranca en null y el panel lo maneja aparte.
 
     try {
-      setResultados(await encuestaService.obtenerResultados(id, carrera));
+      const datos = await encuestaService.obtenerResultados(id, carrera);
+      setResultados(datos);
+      setUltimaRespuesta(datos.ultima_respuesta ?? null);
     } catch (err) {
       setErrorFeedback(err.message);
     } finally {
       setCargandoResultados(false);
     }
   }, [setErrorFeedback]);
+
+  // --- tiempo real: refresco del panel de resultados ---
+  //
+  // Cada CHEQUEO_MS se le pregunta al servidor el total de respuestas y la
+  // fecha de la más reciente con la consulta ligera de `respuestas-recientes`.
+  // Sólo si el total cambió se recarga el panel completo (nueve consultas); si
+  // no entró nada, no pasa nada. El sondeo se salta con la pestaña oculta y se
+  // detiene al salir de la pestaña de resultados, de la encuesta o si la
+  // encuesta ya cerró.
+  useEffect(() => {
+    if (pestana !== 'resultados' || !resultados || seleccion?.estado !== 'publicada') {
+      return undefined;
+    }
+
+    const idEncuesta = seleccion.id_encuesta;
+    const totalActual = resultados.total_respuestas;
+    let enCurso = false;
+
+    const chequear = async () => {
+      if (enCurso || document.hidden) return;
+      enCurso = true;
+
+      try {
+        const { total, ultima } = await encuestaService.respuestasRecientes(
+          idEncuesta,
+          carreraActiva
+        );
+        // La hora de la última respuesta se toma de aquí para que no dependa
+        // de que haya habido un cambio: con la misma respuesta, el string es
+        // idéntico y React no vuelve a pintar.
+        setUltimaRespuesta(ultima ?? null);
+
+        if (total !== totalActual) {
+          await cargarResultados(idEncuesta, carreraActiva);
+        }
+      } catch {
+        // Un sondeo que falle (red, sesión vencida) no debe romper el panel
+        // ni llenar la pantalla de errores cada pocos segundos: se ignora y
+        // el siguiente tick vuelve a intentar.
+      } finally {
+        enCurso = false;
+      }
+    };
+
+    // El primer chequeo va de inmediato y no a los 7 s: al entrar a la
+    // pestaña ya se sabe si llegaron respuestas mientras no se miraba.
+    chequear();
+
+    const intervalo = setInterval(chequear, CHEQUEO_MS);
+    return () => clearInterval(intervalo);
+  }, [pestana, resultados, seleccion, carreraActiva, cargarResultados]);
 
   // --- navegación ---
 
@@ -181,6 +249,8 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     setSeleccion(null);
     setDetalle(null);
     setResultados(null);
+    setCarreraActiva(SIN_FILTRO);
+    setUltimaRespuesta(null);
     setEditandoPregunta(null);
     setMetadatosSucios(false);
     setPreguntasPendientes(false);
@@ -192,6 +262,10 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
       setSeleccion(encuesta);
       setVista('editor');
       setResultados(null);
+      // El filtro de carrera es de una encuesta: arrastrarlo a otra dejaría
+      // los resultados nuevos filtrados por una licenciatura al azar.
+      setCarreraActiva(SIN_FILTRO);
+      setUltimaRespuesta(null);
       setFormPregunta(PREGUNTA_VACIA);
       setEditandoPregunta(null);
       // Siempre se entra por la pestaña de preguntas, aunque la última vez que
@@ -211,6 +285,8 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
       setSeleccion(encuesta);
       setVista('resultados');
       setDetalle(null);
+      setCarreraActiva(SIN_FILTRO);
+      setUltimaRespuesta(null);
       setMetadatosSucios(false);
       setPreguntasPendientes(false);
       setPestana('resultados');
@@ -454,6 +530,24 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
           escala_max_texto:
             formPregunta.tipo === 'escala' ? formPregunta.escala_max_texto : null,
         });
+
+        // Las opciones también se guardan al editar: van en su propio endpoint
+        // (que reemplaza la lista completa) y sólo se mandan si algo cambió,
+        // comparando contra lo que trae `detalle`. Sin esto, lo que se escribía
+        // en el editor de opciones del modal se descartaba al cerrar, y la
+        // única vía real era el botón de opciones de la lista.
+        if (TIPOS_CON_OPCIONES.includes(formPregunta.tipo)) {
+          const origen = detalle?.preguntas?.find((p) => p.id_pregunta === editandoPregunta);
+          const previas = (origen?.opciones ?? []).map((o) => o.texto);
+          const sinCambios =
+            previas.length === formPregunta.opciones.length &&
+            previas.every((t, i) => t === formPregunta.opciones[i]);
+
+          if (!sinCambios) {
+            await encuestaService.actualizarOpciones(editandoPregunta, formPregunta.opciones);
+          }
+        }
+
         avisar('Pregunta actualizada');
       } else {
         // Los valores de la escala llegan como string desde el <input type="number">
@@ -495,7 +589,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     } finally {
       setEnviando(false);
     }
-  }, [formPregunta, editandoPregunta, seleccion, cargarDetalle, avisar, setErrorFeedback]);
+  }, [formPregunta, editandoPregunta, detalle, seleccion, cargarDetalle, avisar, setErrorFeedback]);
 
   const eliminarPregunta = useCallback(
     async (idPregunta) => {
@@ -514,25 +608,52 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     [seleccion, cargarDetalle, avisar, setErrorFeedback]
   );
 
-  const guardarOpciones = useCallback(
-    async (idPregunta, opciones) => {
+  // Crea una copia exacta de la pregunta (texto, ayuda, escala y opciones) y
+  // la inserta justo debajo del original. Usa el mismo endpoint de creación
+  // que el formulario, así que respeta el máximo de preguntas y la unicidad
+  // de licenciatura con sus mensajes de error tal cual. El reordenamiento va
+  // en su propio try: si falla, la copia ya existe (queda al final) y se avisa
+  // del problema sin tirar la duplicación.
+  const duplicarPregunta = useCallback(
+    async (pregunta) => {
       setEnviando(true);
 
       try {
-        await encuestaService.actualizarOpciones(idPregunta, opciones);
+        const { id_pregunta } = await encuestaService.crearPregunta(seleccion.id_encuesta, {
+          texto: pregunta.texto,
+          ayuda: pregunta.ayuda,
+          tipo: pregunta.tipo,
+          es_obligatoria: pregunta.es_obligatoria,
+          opciones: TIPOS_CON_OPCIONES.includes(pregunta.tipo)
+            ? (pregunta.opciones ?? []).map((o) => o.texto)
+            : undefined,
+          escala_min: pregunta.tipo === 'escala' ? pregunta.escala_min : null,
+          escala_max: pregunta.tipo === 'escala' ? pregunta.escala_max : null,
+          escala_min_texto: pregunta.tipo === 'escala' ? pregunta.escala_min_texto : null,
+          escala_max_texto: pregunta.tipo === 'escala' ? pregunta.escala_max_texto : null,
+        });
+
+        try {
+          const ids = (detalle?.preguntas ?? []).map((p) => p.id_pregunta);
+          const posicion = ids.indexOf(pregunta.id_pregunta);
+          if (posicion !== -1) {
+            ids.splice(posicion + 1, 0, id_pregunta);
+            await encuestaService.reordenarPreguntas(seleccion.id_encuesta, ids);
+          }
+        } catch (errOrden) {
+          setErrorFeedback(errOrden.message);
+        }
+
+        avisar('Pregunta duplicada');
         await cargarDetalle(seleccion.id_encuesta);
-        avisar('Opciones actualizadas');
-        return true;
       } catch (err) {
-        // 409 = alguna opción que se quitó ya tenía respuestas. El backend lo
-        // explica; se muestra su texto.
+        // Máximo de preguntas o licenciatura repetida: el backend lo explica.
         setErrorFeedback(err.message);
-        return false;
       } finally {
         setEnviando(false);
       }
     },
-    [seleccion, cargarDetalle, avisar, setErrorFeedback]
+    [detalle, seleccion, cargarDetalle, avisar, setErrorFeedback]
   );
 
   // El filtro se aplica en el cliente y no en la URL porque la lista son todas
@@ -578,34 +699,6 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
       }
     },
     [detalle, seleccion, cargarDetalle, setErrorFeedback]
-  );
-
-  // --- orden de las opciones ---
-
-  // A diferencia de las preguntas, aquí no se toca `detalle`: el editor de
-  // opciones trabaja sobre su propia copia y manda los ids en el orden nuevo.
-  // Se recarga el detalle al final para confirmar que el servidor guardó lo que
-  // se pidió; si rechaza, el catch lo recarga y la lista vuelve a su posición real.
-  const reordenarOpciones = useCallback(
-    async (idPregunta, ids) => {
-      setEnviando(true);
-
-      try {
-        await encuestaService.reordenarOpciones(idPregunta, ids);
-        await cargarDetalle(seleccion.id_encuesta);
-        return true;
-      } catch (err) {
-        setErrorFeedback(err.message);
-        // El modal tiene su propia copia del orden. Si el servidor no lo acepta,
-        // esa copia queda desincronizada, así que se devuelve false para que el
-        // panel la descarte en vez de dejarla mostrando un orden que no se guardó.
-        await cargarDetalle(seleccion.id_encuesta);
-        return false;
-      } finally {
-        setEnviando(false);
-      }
-    },
-    [seleccion, cargarDetalle, setErrorFeedback]
   );
 
   return {
@@ -667,6 +760,13 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     // "Publicada" con el enlace ya dead.
     cargarResultados,
 
+    // Filtro de carrera y fecha de la respuesta más reciente. El filtro vive
+    // aquí porque el sondeo de tiempo real lo necesita para comparar totales
+    // del mismo ámbito; el panel sólo los consume para pintar.
+    carreraActiva,
+    setCarreraActiva,
+    ultimaRespuesta,
+
     formNueva,
     setFormNueva,
     crear,
@@ -681,8 +781,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     setEditandoPregunta,
     guardarPregunta,
     eliminarPregunta,
-    guardarOpciones,
-    reordenarOpciones,
+    duplicarPregunta,
     moverPregunta,
 
     feedback,

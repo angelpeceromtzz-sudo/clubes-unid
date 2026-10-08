@@ -46,6 +46,24 @@ function formatearDiaCorto(iso) {
   return fecha.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 }
 
+// Hora de la última respuesta recibida. Si no es de hoy se antepone el día:
+// una encuesta de varios días no debe mostrar "14:32" sin más, que se lee como
+// si fuera de hace un rato.
+function formatearHoraRespuesta(iso) {
+  if (!iso) return '';
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return '';
+  const hora = fecha.toLocaleTimeString('es-MX', { hour12: false });
+  const esHoy = fecha.toDateString() === new Date().toDateString();
+  if (esHoy) return hora;
+  // Sólo la parte de fecha (YYYY-MM-DD), que es lo que formatea
+  // formatearDiaCorto: meterle la hora entera le rompería el parseo.
+  const dia = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(
+    fecha.getDate()
+  ).padStart(2, '0')}`;
+  return `${formatearDiaCorto(dia)} ${hora}`;
+}
+
 function Tarjeta({ titulo, children, extra }) {
   const { cardCls } = useTheme();
 
@@ -171,8 +189,9 @@ function ResultadoEscala({ pregunta }) {
   );
 }
 
-// Texto libre: no hay distribución que graficar, así que se lista la muestra.
-const TEXTOS_POR_PAGINA = 20;
+// Texto libre: no hay distribución que graficar, así que se lista la muestra,
+// mostrando 10 respuestas por página para no saturar la pantalla.
+const TEXTOS_POR_PAGINA = 10;
 
 function ResultadoTextos({ pregunta }) {
   const { tema, modoOscuro } = useTheme();
@@ -300,11 +319,11 @@ function FiltroCarrera({ porLicenciatura, carreraActiva, onChange, tema, modoOsc
 
 export function PanelResultados({ hook, cargando, resultados }) {
   const { tema, modoOscuro } = useTheme();
-  const { esAdmin, aplicarEstado, refrescarSeleccion, cargarResultados, enviando } = hook;
+  const { esAdmin, aplicarEstado, refrescarSeleccion, cargarResultados, enviando,
+    carreraActiva, setCarreraActiva, ultimaRespuesta } = hook;
 
   const [copiado, setCopiado] = useState(false);
   const [cerrando, setCerrando] = useState(false);
-  const [carreraActiva, setCarreraActiva] = useState(null);
 
   // Guardar la lista completa de licenciaturas antes de filtrar para que el
   // <select> siempre muestre todas las opciones, no solo las del filtro activo.
@@ -335,7 +354,11 @@ export function PanelResultados({ hook, cargando, resultados }) {
     }
   };
 
-  if (cargando) return <Spinner size="md" />;
+  // El spinner sólo se ve cuando no hay datos que mostrar: mientras el panel
+  // se refresca con el sondeo de tiempo real, el contenido anterior sigue en
+  // pantalla y sólo cambia cuando llega el nuevo. Sin esta condición todo el
+  // panel parpadearía cada pocos segundos.
+  if (cargando && !resultados) return <Spinner size="md" />;
 
   if (!resultados) {
     return (
@@ -385,6 +408,26 @@ export function PanelResultados({ hook, cargando, resultados }) {
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           <h2 className={`text-xl font-black break-words ${tema.title}`}>{encuesta.titulo}</h2>
           <Badge texto={infoEstado.etiqueta} color={infoEstado.color} />
+          {/* Es la hora de la respuesta más reciente, no la del último
+              refresco: si lleva rato sin moverse, es que no ha llegado nada
+              nuevo. El punto sigue pulsando sólo mientras el sondeo está
+              activo (encuesta publicada); con la encuesta cerrada la hora se
+              muestra quieta. */}
+          {ultimaRespuesta && (
+            <span
+              title="Fecha y hora de la respuesta más reciente"
+              className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${
+                modoOscuro ? 'text-emerald-400' : 'text-emerald-600'
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  encuesta.estado === 'publicada' ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-500'
+                }`}
+              />
+              Última respuesta: {formatearHoraRespuesta(ultimaRespuesta)}
+            </span>
+          )}
         </div>
 
         {esAdmin && encuesta.estado === 'publicada' && (

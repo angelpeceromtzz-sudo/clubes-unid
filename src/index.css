@@ -36,3 +36,46 @@
     max-height: 55vh !important;
   }
 }
+
+/* Animaciones de la encuesta pública: entrada escalonada de las tarjetas de
+   pregunta y "pop" del check en la pantalla de gracias. El guard de
+   prefers-reduced-motion las desactiva para quien pida menos movimiento. */
+@keyframes encuesta-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes encuesta-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.anim-entrada {
+  animation: encuesta-fade-up 0.45s ease-out both;
+}
+
+.anim-pop {
+  animation: encuesta-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-entrada,
+  .anim-pop {
+    animation: none;
+  }
+}

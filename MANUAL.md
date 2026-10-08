@@ -176,7 +176,10 @@ Quien tenga el enlace puede responder.
   que el alumno tenga que contar.
 - No hay preguntas ocultas: si está en la encuesta, el alumno la ve. Para
   quitársela se borra.
-- Límite de **5 envíos por hora y por IP** (se aplica en producción).
+- Límite de **300 envíos por minuto y por IP** (se aplica en producción). Es
+  una red de seguridad contra ráfagas automatizadas, no un control de
+  "un envío por alumno": el Wi-Fi de la universidad pone a muchos alumnos
+  detrás de la misma IP.
 - Al terminar muestra la pantalla de agradecimiento. No se puede volver a
   enviar desde la misma pantalla, porque no hay forma de saber si alguien ya
   respondió: ese es el precio de no guardar la identidad.
@@ -188,7 +191,7 @@ Estados posibles del enlace, con pantallas distintas:
 | El enlace no existe o la encuesta sigue en borrador | 404 | "Encuesta no encontrada" |
 | Todavía no empieza su periodo de respuestas | 403 | "Todavía no está disponible", con botón de reintentar |
 | Ya cerró | 410 | "Esta encuesta ya se cerró", sin reintentar |
-| Se alcanzó el límite de envíos | 429 | "Alcanzaste el límite de envíos por hora" |
+| Se alcanzó el límite de envíos | 429 | "Demasiados envíos desde tu red" |
 
 ---
 
@@ -520,7 +523,7 @@ Las públicas **no piden token**: es el único caso en el sistema.
 | Método | Endpoint | Rol | Descripción |
 |--------|----------|-----|-------------|
 | GET | `/api/encuestas/publico/:slug` | público | Definición de la encuesta; solo si está publicada y dentro de su vigencia |
-| POST | `/api/encuestas/publico/:slug` | público | Envío de respuestas. 5 por hora y por IP |
+| POST | `/api/encuestas/publico/:slug` | público | Envío de respuestas. 300 por minuto y por IP |
 | GET | `/api/encuestas/admin` | admin, rectoría | Lista con conteo de respuestas |
 | POST | `/api/encuestas/admin` | admin | Crea una encuesta en `borrador` y devuelve el `slug` |
 | GET | `/api/encuestas/admin/:id` | admin, rectoría | Encuesta completa con sus preguntas |
@@ -530,6 +533,10 @@ Las públicas **no piden token**: es el único caso en el sistema.
 | PUT | `/api/encuestas/admin/preguntas/:idPregunta` | admin | Edita una pregunta |
 | DELETE | `/api/encuestas/admin/preguntas/:idPregunta` | admin | Borra. Devuelve **409** si ya tiene respuestas |
 | PUT | `/api/encuestas/admin/preguntas/:idPregunta/opciones` | admin | Reemplaza la lista de opciones |
+| PUT | `/api/encuestas/admin/:id/preguntas/orden` | admin | Guarda el orden completo de las preguntas (también lo usa Duplicar) |
+| PUT | `/api/encuestas/admin/preguntas/:idPregunta/opciones/orden` | admin | Guarda el orden de las opciones. Hoy sin uso en el panel |
+| GET | `/api/encuestas/admin/:id/resultados` | admin, rectoría | Resultados agregados; incluye `ultima_respuesta` (hora de la respuesta más reciente) |
+| GET | `/api/encuestas/admin/:id/respuestas-recientes` | admin, rectoría | Sondeo ligero del panel en vivo: total y última fecha con una sola consulta |
 
 | Método | Endpoint | Rol | Descripción |
 |--------|----------|-----|-------------|
@@ -548,6 +555,19 @@ Dos notas sobre las rutas de escritura:
   respuestas caen en la misma columna (`respuestas_encuesta.id_licenciatura`),
   así que con dos la segunda pisaría a la primera. Lo cierra el índice parcial
   único `uq_pregunta_licenciatura`; la API responde **400** con un mensaje claro.
+
+Comportamiento del panel de preguntas y resultados:
+
+- **El panel de resultados se refresca solo** mientras la encuesta esté
+  publicada: cada 7 s consulta el total con `respuestas-recientes` y sólo
+  recarga los resultados completos si algo cambió. Junto al título se muestra
+  **"Última respuesta"** con la hora de la respuesta más reciente; si no se
+  mueve, es que no ha llegado nada nuevo. El sondeo se pausa con la pestaña
+  oculta.
+- **Las respuestas de texto libre se listan de 10 en 10** por página.
+- **Duplicar** crea una copia de la pregunta (con sus opciones, la ayuda y la
+  escala) justo debajo del original. Las opciones se editan dentro del modal
+  de **Editar**; el botón independiente de opciones se retiró por duplicado.
 
 ---
 

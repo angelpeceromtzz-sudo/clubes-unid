@@ -1,4 +1,5 @@
 import { Icono } from '../../../ui/Icono';
+import { BotonCerrar } from '../../../ui/BotonCerrar';
 import { DIAS } from '../../../../constants/horario';
 import { horaStr } from '../../../../utils/horario';
 
@@ -16,11 +17,7 @@ export function HorarioListModal({ show, horarios, modoOscuro, onClose, onEditar
           <h3 className={`text-sm font-bold ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
             Editar horarios
           </h3>
-          <button onClick={onClose}
-            className={`p-1 rounded-lg transition-colors cursor-pointer
-              ${modoOscuro ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
-            <Icono nombre="close" className="h-4 w-4" strokeWidth={2} />
-          </button>
+          <BotonCerrar onClick={onClose} />
         </div>
         <div className="overflow-y-auto p-4 space-y-2">
           {horarios.length === 0 && (

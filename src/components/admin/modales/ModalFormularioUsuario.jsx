@@ -1,6 +1,6 @@
 import { useTheme } from '../../../contexts/ThemeContext';
-import { Icono } from '../../ui/Icono';
 import { BotonAccion } from '../../ui/BotonAccion';
+import { BotonCerrar } from '../../ui/BotonCerrar';
 import { ModalBase } from '../../ui/ModalBase';
 import { Spinner } from '../../ui/Spinner';
 
@@ -8,7 +8,7 @@ export function ModalFormularioUsuario({
   show, formUsuario, enviando, modalError,
   onClose, onSave, onFormChange,
 }) {
-  const { modoOscuro, inputCls, labelCls, tema } = useTheme();
+  const { inputCls, labelCls, tema } = useTheme();
   if (!show) return null;
 
   return (
@@ -17,12 +17,7 @@ export function ModalFormularioUsuario({
         <h2 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
           Crear Nuevo Usuario
         </h2>
-        <button
-          onClick={onClose}
-          className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
-        >
-          <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
-        </button>
+        <BotonCerrar onClick={onClose} />
       </div>
 
       <form onSubmit={onSave} className="space-y-4">

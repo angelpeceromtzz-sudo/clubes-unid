@@ -1,6 +1,7 @@
 /* Modal de confirmación reutilizable: reemplaza window.confirm con estilo consistente.
    Props: show, titulo, mensaje, textoConfirmar, textoCancelar, varianteDanger, onConfirmar, onCancelar, cargando. */
 import { Icono } from './Icono';
+import { BotonCerrar } from './BotonCerrar';
 import { Spinner } from './Spinner';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -26,15 +27,12 @@ export function ModalConfirmacion({
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <button
+        <BotonCerrar
           onClick={onCancelar}
           disabled={cargando}
-          className={`absolute top-4 right-4 transition-colors cursor-pointer ${
-            modoOscuro ? 'text-white hover:text-amber-400' : 'text-slate-400 hover:text-slate-900'
-          }`}
-        >
-          <Icono nombre="close" strokeWidth={2} className="h-5 w-5" />
-        </button>
+          etiqueta="Cancelar"
+          className="absolute top-4 right-4"
+        />
 
         <div className="flex flex-col items-center text-center">
           <div

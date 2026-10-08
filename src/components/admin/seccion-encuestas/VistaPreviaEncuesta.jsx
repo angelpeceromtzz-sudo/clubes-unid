@@ -16,6 +16,7 @@ import { CampoTexto } from '../../ui/CampoTexto';
 import { Icono } from '../../ui/Icono';
 import { ModalBase } from '../../ui/ModalBase';
 import { CampoPregunta } from '../../encuestas/CampoPregunta';
+import { FondoEncuesta } from '../../encuestas/FondoEncuesta';
 import { etiquetaTipoPregunta } from '../../../constants/encuesta';
 import { infoEstadoEncuesta } from '../../../constants/estatus';
 import { numerosVisibles } from '../../../utils/encuesta';
@@ -53,8 +54,14 @@ export function VistaPreviaEncuesta({
   const info = infoEstadoEncuesta(encuesta?.estado);
 
   return (
-    <ModalBase show onClose={onClose} maxWidth="max-w-2xl" closeOnBackdrop={false}>
-      <div className="flex items-start justify-between gap-3 mb-1">
+    <ModalBase show onClose={onClose} maxWidth="max-w-2xl" closeOnBackdrop={false} externalClose>
+      {/* Misma marca de agua que el formulario público, en modo contenido: la
+          imagen se centra dentro del modal en vez de fijarse a la ventana. */}
+      <FondoEncuesta contenida>
+      {/* La X no va en la cabecera: el ModalBase la dibuja fuera del área con
+          scroll (prop `externalClose`), así permanece visible mientras el
+          contenido se mueve. */}
+      <div className="flex items-center justify-between gap-3 mb-1">
         <h3 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
           Vista previa
         </h3>
@@ -150,17 +157,8 @@ export function VistaPreviaEncuesta({
             <CampoTexto value={encuesta.mensaje_agradecimiento} disabled />
           </div>
         )}
-      </div>
-
-      <div className="flex justify-end mt-6">
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-sm font-semibold opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
-        >
-          Cerrar
-        </button>
-      </div>
+        </div>
+      </FondoEncuesta>
     </ModalBase>
   );
 }

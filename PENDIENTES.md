@@ -243,14 +243,23 @@ Ninguno de los dos lo detecta el linter. Salieron al probar contra la base real.
       copiar el enlace, responder en incógnito, ver resultados. **El código
       compila y pasa el linter, pero la parte de React sólo se comprobó por
       lectura.**
-- [ ] Probar `duplicar` y `opciones/orden` en ejecución. Se escribieron al final
-      de la sesión y el backend quedó arrancado con el código anterior: hay que
-      reiniciarlo. `preguntas/orden` sí está probado.
-- [ ] Reordenar opciones en una pregunta **que ya tiene respuestas**. Es el caso
-      que motivó el endpoint de §2.4 y el que el reemplazo total no cubría.
+- [ ] Probar `duplicar` en ejecución: crea la copia con `POST /preguntas` y la
+      coloca debajo del original con `preguntas/orden` (`opciones/orden` ya no
+      se llama desde el front: el modal independiente de opciones se eliminó y
+      el orden se guarda con el reemplazo total desde el modal de Editar).
+- [x] Reordenar opciones en una pregunta **que ya tiene respuestas**: quedó
+      **sin uso**. La estructura se congela al haber respuestas y el modal de
+      opciones ya no existe; el endpoint sigue en el backend por si se retoma.
+- [ ] Probar el refresco en vivo del panel de resultados (cada 7 s). Requiere
+      el backend con `GET /admin/:id/respuestas-recientes` desplegado: contra
+      Render sin hacer push responde 404 y el sondeo lo traga en silencio.
+      Verificar que el indicador "Última respuesta" marca la hora del envío
+      más reciente y que el panel no parpadea al refrescarse.
 - [ ] Comprobar los 409 al borrar encuesta o pregunta que ya tienen respuestas.
-- [ ] Comprobar el 429 del límite de 5 envíos por hora, que hoy solo aplica con
-      `NODE_ENV=production` (`encuestas.js:55`).
+- [ ] Comprobar el 429 del límite de 300 envíos por minuto, que hoy solo aplica
+      con `NODE_ENV=production` (`encuestas.js`, bloque de rate limit). Probar
+      además el log de `req.ip` / `x-forwarded-for` / `socket.remoteAddress`
+      desde varias redes para confirmar qué IP ve Express detrás de Render.
 
 **Las 6 respuestas de la encuesta demo se enviaron por la API** para poder
 verificar los agregados, y siguen ahí a propósito: son lo que permite ver el

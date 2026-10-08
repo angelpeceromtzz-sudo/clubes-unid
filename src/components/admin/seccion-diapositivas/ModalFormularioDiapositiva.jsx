@@ -1,5 +1,5 @@
 import { ModalBase } from '../../ui/ModalBase';
-import { Icono } from '../../ui/Icono';
+import { BotonCerrar } from '../../ui/BotonCerrar';
 import { CampoTexto } from '../../ui/CampoTexto';
 import { BotonAccion } from '../../ui/BotonAccion';
 import { Spinner } from '../../ui/Spinner';
@@ -13,11 +13,7 @@ export function ModalFormularioDiapositiva({ show, editando, form, enviando, err
         <h2 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
           {editando ? 'Editar Banner' : 'Nuevo Banner'}
         </h2>
-        <button onClick={onClose}
-          className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
-        >
-          <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
-        </button>
+        <BotonCerrar onClick={onClose} />
       </div>
 
       <form onSubmit={onGuardar} className="space-y-4">

@@ -1,5 +1,5 @@
 import { useTheme } from '../../../contexts/ThemeContext';
-import { Icono } from '../../ui/Icono';
+import { BotonCerrar } from '../../ui/BotonCerrar';
 import { ModalBase } from '../../ui/ModalBase';
 
 export function ModalAyuda({ show, onClose }) {
@@ -9,9 +9,7 @@ export function ModalAyuda({ show, onClose }) {
     <ModalBase show={show} onClose={onClose} maxWidth="max-w-md">
       <div className="flex items-center justify-between mb-6">
         <h3 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>Ayuda</h3>
-        <button onClick={onClose} className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>
-          <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
-        </button>
+        <BotonCerrar onClick={onClose} />
       </div>
       <div className={`space-y-4 text-sm leading-relaxed ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
         <p>

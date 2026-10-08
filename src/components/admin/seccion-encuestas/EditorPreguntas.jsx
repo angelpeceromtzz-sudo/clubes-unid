@@ -51,10 +51,10 @@ function Casilla({ etiqueta, checked, onChange, disabled, ayuda }) {
 // reordenar. El orden importa porque es el orden en que el alumno las ve, así
 // que se cambia desde la propia fila con botones y no con arrastrar.
 //
-// `onMover` es opcional: en una pregunta que ya existe lo pasan, y entonces el
-// reordenamiento va al servidor. En una nueva no hay ids todavía, así que se
-// reordena la lista en memoria y se guarda junto con el resto.
-function EditorOpciones({ opciones, onChange, disabled, onMover }) {
+// El reordenamiento se hace en memoria y se guarda con el mismo "Guardar" de
+// la pregunta: no hay ids todavía en una nueva, y en una existente el orden
+// viaja en la lista que manda `guardarPregunta` a su endpoint de opciones.
+function EditorOpciones({ opciones, onChange, disabled }) {
   const actualizar = (indice, texto) => {
     const copia = [...opciones];
     copia[indice] = texto;
@@ -64,11 +64,6 @@ function EditorOpciones({ opciones, onChange, disabled, onMover }) {
   const mover = (indice, delta) => {
     const destino = indice + delta;
     if (destino < 0 || destino >= opciones.length) return;
-
-    if (onMover) {
-      onMover(indice, destino);
-      return;
-    }
 
     const copia = [...opciones];
     [copia[indice], copia[destino]] = [copia[destino], copia[indice]];
@@ -173,24 +168,23 @@ function EditorOpciones({ opciones, onChange, disabled, onMover }) {
 export function EditorPreguntas({ hook }) {
   const { cardCls, labelCls, tema } = useTheme();
   const { detalle, formPregunta, setFormPregunta, editandoPregunta, setEditandoPregunta,
-    guardarPregunta, eliminarPregunta, guardarOpciones, reordenarOpciones, enviando,
+    guardarPregunta, eliminarPregunta, duplicarPregunta, enviando,
     errorFeedback, esAdmin, tieneRespuestas, setPreguntasPendientes } = hook;
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [borrando, setBorrando] = useState(null);
-  const [editandoOpciones, setEditandoOpciones] = useState(null);
 
   // Mientras haya un modal abierto hay algo que se perdería al cambiar de
-  // pestaña: en el de pregunta, lo que se está escribiendo; en el de opciones,
-  // los textos y el orden arrastrados. Se reporta al contenedor para que pida
-  // confirmación antes de desmontar todo esto.
+  // pestaña: lo que se está escribiendo en el formulario de la pregunta.
+  // Se reporta al contenedor para que pida confirmación antes de desmontar
+  // todo esto.
   //
   // No se intenta adivinar si el formulario "cambió": abrir el modal para
   // mirar una pregunta y cerrarlo sin escribir no ensucia nada, y un aviso ahí
   // sería ruido.
   useEffect(() => {
-    setPreguntasPendientes(modalAbierto || editandoOpciones !== null);
-  }, [modalAbierto, editandoOpciones, setPreguntasPendientes]);
+    setPreguntasPendientes(modalAbierto);
+  }, [modalAbierto, setPreguntasPendientes]);
 
   // La estructura se congela cuando la encuesta ya tiene respuestas.
   //
@@ -213,7 +207,6 @@ export function EditorPreguntas({ hook }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setModalAbierto(false);
-    setEditandoOpciones(null);
   }, [detalle?.id_encuesta]);
 
   const preguntas = detalle?.preguntas ?? [];
@@ -367,9 +360,12 @@ export function EditorPreguntas({ hook }) {
                 </div>
               </div>
 
-              {/* Las tres acciones comparten un marco para leerse como un grupo.
-                  Sueltas, el ícono de opciones y el de editar parecían el mismo
-                  botón repetido. */}
+              {/* Las tres acciones (duplicar, editar, eliminar) comparten un
+                  marco para leerse como un grupo. Sueltas se leían como botones
+                  sueltos de la tarjeta. Duplicar reemplaza al viejo botón de
+                  "Editar opciones": las opciones ahora se editan dentro del
+                  modal de Editar, y éste crea una copia exacta de la pregunta
+                  (con sus opciones) justo debajo del original. */}
               {/* El grupo de acciones no se pinta cuando no hay nada que hacer: un marco
                   vacío al lado de cada pregunta se lee como un botón roto. */}
               {editable && (
@@ -378,27 +374,20 @@ export function EditorPreguntas({ hook }) {
                     tema.isDark ? 'border-slate-700/60' : 'border-slate-200'
                   }`}
                 >
-                  {TIPOS_CON_OPCIONES.includes(pregunta.tipo) && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEditandoOpciones({
-                          id: pregunta.id_pregunta,
-                          texto: pregunta.texto,
-                          // Se guardan los ids aparte de los textos porque el
-                          // reordenamiento se guarda por id. Si se guardara sólo el
-                          // texto, habría que volver a pedirlos al servidor.
-                          ids: (pregunta.opciones ?? []).map((o) => o.id_opcion),
-                          opciones: (pregunta.opciones ?? []).map((o) => o.texto),
-                        })
-                      }
-                      title="Editar opciones"
-                      aria-label={`Editar opciones de la pregunta ${indice + 1}`}
-                      className="p-2 opacity-60 hover:opacity-100 cursor-pointer"
-                    >
-                      <Icono nombre="clipboard" className="h-4 w-4" />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => duplicarPregunta(pregunta)}
+                    disabled={enviando || preguntas.length >= MAX_PREGUNTAS_POR_ENCUESTA}
+                    title={
+                      preguntas.length >= MAX_PREGUNTAS_POR_ENCUESTA
+                        ? `La encuesta ya tiene el máximo de ${MAX_PREGUNTAS_POR_ENCUESTA} preguntas`
+                        : 'Duplicar pregunta'
+                    }
+                    aria-label={`Duplicar la pregunta ${indice + 1}`}
+                    className="p-2 opacity-60 hover:opacity-100 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <Icono nombre="duplicate" className="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => abrirEdicion(pregunta)}
@@ -582,83 +571,6 @@ export function EditorPreguntas({ hook }) {
             {enviando ? 'Guardando...' : 'Guardar'}
           </BotonAccion>
         </div>
-      </ModalBase>
-
-      {/* --- opciones de una pregunta existente --- */}
-      <ModalBase
-        show={Boolean(editandoOpciones) && editable}
-        onClose={() => setEditandoOpciones(null)}
-        maxWidth="max-w-lg"
-        closeOnBackdrop={false}
-      >
-        {editandoOpciones && (
-          <>
-            <h3 className={`text-lg font-black uppercase tracking-wider mb-1 ${tema.title}`}>
-              Opciones
-            </h3>
-            <p className={`text-xs mb-5 break-words ${tema.subtitle}`}>
-              {editandoOpciones.texto}
-            </p>
-
-            <Alerta tipo="warning" mensaje="Guardar reemplaza la lista completa.">
-              <p className="text-xs mt-1 opacity-80">
-                Si alguna de las opciones que quites ya tiene respuestas, el servidor la
-                rechaza: los conteos de la pregunta están atados a su opción. Mover el orden
-                con las flechas sí funciona con respuestas, porque no cambia ninguna opción.
-              </p>
-            </Alerta>
-
-            <div className="my-5">
-              <EditorOpciones
-                opciones={editandoOpciones.opciones}
-                onChange={(opciones) =>
-                  setEditandoOpciones({ ...editandoOpciones, opciones })
-                }
-                onMover={async (origen, destino) => {
-                  // Se mueven los ids y los textos a la vez: si sólo se moviera el
-                  // texto, la fila se desplazaría y el id se quedaría atrás, y el
-                  // siguiente guardado escribiría el orden sobre opciones equivocadas.
-                  const ids = [...editandoOpciones.ids];
-                  const textos = [...editandoOpciones.opciones];
-                  const [id] = ids.splice(origen, 1);
-                  ids.splice(destino, 0, id);
-                  const [texto] = textos.splice(origen, 1);
-                  textos.splice(destino, 0, texto);
-
-                  setEditandoOpciones({ ...editandoOpciones, ids, opciones: textos });
-                  // Si el servidor no lo acepta, el modal se cierra: su copia del
-                  // orden ya no sería la del servidor y "Guardar" escribiría mal.
-                  const guardado = await reordenarOpciones(editandoOpciones.id, ids);
-                  if (!guardado) setEditandoOpciones(null);
-                }}
-                disabled={enviando}
-              />
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <BotonAccion
-                variant="outline"
-                onClick={() => setEditandoOpciones(null)}
-                disabled={enviando}
-              >
-                Cancelar
-              </BotonAccion>
-              <BotonAccion
-                onClick={async () => {
-                  // El modal se cierra sólo si se guardó. Si el servidor rechaza
-                  // (409 por quitar una opción con respuestas), cerrarlo tiraría
-                  // los cambios que el admin llevaba un rato haciendo.
-                  if (await guardarOpciones(editandoOpciones.id, editandoOpciones.opciones)) {
-                    setEditandoOpciones(null);
-                  }
-                }}
-                disabled={enviando}
-              >
-                {enviando ? 'Guardando...' : 'Guardar opciones'}
-              </BotonAccion>
-            </div>
-          </>
-        )}
       </ModalBase>
 
       {/* --- baja de pregunta --- */}

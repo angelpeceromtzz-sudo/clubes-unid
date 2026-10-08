@@ -54,15 +54,24 @@ const LIMITE_TEXTOS_RESULTADOS = 200;
 const ESTADOS = ['borrador', 'publicada', 'cerrada'];
 
 // ===========================================================================
-// Rate limit: 100 envíos por hora y por IP.
+// Rate limit: 300 envíos por minuto y por IP.
 //
-// Va por IP porque la respuesta es anónima: no hay sesión que sirva de
-// identidad. Al no persistir la IP, este contador es la única huella del alumno.
-const LIMITE_ENVIO_POR_HORA = 10;
+// Protege contra ráfagas automatizadas, NO contra respuestas repetidas de una
+// misma persona: son dos problemas distintos. Con encuestas anónimas no hay
+// identidad y "una IP = un alumno" no se sostiene —el Wi-Fi de la universidad
+// mete a decenas o cientos de alumnos detrás de la misma IP pública por NAT—,
+// así que el límite se dimensiona al peor caso realista de esa red (100-300
+// alumnos enviando en el mismo minuto), no a uno. Evitar duplicados será un
+// mecanismo aparte, compatible con anonimato.
+//
+// El contador vive en memoria (store por defecto): se reinicia en cada deploy
+// y es por instancia. Para frenar scripts en una instancia única es suficiente.
+// Si algún día hay varias instancias, el límite efectivo se multiplica.
+const LIMITE_ENVIO_POR_MINUTO = 300;
 
 const limiteEnvio = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  limit: LIMITE_ENVIO_POR_HORA,
+  windowMs: 60 * 1000,
+  limit: LIMITE_ENVIO_POR_MINUTO,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   // En desarrollo hay varios alumnos detrás del mismo proxy, y frenar por IP
@@ -70,7 +79,7 @@ const limiteEnvio = rateLimit({
   skip: () => process.env.NODE_ENV !== 'production',
   handler: (req, res) => {
     res.status(429).json({
-      error: 'Alcanzaste el límite de envíos por hora. Intenta más tarde.',
+      error: 'Demasiados envíos desde tu red. Espera un momento e intenta nuevamente.',
     });
   },
 });
@@ -746,8 +755,12 @@ router.get(
         textosArgs
       );
 
+      // Además del total, la fecha de la respuesta más reciente: es lo que el
+      // panel muestra como "Última respuesta" y sale gratis aquí, en la misma
+      // consulta indexada que ya cuenta.
       const total = await pool.query(
-        `SELECT COUNT(*)::int AS total FROM respuestas_encuesta r WHERE r.id_encuesta = $1 ${filterSQL}`,
+        `SELECT COUNT(*)::int AS total, MAX(r.fecha_envio) AS ultima_respuesta
+         FROM respuestas_encuesta r WHERE r.id_encuesta = $1 ${filterSQL}`,
         queryArgs
       );
 
@@ -774,6 +787,7 @@ router.get(
       res.json({
         encuesta: encuesta.rows[0],
         total_respuestas: total.rows[0].total,
+        ultima_respuesta: total.rows[0].ultima_respuesta,
         por_fecha: porFecha.rows,
         por_licenciatura: porLicenciatura.rows,
         // Las respuestas sin programa no se pierden: restan del total y se
@@ -792,6 +806,54 @@ router.get(
       });
     } catch (err) {
       console.error('Error al obtener resultados de la encuesta:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  }
+);
+
+/**
+ * Sondeo ligero para el refresco "en vivo" del panel de resultados.
+ *
+ * El panel lo llama cada unos segundos y sólo cuando el total cambió vuelve a
+ * pedir `/resultados`, que son nueve consultas. Ésta es una sola sobre el
+ * índice (id_encuesta, fecha_envio): si no entró respuestas nuevas, no cuesta
+ * prácticamente nada y no se hace ninguna otra llamada.
+ *
+ * Acepta el mismo filtro `?carrera=` que el endpoint completo para que el
+ * total que se compara sea del mismo ámbito que el panel (con filtro activo se
+ * comparan totales filtrados, no globales).
+ */
+router.get(
+  '/admin/:id/respuestas-recientes',
+  authenticate,
+  requireRole(...ROLES_LECTURA),
+  async (req, res) => {
+    const idEncuesta = Number(req.params.id);
+    const carreraFilter = req.query.carrera ? Number(req.query.carrera) : null;
+
+    if (!Number.isInteger(idEncuesta)) {
+      return res.status(400).json({ error: 'El id de la encuesta debe ser un número' });
+    }
+    if (req.query.carrera && !Number.isInteger(carreraFilter)) {
+      return res.status(400).json({ error: 'El filtro de carrera debe ser un número' });
+    }
+
+    try {
+      const where = carreraFilter
+        ? 'WHERE id_encuesta = $1 AND id_licenciatura = $2'
+        : 'WHERE id_encuesta = $1';
+      const args = carreraFilter ? [idEncuesta, carreraFilter] : [idEncuesta];
+
+      const sondeo = await pool.query(
+        `SELECT COUNT(*)::int AS total, MAX(fecha_envio) AS ultima
+         FROM respuestas_encuesta
+         ${where}`,
+        args
+      );
+
+      res.json({ total: sondeo.rows[0].total, ultima: sondeo.rows[0].ultima });
+    } catch (err) {
+      console.error('Error al sondear respuestas recientes:', err);
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   }

@@ -1,5 +1,5 @@
-import { Icono } from '../../../ui/Icono';
 import { BotonAccion } from '../../../ui/BotonAccion';
+import { BotonCerrar } from '../../../ui/BotonCerrar';
 import { SelectorMapa } from '../../../ui/SelectorMapa';
 import { DIAS, DIAS_CORTO } from '../../../../constants/horario';
 
@@ -20,11 +20,7 @@ export function HorarioFormModal({
           <h3 className={`text-sm font-bold ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
             {editando ? 'Editar horario' : 'Nuevo horario'}
           </h3>
-          <button onClick={onClose}
-            className={`p-1 rounded-lg transition-colors cursor-pointer
-              ${modoOscuro ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
-            <Icono nombre="close" className="h-4 w-4" strokeWidth={2} />
-          </button>
+          <BotonCerrar onClick={onClose} />
         </div>
 
         <form onSubmit={onSubmit} className="p-5 space-y-4">
