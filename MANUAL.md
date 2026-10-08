@@ -169,7 +169,9 @@ Quien tenga el enlace puede responder.
   **Licenciatura**: no viene implícita, la crea él en el editor y es opcional
   ("Prefiero no decir"), para poder comparar resultados entre programas. Como
   cualquier otra pregunta, se puede mover de sitio, cambiar su texto y volverla
-  obligatoria.
+  obligatoria; en ese caso **desaparece la salida "Prefiero no decir"** y el
+  selector pide elegir un programa concreto, porque "no decirlo" no cumple lo
+  que promete el asterisco rojo.
 - Tipos de pregunta: opción única, opción múltiple, texto corto, texto largo,
   escala numérica y **licenciatura** (el selector de programa). La de
   licenciatura aparece sin número, y las demás empiezan en 1: no es una pregunta

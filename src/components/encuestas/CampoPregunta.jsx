@@ -14,7 +14,9 @@
 //
 // `licenciatura` es el único tipo sin lista de opciones propia: las suyas salen
 // del catálogo `cat_licenciaturas`, que se pide aquí con useLicenciaturas. El
-// `null` significa "Prefiero no decir" y el backend lo guarda como NULL.
+// `null` significa "Prefiero no decir" cuando la pregunta es opcional, y el
+// backend lo guarda como NULL. Si la pregunta es obligatoria, `null` es "sin
+// elegir": el envío se rechaza, así que el selector no ofrece esa salida.
 //
 // En las opciones el input nativo se conserva pero oculto con `sr-only`: sigue
 // siendo un radio/checkbox real (teclado, lector de pantalla, name agrupado) y
@@ -178,6 +180,7 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
           onChange={onChange}
           deshabilitado={deshabilitado}
           base={base}
+          esObligatoria={pregunta.es_obligatoria}
         />
       );
 
@@ -197,7 +200,7 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
  * El catálogo se cachea a nivel de módulo, así que la vista previa del panel y
  * el formulario público comparten la misma petición si se abren a la vez.
  */
-function SelectorLicenciatura({ valor, onChange, deshabilitado, base }) {
+function SelectorLicenciatura({ valor, onChange, deshabilitado, base, esObligatoria }) {
   const { licenciaturas, loading, error } = useLicenciaturas();
 
   // `?? ''` y no un cast: el contrato dice number|null, y null es justo el valor
@@ -214,10 +217,19 @@ function SelectorLicenciatura({ valor, onChange, deshabilitado, base }) {
         className={base}
         aria-label="Tu licenciatura"
       >
-        {/* La opción vacía es la respuesta por defecto y también la que
-            representa "Prefiero no decir". Se rotula distinto mientras carga
-            para que el alumno no la tome por una respuesta ya guardada. */}
-        <option value="">{loading ? 'Cargando...' : 'Prefiero no decir'}</option>
+        {/* La opción vacía es la respuesta por defecto. Si la pregunta es
+            opcional se rotula "Prefiero no decir" (es una salida válida); si es
+            obligatoria no se ofrece esa salida, porque elegirla sería un error
+            al enviar (la tarjeta ya lleva el * rojo): el hueco se rotula como
+            pedido de selección. Mientras carga se rotula distinto para que el
+            alumno no la tome por una respuesta ya guardada. */}
+        <option value="">
+          {loading
+            ? 'Cargando...'
+            : esObligatoria
+              ? 'Selecciona tu licenciatura'
+              : 'Prefiero no decir'}
+        </option>
         {licenciaturas.map((l) => (
           <option key={l.id_licenciatura} value={l.id_licenciatura}>
             {l.nombre}
