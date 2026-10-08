@@ -10,6 +10,7 @@ const FORMULARIO_VACIO = {
   url_imagen: '',
   destacada: false,
   publicada: true,
+  categoria: 'informativo',
 };
 
 export function useAdminNoticias(setFeedback, setErrorFeedback) {
@@ -56,6 +57,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       url_imagen: noticia.url_imagen || '',
       destacada: noticia.destacada === true,
       publicada: noticia.publicada === true,
+      categoria: noticia.categoria || 'informativo',
     });
     setEditando(noticia);
     setErrorModal('');
@@ -105,6 +107,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
         url_imagen: form.url_imagen || null,
         destacada: form.destacada,
         publicada: form.publicada,
+        categoria: form.categoria,
       };
       if (editando) {
         await api.updateNoticia(editando.id_noticia, payload);

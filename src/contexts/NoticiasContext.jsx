@@ -31,6 +31,7 @@ export function ProveedorNoticias({ children: hijos }) {
   const [vistoHasta, setVistoHasta] = useState(leerVistoHasta);
   const [modal, setModal] = useState(null);
   const [destacada, setDestacada] = useState(null);
+  const [actualizacionesAbiertas, setActualizacionesAbiertas] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -70,6 +71,15 @@ export function ProveedorNoticias({ children: hijos }) {
     setDestacada(null);
   }, [modal, destacada, marcarLeida]);
 
+  const abrirActualizaciones = useCallback(() => {
+    setActualizacionesAbiertas(true);
+    marcarTodasLeidas();
+  }, [marcarTodasLeidas]);
+
+  const cerrarActualizaciones = useCallback(() => {
+    setActualizacionesAbiertas(false);
+  }, []);
+
   const noLeidas = useMemo(
     () => noticias.filter((n) => n.id_noticia > vistoHasta).length,
     [noticias, vistoHasta]
@@ -103,6 +113,9 @@ export function ProveedorNoticias({ children: hijos }) {
         modal,
         destacada,
         cerrarModal,
+        abrirActualizaciones,
+        cerrarActualizaciones,
+        actualizacionesAbiertas,
         marcarLeida,
         marcarTodasLeidas,
         refetch: cargar,

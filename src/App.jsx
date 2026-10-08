@@ -7,6 +7,7 @@ import { BarraNavegacion } from './components/layout/barra-navegacion/BarraNaveg
 import { PiePagina } from './components/layout/PiePagina';
 import { ModalInicioSesion } from './components/modals/ModalInicioSesion';
 import { ModalNoticias } from './components/noticias/ModalNoticias';
+import { ModalActualizaciones } from './components/noticias/ModalActualizaciones';
 import { NavegacionInferiorMovil } from './components/layout/paneles-navegacion/NavegacionInferiorMovil';
 import { RutaProtegida } from './components/layout/RutaProtegida';
 import { PanelAlumno } from './pages/PanelAlumno';
@@ -100,6 +101,7 @@ function App() {
       />
 
       <ModalNoticias />
+      <ModalActualizaciones />
 
       {showLogin && (
         <ModalInicioSesion onClose={handleLoginSuccess} />

@@ -5,6 +5,12 @@ import { BotonAccion } from '../../ui/BotonAccion';
 import { Spinner } from '../../ui/Spinner';
 import { SubirImagen } from '../../ui/SubirImagen';
 
+const CATEGORIAS_NOTICIA = [
+  { value: 'promocion', label: 'Promoción' },
+  { value: 'evento', label: 'Evento' },
+  { value: 'informativo', label: 'Informativo' },
+];
+
 export function ModalFormularioNoticia({ show, editando, form, enviando, errorModal, modoOscuro, tema, labelCls, onClose, onGuardar, onFormChange, onSubirImagen }) {
 
   return (
@@ -25,6 +31,33 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
         <CampoTexto label="Contenido" name="contenido" type="textarea" value={form.contenido} onChange={onFormChange} placeholder="Escribe aquí el detalle de la novedad..." required />
 
         <SubirImagen label="Imagen" urlImagen={form.url_imagen} onUpload={onSubirImagen} modoOscuro={modoOscuro} labelCls={labelCls} inputId="noticia-image-upload" editando={editando} />
+
+        <div>
+          <span className={labelCls}>Categoría</span>
+          <div className="grid grid-cols-3 gap-2">
+            {CATEGORIAS_NOTICIA.map((cat) => {
+              const activa = form.categoria === cat.value;
+              return (
+                <button
+                  key={cat.value}
+                  type="button"
+                  name="categoria"
+                  value={cat.value}
+                  onClick={onFormChange}
+                  className={`rounded-xl border px-2 py-2 text-[11px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
+                    activa
+                      ? 'border-amber-400 bg-amber-400/15 text-amber-400 shadow-sm'
+                      : modoOscuro
+                        ? 'border-slate-700 bg-[#18223f] text-slate-400 hover:text-slate-200'
+                        : 'border-slate-300 bg-slate-100 text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <label className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
