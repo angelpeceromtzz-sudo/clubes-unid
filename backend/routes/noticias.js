@@ -7,8 +7,10 @@ import { v2 as cloudinary } from 'cloudinary';
 
 const ROLES_EDITOR = [3, 4];
 
+const CATEGORIAS_PERMITIDAS = ['promocion', 'evento', 'informativo'];
+
 const CAMPOS = `id_noticia, titulo, contenido, url_imagen, destacada,
-                publicada, id_autor, fecha_publicacion, fecha_actualizacion`;
+                publicada, categoria, id_autor, fecha_publicacion, fecha_actualizacion`;
 
 function extraerPublicId(url) {
   if (!url || !url.includes('cloudinary.com')) return null;
@@ -66,7 +68,7 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
 // Crea una noticia — admin / rectoría
 router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
-    const { titulo, contenido, url_imagen, destacada, publicada } = req.body;
+    const { titulo, contenido, url_imagen, destacada, publicada, categoria } = req.body;
 
     if (!titulo || !titulo.trim()) {
       return res.status(400).json({ error: 'El título es obligatorio' });
@@ -74,10 +76,14 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
     if (!contenido || !contenido.trim()) {
       return res.status(400).json({ error: 'El contenido es obligatorio' });
     }
+    const categoriaFinal = categoria ?? 'informativo';
+    if (!CATEGORIAS_PERMITIDAS.includes(categoriaFinal)) {
+      return res.status(400).json({ error: 'Categoría no válida' });
+    }
 
     const result = await pool.query(
-      `INSERT INTO noticias (titulo, contenido, url_imagen, destacada, publicada, id_autor)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO noticias (titulo, contenido, url_imagen, destacada, publicada, categoria, id_autor)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING ${CAMPOS}`,
       [
         titulo.trim(),
@@ -85,6 +91,7 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
         url_imagen || null,
         destacada === true,
         publicada !== false,
+        categoriaFinal,
         req.user.id,
       ]
     );
@@ -112,13 +119,16 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
 router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, contenido, url_imagen, destacada, publicada } = req.body;
+    const { titulo, contenido, url_imagen, destacada, publicada, categoria } = req.body;
 
     if (titulo !== undefined && !titulo.trim()) {
       return res.status(400).json({ error: 'El título no puede quedar vacío' });
     }
     if (contenido !== undefined && !contenido.trim()) {
       return res.status(400).json({ error: 'El contenido no puede quedar vacío' });
+    }
+    if (categoria !== undefined && !CATEGORIAS_PERMITIDAS.includes(categoria)) {
+      return res.status(400).json({ error: 'Categoría no válida' });
     }
 
     const actual = await pool.query(
@@ -138,8 +148,9 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
            contenido   = COALESCE($2, contenido),
            url_imagen  = COALESCE($3, url_imagen),
            destacada   = COALESCE($4, destacada),
-           publicada    = COALESCE($5, publicada)
-       WHERE id_noticia = $6
+           publicada    = COALESCE($5, publicada),
+           categoria    = COALESCE($6, categoria)
+       WHERE id_noticia = $7
        RETURNING ${CAMPOS}`,
       [
         titulo !== undefined ? titulo.trim() : null,
@@ -147,6 +158,7 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
         url_imagen !== undefined ? url_imagen : null,
         destacada === undefined ? null : destacada === true,
         publicada === undefined ? null : publicada === true,
+        categoria === undefined ? null : categoria,
         id,
       ]
     );
