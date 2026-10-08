@@ -54,11 +54,11 @@ const LIMITE_TEXTOS_RESULTADOS = 200;
 const ESTADOS = ['borrador', 'publicada', 'cerrada'];
 
 // ===========================================================================
-// Rate limit: 5 envíos por hora y por IP.
+// Rate limit: 100 envíos por hora y por IP.
 //
 // Va por IP porque la respuesta es anónima: no hay sesión que sirva de
 // identidad. Al no persistir la IP, este contador es la única huella del alumno.
-const LIMITE_ENVIO_POR_HORA = 5;
+const LIMITE_ENVIO_POR_HORA = 10;
 
 const limiteEnvio = rateLimit({
   windowMs: 60 * 60 * 1000,
