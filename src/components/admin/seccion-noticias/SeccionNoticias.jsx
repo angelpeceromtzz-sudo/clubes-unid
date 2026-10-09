@@ -24,13 +24,17 @@ export function SeccionNoticias({
   guardar,
   handleFormChange,
   subirImagen,
+  tipoSeccion = 'noticia',
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, labelCls, tema } = useTheme();
+  const esEvento = tipoSeccion === 'evento';
+  const publicaciones = noticias.filter((n) => (n.categoria === 'evento') === esEvento);
+  const publicacionesFiltradas = noticiasFiltradas.filter((n) => (n.categoria === 'evento') === esEvento);
 
   return (
     <div>
       <p className={`text-sm mb-3 ${tema.subtitle}`}>
-        {noticias.length} {noticias.length === 1 ? 'noticia registrada' : 'noticias registradas'}
+        {publicaciones.length} {publicaciones.length === 1 ? (esEvento ? 'evento registrado' : 'noticia registrada') : (esEvento ? 'eventos registrados' : 'noticias registradas')}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
@@ -48,24 +52,24 @@ export function SeccionNoticias({
           />
         </div>
         <button
-          onClick={abrirModalCrear}
+          onClick={() => abrirModalCrear(esEvento ? 'evento' : 'informativo')}
           className="flex-1 sm:flex-none font-black text-xs uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0 bg-amber-400 hover:bg-amber-500 text-[#0e162c]"
         >
           <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
-          Publicar Noticia
+          {esEvento ? 'Agregar Evento' : 'Publicar Noticia'}
         </button>
       </div>
 
       {cargando ? (
-        <p className={`text-sm py-8 text-center ${tema.subtitle}`}>Cargando noticias...</p>
-      ) : noticiasFiltradas.length === 0 ? (
+        <p className={`text-sm py-8 text-center ${tema.subtitle}`}>Cargando {esEvento ? 'eventos' : 'noticias'}...</p>
+      ) : publicacionesFiltradas.length === 0 ? (
         <p className={`text-sm py-8 text-center ${tema.subtitle}`}>
-          {busqueda ? 'No hay noticias que coincidan con la búsqueda.' : 'Aún no has publicado noticias.'}
+          {busqueda ? 'No hay publicaciones que coincidan con la búsqueda.' : esEvento ? 'Aún no has agregado eventos.' : 'Aún no has publicado noticias.'}
         </p>
       ) : (
         <>
           <TablaNoticiasDesktop
-            noticias={noticiasFiltradas}
+            noticias={publicacionesFiltradas}
             modoOscuro={modoOscuro}
             tableBg={tableBg}
             thCls={thCls}
@@ -77,7 +81,7 @@ export function SeccionNoticias({
           />
 
           <TarjetasNoticiasMobile
-            noticias={noticiasFiltradas}
+            noticias={publicacionesFiltradas}
             modoOscuro={modoOscuro}
             tdTitle={tdTitle}
             tdCls={tdCls}
@@ -101,6 +105,7 @@ export function SeccionNoticias({
         onGuardar={guardar}
         onFormChange={handleFormChange}
         onSubirImagen={subirImagen}
+        tipoSeccion={tipoSeccion}
       />
     </div>
   );

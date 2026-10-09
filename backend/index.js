@@ -9,7 +9,7 @@ dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { migrate } from './migrate.js';
-migrate();
+await migrate();
 
 import authRoutes from './routes/auth.js';
 import usuariosRoutes from './routes/usuarios.js';

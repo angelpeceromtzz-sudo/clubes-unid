@@ -158,7 +158,7 @@ export function ModalActualizaciones() {
             <button
               onClick={() => {
                 cerrarActualizaciones();
-                navigate('/noticias');
+                navigate(noticia?.categoria === 'evento' ? '/eventos' : '/noticias');
               }}
               className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-black uppercase tracking-widest text-amber-400 transition-colors hover:text-amber-300"
             >

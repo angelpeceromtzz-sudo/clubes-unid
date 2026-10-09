@@ -16,6 +16,7 @@ import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { PaginaNoticias } from './pages/PaginaNoticias';
+import { PaginaCalendario } from './pages/PaginaCalendario';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
@@ -120,6 +121,8 @@ function App() {
           />
         } />
         <Route path="/noticias" element={<PaginaNoticias />} />
+        <Route path="/eventos" element={<PaginaNoticias tipoInicial="eventos" />} />
+        <Route path="/calendario" element={<PaginaCalendario />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />

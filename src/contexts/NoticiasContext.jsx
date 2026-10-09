@@ -27,6 +27,7 @@ function guardarVistoHasta(id) {
 
 export function ProveedorNoticias({ children: hijos }) {
   const [noticias, setNoticias] = useState([]);
+  const [eventos, setEventos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [vistoHasta, setVistoHasta] = useState(leerVistoHasta);
   const [modal, setModal] = useState(null);
@@ -35,10 +36,15 @@ export function ProveedorNoticias({ children: hijos }) {
 
   const cargar = useCallback(async () => {
     try {
-      const data = await api.getNoticias();
-      setNoticias(Array.isArray(data) ? data : []);
+      const [respuestaNoticias, respuestaEventos] = await Promise.allSettled([
+        api.getNoticias(),
+        api.getEventos(),
+      ]);
+      setNoticias(respuestaNoticias.status === 'fulfilled' && Array.isArray(respuestaNoticias.value) ? respuestaNoticias.value : []);
+      setEventos(respuestaEventos.status === 'fulfilled' && Array.isArray(respuestaEventos.value) ? respuestaEventos.value : []);
     } catch {
       setNoticias([]);
+      setEventos([]);
     } finally {
       setCargando(false);
     }
@@ -108,6 +114,7 @@ export function ProveedorNoticias({ children: hijos }) {
     <ContextoNoticias.Provider
       value={{
         noticias,
+        eventos,
         cargando,
         noLeidas,
         modal,

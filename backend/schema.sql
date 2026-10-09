@@ -356,6 +356,9 @@ CREATE TABLE IF NOT EXISTS noticias (
     id_autor INT,
     categoria VARCHAR(20) NOT NULL DEFAULT 'informativo'
         CONSTRAINT chk_noticia_categoria CHECK (categoria IN ('promocion', 'evento', 'informativo')),
+    fecha_evento DATE,
+    hora_evento TIME,
+    lugar_evento VARCHAR(200),
     fecha_publicacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_noticia_autor FOREIGN KEY (id_autor) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
@@ -363,6 +366,9 @@ CREATE TABLE IF NOT EXISTS noticias (
 
 -- Migración idempotente: en bases ya existentes la columna no está.
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria VARCHAR(20) NOT NULL DEFAULT 'informativo';
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS fecha_evento DATE;
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS hora_evento TIME;
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS lugar_evento VARCHAR(200);
 
 DO $$
 BEGIN

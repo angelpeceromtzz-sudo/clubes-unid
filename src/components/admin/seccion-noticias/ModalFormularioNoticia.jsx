@@ -7,17 +7,16 @@ import { SubirImagen } from '../../ui/SubirImagen';
 
 const CATEGORIAS_NOTICIA = [
   { value: 'promocion', label: 'Promoción' },
-  { value: 'evento', label: 'Evento' },
   { value: 'informativo', label: 'Informativo' },
 ];
 
-export function ModalFormularioNoticia({ show, editando, form, enviando, errorModal, modoOscuro, tema, labelCls, onClose, onGuardar, onFormChange, onSubirImagen }) {
+export function ModalFormularioNoticia({ show, editando, form, enviando, errorModal, modoOscuro, tema, labelCls, onClose, onGuardar, onFormChange, onSubirImagen, tipoSeccion = 'noticia' }) {
 
   return (
     <ModalBase show={show} onClose={onClose} maxWidth="max-w-lg">
       <div className="flex items-center justify-between mb-6">
         <h2 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
-          {editando ? 'Editar Noticia' : 'Nueva Noticia'}
+          {editando ? (tipoSeccion === 'evento' ? 'Editar Evento' : 'Editar Noticia') : (tipoSeccion === 'evento' ? 'Nuevo Evento' : 'Nueva Noticia')}
         </h2>
         <button onClick={onClose}
           className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
@@ -32,9 +31,19 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
 
         <SubirImagen label="Imagen" urlImagen={form.url_imagen} onUpload={onSubirImagen} modoOscuro={modoOscuro} labelCls={labelCls} inputId="noticia-image-upload" editando={editando} />
 
-        <div>
+        {tipoSeccion === 'evento' && (
+          <div className="space-y-4">
+            <CampoTexto label="Fecha del evento" name="fecha_evento" type="date" value={form.fecha_evento || ''} onChange={onFormChange} required />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <CampoTexto label="Hora" name="hora_evento" type="time" value={form.hora_evento || ''} onChange={onFormChange} />
+              <CampoTexto label="Lugar" name="lugar_evento" value={form.lugar_evento || ''} onChange={onFormChange} maxLength={200} placeholder="Ej: Auditorio del campus" />
+            </div>
+          </div>
+        )}
+
+        {tipoSeccion !== 'evento' && <div>
           <span className={labelCls}>Categoría</span>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {CATEGORIAS_NOTICIA.map((cat) => {
               const activa = form.categoria === cat.value;
               return (
@@ -57,7 +66,7 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
               );
             })}
           </div>
-        </div>
+        </div>}
 
         <div className="flex flex-col sm:flex-row gap-3">
           <label className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
@@ -81,7 +90,7 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
                 {editando ? 'Guardando...' : 'Publicando...'}
               </>
             ) : (
-              editando ? 'Guardar Cambios' : 'Publicar Noticia'
+              editando ? 'Guardar Cambios' : (tipoSeccion === 'evento' ? 'Guardar Evento' : 'Publicar Noticia')
             )}
           </BotonAccion>
         </div>

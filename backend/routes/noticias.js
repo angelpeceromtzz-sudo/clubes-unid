@@ -10,7 +10,21 @@ const ROLES_EDITOR = [3, 4];
 const CATEGORIAS_PERMITIDAS = ['promocion', 'evento', 'informativo'];
 
 const CAMPOS = `id_noticia, titulo, contenido, url_imagen, destacada,
-                publicada, categoria, id_autor, fecha_publicacion, fecha_actualizacion`;
+                publicada, categoria, fecha_evento, hora_evento, lugar_evento,
+                id_autor, fecha_publicacion, fecha_actualizacion`;
+
+function fechaEventoValida(fecha) {
+  if (typeof fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return false;
+  const valor = new Date(`${fecha}T12:00:00Z`);
+  return !Number.isNaN(valor.getTime()) && valor.toISOString().slice(0, 10) === fecha;
+}
+
+function errorDatosEvento(fecha, hora, lugar) {
+  if (fecha != null && fecha !== '' && !fechaEventoValida(fecha)) return 'Fecha del evento no válida';
+  if (hora != null && hora !== '' && (typeof hora !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(hora))) return 'Hora del evento no válida';
+  if (lugar != null && (typeof lugar !== 'string' || lugar.length > 200)) return 'Lugar del evento no válido';
+  return null;
+}
 
 function extraerPublicId(url) {
   if (!url || !url.includes('cloudinary.com')) return null;
@@ -49,6 +63,22 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Todos los eventos publicados, sin depender del límite del feed de noticias.
+router.get('/eventos', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT ${CAMPOS}
+       FROM noticias
+       WHERE publicada = TRUE AND categoria = 'evento'
+       ORDER BY fecha_publicacion DESC, id_noticia DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al listar eventos:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // Lista todas las noticias (incluye borradores) — admin / rectoría
 router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
@@ -68,7 +98,7 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
 // Crea una noticia — admin / rectoría
 router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
-    const { titulo, contenido, url_imagen, destacada, publicada, categoria } = req.body;
+    const { titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento } = req.body;
 
     if (!titulo || !titulo.trim()) {
       return res.status(400).json({ error: 'El título es obligatorio' });
@@ -80,10 +110,15 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
     if (!CATEGORIAS_PERMITIDAS.includes(categoriaFinal)) {
       return res.status(400).json({ error: 'Categoría no válida' });
     }
+    if (categoriaFinal === 'evento') {
+      const error = errorDatosEvento(fecha_evento, hora_evento, lugar_evento);
+      if (error) return res.status(400).json({ error });
+      if (!fecha_evento) return res.status(400).json({ error: 'La fecha del evento es obligatoria' });
+    }
 
     const result = await pool.query(
-      `INSERT INTO noticias (titulo, contenido, url_imagen, destacada, publicada, categoria, id_autor)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO noticias (titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, id_autor)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING ${CAMPOS}`,
       [
         titulo.trim(),
@@ -92,6 +127,9 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
         destacada === true,
         publicada !== false,
         categoriaFinal,
+        categoriaFinal === 'evento' ? fecha_evento : null,
+        categoriaFinal === 'evento' ? hora_evento || null : null,
+        categoriaFinal === 'evento' ? lugar_evento?.trim() || null : null,
         req.user.id,
       ]
     );
@@ -119,7 +157,7 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
 router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, contenido, url_imagen, destacada, publicada, categoria } = req.body;
+    const { titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento } = req.body;
 
     if (titulo !== undefined && !titulo.trim()) {
       return res.status(400).json({ error: 'El título no puede quedar vacío' });
@@ -130,14 +168,21 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     if (categoria !== undefined && !CATEGORIAS_PERMITIDAS.includes(categoria)) {
       return res.status(400).json({ error: 'Categoría no válida' });
     }
+    const errorEvento = errorDatosEvento(fecha_evento, hora_evento, lugar_evento);
+    if (errorEvento) return res.status(400).json({ error: errorEvento });
 
     const actual = await pool.query(
-      'SELECT url_imagen FROM noticias WHERE id_noticia = $1',
+      'SELECT url_imagen, categoria, fecha_evento FROM noticias WHERE id_noticia = $1',
       [id]
     );
 
     if (actual.rows.length === 0) {
       return res.status(404).json({ error: 'Noticia no encontrada' });
+    }
+    const categoriaFinal = categoria ?? actual.rows[0].categoria;
+    const fechaFinal = fecha_evento === undefined ? actual.rows[0].fecha_evento : fecha_evento;
+    if ((categoria !== undefined || fecha_evento !== undefined) && categoriaFinal === 'evento' && !fechaFinal) {
+      return res.status(400).json({ error: 'La fecha del evento es obligatoria' });
     }
 
     const urlAnterior = actual.rows[0].url_imagen;
@@ -149,8 +194,11 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
            url_imagen  = COALESCE($3, url_imagen),
            destacada   = COALESCE($4, destacada),
            publicada    = COALESCE($5, publicada),
-           categoria    = COALESCE($6, categoria)
-       WHERE id_noticia = $7
+           categoria    = COALESCE($6, categoria),
+           fecha_evento = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $7 THEN $8::date ELSE fecha_evento END,
+           hora_evento  = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $9 THEN $10::time ELSE hora_evento END,
+           lugar_evento = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $11 THEN $12 ELSE lugar_evento END
+       WHERE id_noticia = $13
        RETURNING ${CAMPOS}`,
       [
         titulo !== undefined ? titulo.trim() : null,
@@ -159,6 +207,12 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
         destacada === undefined ? null : destacada === true,
         publicada === undefined ? null : publicada === true,
         categoria === undefined ? null : categoria,
+        fecha_evento !== undefined,
+        fecha_evento || null,
+        hora_evento !== undefined,
+        hora_evento || null,
+        lugar_evento !== undefined,
+        lugar_evento?.trim() || null,
         id,
       ]
     );

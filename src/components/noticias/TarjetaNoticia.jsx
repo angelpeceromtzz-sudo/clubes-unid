@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
 import { obtenerUrlImagen } from '../../utils/imagen';
-import { contarPalabras, fechaCorta, fechaRelativa, recortarPalabras } from '../../utils/formato';
+import { contarPalabras, fechaCorta, fechaEventoCorta, fechaRelativa, recortarPalabras } from '../../utils/formato';
 
 const LIMITE_PALABRAS = 50;
 
@@ -51,6 +51,14 @@ export function TarjetaNoticia({ noticia }) {
         <h2 className={`text-lg sm:text-xl font-black leading-snug ${tema.title}`}>
           {noticia.titulo}
         </h2>
+
+        {noticia.categoria === 'evento' && (
+          <div className={`mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold ${modoOscuro ? 'text-indigo-300' : 'text-indigo-600'}`}>
+            {noticia.fecha_evento && <span>📅 {fechaEventoCorta(noticia.fecha_evento)}</span>}
+            {noticia.hora_evento && <span>🕒 {String(noticia.hora_evento).slice(0, 5)}</span>}
+            {noticia.lugar_evento && <span>📍 {noticia.lugar_evento}</span>}
+          </div>
+        )}
 
         <p className={`mt-3 text-sm leading-relaxed whitespace-pre-line break-words ${tema.subtitle}`}>
           {contenido}

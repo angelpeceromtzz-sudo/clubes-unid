@@ -114,6 +114,7 @@ export const api = {
   deleteDiapositivaHero: diapositivaService.deleteDiapositivaHero,
 
   getNoticias: noticiaService.getNoticias,
+  getEventos: noticiaService.getEventos,
   getNoticiasAdmin: noticiaService.getNoticiasAdmin,
   createNoticia: noticiaService.createNoticia,
   updateNoticia: noticiaService.updateNoticia,

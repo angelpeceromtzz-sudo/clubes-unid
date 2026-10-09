@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { useConfirmacionPendiente } from './useConfirmacionPendiente';
 import { filtrarPorTexto } from '../utils/filtros';
+import { useNoticias } from '../contexts/NoticiasContext';
 
 const FORMULARIO_VACIO = {
   titulo: '',
@@ -11,9 +12,13 @@ const FORMULARIO_VACIO = {
   destacada: false,
   publicada: true,
   categoria: 'informativo',
+  fecha_evento: '',
+  hora_evento: '',
+  lugar_evento: '',
 };
 
 export function useAdminNoticias(setFeedback, setErrorFeedback) {
+  const { refetch: refetchPublicaciones } = useNoticias();
   const [noticias, setNoticias] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -38,13 +43,14 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
     try {
       const actualizadas = await api.getNoticiasAdmin();
       setNoticias(actualizadas);
+      await refetchPublicaciones();
     } catch {
       // silently fail
     }
-  }, []);
+  }, [refetchPublicaciones]);
 
-  const abrirModalCrear = useCallback(() => {
-    setForm({ ...FORMULARIO_VACIO });
+  const abrirModalCrear = useCallback((categoria = 'informativo') => {
+    setForm({ ...FORMULARIO_VACIO, categoria });
     setEditando(null);
     setErrorModal('');
     setShowModal(true);
@@ -58,6 +64,9 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       destacada: noticia.destacada === true,
       publicada: noticia.publicada === true,
       categoria: noticia.categoria || 'informativo',
+      fecha_evento: noticia.fecha_evento ? String(noticia.fecha_evento).slice(0, 10) : '',
+      hora_evento: noticia.hora_evento ? String(noticia.hora_evento).slice(0, 5) : '',
+      lugar_evento: noticia.lugar_evento || '',
     });
     setEditando(noticia);
     setErrorModal('');
@@ -99,6 +108,10 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       setErrorModal('El contenido es obligatorio');
       return;
     }
+    if (form.categoria === 'evento' && !form.fecha_evento) {
+      setErrorModal('La fecha del evento es obligatoria');
+      return;
+    }
     setEnviando(true);
     try {
       const payload = {
@@ -108,13 +121,16 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
         destacada: form.destacada,
         publicada: form.publicada,
         categoria: form.categoria,
+        fecha_evento: form.categoria === 'evento' ? form.fecha_evento : null,
+        hora_evento: form.categoria === 'evento' ? form.hora_evento || null : null,
+        lugar_evento: form.categoria === 'evento' ? form.lugar_evento : null,
       };
       if (editando) {
         await api.updateNoticia(editando.id_noticia, payload);
-        setFeedback('Noticia actualizada correctamente');
+        setFeedback(form.categoria === 'evento' ? 'Evento actualizado correctamente' : 'Noticia actualizada correctamente');
       } else {
         await api.createNoticia(payload);
-        setFeedback('Noticia publicada correctamente');
+        setFeedback(form.categoria === 'evento' ? 'Evento guardado correctamente' : 'Noticia publicada correctamente');
       }
       await refetch();
       setShowModal(false);

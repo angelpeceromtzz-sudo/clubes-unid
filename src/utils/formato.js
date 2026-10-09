@@ -30,6 +30,13 @@ export function fechaCorta(fecha) {
   });
 }
 
+export function fechaEventoCorta(fecha) {
+  if (!fecha) return '';
+  return new Date(`${String(fecha).slice(0, 10)}T12:00:00`).toLocaleDateString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+}
+
 export function contarPalabras(texto) {
   if (!texto) return 0;
   return texto.trim().split(/\s+/).filter(Boolean).length;

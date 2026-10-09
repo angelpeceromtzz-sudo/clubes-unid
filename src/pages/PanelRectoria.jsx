@@ -59,7 +59,7 @@ export function PanelRectoria() {
         {d.vistaActiva === 'actividad' && (
           <TablaActividad />
         )}
-        {d.vistaActiva === 'noticias' && (
+        {(d.vistaActiva === 'noticias' || d.vistaActiva === 'eventos') && (
           <SeccionNoticias
             noticias={d.noticias.noticias}
             noticiasFiltradas={d.noticias.noticiasFiltradas}
@@ -79,13 +79,14 @@ export function PanelRectoria() {
             guardar={d.noticias.guardar}
             handleFormChange={d.noticias.handleFormChange}
             subirImagen={d.noticias.subirImagen}
+            tipoSeccion={d.vistaActiva === 'eventos' ? 'evento' : 'noticia'}
           />
         )}
 
         <ModalConfirmacion
           show={!!d.pendienteConfirmacionNoticia}
           titulo="Eliminar noticia"
-          mensaje={`¿Eliminar la noticia "${d.pendienteConfirmacionNoticia?.titulo || ''}"? Esta acción no se puede deshacer.`}
+          mensaje={`¿Eliminar la publicación "${d.pendienteConfirmacionNoticia?.titulo || ''}"? Esta acción no se puede deshacer.`}
           textoConfirmar="Eliminar"
           varianteDanger
           onConfirmar={d.confirmarPendienteNoticia}

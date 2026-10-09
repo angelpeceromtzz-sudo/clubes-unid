@@ -6,7 +6,7 @@ import { fechaRelativa } from '../../utils/formato';
 
 export function NoticiasRecientes({ noticias, cargando }) {
   const { cardCls, tdTitle, tdCls, modoOscuro } = useTheme();
-  const recientes = noticias?.slice(0, 5) || [];
+  const recientes = noticias?.filter((n) => n.categoria !== 'evento').slice(0, 5) || [];
 
   return (
     <div className={`${cardCls} border rounded-2xl overflow-hidden`}>

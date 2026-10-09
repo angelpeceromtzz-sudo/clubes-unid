@@ -7,6 +7,8 @@ import { MenuUsuario } from '../MenuUsuario';
 import { Logotipo } from './Logotipo';
 import { ModalAyuda } from '../navegacion/ModalAyuda';
 import { BotonNoticias } from '../../noticias/BotonNoticias';
+import { BotonEventos } from '../../noticias/BotonEventos';
+import { BotonCalendario } from '../../noticias/BotonCalendario';
 
 export function BarraNavegacion({
   menuAbierto, setMenuAbierto, onLogoClick,
@@ -50,14 +52,16 @@ export function BarraNavegacion({
             )}
 
             {mostrarFiltros && (
-              <div className="hidden lg:block shrink-0">
+              <div className="hidden lg:flex items-center gap-1 shrink-0">
                 <BotonNoticias />
+                <BotonEventos />
+                <BotonCalendario />
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 ml-auto shrink-0">
-            {mostrarFiltros && <BotonNoticias className="lg:hidden" />}
+            {mostrarFiltros && <div className="flex items-center gap-0.5 lg:hidden"><BotonNoticias /><BotonEventos /><BotonCalendario /></div>}
             {user && (
               <div className="hidden lg:flex items-center gap-3">
                 <BadgeNotificaciones />

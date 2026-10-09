@@ -4,6 +4,8 @@ export const noticiaService = {
   getNoticias: (limite) =>
     request(limite ? `/noticias?limite=${limite}` : '/noticias'),
 
+  getEventos: () => request('/noticias/eventos'),
+
   getNoticiasAdmin: () => request('/noticias/admin'),
 
   createNoticia: (data) =>
