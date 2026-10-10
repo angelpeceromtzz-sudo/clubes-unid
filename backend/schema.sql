@@ -359,6 +359,8 @@ CREATE TABLE IF NOT EXISTS noticias (
     fecha_evento DATE,
     hora_evento TIME,
     lugar_evento VARCHAR(200),
+    categoria_evento VARCHAR(20) NOT NULL DEFAULT 'social'
+        CONSTRAINT chk_noticia_categoria_evento CHECK (categoria_evento IN ('social', 'deportivo', 'cultural')),
     fecha_publicacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_noticia_autor FOREIGN KEY (id_autor) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
@@ -369,6 +371,9 @@ ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria VARCHAR(20) NOT NULL DEF
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS fecha_evento DATE;
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS hora_evento TIME;
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS lugar_evento VARCHAR(200);
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria_evento VARCHAR(20) NOT NULL DEFAULT 'social';
+UPDATE noticias SET categoria_evento = 'social' WHERE categoria_evento NOT IN ('social', 'deportivo', 'cultural');
+ALTER TABLE noticias ALTER COLUMN categoria_evento SET DEFAULT 'social';
 
 DO $$
 BEGIN
@@ -377,6 +382,30 @@ BEGIN
             ADD CONSTRAINT chk_noticia_categoria CHECK (categoria IN ('promocion', 'evento', 'informativo'));
     END IF;
 END $$;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_noticia_categoria_evento'
+          AND pg_get_constraintdef(oid) LIKE '%general%'
+    ) THEN
+        ALTER TABLE noticias DROP CONSTRAINT chk_noticia_categoria_evento;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_categoria_evento') THEN
+        ALTER TABLE noticias ADD CONSTRAINT chk_noticia_categoria_evento
+            CHECK (categoria_evento IN ('social', 'deportivo', 'cultural'));
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS intereses_eventos (
+    id_noticia INT NOT NULL REFERENCES noticias(id_noticia) ON DELETE CASCADE,
+    id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    fecha_registro TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id_noticia, id_usuario)
+);
+
+CREATE INDEX IF NOT EXISTS idx_intereses_eventos_usuario ON intereses_eventos(id_usuario);
 
 CREATE INDEX IF NOT EXISTS idx_noticias_publicada ON noticias(publicada);
 CREATE INDEX IF NOT EXISTS idx_noticias_fecha ON noticias(fecha_publicacion DESC);

@@ -2,6 +2,7 @@ import { Badge } from '../../ui/Badge';
 import { Icono } from '../../ui/Icono';
 import { obtenerUrlImagen } from '../../../utils/imagen';
 import { fechaCorta, fechaEventoCorta } from '../../../utils/formato';
+import { nombreCategoriaEvento } from '../../../constants/categoriasEvento';
 
 export function TablaNoticiasDesktop({ noticias, modoOscuro, tableBg, thCls, tdCls, tdTitle, onToggle, onEditar, onEliminar }) {
   return (
@@ -35,6 +36,7 @@ export function TablaNoticiasDesktop({ noticias, modoOscuro, tableBg, thCls, tdC
                 </td>
                 <td className="px-5 py-4">
                   <p className={`font-medium ${tdTitle}`}>{n.titulo}</p>
+                  {n.categoria === 'evento' && <p className={`mt-1 text-xs ${tdCls}`}>{nombreCategoriaEvento(n.categoria_evento)} · {n.total_interesados ?? 0} interesados</p>}
                   {n.categoria === 'evento' && n.lugar_evento && <p className={`mt-1 text-xs ${tdCls}`}>📍 {n.lugar_evento}</p>}
                   {n.destacada && (
                     <span className="inline-block mt-1 text-[10px] uppercase font-bold text-amber-400">Destacada</span>

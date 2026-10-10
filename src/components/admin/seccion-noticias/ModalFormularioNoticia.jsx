@@ -4,6 +4,8 @@ import { CampoTexto } from '../../ui/CampoTexto';
 import { BotonAccion } from '../../ui/BotonAccion';
 import { Spinner } from '../../ui/Spinner';
 import { SubirImagen } from '../../ui/SubirImagen';
+import { CATEGORIAS_EVENTO } from '../../../constants/categoriasEvento';
+import { fechaHoyCampus } from '../../../utils/fechas';
 
 const CATEGORIAS_NOTICIA = [
   { value: 'promocion', label: 'Promoción' },
@@ -11,6 +13,9 @@ const CATEGORIAS_NOTICIA = [
 ];
 
 export function ModalFormularioNoticia({ show, editando, form, enviando, errorModal, modoOscuro, tema, labelCls, onClose, onGuardar, onFormChange, onSubirImagen, tipoSeccion = 'noticia' }) {
+  const hoy = fechaHoyCampus();
+  const fechaAnterior = editando?.fecha_evento ? String(editando.fecha_evento).slice(0, 10) : '';
+  const fechaMinima = fechaAnterior && fechaAnterior < hoy ? fechaAnterior : hoy;
 
   return (
     <ModalBase show={show} onClose={onClose} maxWidth="max-w-lg">
@@ -33,10 +38,33 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
 
         {tipoSeccion === 'evento' && (
           <div className="space-y-4">
-            <CampoTexto label="Fecha del evento" name="fecha_evento" type="date" value={form.fecha_evento || ''} onChange={onFormChange} required />
+            <CampoTexto label="Fecha del evento" name="fecha_evento" type="date" value={form.fecha_evento || ''} onChange={onFormChange} min={fechaMinima} required />
+            <p className={`-mt-2 text-[11px] ${tema.subtitle}`}>
+              {fechaAnterior && fechaAnterior < hoy
+                ? 'Puedes conservar la fecha original. Si la cambias, elige hoy o una fecha futura.'
+                : 'Selecciona hoy o una fecha futura.'}
+            </p>
             <div className="grid sm:grid-cols-2 gap-4">
               <CampoTexto label="Hora" name="hora_evento" type="time" value={form.hora_evento || ''} onChange={onFormChange} />
               <CampoTexto label="Lugar" name="lugar_evento" value={form.lugar_evento || ''} onChange={onFormChange} maxLength={200} placeholder="Ej: Auditorio del campus" />
+            </div>
+            <div>
+              <span className={labelCls}>Categoría del evento</span>
+              <div className="grid grid-cols-3 gap-2">
+                {CATEGORIAS_EVENTO.map((cat) => {
+                  const activa = form.categoria_evento === cat.value;
+                  return (
+                    <button key={cat.value} type="button" name="categoria_evento" value={cat.value} onClick={onFormChange}
+                      aria-pressed={activa}
+                      className={`rounded-xl border px-2 py-2 text-[11px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
+                        activa ? 'border-amber-400 bg-amber-400/15 text-amber-400 shadow-sm'
+                          : modoOscuro ? 'border-slate-700 bg-[#18223f] text-slate-400 hover:text-slate-200'
+                            : 'border-slate-300 bg-slate-100 text-slate-500 hover:text-slate-800'
+                      }`}
+                    >{cat.label}</button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

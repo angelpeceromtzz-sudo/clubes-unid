@@ -4,6 +4,8 @@ import { api } from '../services/api';
 import { useConfirmacionPendiente } from './useConfirmacionPendiente';
 import { filtrarPorTexto } from '../utils/filtros';
 import { useNoticias } from '../contexts/NoticiasContext';
+import { fechaHoyCampus } from '../utils/fechas';
+import { normalizarCategoriaEvento } from '../constants/categoriasEvento';
 
 const FORMULARIO_VACIO = {
   titulo: '',
@@ -15,6 +17,7 @@ const FORMULARIO_VACIO = {
   fecha_evento: '',
   hora_evento: '',
   lugar_evento: '',
+  categoria_evento: 'social',
 };
 
 export function useAdminNoticias(setFeedback, setErrorFeedback) {
@@ -67,6 +70,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       fecha_evento: noticia.fecha_evento ? String(noticia.fecha_evento).slice(0, 10) : '',
       hora_evento: noticia.hora_evento ? String(noticia.hora_evento).slice(0, 5) : '',
       lugar_evento: noticia.lugar_evento || '',
+      categoria_evento: normalizarCategoriaEvento(noticia.categoria_evento),
     });
     setEditando(noticia);
     setErrorModal('');
@@ -112,6 +116,11 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       setErrorModal('La fecha del evento es obligatoria');
       return;
     }
+    if (form.categoria === 'evento' && form.fecha_evento < fechaHoyCampus() &&
+        (!editando || form.fecha_evento !== String(editando.fecha_evento || '').slice(0, 10))) {
+      setErrorModal('La fecha del evento no puede ser pasada');
+      return;
+    }
     setEnviando(true);
     try {
       const payload = {
@@ -124,6 +133,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
         fecha_evento: form.categoria === 'evento' ? form.fecha_evento : null,
         hora_evento: form.categoria === 'evento' ? form.hora_evento || null : null,
         lugar_evento: form.categoria === 'evento' ? form.lugar_evento : null,
+        categoria_evento: form.categoria === 'evento' ? form.categoria_evento : 'social',
       };
       if (editando) {
         await api.updateNoticia(editando.id_noticia, payload);

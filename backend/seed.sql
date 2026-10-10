@@ -63,7 +63,7 @@ ON CONFLICT DO NOTHING;
 -- con ON CONFLICT el nextval se ejecuta igual aunque la fila se omita,
 -- así que un re-run consume IDs y deja huecos en la secuencia.
 INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol)
-SELECT v.nombre_completo, v.correo, '$2a$10$1yPFtZxv36gERR.BTYnbxONc0MB7eAHxrsGsfcw7qGyPJmeu67JzO', r.id_rol
+SELECT v.nombre_completo, v.correo, '$2a$10$MSw0tpLhjgT8ZXXAiI/b9OhZK/rpKHkO6Sdf/VlSA6PHE9Qt52zVi', r.id_rol
 FROM (VALUES
   ('Luis Miguel Hernández Pérez',   'alumno.libre@unid.mx',    'alumno'),
   ('María Fernanda López García',   'alumno.inscrito@unid.mx', 'alumno'),
@@ -168,7 +168,7 @@ WHERE NOT EXISTS (
 -- Nota: El presidente de Voleibol se asigna desde la BD o panel admin.
 -- 5 alumnos de prueba para Voleibol (contraseña: 123456)
 INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol)
-SELECT v.nombre_completo, v.correo, '$2a$10$1yPFtZxv36gERR.BTYnbxONc0MB7eAHxrsGsfcw7qGyPJmeu67JzO', r.id_rol
+SELECT v.nombre_completo, v.correo, '$2a$10$MSw0tpLhjgT8ZXXAiI/b9OhZK/rpKHkO6Sdf/VlSA6PHE9Qt52zVi', r.id_rol
 FROM (VALUES
   ('Sofía Martínez López',     'alumno.voleibol1@unid.mx'),
   ('Andrés García Hernández',  'alumno.voleibol2@unid.mx'),

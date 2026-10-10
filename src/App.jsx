@@ -47,8 +47,8 @@ function App() {
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
-    redirigirPostLogin();
-  }, [redirigirPostLogin]);
+    if (location.pathname !== '/eventos') redirigirPostLogin();
+  }, [redirigirPostLogin, location.pathname]);
 
   function handleLogout() {
     cerrarSesion();
@@ -121,7 +121,7 @@ function App() {
           />
         } />
         <Route path="/noticias" element={<PaginaNoticias />} />
-        <Route path="/eventos" element={<PaginaNoticias tipoInicial="eventos" />} />
+        <Route path="/eventos" element={<PaginaNoticias tipoInicial="eventos" onLoginClick={() => setShowLogin(true)} />} />
         <Route path="/calendario" element={<PaginaCalendario />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />

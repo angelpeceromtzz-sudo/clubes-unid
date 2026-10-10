@@ -2,6 +2,7 @@ import { Badge } from '../../ui/Badge';
 import { Icono } from '../../ui/Icono';
 import { obtenerUrlImagen } from '../../../utils/imagen';
 import { fechaCorta, fechaEventoCorta } from '../../../utils/formato';
+import { nombreCategoriaEvento } from '../../../constants/categoriasEvento';
 
 export function TarjetasNoticiasMobile({ noticias, modoOscuro, tdTitle, tdCls, onToggle, onEditar, onEliminar }) {
   return (
@@ -20,6 +21,7 @@ export function TarjetasNoticiasMobile({ noticias, modoOscuro, tdTitle, tdCls, o
             )}
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold ${tdTitle}`}>{n.titulo}</p>
+              {n.categoria === 'evento' && <p className={`text-[10px] mt-0.5 ${tdCls}`}>{nombreCategoriaEvento(n.categoria_evento)} · {n.total_interesados ?? 0} interesados</p>}
               <div className="flex items-center gap-2 mt-0.5">
                 <span className={`text-[10px] ${tdCls}`}>{n.categoria === 'evento' && n.fecha_evento ? fechaEventoCorta(n.fecha_evento) : fechaCorta(n.fecha_publicacion)}{n.categoria === 'evento' && n.hora_evento ? ` · ${String(n.hora_evento).slice(0, 5)}` : ''}</span>
                 {n.destacada && <span className="text-[10px] uppercase font-bold text-amber-400">Destacada</span>}

@@ -115,6 +115,9 @@ export const api = {
 
   getNoticias: noticiaService.getNoticias,
   getEventos: noticiaService.getEventos,
+  getMisInteresesEventos: noticiaService.getMisInteresesEventos,
+  marcarInteresEvento: noticiaService.marcarInteresEvento,
+  quitarInteresEvento: noticiaService.quitarInteresEvento,
   getNoticiasAdmin: noticiaService.getNoticiasAdmin,
   createNoticia: noticiaService.createNoticia,
   updateNoticia: noticiaService.updateNoticia,

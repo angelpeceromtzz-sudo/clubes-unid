@@ -4,8 +4,31 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useNoticias } from '../contexts/NoticiasContext';
 import { Icono } from '../components/ui/Icono';
 import { Spinner } from '../components/ui/Spinner';
+import { normalizarCategoriaEvento } from '../constants/categoriasEvento';
+import { fechaHoyCampus } from '../utils/fechas';
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const ESTILOS_CATEGORIA = {
+  social: {
+    punto: 'bg-indigo-400',
+    claro: 'bg-indigo-100 text-indigo-700',
+    oscuro: 'bg-indigo-500/20 text-indigo-300',
+  },
+  deportivo: {
+    punto: 'bg-emerald-400',
+    claro: 'bg-emerald-100 text-emerald-700',
+    oscuro: 'bg-emerald-500/20 text-emerald-300',
+  },
+  cultural: {
+    punto: 'bg-rose-400',
+    claro: 'bg-rose-100 text-rose-700',
+    oscuro: 'bg-rose-500/20 text-rose-300',
+  },
+};
+
+function estiloCategoria(valor) {
+  return ESTILOS_CATEGORIA[normalizarCategoriaEvento(valor)];
+}
 
 function claveLocal(fecha) {
   const anio = fecha.getFullYear();
@@ -18,21 +41,25 @@ function fechaEvento(valor) {
   return valor ? String(valor).slice(0, 10) : '';
 }
 
+function capitalizarInicial(valor) {
+  return valor.charAt(0).toLocaleUpperCase('es-MX') + valor.slice(1);
+}
+
 function fechaLegible(clave) {
-  return new Date(`${clave}T12:00:00`).toLocaleDateString('es-MX', {
+  return capitalizarInicial(new Date(`${clave}T12:00:00`).toLocaleDateString('es-MX', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  });
+  }));
 }
 
 export function PaginaCalendario() {
   const { tema, modoOscuro } = useTheme();
   const { eventos: publicaciones, cargando } = useNoticias();
   const [mesVisible, setMesVisible] = useState(() => {
-    const hoy = new Date();
+    const hoy = new Date(`${fechaHoyCampus()}T12:00:00`);
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   });
-  const [diaSeleccionado, setDiaSeleccionado] = useState(() => claveLocal(new Date()));
-  const hoyClave = claveLocal(new Date());
+  const [diaSeleccionado, setDiaSeleccionado] = useState(fechaHoyCampus);
+  const hoyClave = fechaHoyCampus();
 
   const eventos = useMemo(
     () => publicaciones.filter((noticia) => noticia.fecha_evento),
@@ -68,13 +95,13 @@ export function PaginaCalendario() {
   }
 
   function irAHoy() {
-    const hoy = new Date();
+    const hoy = new Date(`${fechaHoyCampus()}T12:00:00`);
     setMesVisible(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
     setDiaSeleccionado(claveLocal(hoy));
   }
 
   const seleccionados = diaSeleccionado ? eventosPorDia[diaSeleccionado] || [] : [];
-  const tituloMes = mesVisible.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+  const tituloMes = capitalizarInicial(mesVisible.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }));
 
   return (
     <main className="w-full px-4 sm:px-8 lg:px-12 xl:px-16 py-10 pb-24">
@@ -97,10 +124,10 @@ export function PaginaCalendario() {
         </div>
 
         {cargando ? <Spinner className="py-20" /> : (
-          <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
-            <section className={`rounded-2xl border overflow-hidden ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`} aria-label={`Calendario de ${tituloMes}`}>
+          <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
+            <section className={`min-w-0 rounded-2xl border overflow-hidden ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`} aria-label={`Calendario de ${tituloMes}`}>
               <div className={`text-center py-4 border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                <h2 className={`text-lg font-black capitalize ${tema.title}`}>{tituloMes}</h2>
+                <h2 className={`text-lg font-black ${tema.title}`}>{tituloMes}</h2>
               </div>
               <div className="grid grid-cols-7">
                 {DIAS_SEMANA.map((dia) => <div key={dia} className={`text-center text-[10px] uppercase tracking-widest font-black py-3 ${tema.subtitle}`}>{dia}</div>)}
@@ -113,16 +140,22 @@ export function PaginaCalendario() {
                       type="button"
                       disabled={!dia}
                       onClick={() => dia && setDiaSeleccionado(clave)}
-                      aria-label={dia ? `${fechaLegible(clave)}, ${eventosDia.length} eventos` : undefined}
+                      aria-label={dia ? `${fechaLegible(clave)}, ${eventosDia.length} evento${eventosDia.length === 1 ? '' : 's'}` : undefined}
                       aria-pressed={dia ? diaSeleccionado === clave : undefined}
-                      className={`min-h-20 sm:min-h-28 p-1.5 sm:p-2 text-left border-t border-r ${modoOscuro ? 'border-slate-800/70' : 'border-slate-100'} ${dia ? 'cursor-pointer hover:bg-amber-400/5' : 'cursor-default'} ${diaSeleccionado === clave ? 'bg-amber-400/10' : ''}`}
+                      className={`min-w-0 min-h-20 sm:min-h-28 p-1.5 sm:p-2 text-left border-t border-r ${modoOscuro ? 'border-slate-800/70' : 'border-slate-100'} ${dia ? 'cursor-pointer hover:bg-amber-400/5' : 'cursor-default'} ${diaSeleccionado === clave ? 'bg-amber-400/10' : ''}`}
                     >
                       {dia && <>
                         <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${clave === hoyClave ? 'bg-amber-400 text-slate-950' : tema.title}`}>{dia.getDate()}</span>
                         {eventosDia.length > 0 && <>
-                          <span className="block sm:hidden mt-1 w-2 h-2 rounded-full bg-indigo-400" />
+                          <span className="flex sm:hidden mt-1 gap-1" aria-hidden="true">
+                            {[...new Set(eventosDia.map((evento) => normalizarCategoriaEvento(evento.categoria_evento)))].map((categoria) => (
+                              <span key={categoria} className={`w-2 h-2 rounded-full ${estiloCategoria(categoria).punto}`} />
+                            ))}
+                          </span>
                           <div className="hidden sm:block mt-1 space-y-1">
-                            {eventosDia.slice(0, 2).map((evento) => <div key={evento.id_noticia} className="truncate rounded px-1.5 py-1 text-[10px] font-bold bg-indigo-500/15 text-indigo-400">{evento.titulo}</div>)}
+                            {eventosDia.slice(0, 2).map((evento) => (
+                              <div key={evento.id_noticia} className={`truncate rounded px-1.5 py-1 text-[10px] font-bold ${estiloCategoria(evento.categoria_evento)[modoOscuro ? 'oscuro' : 'claro']}`}>{evento.titulo}</div>
+                            ))}
                             {eventosDia.length > 2 && <span className={`text-[10px] ${tema.subtitle}`}>+{eventosDia.length - 2} más</span>}
                           </div>
                         </>}
@@ -134,7 +167,7 @@ export function PaginaCalendario() {
             </section>
 
             <aside className={`rounded-2xl border p-5 h-fit ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`} aria-live="polite">
-              <h2 className={`font-black capitalize ${tema.title}`}>{diaSeleccionado ? fechaLegible(diaSeleccionado) : 'Selecciona un día'}</h2>
+              <h2 className={`font-black ${tema.title}`}>{diaSeleccionado ? fechaLegible(diaSeleccionado) : 'Selecciona un día'}</h2>
               {diaSeleccionado && seleccionados.length === 0 && <p className={`text-sm mt-4 ${tema.subtitle}`}>No hay eventos para este día.</p>}
               <div className="mt-4 space-y-3">
                 {seleccionados.map((evento) => <article key={evento.id_noticia} className={`rounded-xl p-3 ${modoOscuro ? 'bg-slate-800/60' : 'bg-slate-50'}`}>

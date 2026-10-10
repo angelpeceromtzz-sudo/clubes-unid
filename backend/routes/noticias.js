@@ -8,10 +8,19 @@ import { v2 as cloudinary } from 'cloudinary';
 const ROLES_EDITOR = [3, 4];
 
 const CATEGORIAS_PERMITIDAS = ['promocion', 'evento', 'informativo'];
+const CATEGORIAS_EVENTO = ['social', 'deportivo', 'cultural'];
 
 const CAMPOS = `id_noticia, titulo, contenido, url_imagen, destacada,
-                publicada, categoria, fecha_evento, hora_evento, lugar_evento,
+                publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento,
                 id_autor, fecha_publicacion, fecha_actualizacion`;
+
+function hoyEnCampus() {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const fecha = Object.fromEntries(partes.map(({ type, value }) => [type, value]));
+  return `${fecha.year}-${fecha.month}-${fecha.day}`;
+}
 
 function fechaEventoValida(fecha) {
   if (typeof fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return false;
@@ -67,7 +76,8 @@ router.get('/', async (req, res) => {
 router.get('/eventos', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT ${CAMPOS}
+      `SELECT ${CAMPOS},
+              (SELECT COUNT(*)::int FROM intereses_eventos ie WHERE ie.id_noticia = noticias.id_noticia) AS total_interesados
        FROM noticias
        WHERE publicada = TRUE AND categoria = 'evento'
        ORDER BY fecha_publicacion DESC, id_noticia DESC`
@@ -79,11 +89,66 @@ router.get('/eventos', async (req, res) => {
   }
 });
 
+router.get('/eventos/intereses/mios', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT ie.id_noticia FROM intereses_eventos ie
+       JOIN noticias n ON n.id_noticia = ie.id_noticia
+       WHERE ie.id_usuario = $1 AND n.publicada = TRUE AND n.categoria = 'evento'`,
+      [req.user.id]
+    );
+    res.json(result.rows.map((fila) => fila.id_noticia));
+  } catch (err) {
+    console.error('Error al listar intereses de eventos:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+router.post('/eventos/:id/interes', authenticate, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Evento no válido' });
+    const evento = await pool.query(
+      `SELECT fecha_evento::text AS fecha_evento FROM noticias
+       WHERE id_noticia = $1 AND categoria = 'evento' AND publicada = TRUE`,
+      [id]
+    );
+    if (evento.rows.length === 0) return res.status(404).json({ error: 'Evento no encontrado' });
+    if (!evento.rows[0].fecha_evento || evento.rows[0].fecha_evento < hoyEnCampus()) {
+      return res.status(400).json({ error: 'Este evento ya finalizó' });
+    }
+    await pool.query(
+      `INSERT INTO intereses_eventos (id_noticia, id_usuario) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [id, req.user.id]
+    );
+    const total = await pool.query('SELECT COUNT(*)::int AS total FROM intereses_eventos WHERE id_noticia = $1', [id]);
+    res.json({ interesado: true, total_interesados: total.rows[0].total });
+  } catch (err) {
+    console.error('Error al registrar interés en evento:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+router.delete('/eventos/:id/interes', authenticate, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Evento no válido' });
+    await pool.query('DELETE FROM intereses_eventos WHERE id_noticia = $1 AND id_usuario = $2', [id, req.user.id]);
+    const total = await pool.query('SELECT COUNT(*)::int AS total FROM intereses_eventos WHERE id_noticia = $1', [id]);
+    res.json({ interesado: false, total_interesados: total.rows[0].total });
+  } catch (err) {
+    console.error('Error al quitar interés en evento:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // Lista todas las noticias (incluye borradores) — admin / rectoría
 router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT ${CAMPOS}, u.nombre_completo AS autor_nombre
+      `SELECT ${CAMPOS}, u.nombre_completo AS autor_nombre,
+              (SELECT COUNT(*)::int FROM intereses_eventos ie WHERE ie.id_noticia = noticias.id_noticia) AS total_interesados
        FROM noticias
        LEFT JOIN usuarios u ON u.id_usuario = noticias.id_autor
        ORDER BY fecha_publicacion DESC, id_noticia DESC`
@@ -98,7 +163,7 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
 // Crea una noticia — admin / rectoría
 router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
-    const { titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento } = req.body;
+    const { titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento } = req.body;
 
     if (!titulo || !titulo.trim()) {
       return res.status(400).json({ error: 'El título es obligatorio' });
@@ -114,11 +179,13 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
       const error = errorDatosEvento(fecha_evento, hora_evento, lugar_evento);
       if (error) return res.status(400).json({ error });
       if (!fecha_evento) return res.status(400).json({ error: 'La fecha del evento es obligatoria' });
+      if (fecha_evento < hoyEnCampus()) return res.status(400).json({ error: 'La fecha del evento no puede ser pasada' });
+      if (!CATEGORIAS_EVENTO.includes(categoria_evento ?? 'social')) return res.status(400).json({ error: 'Categoría del evento no válida' });
     }
 
     const result = await pool.query(
-      `INSERT INTO noticias (titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, id_autor)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO noticias (titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento, id_autor)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING ${CAMPOS}`,
       [
         titulo.trim(),
@@ -130,6 +197,7 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
         categoriaFinal === 'evento' ? fecha_evento : null,
         categoriaFinal === 'evento' ? hora_evento || null : null,
         categoriaFinal === 'evento' ? lugar_evento?.trim() || null : null,
+        categoriaFinal === 'evento' ? categoria_evento ?? 'social' : 'social',
         req.user.id,
       ]
     );
@@ -157,7 +225,7 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
 router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento } = req.body;
+    const { titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento } = req.body;
 
     if (titulo !== undefined && !titulo.trim()) {
       return res.status(400).json({ error: 'El título no puede quedar vacío' });
@@ -170,9 +238,12 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     }
     const errorEvento = errorDatosEvento(fecha_evento, hora_evento, lugar_evento);
     if (errorEvento) return res.status(400).json({ error: errorEvento });
+    if (categoria_evento !== undefined && !CATEGORIAS_EVENTO.includes(categoria_evento)) {
+      return res.status(400).json({ error: 'Categoría del evento no válida' });
+    }
 
     const actual = await pool.query(
-      'SELECT url_imagen, categoria, fecha_evento FROM noticias WHERE id_noticia = $1',
+      'SELECT url_imagen, categoria, fecha_evento::text AS fecha_evento FROM noticias WHERE id_noticia = $1',
       [id]
     );
 
@@ -183,6 +254,10 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     const fechaFinal = fecha_evento === undefined ? actual.rows[0].fecha_evento : fecha_evento;
     if ((categoria !== undefined || fecha_evento !== undefined) && categoriaFinal === 'evento' && !fechaFinal) {
       return res.status(400).json({ error: 'La fecha del evento es obligatoria' });
+    }
+    if (categoriaFinal === 'evento' && fecha_evento !== undefined &&
+        fecha_evento !== actual.rows[0].fecha_evento && fecha_evento < hoyEnCampus()) {
+      return res.status(400).json({ error: 'La fecha del evento no puede ser pasada' });
     }
 
     const urlAnterior = actual.rows[0].url_imagen;
@@ -197,8 +272,9 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
            categoria    = COALESCE($6, categoria),
            fecha_evento = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $7 THEN $8::date ELSE fecha_evento END,
            hora_evento  = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $9 THEN $10::time ELSE hora_evento END,
-           lugar_evento = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $11 THEN $12 ELSE lugar_evento END
-       WHERE id_noticia = $13
+           lugar_evento = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $11 THEN $12 ELSE lugar_evento END,
+           categoria_evento = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN 'social' ELSE COALESCE($13, categoria_evento) END
+       WHERE id_noticia = $14
        RETURNING ${CAMPOS}`,
       [
         titulo !== undefined ? titulo.trim() : null,
@@ -213,6 +289,7 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
         hora_evento || null,
         lugar_evento !== undefined,
         lugar_evento?.trim() || null,
+        categoriaFinal === 'evento' ? categoria_evento ?? null : 'social',
         id,
       ]
     );
