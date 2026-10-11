@@ -9,7 +9,7 @@ const ROLES_EDITOR = [3, 4];
 
 const CATEGORIAS_PERMITIDAS = ['promocion', 'evento', 'informativo'];
 
-const CAMPOS = `id_noticia, titulo, contenido, url_imagen, destacada,
+const CAMPOS = `id_noticia, titulo, subtitulo, contenido, url_imagen, destacada,
                 publicada, categoria, id_autor, fecha_publicacion, fecha_actualizacion`;
 
 function extraerPublicId(url) {
@@ -68,7 +68,7 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
 // Crea una noticia — admin / rectoría
 router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
-    const { titulo, contenido, url_imagen, destacada, publicada, categoria } = req.body;
+    const { titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria } = req.body;
 
     if (!titulo || !titulo.trim()) {
       return res.status(400).json({ error: 'El título es obligatorio' });
@@ -82,11 +82,12 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
     }
 
     const result = await pool.query(
-      `INSERT INTO noticias (titulo, contenido, url_imagen, destacada, publicada, categoria, id_autor)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO noticias (titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, id_autor)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING ${CAMPOS}`,
       [
         titulo.trim(),
+        subtitulo?.trim() || null,
         contenido.trim(),
         url_imagen || null,
         destacada === true,
@@ -119,7 +120,7 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
 router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, contenido, url_imagen, destacada, publicada, categoria } = req.body;
+    const { titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria } = req.body;
 
     if (titulo !== undefined && !titulo.trim()) {
       return res.status(400).json({ error: 'El título no puede quedar vacío' });
@@ -145,15 +146,17 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     const result = await pool.query(
       `UPDATE noticias
        SET titulo      = COALESCE($1, titulo),
-           contenido   = COALESCE($2, contenido),
-           url_imagen  = COALESCE($3, url_imagen),
-           destacada   = COALESCE($4, destacada),
-           publicada    = COALESCE($5, publicada),
-           categoria    = COALESCE($6, categoria)
-       WHERE id_noticia = $7
+           subtitulo   = COALESCE($2, subtitulo),
+           contenido   = COALESCE($3, contenido),
+           url_imagen  = COALESCE($4, url_imagen),
+           destacada   = COALESCE($5, destacada),
+           publicada    = COALESCE($6, publicada),
+           categoria    = COALESCE($7, categoria)
+       WHERE id_noticia = $8
        RETURNING ${CAMPOS}`,
       [
         titulo !== undefined ? titulo.trim() : null,
+        subtitulo === undefined ? null : subtitulo?.trim() || '',
         contenido !== undefined ? contenido.trim() : null,
         url_imagen !== undefined ? url_imagen : null,
         destacada === undefined ? null : destacada === true,

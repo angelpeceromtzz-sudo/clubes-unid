@@ -349,6 +349,7 @@ CREATE TABLE IF NOT EXISTS diapositivas_hero (
 CREATE TABLE IF NOT EXISTS noticias (
     id_noticia SERIAL PRIMARY KEY,
     titulo VARCHAR(200) NOT NULL,
+    subtitulo VARCHAR(300),
     contenido TEXT NOT NULL,
     url_imagen VARCHAR(500),
     destacada BOOLEAN NOT NULL DEFAULT FALSE,
@@ -363,6 +364,7 @@ CREATE TABLE IF NOT EXISTS noticias (
 
 -- Migración idempotente: en bases ya existentes la columna no está.
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria VARCHAR(20) NOT NULL DEFAULT 'informativo';
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS subtitulo VARCHAR(300);
 
 DO $$
 BEGIN
