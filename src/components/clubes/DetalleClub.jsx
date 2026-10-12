@@ -99,6 +99,8 @@ export function DetalleClub({ onLoginClick }) {
           deshabilitado={deshabilitado}
         />
 
+        <PresidenteClub club={club} modoOscuro={modoOscuro} />
+
         <div className="md:hidden">
           <AprendizajeClub modoOscuro={modoOscuro} />
         </div>
@@ -110,8 +112,6 @@ export function DetalleClub({ onLoginClick }) {
         </div>
 
         <InfoAdicionalClub club={club} modoOscuro={modoOscuro} />
-
-        <PresidenteClub club={club} modoOscuro={modoOscuro} />
 
         <RequisitosFAQClub modoOscuro={modoOscuro} />
       </div>

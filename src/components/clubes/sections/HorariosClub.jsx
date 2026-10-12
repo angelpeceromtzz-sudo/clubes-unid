@@ -153,10 +153,11 @@ export function HorariosClub({ club, modoOscuro, esAdmin, esPresidente, esMiembr
         </div>
       )}
 
-      <div className="px-4 py-3 border-b flex items-center justify-between gap-2"
-        style={{ borderColor: modoOscuro ? 'rgba(51,65,85,0.3)' : 'rgba(226,232,240,1)' }}>
-        <div className="flex items-center gap-2.5">
-          <Icono nombre="clock" strokeWidth={2} className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-amber-400' : 'text-amber-600'}`} />
+      <div className="flex items-center justify-between gap-3 px-5 md:px-6 pt-5 md:pt-6">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${modoOscuro ? 'bg-amber-500/10' : 'bg-amber-100'}`}>
+            <Icono nombre="clock" strokeWidth={2} className={`h-5 w-5 ${modoOscuro ? 'text-amber-400' : 'text-amber-600'}`} />
+          </div>
           <h2 className={`text-sm font-black tracking-tight ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>Horario</h2>
           {!cargando && horarios.length > 0 && (
             <span className={`text-[9px] font-bold tabular-nums ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>

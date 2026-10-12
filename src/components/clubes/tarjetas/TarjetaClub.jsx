@@ -58,11 +58,6 @@ export function TarjetaClub({
           <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(categoria, modoOscuro)}`}>
             {categoria}
           </span>
-          {esProximamente && (
-            <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border text-slate-500 border-slate-500/30 bg-slate-500/10">
-              Próximamente
-            </span>
-          )}
         </div>
         <h3 className={`text-lg font-bold line-clamp-2 ${c.title} ${esProximamente ? '' : 'group-hover:text-amber-400 transition-colors duration-200'}`}>
           {nombre}
