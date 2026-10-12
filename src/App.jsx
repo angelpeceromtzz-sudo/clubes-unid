@@ -8,6 +8,7 @@ import { PiePagina } from './components/layout/PiePagina';
 import { ModalInicioSesion } from './components/modals/ModalInicioSesion';
 import { ModalNoticias } from './components/noticias/ModalNoticias';
 import { ModalActualizaciones } from './components/noticias/ModalActualizaciones';
+import { ModalConfirmacion } from './components/ui/ModalConfirmacion';
 import { NavegacionInferiorMovil } from './components/layout/paneles-navegacion/NavegacionInferiorMovil';
 import { RutaProtegida } from './components/layout/RutaProtegida';
 import { PanelAlumno } from './pages/PanelAlumno';
@@ -33,6 +34,7 @@ function App() {
   const { redirigirPostLogin } = useAuthRedirect();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [confirmarLogout, setConfirmarLogout] = useState(false);
   const [catalogoKey] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
   const [splashDone, setSplashDone] = useState(false);
@@ -55,6 +57,7 @@ function App() {
     cerrarSesion();
     navigate('/');
     setMenuAbierto(false);
+    setConfirmarLogout(false);
   }
 
   const mostrarFiltros = location.pathname === '/';
@@ -122,7 +125,7 @@ function App() {
         onLogoClick={irACatalogo}
         user={usuario}
         onLoginClick={() => setShowLogin(true)}
-        onLogout={handleLogout}
+        onLogout={() => setConfirmarLogout(true)}
         onDashboardClick={irADashboard}
         mostrarFiltros={mostrarFiltros}
         mostrarLogo={esRutaPanel}
@@ -134,6 +137,16 @@ function App() {
 
       <ModalNoticias />
       <ModalActualizaciones />
+
+      <ModalConfirmacion
+        show={confirmarLogout}
+        titulo="Cerrar sesión"
+        mensaje="¿Seguro que quieres cerrar sesión?"
+        textoConfirmar="Cerrar sesión"
+        textoCancelar="Cancelar"
+        onConfirmar={handleLogout}
+        onCancelar={() => setConfirmarLogout(false)}
+      />
 
       {showLogin && (
         <ModalInicioSesion onClose={handleLoginSuccess} />
