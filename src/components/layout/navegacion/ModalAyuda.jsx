@@ -13,7 +13,7 @@ export function ModalAyuda({ show, onClose }) {
       </div>
       <div className={`space-y-4 text-sm leading-relaxed ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
         <p>
-          <strong className="text-amber-400">Clubs UNID</strong> es la plataforma de registro y gestión de clubs universitarios.
+          Esta página es la plataforma de registro y gestión de <strong className="text-amber-400">clubs universitarios</strong> del campus de la UNID en Campeche.
         </p>
         <div className={`space-y-2 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
           <p><span className="text-amber-400 font-bold">•</span> Explora el catálogo y postúlate a hasta 3 clubs.</p>

@@ -27,7 +27,7 @@ export function ModalBase({ show, onClose, maxWidth = 'max-w-lg', closeOnBackdro
   if (!show) return null;
 
   const clasesPanel = panelClassName
-    ?? `max-h-[85vh] overflow-y-auto overflow-x-hidden p-8 border scrollbar-amber ${tema.isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`;
+    ?? `max-h-[85vh] overflow-y-auto overflow-x-hidden p-4 sm:p-8 border scrollbar-amber ${tema.isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`;
 
   return createPortal(
     <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4"
@@ -57,7 +57,7 @@ export function ModalBase({ show, onClose, maxWidth = 'max-w-lg', closeOnBackdro
             <BotonCerrar onClick={onClose} etiqueta="Cerrar" />
           </div>
         )}
-        <div className="max-h-[85vh] overflow-y-auto p-8 scrollbar-amber">
+        <div className="max-h-[85vh] overflow-y-auto p-4 sm:p-8 scrollbar-amber">
           {children}
         </div>
       </div>

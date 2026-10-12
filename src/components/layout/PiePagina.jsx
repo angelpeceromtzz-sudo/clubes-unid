@@ -5,7 +5,7 @@ export function PiePagina() {
   const { tema } = useTheme();
   return (
     <footer className={`border-t transition-colors duration-300 ${tema.headerBorder} ${tema.bg}`}>
-      <div className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 py-12 sm:py-16 lg:py-20">
+      <div className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 pt-12 sm:pt-16 lg:pt-20 pb-6 sm:pb-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-12">
 
           <div className="space-y-4">
@@ -70,7 +70,7 @@ export function PiePagina() {
 
         <div className={`mt-10 sm:mt-14 pt-6 sm:pt-8 border-t transition-colors duration-300 ${tema.headerBorder}`}>
           <p className={`text-xs text-center font-medium ${tema.subtitle}`}>
-            &copy; {new Date().getFullYear()} UNID &mdash; Universidad Interamericana para el Desarrollo. Todos los derechos reservados.
+            &copy; {new Date().getFullYear()} UNID Universidad Interamericana para el Desarrollo. Todos los derechos reservados.
           </p>
         </div>
       </div>
