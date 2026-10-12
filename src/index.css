@@ -43,6 +43,11 @@
   background: transparent;
 }
 
+/* Carruseles horizontales mobile (filas estilo Netflix): oculta la barra. */
+.nf-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 @media print {
   nav, aside, button {
     display: none !important;

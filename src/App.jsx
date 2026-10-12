@@ -110,15 +110,13 @@ function App() {
 
   return (
     <div
-      className={`min-h-screen font-sans transition-colors duration-300 pb-16 lg:pb-0 lg:pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
+      className={`min-h-screen font-sans transition-colors duration-300 overflow-x-clip pb-16 lg:pb-0 lg:pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
       style={{ '--navbar-height': modoOscuro && location.pathname !== '/' ? `${alturaNavbar}px` : '0px' }}
     >
       <SplashScreen authReady={authReady} clubesLoading={clubesLoading} onFinish={() => setSplashDone(true)} />
 
       <BarraNavegacion
         splashActivo={!splashDone}
-        estadoActivo={estadoActivo}
-        setEstadoActivo={setEstadoActivo}
         menuAbierto={menuAbierto}
         setMenuAbierto={setMenuAbierto}
         onLogoClick={irACatalogo}

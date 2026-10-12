@@ -76,7 +76,6 @@ export function BarraNavegacion({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 ml-auto shrink-0">
-            {mostrarFiltros && <div className="flex items-center gap-0.5 lg:hidden"><BotonNoticias /><BotonEventos /><BotonCalendario /></div>}
             {user && (
               <div className="hidden lg:flex items-center gap-3">
                 <BadgeNotificaciones />

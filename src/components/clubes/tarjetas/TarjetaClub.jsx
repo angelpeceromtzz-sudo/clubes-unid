@@ -34,12 +34,12 @@ export function TarjetaClub({
   return (
     <div
       onClick={esProximamente ? undefined : onClick}
-      className={`group rounded-2xl p-6 shadow-lg flex flex-col justify-between border cursor-pointer select-none ${
+      className={`group rounded-xl p-4 lg:rounded-2xl lg:p-6 shadow-lg flex flex-col justify-between border cursor-pointer select-none ${
         esProximamente ? '' : 'hover:shadow-2xl hover:scale-[1.03] hover:z-10 transition-all duration-300 active:scale-[0.98]'
       } ${c.card}`}
     >
       <div className="flex flex-col flex-1">
-        <div className={`overflow-hidden rounded-xl h-48 mb-5 flex items-center justify-center`}>
+        <div className={`overflow-hidden rounded-xl h-40 mb-3 lg:h-48 lg:mb-5 flex items-center justify-center`}>
           {obtenerUrlImagen(imagen) ? (
             <img
               src={obtenerUrlImagen(imagen)}
@@ -74,7 +74,7 @@ export function TarjetaClub({
 
       {!esProximamente && (
         <div className="mt-auto">
-          <div className={`h-px my-5 ${c.divider}`} />
+          <div className={`h-px my-3 lg:my-5 ${c.divider}`} />
           <div className="flex items-center justify-between gap-2">
             {estado === 'abierto' ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">

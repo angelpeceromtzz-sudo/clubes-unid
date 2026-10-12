@@ -53,6 +53,18 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
     return map;
   }, [clubes]);
 
+  const categoriasMobile = useMemo(() => {
+    return Object.entries(clubesPorCategoria).sort(([a], [b]) => {
+      if (a === 'Proximamente') return 1;
+      if (b === 'Proximamente') return -1;
+      const prioA = ORDEN_CATEGORIA.indexOf(a);
+      const prioB = ORDEN_CATEGORIA.indexOf(b);
+      const rankA = prioA === -1 ? ORDEN_CATEGORIA.length : prioA;
+      const rankB = prioB === -1 ? ORDEN_CATEGORIA.length : prioB;
+      return rankA - rankB;
+    });
+  }, [clubesPorCategoria]);
+
   return (
     <>
       {!heroListo && (
@@ -64,16 +76,15 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
       <main id="catalogo" className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 py-12 pb-24 md:pb-12">
         <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="shrink-0">
-            <h2 className={`text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>
-              Explorar Clubes Disponibles
+            <h2 className={`text-2xl lg:text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>
+              Explorar Clubes
             </h2>
             <p className={`text-sm mt-1 transition-colors duration-300 ${tema.subtitle}`}>
               Catálogo oficial UNID Campus Campeche
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 lg:items-end">
-            <FiltrosEstado estadoActivo={estadoActivo} setEstadoActivo={setEstadoActivo} variante="mobile" />
+          <div className="hidden lg:flex flex-col gap-3 lg:items-end">
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-start lg:justify-end">
               <FiltrosEstado estadoActivo={estadoActivo} setEstadoActivo={setEstadoActivo} variante="desktop" />
               <SelectorCategoria
@@ -117,7 +128,7 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
 
             {/* Mobile: Netflix-style rows per category */}
             <div className="lg:hidden space-y-8">
-              {Object.entries(clubesPorCategoria).map(([categoria, clubs]) => (
+              {categoriasMobile.map(([categoria, clubs]) => (
                 <section key={categoria}>
                   <div className="flex items-center gap-2 mb-3">
                     <h3 className={`text-sm font-black uppercase tracking-wider ${tema.title}`}>
@@ -129,10 +140,9 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
                       {clubs.length}
                     </span>
                   </div>
-                  <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                    <style>{`.nf-scroll::-webkit-scrollbar { display: none; }`}</style>
+                  <div className="nf-scroll -mx-6 flex gap-3 overflow-x-auto px-6 pb-2 sm:-mx-8 sm:px-8" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                     {clubs.map((club) => (
-                      <div key={club.id_club} className="nf-scroll shrink-0 w-64">
+                      <div key={club.id_club} className="shrink-0 w-56">
                         <TarjetaClub
                           nombre={club.nombre_club}
                           descripcion={club.descripcion}
