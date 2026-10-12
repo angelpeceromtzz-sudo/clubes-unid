@@ -9,6 +9,7 @@ import { normalizarCategoriaEvento } from '../constants/categoriasEvento';
 
 const FORMULARIO_VACIO = {
   titulo: '',
+  subtitulo: '',
   contenido: '',
   url_imagen: '',
   destacada: false,
@@ -40,7 +41,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       .finally(() => setCargando(false));
   }, []);
 
-  const noticiasFiltradas = filtrarPorTexto(noticias, busqueda, ['titulo', 'contenido']);
+  const noticiasFiltradas = filtrarPorTexto(noticias, busqueda, ['titulo', 'subtitulo', 'contenido']);
 
   const refetch = useCallback(async () => {
     try {
@@ -62,6 +63,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
   const abrirModalEditar = useCallback((noticia) => {
     setForm({
       titulo: noticia.titulo || '',
+      subtitulo: noticia.subtitulo || '',
       contenido: noticia.contenido || '',
       url_imagen: noticia.url_imagen || '',
       destacada: noticia.destacada === true,
@@ -125,6 +127,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
     try {
       const payload = {
         titulo: form.titulo,
+        subtitulo: form.subtitulo?.trim() || null,
         contenido: form.contenido,
         url_imagen: form.url_imagen || null,
         destacada: form.destacada,

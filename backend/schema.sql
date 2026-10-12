@@ -349,6 +349,7 @@ CREATE TABLE IF NOT EXISTS diapositivas_hero (
 CREATE TABLE IF NOT EXISTS noticias (
     id_noticia SERIAL PRIMARY KEY,
     titulo VARCHAR(200) NOT NULL,
+    subtitulo VARCHAR(300),
     contenido TEXT NOT NULL,
     url_imagen VARCHAR(500),
     destacada BOOLEAN NOT NULL DEFAULT FALSE,
@@ -372,6 +373,7 @@ ALTER TABLE noticias ADD COLUMN IF NOT EXISTS fecha_evento DATE;
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS hora_evento TIME;
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS lugar_evento VARCHAR(200);
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria_evento VARCHAR(20) NOT NULL DEFAULT 'social';
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS subtitulo VARCHAR(300);
 UPDATE noticias SET categoria_evento = 'social' WHERE categoria_evento NOT IN ('social', 'deportivo', 'cultural');
 ALTER TABLE noticias ALTER COLUMN categoria_evento SET DEFAULT 'social';
 

@@ -15,6 +15,34 @@
   scrollbar-color: #f59e0b transparent;
 }
 
+/* Scrollbar oscura y limpia para paneles sobre fondo azul noche.
+   Thumb en tono slate-700 con acento slate-600 al pasar el cursor. */
+.scrollbar-dark {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+.scrollbar-dark::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-dark::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 9999px;
+}
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+  background-clip: padding-box;
+}
+.scrollbar-dark::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 @media print {
   nav, aside, button {
     display: none !important;

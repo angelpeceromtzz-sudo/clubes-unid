@@ -10,7 +10,7 @@ const ROLES_EDITOR = [3, 4];
 const CATEGORIAS_PERMITIDAS = ['promocion', 'evento', 'informativo'];
 const CATEGORIAS_EVENTO = ['social', 'deportivo', 'cultural'];
 
-const CAMPOS = `id_noticia, titulo, contenido, url_imagen, destacada,
+const CAMPOS = `id_noticia, titulo, subtitulo, contenido, url_imagen, destacada,
                 publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento,
                 id_autor, fecha_publicacion, fecha_actualizacion`;
 
@@ -163,7 +163,7 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
 // Crea una noticia — admin / rectoría
 router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
-    const { titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento } = req.body;
+    const { titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento } = req.body;
 
     if (!titulo || !titulo.trim()) {
       return res.status(400).json({ error: 'El título es obligatorio' });
@@ -184,11 +184,12 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
     }
 
     const result = await pool.query(
-      `INSERT INTO noticias (titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento, id_autor)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `INSERT INTO noticias (titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento, id_autor)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING ${CAMPOS}`,
       [
         titulo.trim(),
+        subtitulo?.trim() || null,
         contenido.trim(),
         url_imagen || null,
         destacada === true,
@@ -225,7 +226,7 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
 router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento } = req.body;
+    const { titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento } = req.body;
 
     if (titulo !== undefined && !titulo.trim()) {
       return res.status(400).json({ error: 'El título no puede quedar vacío' });
@@ -265,19 +266,21 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     const result = await pool.query(
       `UPDATE noticias
        SET titulo      = COALESCE($1, titulo),
-           contenido   = COALESCE($2, contenido),
-           url_imagen  = COALESCE($3, url_imagen),
-           destacada   = COALESCE($4, destacada),
-           publicada    = COALESCE($5, publicada),
-           categoria    = COALESCE($6, categoria),
-           fecha_evento = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $7 THEN $8::date ELSE fecha_evento END,
-           hora_evento  = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $9 THEN $10::time ELSE hora_evento END,
-           lugar_evento = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN NULL WHEN $11 THEN $12 ELSE lugar_evento END,
-           categoria_evento = CASE WHEN $6 IS NOT NULL AND $6 <> 'evento' THEN 'social' ELSE COALESCE($13, categoria_evento) END
-       WHERE id_noticia = $14
+           subtitulo   = COALESCE($2, subtitulo),
+           contenido   = COALESCE($3, contenido),
+           url_imagen  = COALESCE($4, url_imagen),
+           destacada   = COALESCE($5, destacada),
+           publicada    = COALESCE($6, publicada),
+           categoria    = COALESCE($7, categoria),
+           fecha_evento = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN NULL WHEN $8 THEN $9::date ELSE fecha_evento END,
+           hora_evento  = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN NULL WHEN $10 THEN $11::time ELSE hora_evento END,
+           lugar_evento = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN NULL WHEN $12 THEN $13 ELSE lugar_evento END,
+           categoria_evento = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN 'social' ELSE COALESCE($14, categoria_evento) END
+       WHERE id_noticia = $15
        RETURNING ${CAMPOS}`,
       [
         titulo !== undefined ? titulo.trim() : null,
+        subtitulo === undefined ? null : subtitulo?.trim() || '',
         contenido !== undefined ? contenido.trim() : null,
         url_imagen !== undefined ? url_imagen : null,
         destacada === undefined ? null : destacada === true,
