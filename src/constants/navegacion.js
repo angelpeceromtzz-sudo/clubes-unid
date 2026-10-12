@@ -5,6 +5,8 @@ export const ELEMENTOS_NAV_ADMIN = [
   { key: 'diapositivas', label: 'Banner Principal', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
   { key: 'anuncios', label: 'Anuncios Globales', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
   { key: 'encuestas', label: 'Encuestas', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a2 2 0 01.707.293l5.414 5.414a2 2 0 01.293.707V19a2 2 0 01-2 2z' },
+  { key: 'noticias', label: 'Noticias', icon: 'M12 7.5h1.5m-1.5 3h1.5m-7.5 0h7.5m-7.5 0h1.5m-1.5 0h1.5m-1.5 0h1.5m3-6h1.5m-1.5 0h1.5m-7.5 0h7.5m-7.5 0h1.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { key: 'eventos', label: 'Eventos', icon: 'M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12H3V7a2 2 0 012-2z' },
   { key: 'historial', label: 'Actividad de Clubes', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
   { key: 'actividad', label: 'Historial de Acciones', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
 ];
@@ -22,6 +24,8 @@ export const ELEMENTOS_NAV_RECTORIA = [
   // mismo módulo, y el orden sigue al del panel de admin para que los dos
   // paneles se lean igual.
   { key: 'encuestas', label: 'Encuestas', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a2 2 0 01.707.293l5.414 5.414a2 2 0 01.293.707V19a2 2 0 01-2 2z' },
+  { key: 'noticias', label: 'Noticias', icon: 'M12 7.5h1.5m-1.5 3h1.5m-7.5 0h7.5m-7.5 0h1.5m-1.5 0h1.5m-1.5 0h1.5m3-6h1.5m-1.5 0h1.5m-7.5 0h7.5m-7.5 0h1.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { key: 'eventos', label: 'Eventos', icon: 'M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12H3V7a2 2 0 012-2z' },
   { key: 'actividad', label: 'Historial de Acciones', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
 ];
 

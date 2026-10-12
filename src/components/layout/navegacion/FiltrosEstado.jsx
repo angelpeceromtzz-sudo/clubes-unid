@@ -8,7 +8,7 @@ export function FiltrosEstado({ estadoActivo, setEstadoActivo, variante = 'deskt
   if (variante === 'mobile') {
     return (
       <div
-        className="flex items-center gap-2.5 px-5 py-2.5 overflow-x-auto justify-center"
+        className="md:hidden flex items-center gap-2.5 overflow-x-auto w-full"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
       >
         <style>{`.nf-mobile-filter::-webkit-scrollbar { display: none; }`}</style>

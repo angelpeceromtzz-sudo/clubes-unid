@@ -9,7 +9,7 @@ dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { migrate } from './migrate.js';
-migrate();
+await migrate();
 
 import authRoutes from './routes/auth.js';
 import usuariosRoutes from './routes/usuarios.js';
@@ -29,6 +29,7 @@ import adminDashboardRoutes from './routes/adminDashboard.js';
 import catalogosRoutes from './routes/catalogos.js';
 import encuestasRoutes from './routes/encuestas.js';
 import diapositivasHeroRoutes from './routes/diapositivasHero.js';
+import noticiasRoutes from './routes/noticias.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -74,6 +75,7 @@ app.use('/api/admin', adminDashboardRoutes);
 app.use('/api/diapositivas-hero', diapositivasHeroRoutes);
 app.use('/api/catalogos', catalogosRoutes);
 app.use('/api/encuestas', encuestasRoutes);
+app.use('/api/noticias', noticiasRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

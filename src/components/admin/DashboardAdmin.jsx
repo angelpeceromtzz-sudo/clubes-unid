@@ -4,6 +4,7 @@ import { UltimasInscripciones } from './UltimasInscripciones';
 import { GraficaInscripciones } from './GraficaInscripciones';
 import { ClubesPopulares } from './ClubesPopulares';
 import { ActividadRecienteFeed } from './ActividadRecienteFeed';
+import { NoticiasRecientes } from './NoticiasRecientes';
 
 export function DashboardAdmin({
   totalAlumnos,
@@ -16,6 +17,8 @@ export function DashboardAdmin({
   clubes,
   historial,
   historialLoading,
+  noticias,
+  noticiasLoading,
 }) {
   return (
     <div className="space-y-6">
@@ -43,6 +46,10 @@ export function DashboardAdmin({
         {/* Columna secundaria */}
         <div className="space-y-6">
           <ClubesPopulares clubes={clubes} />
+          <NoticiasRecientes
+            noticias={noticias}
+            cargando={noticiasLoading}
+          />
           <ActividadRecienteFeed
             historial={historial}
             cargando={historialLoading}

@@ -6,6 +6,8 @@ import { useTheme } from './contexts/ThemeContext';
 import { BarraNavegacion } from './components/layout/barra-navegacion/BarraNavegacion';
 import { PiePagina } from './components/layout/PiePagina';
 import { ModalInicioSesion } from './components/modals/ModalInicioSesion';
+import { ModalNoticias } from './components/noticias/ModalNoticias';
+import { ModalActualizaciones } from './components/noticias/ModalActualizaciones';
 import { NavegacionInferiorMovil } from './components/layout/paneles-navegacion/NavegacionInferiorMovil';
 import { RutaProtegida } from './components/layout/RutaProtegida';
 import { PanelAlumno } from './pages/PanelAlumno';
@@ -13,6 +15,8 @@ import { PanelPresidente } from './pages/PanelPresidente';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
+import { PaginaNoticias } from './pages/PaginaNoticias';
+import { PaginaCalendario } from './pages/PaginaCalendario';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { useClubes } from './hooks/useClubes';
@@ -44,8 +48,8 @@ function App() {
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
-    redirigirPostLogin();
-  }, [redirigirPostLogin]);
+    if (location.pathname !== '/eventos') redirigirPostLogin();
+  }, [redirigirPostLogin, location.pathname]);
 
   function handleLogout() {
     cerrarSesion();
@@ -113,8 +117,6 @@ function App() {
 
       <BarraNavegacion
         splashActivo={!splashDone}
-        categoriaActiva={categoriaActiva}
-        setCategoriaActiva={setCategoriaActiva}
         estadoActivo={estadoActivo}
         setEstadoActivo={setEstadoActivo}
         menuAbierto={menuAbierto}
@@ -132,6 +134,9 @@ function App() {
         onScrollChange={handleScrollChange}
       />
 
+      <ModalNoticias />
+      <ModalActualizaciones />
+
       {showLogin && (
         <ModalInicioSesion onClose={handleLoginSuccess} />
       )}
@@ -141,9 +146,16 @@ function App() {
           <PaginaInicio key={catalogoKey}
             clubes={clubesFiltrados}
             clubesLoading={clubesLoading}
+            categoriaActiva={categoriaActiva}
+            setCategoriaActiva={setCategoriaActiva}
+            estadoActivo={estadoActivo}
+            setEstadoActivo={setEstadoActivo}
             onLoginClick={() => setShowLogin(true)}
           />
         } />
+        <Route path="/noticias" element={<PaginaNoticias />} />
+        <Route path="/eventos" element={<PaginaNoticias tipoInicial="eventos" onLoginClick={() => setShowLogin(true)} />} />
+        <Route path="/calendario" element={<PaginaCalendario />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />

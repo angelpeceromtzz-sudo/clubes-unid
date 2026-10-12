@@ -1,3 +1,11 @@
+export function fechaHoyCampus() {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const fecha = Object.fromEntries(partes.map(({ type, value }) => [type, value]));
+  return `${fecha.year}-${fecha.month}-${fecha.day}`;
+}
+
 export function calcularTiempoRestante(fechaExpiracion) {
   if (!fechaExpiracion) return null;
   const ahora = new Date();

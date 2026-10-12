@@ -27,7 +27,7 @@ const upload = multer({
 
 const router = Router();
 
-router.post('/imagen', authenticate, requireRole(3), upload.single('imagen'), (req, res) => {
+router.post('/imagen', authenticate, requireRole(3, 4), upload.single('imagen'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No se envió ninguna imagen o el formato no es válido' });

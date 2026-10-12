@@ -1,7 +1,7 @@
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from './Icono';
 
-export function CampoTexto({ label, name, placeholder, value, onChange, type = 'text', disabled, readOnly, error, required, maxLength }) {
+export function CampoTexto({ label, name, placeholder, value, onChange, type = 'text', disabled, readOnly, error, required, maxLength, min }) {
   const { inputCls, labelCls } = useTheme();
 
   const lockedCls = readOnly
@@ -29,6 +29,7 @@ export function CampoTexto({ label, name, placeholder, value, onChange, type = '
         disabled={disabled || readOnly}
         readOnly={readOnly}
         maxLength={maxLength}
+        min={min}
         rows={type === 'textarea' ? 3 : undefined}
         className={`${inputCls} ${lockedCls} ${type === 'textarea' ? 'resize-none' : ''}`}
       />

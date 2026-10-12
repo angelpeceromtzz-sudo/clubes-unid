@@ -20,11 +20,14 @@ function getPortalContainer() {
   return portalDiv;
 }
 
-export function ModalBase({ show, onClose, maxWidth = 'max-w-lg', closeOnBackdrop = true, externalClose = false, children }) {
+export function ModalBase({ show, onClose, maxWidth = 'max-w-lg', closeOnBackdrop = true, externalClose = false, panelClassName, children }) {
   const { tema } = useTheme();
   const [container] = useState(getPortalContainer);
 
   if (!show) return null;
+
+  const clasesPanel = panelClassName
+    ?? `max-h-[85vh] overflow-y-auto overflow-x-hidden p-8 border scrollbar-amber ${tema.isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`;
 
   return createPortal(
     <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4"
@@ -35,7 +38,7 @@ export function ModalBase({ show, onClose, maxWidth = 'max-w-lg', closeOnBackdro
            `tema.text`, así que sin esto todo texto sin color propio heredaba el
            negro por defecto del navegador: en oscuro quedaba negro sobre
            `bg-[#0e162c]`, ilegible. */
-        className={`relative rounded-2xl w-full ${maxWidth} border ${tema.isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'} ${tema.text}`}
+        className={`relative rounded-2xl w-full ${maxWidth} ${clasesPanel} ${tema.text}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* La X se sale de la tarjeta (`-top`/`-right` negativos) y por eso

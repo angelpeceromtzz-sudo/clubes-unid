@@ -16,6 +16,7 @@ import { TablaActividad } from '../components/admin/tabla-actividad/TablaActivid
 import { ModalPasswordAdmin } from '../components/admin/modales/ModalPasswordAdmin';
 import { SeccionDiapositivas } from '../components/admin/seccion-diapositivas/SeccionDiapositivas';
 import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
+import { SeccionNoticias } from '../components/admin/seccion-noticias/SeccionNoticias';
 import { Spinner } from '../components/ui/Spinner';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -58,6 +59,8 @@ export function PanelAdmin() {
               clubes={d.clubes}
               historial={d.historial}
               historialLoading={d.historialLoading}
+              noticias={d.noticias.noticias}
+              noticiasLoading={d.noticias.cargando}
             />
           )}
 
@@ -70,6 +73,30 @@ export function PanelAdmin() {
           )}
 
           {d.vistaActiva === 'encuestas' && <SeccionEncuestas d={d} />}
+
+          {(d.vistaActiva === 'noticias' || d.vistaActiva === 'eventos') && (
+            <SeccionNoticias
+              noticias={d.noticias.noticias}
+              noticiasFiltradas={d.noticias.noticiasFiltradas}
+              cargando={d.noticias.cargando}
+              busqueda={d.noticias.busqueda}
+              setBusqueda={d.noticias.setBusqueda}
+              showModal={d.noticias.showModal}
+              editando={d.noticias.editando}
+              form={d.noticias.form}
+              enviando={d.noticias.enviando}
+              errorModal={d.noticias.errorModal}
+              abrirModalCrear={d.noticias.abrirModalCrear}
+              abrirModalEditar={d.noticias.abrirModalEditar}
+              cerrarModal={d.noticias.cerrarModal}
+              togglePublicada={d.noticias.togglePublicada}
+              eliminar={d.noticias.eliminar}
+              guardar={d.noticias.guardar}
+              handleFormChange={d.noticias.handleFormChange}
+              subirImagen={d.noticias.subirImagen}
+              tipoSeccion={d.vistaActiva === 'eventos' ? 'evento' : 'noticia'}
+            />
+          )}
 
           {d.vistaActiva === 'historial' && (
             <TablaHistorial
@@ -187,6 +214,15 @@ export function PanelAdmin() {
             varianteDanger
             onConfirmar={d.confirmarPendienteBanner}
             onCancelar={d.cancelarPendienteBanner}
+          />
+          <ModalConfirmacion
+            show={!!d.pendienteConfirmacionNoticia}
+            titulo="Eliminar noticia"
+            mensaje={`¿Eliminar la publicación "${d.pendienteConfirmacionNoticia?.titulo || ''}"? Esta acción no se puede deshacer.`}
+            textoConfirmar="Eliminar"
+            varianteDanger
+            onConfirmar={d.confirmarPendienteNoticia}
+            onCancelar={d.cancelarPendienteNoticia}
           />
       </NavegacionPanel>
     </RutaProtegida>
