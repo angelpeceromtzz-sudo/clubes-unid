@@ -20,10 +20,10 @@ const CATEGORIAS = {
   },
   evento: {
     label: 'Evento',
-    badge: 'border-emerald-500 bg-emerald-600/20 text-emerald-400',
-    acento: 'border-emerald-500',
-    punto: 'bg-emerald-400',
-    glow: 'shadow-emerald-500/20',
+    badge: 'border-red-500 bg-red-600/20 text-red-400',
+    acento: 'border-red-500',
+    punto: 'bg-red-400',
+    glow: 'shadow-red-500/20',
   },
   informativo: {
     label: 'Informativo',

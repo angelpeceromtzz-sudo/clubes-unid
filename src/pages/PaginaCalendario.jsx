@@ -15,9 +15,9 @@ const ESTILOS_CATEGORIA = {
     oscuro: 'bg-indigo-500/20 text-indigo-300',
   },
   deportivo: {
-    punto: 'bg-emerald-400',
-    claro: 'bg-emerald-100 text-emerald-700',
-    oscuro: 'bg-emerald-500/20 text-emerald-300',
+    punto: 'bg-red-400',
+    claro: 'bg-red-100 text-red-700',
+    oscuro: 'bg-red-500/20 text-red-300',
   },
   cultural: {
     punto: 'bg-rose-400',
