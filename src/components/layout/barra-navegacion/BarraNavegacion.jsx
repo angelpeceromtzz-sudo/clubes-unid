@@ -9,6 +9,7 @@ import { ModalAyuda } from '../navegacion/ModalAyuda';
 import { BotonNoticias } from '../../noticias/BotonNoticias';
 import { BotonEventos } from '../../noticias/BotonEventos';
 import { BotonCalendario } from '../../noticias/BotonCalendario';
+import { BotonPortal } from './BotonPortal';
 
 export function BarraNavegacion({
   menuAbierto, setMenuAbierto, onLogoClick,
@@ -76,6 +77,7 @@ export function BarraNavegacion({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 ml-auto shrink-0">
+            <BotonPortal />
             {user && (
               <div className="hidden lg:flex items-center gap-3">
                 <BadgeNotificaciones />
@@ -87,7 +89,7 @@ export function BarraNavegacion({
                 </button>
               </div>
             )}
-            {user && <BadgeNotificaciones className="flex lg:hidden" />}
+            {user && <BadgeNotificaciones className="flex lg:hidden" variante="modal" />}
 
             <MenuUsuario
               user={user}

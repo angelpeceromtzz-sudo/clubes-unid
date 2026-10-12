@@ -1,19 +1,27 @@
 import { useRef, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNotificaciones } from '../../contexts/NotificationContext';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { useBloqueoScroll } from '../../hooks/useBloqueoScroll';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
 import { ModalNotificacion } from './navegacion/ModalNotificacion';
 import { ElementoNotificacion } from './navegacion/ElementoNotificacion';
 
-export function BadgeNotificaciones({ className = '' }) {
+export function BadgeNotificaciones({ className = '', variante = 'dropdown' }) {
   const { modoOscuro, tema } = useTheme();
   const { notificaciones, noLeidas, marcarComoLeida, marcarTodasLeidas, eliminarNotificacion } = useNotificaciones();
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
   const [notifModal, setNotifModal] = useState(null);
   const notificacionesRef = useRef(null);
 
+  const esModal = variante === 'modal';
+
   useClickOutside(notificacionesRef, mostrarNotificaciones, () => setMostrarNotificaciones(false), '[aria-label="Notificaciones"]');
+
+  // En móvil el panel se comporta como modal centrado: se congela el scroll del
+  // fondo, igual que el menú hamburguesa.
+  useBloqueoScroll(esModal && mostrarNotificaciones);
 
   const ordenadas = useMemo(() => {
     const noLeidasList = [];
@@ -31,12 +39,60 @@ export function BadgeNotificaciones({ className = '' }) {
     setMostrarNotificaciones(false);
   }
 
+  // El encabezado + la lista se comparten entre el dropdown (escritorio) y el
+  // modal (móvil): mismo look, sólo cambia cómo se posiciona el contenedor.
+  const panel = (
+    <div className={`rounded-xl overflow-hidden ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'} ${tema.dropdownBorder}`}>
+      <div className={`px-4 py-3 flex items-center justify-between ${modoOscuro ? 'border-b border-slate-700/50' : 'border-b border-slate-200'}`}>
+        <p className={`text-xs font-semibold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
+          Notificaciones {noLeidas > 0 && `(${noLeidas} sin leer)`}
+        </p>
+        {noLeidas > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); marcarTodasLeidas(); }}
+            className="text-[10px] font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer uppercase tracking-wider"
+          >
+            Leer todas
+          </button>
+        )}
+      </div>
+      <div
+        className="overflow-y-auto"
+        style={{
+          maxHeight: 'min(60vh, 480px)',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
+      >
+        {ordenadas.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 px-4">
+            <Icono nombre="bell" className={`h-8 w-8 mb-2 ${modoOscuro ? 'text-slate-600' : 'text-slate-300'}`} strokeWidth={1.5} />
+            <p className={`text-sm text-center ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
+              No hay notificaciones
+            </p>
+          </div>
+        ) : (
+          ordenadas.map((notif) => (
+            <ElementoNotificacion
+              key={notif.id_notificacion}
+              notif={notif}
+              modoOscuro={modoOscuro}
+              onLeer={handleLeer}
+              onEliminar={eliminarNotificacion}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className={`relative ${className}`}>
       <button
         onClick={() => setMostrarNotificaciones((prev) => !prev)}
         className={`relative p-2 rounded-full cursor-pointer ${modoOscuro ? 'md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : ''} ${tema.iconColor} hover:text-amber-400 transition-colors`}
         aria-label="Notificaciones"
+        title="Notificaciones"
       >
         <Icono nombre="bell" className="h-6 w-6 md:h-5 md:w-5" strokeWidth={2} />
         {noLeidas > 0 && (
@@ -46,56 +102,34 @@ export function BadgeNotificaciones({ className = '' }) {
         )}
       </button>
 
-      {mostrarNotificaciones && (
+      {mostrarNotificaciones && (esModal ? (
+        // Móvil: modal centrado. Se porta al body porque un `fixed` dentro del
+        // header queda contenido por su backdrop-blur.
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setMostrarNotificaciones(false)}
+          >
+            <div
+              ref={notificacionesRef}
+              className={`w-full max-w-sm max-h-[85vh] shadow-2xl ${tema.dropdownBorder}`}
+              onClick={(e) => e.stopPropagation()}
+              style={{ animation: 'dropdownIn 0.2s ease-out' }}
+            >
+              {panel}
+            </div>
+          </div>,
+          document.body,
+        )
+      ) : (
         <div
           ref={notificacionesRef}
           className={`absolute right-0 top-12 z-50 w-80 sm:w-96 rounded-xl shadow-2xl transition-colors duration-300 ${tema.dropdownBorder}`}
           style={{ animation: 'dropdownIn 0.2s ease-out' }}
         >
-          <div className={`rounded-xl overflow-hidden ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'} ${tema.dropdownBorder}`}>
-            <div className={`px-4 py-3 flex items-center justify-between ${modoOscuro ? 'border-b border-slate-700/50' : 'border-b border-slate-200'}`}>
-              <p className={`text-xs font-semibold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-                Notificaciones {noLeidas > 0 && `(${noLeidas} sin leer)`}
-              </p>
-              {noLeidas > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); marcarTodasLeidas(); }}
-                  className="text-[10px] font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer uppercase tracking-wider"
-                >
-                  Leer todas
-                </button>
-              )}
-            </div>
-            <div
-              className="overflow-y-auto"
-              style={{
-                maxHeight: 'min(60vh, 480px)',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-              }}
-            >
-              {ordenadas.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 px-4">
-                  <Icono nombre="bell" className={`h-8 w-8 mb-2 ${modoOscuro ? 'text-slate-600' : 'text-slate-300'}`} strokeWidth={1.5} />
-                  <p className={`text-sm text-center ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
-                    No hay notificaciones
-                  </p>
-                </div>
-              ) : (
-                ordenadas.map((notif) => (
-                  <ElementoNotificacion
-                    key={notif.id_notificacion}
-                    notif={notif}
-                    modoOscuro={modoOscuro}
-                    onLeer={handleLeer}
-                    onEliminar={eliminarNotificacion}
-                  />
-                ))
-              )}
-            </div>
-          </div>
+          {panel}
         </div>
-      )}
+      ))}
 
       <ModalNotificacion
         notif={notifModal}

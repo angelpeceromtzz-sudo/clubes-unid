@@ -70,34 +70,36 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                   <Icono nombre="grid" className="h-4 w-4" strokeWidth={2} />
                   Mi Dashboard
                 </button>
-                <div className={`h-px ${tema.headerBorder} mx-3`} />
-                <button
-                  onClick={() => { abrirActualizaciones(); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
-                >
-                  <Icono nombre="newspaper" className="h-4 w-4" strokeWidth={2} />
-                  Noticias
-                  {noLeidas > 0 && (
-                    <span className="relative ml-auto flex items-center justify-center h-2 w-2 shrink-0">
-                      <span className="absolute inset-0 rounded-full bg-amber-500/40 animate-ping" />
-                      <span className="relative h-2 w-2 rounded-full bg-amber-500" />
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={() => { navigate('/eventos'); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
-                >
-                  <Icono nombre="calendar" className="h-4 w-4" strokeWidth={2} />
-                  Eventos
-                </button>
-                <button
-                  onClick={() => { navigate('/calendario'); setMenuAbierto(false); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
-                >
-                  <Icono nombre="clock" className="h-4 w-4" strokeWidth={2} />
-                  Calendario
-                </button>
+                <div className="lg:hidden">
+                  <div className={`h-px ${tema.headerBorder} mx-3`} />
+                  <button
+                    onClick={() => { abrirActualizaciones(); setMenuAbierto(false); }}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  >
+                    <Icono nombre="newspaper" className="h-4 w-4" strokeWidth={2} />
+                    Noticias
+                    {noLeidas > 0 && (
+                      <span className="relative ml-auto flex items-center justify-center h-2 w-2 shrink-0">
+                        <span className="absolute inset-0 rounded-full bg-amber-500/40 animate-ping" />
+                        <span className="relative h-2 w-2 rounded-full bg-amber-500" />
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { navigate('/eventos'); setMenuAbierto(false); }}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  >
+                    <Icono nombre="calendar" className="h-4 w-4" strokeWidth={2} />
+                    Eventos
+                  </button>
+                  <button
+                    onClick={() => { navigate('/calendario'); setMenuAbierto(false); }}
+                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
+                  >
+                    <Icono nombre="clock" className="h-4 w-4" strokeWidth={2} />
+                    Calendario
+                  </button>
+                </div>
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 <button
                   onClick={() => { setModoOscuro((prev) => !prev); setMenuAbierto(false); }}
