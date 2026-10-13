@@ -7,7 +7,6 @@ import { MenuUsuario } from '../MenuUsuario';
 import { Logotipo } from './Logotipo';
 import { ModalAyuda } from '../navegacion/ModalAyuda';
 import { BotonNoticias } from '../../noticias/BotonNoticias';
-import { BotonEventos } from '../../noticias/BotonEventos';
 import { BotonCalendario } from '../../noticias/BotonCalendario';
 import { BotonPortal } from './BotonPortal';
 
@@ -70,7 +69,6 @@ export function BarraNavegacion({
             {mostrarFiltros && (
               <div className="hidden lg:flex items-center gap-1 shrink-0">
                 <BotonNoticias />
-                <BotonEventos />
                 <BotonCalendario />
               </div>
             )}

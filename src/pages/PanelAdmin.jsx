@@ -74,7 +74,7 @@ export function PanelAdmin() {
 
           {d.vistaActiva === 'encuestas' && <SeccionEncuestas d={d} />}
 
-          {(d.vistaActiva === 'noticias' || d.vistaActiva === 'eventos') && (
+          {d.vistaActiva === 'noticias' && (
             <SeccionNoticias
               noticias={d.noticias.noticias}
               noticiasFiltradas={d.noticias.noticiasFiltradas}
@@ -94,7 +94,6 @@ export function PanelAdmin() {
               guardar={d.noticias.guardar}
               handleFormChange={d.noticias.handleFormChange}
               subirImagen={d.noticias.subirImagen}
-              tipoSeccion={d.vistaActiva === 'eventos' ? 'evento' : 'noticia'}
             />
           )}
 

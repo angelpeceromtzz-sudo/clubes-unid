@@ -1,5 +1,6 @@
-/* Página de noticias: listado completo de publicaciones, de la más reciente a la más antigua. */
+/* Página pública con pestañas de noticias y eventos. */
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNoticias } from '../contexts/NoticiasContext';
 import { useAutenticacion } from '../contexts/AuthContext';
@@ -10,18 +11,26 @@ import { Icono } from '../components/ui/Icono';
 import { Spinner } from '../components/ui/Spinner';
 import { TarjetaNoticia } from '../components/noticias/TarjetaNoticia';
 
-export function PaginaNoticias({ tipoInicial = 'noticias', onLoginClick }) {
+export function PaginaNoticias({ onLoginClick }) {
   const { tema, modoOscuro } = useTheme();
   const { usuario } = useAutenticacion();
   const { noticias, eventos, cargando, marcarTodasLeidas } = useNoticias();
-  const esVistaEventos = tipoInicial === 'eventos';
+  const [parametros, setParametros] = useSearchParams();
+  const esVistaEventos = parametros.get('seccion') === 'eventos';
   const [categoriaEvento, setCategoriaEvento] = useState('todos');
   const [interesesUsuario, setInteresesUsuario] = useState({ id: null, ids: [] });
   const [conteos, setConteos] = useState({});
   const [procesandoId, setProcesandoId] = useState(null);
+  const [recienConfirmadoId, setRecienConfirmadoId] = useState(null);
   const [errorInteres, setErrorInteres] = useState('');
-  const usuarioId = usuario?.id ?? null;
+  const usuarioId = usuario?.id_usuario ?? usuario?.id ?? null;
   const intereses = interesesUsuario.id === usuarioId ? interesesUsuario.ids : [];
+
+  useEffect(() => {
+    if (recienConfirmadoId === null) return;
+    const temporizador = window.setTimeout(() => setRecienConfirmadoId(null), 1150);
+    return () => window.clearTimeout(temporizador);
+  }, [recienConfirmadoId]);
   const eventosOrdenados = useMemo(() => {
     const hoy = fechaHoyCampus();
     return [...eventos].sort((a, b) => {
@@ -41,8 +50,15 @@ export function PaginaNoticias({ tipoInicial = 'noticias', onLoginClick }) {
     if (!esVistaEventos || !usuarioId) return;
     let vigente = true;
     api.getMisInteresesEventos()
-      .then((ids) => { if (vigente) setInteresesUsuario({ id: usuarioId, ids: Array.isArray(ids) ? ids : [] }); })
-      .catch(() => { if (vigente) setErrorInteres('No se pudieron cargar tus intereses.'); });
+      .then((ids) => {
+        if (!Array.isArray(ids)) throw new Error('Respuesta de intereses no válida');
+        if (vigente) setInteresesUsuario({ id: usuarioId, ids: ids.map(Number) });
+      })
+      .catch(() => {
+        if (vigente) {
+          setErrorInteres('No se pudieron cargar tus intereses.');
+        }
+      });
     return () => { vigente = false; };
   }, [esVistaEventos, usuarioId]);
 
@@ -54,17 +70,19 @@ export function PaginaNoticias({ tipoInicial = 'noticias', onLoginClick }) {
     if (procesandoId !== null) return;
     const id = evento.id_noticia;
     const interesado = intereses.includes(id);
+    if (interesado) return;
     setProcesandoId(id);
     setErrorInteres('');
     try {
-      const respuesta = interesado ? await api.quitarInteresEvento(id) : await api.marcarInteresEvento(id);
+      const respuesta = await api.marcarInteresEvento(id);
       setInteresesUsuario((actual) => {
         const ids = actual.id === usuarioId ? actual.ids : [];
         return {
           id: usuarioId,
-          ids: respuesta.interesado ? [...new Set([...ids, id])] : ids.filter((actualId) => actualId !== id),
+          ids: respuesta.interesado ? [...new Set([...ids, id])] : ids,
         };
       });
+      if (respuesta.interesado) setRecienConfirmadoId(id);
       setConteos((actual) => ({ ...actual, [id]: respuesta.total_interesados }));
     } catch (error) {
       setErrorInteres(error.message || 'No se pudo actualizar tu interés.');
@@ -88,13 +106,30 @@ export function PaginaNoticias({ tipoInicial = 'noticias', onLoginClick }) {
           <Icono nombre={esVistaEventos ? 'calendar' : 'book'} className="h-6 w-6" strokeWidth={2} />
         </span>
         <div>
-          <h1 className={`text-3xl font-black tracking-tight ${tema.title}`}>
-            {esVistaEventos ? 'Eventos' : 'Noticias'}
-          </h1>
+          <h1 className={`text-3xl font-black tracking-tight ${tema.title}`}>Noticias y eventos</h1>
           <p className={`text-sm mt-0.5 ${tema.subtitle}`}>
-            {esVistaEventos ? 'Actividades y eventos de Clubes UNID Campus Campeche' : 'Novedades y comunicados de la Dirección de Clubes UNID Campus Campeche'}
+            Novedades, comunicados y actividades de Clubes UNID Campus Campeche
           </p>
         </div>
+      </div>
+
+      <div className={`mt-8 inline-flex rounded-xl border p-1 ${modoOscuro ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-slate-50'}`} role="tablist" aria-label="Contenido de noticias">
+        {[{ value: 'noticias', label: 'Noticias', icon: 'book' }, { value: 'eventos', label: 'Eventos', icon: 'calendar' }].map((opcion) => (
+          <button
+            key={opcion.value}
+            type="button"
+            role="tab"
+            aria-selected={(esVistaEventos ? 'eventos' : 'noticias') === opcion.value}
+            onClick={() => setParametros(opcion.value === 'eventos' ? { seccion: 'eventos' } : {})}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-black transition-colors cursor-pointer ${(esVistaEventos ? 'eventos' : 'noticias') === opcion.value
+              ? 'bg-amber-400 text-slate-950 shadow-sm'
+              : modoOscuro ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-950'}`}
+          >
+            <Icono nombre={opcion.icon} className="h-4 w-4" strokeWidth={2} />
+            {opcion.label}
+            {opcion.value === 'eventos' && eventos.length > 0 && <span className="rounded-full bg-slate-950/10 px-1.5 py-0.5 text-[10px]">{eventos.length}</span>}
+          </button>
+        ))}
       </div>
 
       {esVistaEventos && (
@@ -129,12 +164,13 @@ export function PaginaNoticias({ tipoInicial = 'noticias', onLoginClick }) {
           <p className={`text-sm ${tema.subtitle}`}>{esVistaEventos ? (eventos.length ? 'No hay eventos en esta categoría' : 'Todavía no hay eventos publicados') : 'Todavía no hay noticias publicadas'}</p>
         </div>
       ) : (
-        <div className="mt-10 space-y-6">
+        <div className="mt-8 space-y-6">
           {publicacionesVisibles.map((noticia) => (
             <TarjetaNoticia key={noticia.id_noticia} noticia={noticia}
               interesado={intereses.includes(noticia.id_noticia)}
+              interesReciente={recienConfirmadoId === noticia.id_noticia}
               totalInteresados={conteos[noticia.id_noticia] ?? noticia.total_interesados ?? 0}
-              interesProcesando={procesandoId !== null}
+              interesProcesando={procesandoId !== null || Boolean(usuarioId && interesesUsuario.id !== usuarioId)}
               onToggleInteres={esVistaEventos ? () => alternarInteres(noticia) : undefined}
             />
           ))}

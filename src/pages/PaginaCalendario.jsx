@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNoticias } from '../contexts/NoticiasContext';
 import { Icono } from '../components/ui/Icono';
@@ -53,7 +52,7 @@ function fechaLegible(clave) {
 
 export function PaginaCalendario() {
   const { tema, modoOscuro } = useTheme();
-  const { eventos: publicaciones, cargando } = useNoticias();
+  const { eventos: publicaciones, cargando, abrirActualizaciones } = useNoticias();
   const [mesVisible, setMesVisible] = useState(() => {
     const hoy = new Date(`${fechaHoyCampus()}T12:00:00`);
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -77,6 +76,14 @@ export function PaginaCalendario() {
     }
     return mapa;
   }, [eventos]);
+
+  const eventosDelMes = useMemo(
+    () => eventos.filter((evento) => {
+      const fecha = fechaEvento(evento.fecha_evento);
+      return fecha.startsWith(`${mesVisible.getFullYear()}-${String(mesVisible.getMonth() + 1).padStart(2, '0')}`);
+    }),
+    [eventos, mesVisible]
+  );
 
   const celdas = useMemo(() => {
     const primerDia = (mesVisible.getDay() + 6) % 7;
@@ -117,17 +124,28 @@ export function PaginaCalendario() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => cambiarMes(-1)} className={`p-2 rounded-lg cursor-pointer ${tema.btnInactive}`} aria-label="Mes anterior"><Icono nombre="chevron-left" className="h-5 w-5" /></button>
             <button type="button" onClick={irAHoy} className={`px-3 py-2 rounded-lg text-xs font-bold cursor-pointer ${tema.btnInactive}`}>Hoy</button>
-            <button type="button" onClick={() => cambiarMes(1)} className={`p-2 rounded-lg cursor-pointer ${tema.btnInactive}`} aria-label="Mes siguiente"><Icono nombre="chevron-right" className="h-5 w-5" /></button>
           </div>
         </div>
 
         {cargando ? <Spinner className="py-20" /> : (
           <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
             <section className={`min-w-0 rounded-2xl border overflow-hidden ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`} aria-label={`Calendario de ${tituloMes}`}>
-              <div className={`text-center py-4 border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                <h2 className={`text-lg font-black ${tema.title}`}>{tituloMes}</h2>
+              <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-4 border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => cambiarMes(-1)} className={`p-2 rounded-lg cursor-pointer ${tema.btnInactive}`} aria-label="Mes anterior"><Icono nombre="chevron-left" className="h-5 w-5" /></button>
+                  <h2 className={`min-w-36 text-center text-lg font-black ${tema.title}`}>{tituloMes}</h2>
+                  <button type="button" onClick={() => cambiarMes(1)} className={`p-2 rounded-lg cursor-pointer ${tema.btnInactive}`} aria-label="Mes siguiente"><Icono nombre="chevron-right" className="h-5 w-5" /></button>
+                </div>
+                <span className={`text-xs font-semibold ${tema.subtitle}`}>{eventosDelMes.length} {eventosDelMes.length === 1 ? 'actividad' : 'actividades'}</span>
+              </div>
+              <div className={`flex flex-wrap gap-x-4 gap-y-2 px-4 py-3 border-b text-[11px] font-semibold ${modoOscuro ? 'border-slate-700/50 text-slate-300' : 'border-slate-100 text-slate-600'}`} aria-label="Leyenda de categorías">
+                {Object.entries(ESTILOS_CATEGORIA).map(([categoria, estilo]) => (
+                  <span key={categoria} className="inline-flex items-center gap-1.5 capitalize">
+                    <span className={`h-2 w-2 rounded-full ${estilo.punto}`} aria-hidden="true" />
+                    {categoria}
+                  </span>
+                ))}
               </div>
               <div className="grid grid-cols-7">
                 {DIAS_SEMANA.map((dia) => <div key={dia} className={`text-center text-[10px] uppercase tracking-widest font-black py-3 ${tema.subtitle}`}>{dia}</div>)}
@@ -178,7 +196,7 @@ export function PaginaCalendario() {
                 </article>)}
               </div>
               {!diaSeleccionado && <p className={`text-sm mt-4 ${tema.subtitle}`}>Selecciona una fecha para ver sus eventos.</p>}
-              <Link to="/eventos" className="inline-block mt-5 text-xs font-bold text-amber-500 hover:text-amber-400">Ver todos los eventos</Link>
+              <button type="button" onClick={() => abrirActualizaciones('evento')} className="mt-5 text-xs font-bold text-amber-500 hover:text-amber-400 cursor-pointer">Abrir Noticias y eventos</button>
             </aside>
           </div>
         )}

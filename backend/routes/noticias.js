@@ -130,19 +130,6 @@ router.post('/eventos/:id/interes', authenticate, async (req, res) => {
   }
 });
 
-router.delete('/eventos/:id/interes', authenticate, async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Evento no válido' });
-    await pool.query('DELETE FROM intereses_eventos WHERE id_noticia = $1 AND id_usuario = $2', [id, req.user.id]);
-    const total = await pool.query('SELECT COUNT(*)::int AS total FROM intereses_eventos WHERE id_noticia = $1', [id]);
-    res.json({ interesado: false, total_interesados: total.rows[0].total });
-  } catch (err) {
-    console.error('Error al quitar interés en evento:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
 // Lista todas las noticias (incluye borradores) — admin / rectoría
 router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {

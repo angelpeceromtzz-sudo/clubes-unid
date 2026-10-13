@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
+import { useNoticias } from './contexts/NoticiasContext';
 import { useTheme } from './contexts/ThemeContext';
 import { BarraNavegacion } from './components/layout/barra-navegacion/BarraNavegacion';
 import { PiePagina } from './components/layout/PiePagina';
@@ -16,7 +17,6 @@ import { PanelPresidente } from './pages/PanelPresidente';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
-import { PaginaNoticias } from './pages/PaginaNoticias';
 import { PaginaCalendario } from './pages/PaginaCalendario';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import PaginaEncuesta from './pages/PaginaEncuesta';
@@ -25,8 +25,23 @@ import { useAuthRedirect } from './hooks/useAuthRedirect';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { NAVBAR_HEIGHT, NAVBAR_HEIGHT_LOGO } from './constants/limites';
 
+function RedireccionNoticias() {
+  const { abrirActualizaciones } = useNoticias();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const eventos = location.pathname === '/eventos' || new URLSearchParams(location.search).get('seccion') === 'eventos';
+    abrirActualizaciones(eventos ? 'evento' : 'todos');
+    navigate('/', { replace: true });
+  }, [abrirActualizaciones, location.pathname, location.search, navigate]);
+
+  return null;
+}
+
 function App() {
   const { estaAutenticado, authReady, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { actualizacionesAbiertas } = useNoticias();
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,8 +65,8 @@ function App() {
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
-    if (location.pathname !== '/eventos') redirigirPostLogin();
-  }, [redirigirPostLogin, location.pathname]);
+    if (!actualizacionesAbiertas && location.pathname !== '/noticias') redirigirPostLogin();
+  }, [redirigirPostLogin, location.pathname, actualizacionesAbiertas]);
 
   function handleLogout() {
     cerrarSesion();
@@ -136,7 +151,7 @@ function App() {
       />
 
       <ModalNoticias />
-      <ModalActualizaciones />
+      <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />
 
       <ModalConfirmacion
         show={confirmarLogout}
@@ -164,8 +179,8 @@ function App() {
             onLoginClick={() => setShowLogin(true)}
           />
         } />
-        <Route path="/noticias" element={<PaginaNoticias />} />
-        <Route path="/eventos" element={<PaginaNoticias tipoInicial="eventos" onLoginClick={() => setShowLogin(true)} />} />
+        <Route path="/noticias" element={<RedireccionNoticias />} />
+        <Route path="/eventos" element={<RedireccionNoticias />} />
         <Route path="/calendario" element={<PaginaCalendario />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />

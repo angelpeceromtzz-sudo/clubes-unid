@@ -1,5 +1,5 @@
 /* Popup automático de la portada: muestra únicamente la noticia más reciente que el
-   visitante todavía no ha visto, con botón de cierre. El listado completo vive en /noticias. */
+   visitante todavía no ha visto, con botón de cierre. El historial se abre en la ventana Noticias. */
 import { ModalBase } from '../ui/ModalBase';
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';

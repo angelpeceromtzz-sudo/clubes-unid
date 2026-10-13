@@ -69,7 +69,7 @@ export function PanelRectoria() {
         {d.vistaActiva === 'actividad' && (
           <TablaActividad />
         )}
-        {(d.vistaActiva === 'noticias' || d.vistaActiva === 'eventos') && (
+        {d.vistaActiva === 'noticias' && (
           <SeccionNoticias
             noticias={d.noticias.noticias}
             noticiasFiltradas={d.noticias.noticiasFiltradas}
@@ -89,7 +89,6 @@ export function PanelRectoria() {
             guardar={d.noticias.guardar}
             handleFormChange={d.noticias.handleFormChange}
             subirImagen={d.noticias.subirImagen}
-            tipoSeccion={d.vistaActiva === 'eventos' ? 'evento' : 'noticia'}
           />
         )}
 
