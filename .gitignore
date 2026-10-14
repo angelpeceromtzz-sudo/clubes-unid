@@ -26,10 +26,22 @@ dist-ssr
 # Vercel
 .vercel
 
-# Environment
+# Environment (todos los .env locales; solo se versionan los .env.example)
 .env
-.env.*.local
-# .env.development y .env.production SÍ se versionan (no contienen secretos)
+.env.*
+!.env.example
+!**/.env.example
+
+# Credenciales y certificados
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.jks
+*.keystore
+credentials.json
+*serviceAccount*.json
 
 # Documents
 *.docx

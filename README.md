@@ -58,19 +58,25 @@ cd backend
 npm install
 ```
 
-Crear archivo `.env` en `backend/` basado en `.env.example`:
+Crear el archivo `backend/.env` a partir de `backend/.env.example` (los valores
+reales nunca se versionan). El frontend usa su propio `.env.local`, basado en el
+`.env.example` de la raíz.
+
+Variables del backend (valores falsos; los reales van solo en `backend/.env` o
+en el panel de Render/GitHub Secrets):
 
 ```env
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=clubs_bd
 DB_USER=postgres
-DB_PASSWORD=tu_password
-JWT_SECRET=tu_secreto_jwt
+DB_PASSWORD=tu_password_local
+DATABASE_URL=
+JWT_SECRET=tu_jwt_secret
 PORT=4000
 ADMIN_CORREO=admin@ejemplo.com
-ADMIN_SECRET=clave_admin
-CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
+ADMIN_SECRET=tu_admin_secret
+CLOUDINARY_URL=cloudinary://api_key_falsa:api_secret_falso@cloud_name_falso
 CORS_ORIGIN=http://localhost:5173
 ```
 

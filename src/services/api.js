@@ -98,6 +98,7 @@ export const api = {
   actualizarConfiguracionConvocatoria: convocatoriaService.actualizarConfiguracionConvocatoria,
   cerrarConvocatoria: convocatoriaService.cerrarConvocatoria,
   getHistorialOfertas: convocatoriaService.getHistorialOfertas,
+  descargarAsistencia: convocatoriaService.descargarAsistencia,
 
   asignarBloque: ofertaService.asignarBloque,
   seleccionarOfertas: ofertaService.seleccionarOfertas,

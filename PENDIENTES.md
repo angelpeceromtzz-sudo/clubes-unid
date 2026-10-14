@@ -341,8 +341,10 @@ la contraseña para trabajar en la interfaz. Lo que no dice es *de dónde salió
 llave*. No es un permiso abstracto del sistema — es una línea de texto en un `.env`
 que se puede copiar, mandar por chat o commitear. "El mesero tiene la llave desde
 siempre" suena a control del sistema; en la práctica es un secreto compartido entre
-personas, y los secretos compartidos se filtran. Ya hay uno filtrado:
-`debug_query.mjs:8` tiene `password: 'angel2007'` y está versionado en git.
+personas, y los secretos compartidos se filtran. Ya hay uno filtrado: el
+antiguo `debug_query.mjs` tenía la contraseña de la base hardcodeada. El valor
+se eliminó del árbol, se rotó en el proveedor y se purga del historial con
+`git filter-repo` (ver checklist de seguridad del repo).
 
 **La raíz es de entorno, no de código.** Mientras desarrollo y producción
 compartan la misma `DATABASE_URL`, cualquier backend local escribe en producción. Es
@@ -358,17 +360,15 @@ así.
       levantar un backend contra la base real. Eso elimina la llave local por
       completo, pero también deja de haber forma de probar escrituras sin tocar
       producción.
-- [ ] Rotar los secretos de `backend/.env`. `JWT_SECRET`
-      (`clubes-unid-jwt-secret-2026`) y `ADMIN_SECRET` (`unid-admin-2026`) son
-      adivinables, y `ADMIN_SECRET` es la única barrera de
+- [ ] Rotar los secretos de `backend/.env`. `JWT_SECRET` y `ADMIN_SECRET`
+      estaban versionados (valores retirados del repo) y eran adivinables. Los
+      nuevos valores van solo en variables de entorno (`.env` local / panel de
+      Render), nunca en git; `backend/.env.example` documenta los nombres con
+      valores falsos. `ADMIN_SECRET` es la única barrera de
       `POST /api/usuarios/admin-action`, que promueve a admin.
 
-**Lo que este ítem NO cubre**, y conviene decirlo para que no se lea como cerrado: hay
-una fuga abierta en `formularios.js:26-47`
-(`GET /api/formularios/debug-postulaciones`), sin `authenticate` ni `requireRole`,
-que en producción responde **200 con datos reales de alumnos** (nombre, matrícula,
-carrera, club). Está en `main`, que es la rama que Render despliega, así que está
-vivo en `https://clubes-unid.onrender.com`. El comentario del código dice "SOLO
-LOCAL", y esa suposición es lo que falló: no hay nada en el repo que impida que un
-endpoint de debug llegue a producción. Se documenta aparte porque es un fix de una
-línea, no una decisión de equipo.
+**Actualización**: el endpoint `GET /api/formularios/debug-postulaciones` ya no
+está expuesto. En `backend/routes/formularios.js:27` quedó protegido con
+`authenticate` y `requireRole(3)`, así que dejó de responder con datos reales de
+alumnos a peticiones anónimas. Se corrigió porque era un fix de una línea, no una
+decisión de equipo.

@@ -1,0 +1,21 @@
+title = "gitleaks config para clubes-unid"
+
+# Usa las reglas por defecto de gitleaks y solo excluye lo que no es secreto.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Placeholders de .env.example y lockfiles (no son credenciales reales)"
+paths = [
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)package-lock\.json$''',
+]
+regexes = [
+  '''tu_password_local''',
+  '''tu_jwt_secret''',
+  '''tu_admin_secret''',
+  '''api_key_falsa''',
+  '''api_secret_falso''',
+  '''cloud_name_falso''',
+  '''REDACTED''',
+]
