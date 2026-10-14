@@ -19,3 +19,11 @@ regexes = [
   '''cloud_name_falso''',
   '''REDACTED''',
 ]
+
+[[allowlists]]
+description = "Secretos historicos YA ROTADOS y sin valor. No se purgo el historial porque hay colaboradores activos; se permiten aqui para que el escaneo no marque falsos positivos conocidos."
+regexes = [
+  '''angel2007''',
+  '''clubes-unid-jwt-secret-2026''',
+  '''unid-admin-2026''',
+]
