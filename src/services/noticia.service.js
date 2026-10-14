@@ -10,8 +10,6 @@ export const noticiaService = {
 
   marcarInteresEvento: (id) => request(`/noticias/eventos/${id}/interes`, { method: 'POST' }),
 
-  quitarInteresEvento: (id) => request(`/noticias/eventos/${id}/interes`, { method: 'DELETE' }),
-
   getNoticiasAdmin: () => request('/noticias/admin'),
 
   createNoticia: (data) =>

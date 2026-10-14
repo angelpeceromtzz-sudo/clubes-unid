@@ -9,11 +9,7 @@ if (!JWT_SECRET) {
 
 export function authenticate(req, res, next) {
   const header = req.headers.authorization;
-  let token = header?.startsWith('Bearer ') ? header.split(' ')[1] : null;
-
-  if (!token) {
-    token = req.query.token;
-  }
+  const token = header?.startsWith('Bearer ') ? header.split(' ')[1] : null;
 
   if (!token) {
     return res.status(401).json({ error: 'Token no proporcionado' });

@@ -1,16 +1,19 @@
-/* Modal de "Actualizaciones": historial de noticias con la lista en el panel
+/* Modal de "Actualizaciones": historial de noticias y eventos con la lista en el panel
    izquierdo (Master) y el detalle en el derecho. En móvil (< md) se transforma
    en una vista de una sola columna estilo Google News / Discover: tarjetas
    destacadas en banner, lista horizontal compacta para el resto y un detalle a
    pantalla completa. Paleta oscura del sitio (noche/azul marino) con acentos
    dorados. Cada tarjeta hereda el color de su categoría para identificarla de un
    vistazo y mantiene su propio indicador "No leído". Reutiliza NoticiasContext. */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ModalBase } from '../ui/ModalBase';
 import { Icono } from '../ui/Icono';
 import { useNoticias } from '../../contexts/NoticiasContext';
+import { useAutenticacion } from '../../contexts/AuthContext';
+import { api } from '../../services/api';
+import { fechaHoyCampus } from '../../utils/fechas';
 import { obtenerUrlImagen } from '../../utils/imagen';
-import { fechaCorta, fechaRelativa, recortarPalabras } from '../../utils/formato';
+import { fechaCorta, fechaEventoCorta, fechaRelativa, recortarPalabras } from '../../utils/formato';
 
 const CATEGORIAS = {
   promocion: {
@@ -39,42 +42,223 @@ const CATEGORIAS = {
 const CATEGORIA_POR_DEFECTO = CATEGORIAS.informativo;
 
 const OPCIONES_FILTRO = [
-  { value: 'todos', label: 'Todas' },
+  { value: 'todos', label: 'Todas las publicaciones' },
   { value: 'promocion', label: 'Promoción' },
-  { value: 'evento', label: 'Evento' },
+  { value: 'evento', label: 'Eventos' },
   { value: 'informativo', label: 'Informativo' },
 ];
+
+function SelectorCategorias({ id, valor, alCambiar }) {
+  const [abierto, setAbierto] = useState(false);
+  const [activo, setActivo] = useState(0);
+  const contenedorRef = useRef(null);
+  const botonRef = useRef(null);
+  const opcionesRef = useRef([]);
+  const seleccionada = OPCIONES_FILTRO.find((opcion) => opcion.value === valor) ?? OPCIONES_FILTRO[0];
+
+  useEffect(() => {
+    if (!abierto) return;
+    function cerrarAlPulsarFuera(evento) {
+      if (!contenedorRef.current?.contains(evento.target)) setAbierto(false);
+    }
+    document.addEventListener('pointerdown', cerrarAlPulsarFuera);
+    return () => document.removeEventListener('pointerdown', cerrarAlPulsarFuera);
+  }, [abierto]);
+
+  useEffect(() => {
+    if (abierto) opcionesRef.current[activo]?.focus();
+  }, [abierto, activo]);
+
+  function abrir() {
+    setActivo(Math.max(0, OPCIONES_FILTRO.findIndex((opcion) => opcion.value === valor)));
+    setAbierto(true);
+  }
+
+  function cerrar(devolverFoco = false) {
+    setAbierto(false);
+    if (devolverFoco) botonRef.current?.focus();
+  }
+
+  function elegir(valorElegido) {
+    alCambiar(valorElegido);
+    cerrar(true);
+  }
+
+  function manejarTeclaLista(evento) {
+    switch (evento.key) {
+      case 'ArrowDown':
+        evento.preventDefault();
+        setActivo((indice) => (indice + 1) % OPCIONES_FILTRO.length);
+        break;
+      case 'ArrowUp':
+        evento.preventDefault();
+        setActivo((indice) => (indice - 1 + OPCIONES_FILTRO.length) % OPCIONES_FILTRO.length);
+        break;
+      case 'Home':
+        evento.preventDefault();
+        setActivo(0);
+        break;
+      case 'End':
+        evento.preventDefault();
+        setActivo(OPCIONES_FILTRO.length - 1);
+        break;
+      case 'Escape':
+        evento.preventDefault();
+        evento.stopPropagation();
+        cerrar(true);
+        break;
+      case 'Enter':
+      case ' ':
+        evento.preventDefault();
+        elegir(OPCIONES_FILTRO[activo].value);
+        break;
+      case 'Tab':
+        setAbierto(false);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return (
+    <div ref={contenedorRef} className="relative mt-3">
+      <span id={`${id}-label`} className="mb-2 block text-xs font-semibold text-slate-300">Filtrar por categoría</span>
+      <button
+        ref={botonRef}
+        id={id}
+        type="button"
+        aria-labelledby={`${id}-label ${id}`}
+        aria-haspopup="listbox"
+        aria-expanded={abierto}
+        aria-controls={`${id}-opciones`}
+        onClick={() => (abierto ? cerrar() : abrir())}
+        onKeyDown={(evento) => {
+          if (evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
+            evento.preventDefault();
+            abrir();
+          }
+        }}
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border bg-[#172238] px-4 py-3 text-left text-sm font-semibold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300/25 ${
+          abierto ? 'border-amber-300' : 'border-slate-600 hover:border-amber-300/70'
+        }`}
+      >
+        <Icono nombre="filter" className="h-4 w-4 shrink-0 text-amber-300" strokeWidth={2} />
+        <span className="min-w-0 flex-1 truncate">{seleccionada.label}</span>
+        <Icono nombre="chevron-down" className={`h-4 w-4 shrink-0 text-amber-300 transition-transform ${abierto ? 'rotate-180' : ''}`} strokeWidth={2.5} />
+      </button>
+      {abierto && (
+        <div
+          id={`${id}-opciones`}
+          role="listbox"
+          aria-labelledby={`${id}-label`}
+          onKeyDown={manejarTeclaLista}
+          className="absolute top-full right-0 left-0 z-50 mt-2 rounded-xl border border-slate-600 bg-[#121d30] p-1.5 shadow-[0_14px_32px_rgba(2,6,23,0.45)]"
+        >
+          {OPCIONES_FILTRO.map((opcion, indice) => {
+            const elegida = valor === opcion.value;
+            return (
+              <button
+                key={opcion.value}
+                ref={(elemento) => { opcionesRef.current[indice] = elemento; }}
+                type="button"
+                role="option"
+                tabIndex={-1}
+                aria-selected={elegida}
+                onClick={() => elegir(opcion.value)}
+                className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-300/50 ${
+                  elegida ? 'bg-amber-300/15 font-semibold text-amber-200' : 'text-slate-200 hover:bg-slate-700/70'
+                }`}
+              >
+                <span className="flex-1">{opcion.label}</span>
+                {elegida && <Icono nombre="check" className="h-4 w-4 shrink-0 text-amber-300" strokeWidth={2.5} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function infoCategoria(categoria) {
   return CATEGORIAS[categoria] ?? CATEGORIA_POR_DEFECTO;
 }
 
-export function ModalActualizaciones() {
+function EtiquetaTendencia({ publicacion, totalInteresados, className = '' }) {
+  const total = Number(totalInteresados ?? publicacion.total_interesados) || 0;
+  if (publicacion.categoria !== 'evento' || total <= 10) return null;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full bg-amber-400/10 px-2.5 py-1 text-xs font-bold text-amber-300 ${className}`}>
+      <Icono nombre="zap" className="h-3.5 w-3.5" strokeWidth={2} />
+      En tendencia · {total} interesados
+    </span>
+  );
+}
+
+export function ModalActualizaciones({ onLoginClick }) {
   const {
     noticias,
+    eventos,
     cargando,
     actualizacionesAbiertas,
+    filtroActualizaciones,
+    setFiltroActualizaciones,
     cerrarActualizaciones,
     destacadasFijadas,
     marcarLeida,
     estaLeida,
+    refetch,
   } = useNoticias();
+  const { usuario } = useAutenticacion();
   const [seleccionId, setSeleccionId] = useState(null);
-  const [filtroCategoria, setFiltroCategoria] = useState('todos');
   // Detalle a pantalla completa en móvil (null = lista).
   const [activeMobileNews, setActiveMobileNews] = useState(null);
+  const [interesesUsuario, setInteresesUsuario] = useState({ id: null, ids: [] });
+  const [conteos, setConteos] = useState({});
+  const [procesandoId, setProcesandoId] = useState(null);
+  const [recienConfirmadoId, setRecienConfirmadoId] = useState(null);
+  const [errorInteres, setErrorInteres] = useState('');
+  const [errorConsultaIntereses, setErrorConsultaIntereses] = useState({ id: null, mensaje: '' });
+  const usuarioId = usuario?.id_usuario ?? usuario?.id ?? null;
+  const intereses = interesesUsuario.id === usuarioId ? interesesUsuario.ids : [];
 
-  const ordenadas = useMemo(
-    () => [...noticias].sort((a, b) => new Date(b.fecha_publicacion) - new Date(a.fecha_publicacion)),
-    [noticias]
-  );
+  useEffect(() => {
+    if (recienConfirmadoId === null) return;
+    const temporizador = window.setTimeout(() => setRecienConfirmadoId(null), 1150);
+    return () => window.clearTimeout(temporizador);
+  }, [recienConfirmadoId]);
+
+  useEffect(() => {
+    if (!usuarioId) return;
+    let vigente = true;
+    api.getMisInteresesEventos()
+      .then((ids) => {
+        if (!Array.isArray(ids)) throw new Error('Respuesta de intereses no válida');
+        if (vigente) {
+          setInteresesUsuario({ id: usuarioId, ids: ids.map(Number) });
+          setErrorConsultaIntereses({ id: usuarioId, mensaje: '' });
+        }
+      })
+      .catch(() => {
+        if (vigente) {
+          setErrorConsultaIntereses({ id: usuarioId, mensaje: 'No se pudieron cargar tus intereses. Recarga para intentarlo de nuevo.' });
+        }
+      });
+    return () => { vigente = false; };
+  }, [usuarioId]);
+
+  const ordenadas = useMemo(() => {
+    const publicaciones = new Map(noticias.map((noticia) => [noticia.id_noticia, noticia]));
+    eventos.forEach((evento) => publicaciones.set(evento.id_noticia, evento));
+    return [...publicaciones.values()].sort((a, b) => new Date(b.fecha_publicacion) - new Date(a.fecha_publicacion));
+  }, [noticias, eventos]);
 
   const filtradas = useMemo(
     () =>
-      filtroCategoria === 'todos'
+      filtroActualizaciones === 'todos'
         ? ordenadas
-        : ordenadas.filter((n) => n.categoria === filtroCategoria),
-    [ordenadas, filtroCategoria]
+        : ordenadas.filter((n) => n.categoria === filtroActualizaciones),
+    [ordenadas, filtroActualizaciones]
   );
 
   const totalNoLeidas = useMemo(
@@ -108,17 +292,91 @@ export function ModalActualizaciones() {
 
   function seleccionar(n) {
     setSeleccionId(n.id_noticia);
+    setErrorInteres('');
     marcarLeida(n.id_noticia);
   }
 
   function abrirDetalleMobile(n) {
     setActiveMobileNews(n);
+    setErrorInteres('');
     marcarLeida(n.id_noticia);
   }
 
   function cambiarFiltro(valor) {
-    setFiltroCategoria(valor);
+    setFiltroActualizaciones(valor);
     setSeleccionId(null);
+  }
+
+  async function mostrarInteres(evento) {
+    if (!usuario) {
+      onLoginClick?.();
+      return;
+    }
+    const id = evento.id_noticia;
+    if (procesandoId !== null || interesesUsuario.id !== usuarioId || intereses.includes(id)) return;
+    setProcesandoId(id);
+    setErrorInteres('');
+    try {
+      const respuesta = await api.marcarInteresEvento(id);
+      setInteresesUsuario((actual) => ({
+        id: usuarioId,
+        ids: [...new Set([...(actual.id === usuarioId ? actual.ids : []), id])],
+      }));
+      setRecienConfirmadoId(id);
+      setConteos((actual) => ({ ...actual, [id]: respuesta.total_interesados }));
+      refetch();
+    } catch (error) {
+      setErrorInteres(error.message || 'No se pudo registrar tu interés.');
+    } finally {
+      setProcesandoId(null);
+    }
+  }
+
+  function renderInteres(evento) {
+    if (evento.categoria !== 'evento') return null;
+    const interesado = intereses.includes(evento.id_noticia);
+    const finalizado = !evento.fecha_evento || String(evento.fecha_evento).slice(0, 10) < fechaHoyCampus();
+    const errorConsulta = usuarioId && errorConsultaIntereses.id === usuarioId ? errorConsultaIntereses.mensaje : '';
+    const comprobandoInteres = Boolean(usuarioId && interesesUsuario.id !== usuarioId);
+    const errorVisible = errorConsulta || errorInteres;
+    return (
+      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-700 pt-4">
+        {interesado ? (
+          <button type="button" disabled
+            aria-label={`Interés confirmado en ${evento.titulo}`}
+            title="Tu interés quedó guardado en tu cuenta"
+            className={`boton-interes-confirmado${recienConfirmadoId === evento.id_noticia ? ' boton-interes-confirmado--reciente' : ''}`}
+          >
+            <span className="interes-confirmado-marca">
+              <Icono nombre="check" className="h-4 w-4" strokeWidth={3} />
+            </span>
+            Interés confirmado
+          </button>
+        ) : comprobandoInteres ? (
+          <div role="status" className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-xs font-semibold text-slate-300">
+            <span className={`h-2 w-2 rounded-full ${errorConsulta ? 'bg-red-400' : 'animate-pulse bg-amber-400'}`} aria-hidden="true" />
+            {errorConsulta ? 'Estado no disponible' : 'Comprobando tu interés...'}
+          </div>
+        ) : (
+          <button type="button" onClick={() => mostrarInteres(evento)}
+            disabled={procesandoId !== null || finalizado}
+            aria-label={`Mostrar interés en ${evento.titulo}`}
+            className={finalizado
+              ? 'inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-400'
+              : `boton-interes-cta${procesandoId === evento.id_noticia ? ' boton-interes-cta--procesando' : ''}`}
+          >
+            {finalizado ? <Icono nombre="clock" className="h-4 w-4" strokeWidth={2.3} /> : (
+              <span className="interes-cta-estrella" aria-hidden="true">
+                <Icono nombre="star" className="h-4 w-4" strokeWidth={2.3} />
+              </span>
+            )}
+            <span>{finalizado ? 'Evento finalizado' : procesandoId === evento.id_noticia ? 'Guardando interés...' : 'Mostrar interés'}</span>
+          </button>
+        )}
+        <EtiquetaTendencia publicacion={evento} totalInteresados={conteos[evento.id_noticia]} />
+        {errorVisible && <p role="alert" className="w-full text-xs font-medium text-red-400">{errorVisible}</p>}
+      </div>
+    );
   }
 
   function renderTarjeta(n) {
@@ -158,6 +416,8 @@ export function ModalActualizaciones() {
           </div>
 
           <h3 className="text-sm font-bold leading-snug text-white">{n.titulo}</h3>
+          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {fechaEventoCorta(n.fecha_evento)}</p>}
+          <EtiquetaTendencia publicacion={n} totalInteresados={conteos[n.id_noticia]} className="mt-2" />
 
           {secundario && (
             <p className="mt-1 line-clamp-1 text-xs text-slate-400">{secundario}</p>
@@ -212,6 +472,8 @@ export function ModalActualizaciones() {
             )}
           </div>
           <h3 className="mt-2 text-lg font-black leading-snug text-white">{n.titulo}</h3>
+          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {fechaEventoCorta(n.fecha_evento)}</p>}
+          <EtiquetaTendencia publicacion={n} totalInteresados={conteos[n.id_noticia]} className="mt-2" />
           {secundario && (
             <p className="mt-1 line-clamp-2 text-sm text-slate-300">{secundario}</p>
           )}
@@ -248,6 +510,8 @@ export function ModalActualizaciones() {
           <h3 className="mt-1.5 line-clamp-2 text-sm font-bold leading-snug text-white">
             {n.titulo}
           </h3>
+          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {fechaEventoCorta(n.fecha_evento)}</p>}
+          <EtiquetaTendencia publicacion={n} totalInteresados={conteos[n.id_noticia]} className="mt-2" />
           {secundario && (
             <p className="mt-0.5 line-clamp-1 text-xs text-slate-400">{secundario}</p>
           )}
@@ -287,12 +551,12 @@ export function ModalActualizaciones() {
 
         {/* ══ Vista móvil: una sola columna (estilo Google News) ══ */}
         <div className="flex h-full min-h-0 w-full flex-col md:hidden">
-          <header className="shrink-0 border-b border-slate-800 bg-[#0f172a] px-4 py-4 pr-14">
+          <header className="relative z-20 shrink-0 border-b border-slate-800 bg-[#0f172a] px-4 py-4 pr-14">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-extrabold tracking-tight text-white">Noticias</h2>
+              <h2 className="text-lg font-extrabold tracking-tight text-white">Noticias y eventos</h2>
               {!cargando && filtradas.length > 0 && (
                 <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-                  {filtradas.length} {filtradas.length === 1 ? 'nota' : 'notas'}
+                  {filtradas.length} {filtradas.length === 1 ? 'publicación' : 'publicaciones'}
                 </span>
               )}
             </div>
@@ -303,23 +567,7 @@ export function ModalActualizaciones() {
               </p>
             )}
 
-            <div className="mt-3">
-              <label htmlFor="filtro-categoria-mobile" className="sr-only">
-                Filtrar por categoría
-              </label>
-              <select
-                id="filtro-categoria-mobile"
-                value={filtroCategoria}
-                onChange={(e) => cambiarFiltro(e.target.value)}
-                className="w-full cursor-pointer rounded-lg border border-slate-700 bg-[#131b2e] px-3 py-2 text-xs font-black uppercase tracking-wider text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-              >
-                {OPCIONES_FILTRO.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectorCategorias id="filtro-categoria-mobile" valor={filtroActualizaciones} alCambiar={cambiarFiltro} />
           </header>
 
           <div className="scrollbar-dark min-h-0 flex-1 space-y-6 overflow-y-auto bg-[#0b0f19] p-4">
@@ -332,7 +580,7 @@ export function ModalActualizaciones() {
                 {destacadasMobile.length > 0 && (
                   <section className="space-y-4">
                     <h3 className="px-1 text-[10px] font-black uppercase tracking-widest text-amber-400">
-                      Noticias destacadas
+                      Publicaciones destacadas
                     </h3>
                     {destacadasMobile.map(renderDestacadaMobile)}
                   </section>
@@ -341,7 +589,7 @@ export function ModalActualizaciones() {
                 {restoMobile.length > 0 && (
                   <section className="space-y-3">
                     <h3 className="px-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                      Otras noticias
+                      Otras publicaciones
                     </h3>
                     {restoMobile.map(renderCompactaMobile)}
                   </section>
@@ -354,12 +602,12 @@ export function ModalActualizaciones() {
         {/* ══ Vista escritorio: Master-Detail de dos columnas ══ */}
         {/* Panel izquierdo: historial de noticias */}
         <aside className="hidden w-full shrink-0 flex-col border-b border-slate-800 bg-[#0f172a] md:flex md:w-96 md:border-b-0 md:border-r">
-          <div className="border-b border-slate-800 px-5 py-4">
+          <div className="relative z-20 border-b border-slate-800 px-5 py-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-extrabold tracking-tight text-white">Noticias</h2>
+              <h2 className="text-lg font-extrabold tracking-tight text-white">Noticias y eventos</h2>
               {!cargando && filtradas.length > 0 && (
                 <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-                  {filtradas.length} {filtradas.length === 1 ? 'nota' : 'notas'}
+                  {filtradas.length} {filtradas.length === 1 ? 'publicación' : 'publicaciones'}
                 </span>
               )}
             </div>
@@ -370,23 +618,7 @@ export function ModalActualizaciones() {
               </p>
             )}
 
-            <div className="mt-3">
-              <label htmlFor="filtro-categoria" className="sr-only">
-                Filtrar por categoría
-              </label>
-              <select
-                id="filtro-categoria"
-                value={filtroCategoria}
-                onChange={(e) => cambiarFiltro(e.target.value)}
-                className="w-full cursor-pointer rounded-lg border border-slate-700 bg-[#131b2e] px-3 py-2 text-xs font-black uppercase tracking-wider text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-              >
-                {OPCIONES_FILTRO.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectorCategorias id="filtro-categoria" valor={filtroActualizaciones} alCambiar={cambiarFiltro} />
           </div>
 
           <div className="scrollbar-dark max-h-[45vh] flex-1 space-y-3 overflow-y-auto p-4 md:max-h-none md:min-h-0">
@@ -406,7 +638,7 @@ export function ModalActualizaciones() {
                 )}
                 {destacadasLista.length > 0 && restoLista.length > 0 && (
                   <p className="px-1 pt-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    Todas las noticias
+                    Todas las publicaciones
                   </p>
                 )}
                 {restoLista.map(renderTarjeta)}
@@ -419,7 +651,7 @@ export function ModalActualizaciones() {
         <section className="scrollbar-dark hidden min-w-0 flex-1 overflow-y-auto bg-[#131b2e] p-5 sm:p-7 md:block">
           {!noticia ? (
             <div className="flex h-full items-center justify-center text-sm text-slate-400">
-              Selecciona una noticia para ver el detalle.
+              Selecciona una publicación para ver el detalle.
             </div>
           ) : (
             <>
@@ -476,6 +708,14 @@ export function ModalActualizaciones() {
                 )}
               </div>
 
+              {noticia.categoria === 'evento' && noticia.fecha_evento && (
+                <p className="mt-4 text-sm font-semibold text-amber-300">
+                  📅 {fechaEventoCorta(noticia.fecha_evento)}
+                  {noticia.hora_evento && ` · 🕒 ${String(noticia.hora_evento).slice(0, 5)}`}
+                  {noticia.lugar_evento && ` · 📍 ${noticia.lugar_evento}`}
+                </p>
+              )}
+              {renderInteres(noticia)}
               {/* Cuerpo */}
               <p className="mt-5 text-sm leading-relaxed whitespace-pre-line break-words text-slate-300">
                 {noticia.contenido}
@@ -547,6 +787,14 @@ export function ModalActualizaciones() {
               {noticiaMobile.subtitulo}
             </p>
           )}
+          {noticiaMobile.categoria === 'evento' && noticiaMobile.fecha_evento && (
+            <p className="mt-3 text-sm font-semibold text-amber-300">
+              📅 {fechaEventoCorta(noticiaMobile.fecha_evento)}
+              {noticiaMobile.hora_evento && ` · 🕒 ${String(noticiaMobile.hora_evento).slice(0, 5)}`}
+              {noticiaMobile.lugar_evento && ` · 📍 ${noticiaMobile.lugar_evento}`}
+            </p>
+          )}
+          {renderInteres(noticiaMobile)}
           <p className="mt-4 text-sm leading-relaxed whitespace-pre-line break-words text-slate-300">
             {noticiaMobile.contenido}
           </p>

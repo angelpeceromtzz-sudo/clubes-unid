@@ -5,12 +5,22 @@ dotenv.config();
 
 const { Pool } = pkg;
 
-const isProduction = process.env.DATABASE_URL ? true : false;
+// Falla con un error claro en vez de caer a credenciales por defecto.
+function requerido(nombre) {
+  const valor = process.env[nombre];
+  if (!valor) {
+    console.error(`FATAL: falta la variable de entorno ${nombre}. Revisa backend/.env (ver backend/.env.example).`);
+    process.exit(1);
+  }
+  return valor;
+}
+
+const isProduction = Boolean(process.env.DATABASE_URL);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  
-  ...(isProduction 
+
+  ...(isProduction
     ? {
         ssl: {
           rejectUnauthorized: false
@@ -21,7 +31,7 @@ const pool = new Pool({
         port: parseInt(process.env.DB_PORT || '5432'),
         database: process.env.DB_NAME || 'clubs_bd',
         user: process.env.DB_USER || 'postgres',
-        password: process.env.DB_PASSWORD || 'postgres',
+        password: requerido('DB_PASSWORD'),
       }
   )
 });

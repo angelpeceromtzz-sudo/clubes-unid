@@ -11,7 +11,7 @@ import { fechaHoyCampus } from '../../utils/fechas';
 
 const LIMITE_PALABRAS = 50;
 
-export function TarjetaNoticia({ noticia, interesado = false, totalInteresados = 0, interesProcesando = false, onToggleInteres }) {
+export function TarjetaNoticia({ noticia, interesado = false, interesReciente = false, totalInteresados = 0, interesProcesando = false, onToggleInteres }) {
   const { tema, modoOscuro } = useTheme();
   const [expandida, setExpandida] = useState(false);
 
@@ -21,6 +21,7 @@ export function TarjetaNoticia({ noticia, interesado = false, totalInteresados =
     : noticia.contenido;
   const esEvento = noticia.categoria === 'evento';
   const finalizado = esEvento && noticia.fecha_evento && String(noticia.fecha_evento).slice(0, 10) < fechaHoyCampus();
+  const cantidadInteresados = Number(totalInteresados) || 0;
 
   return (
     <article
@@ -95,18 +96,38 @@ export function TarjetaNoticia({ noticia, interesado = false, totalInteresados =
 
         {esEvento && onToggleInteres && (
           <div className={`mt-5 flex flex-wrap items-center gap-3 border-t pt-4 ${modoOscuro ? 'border-slate-700/50' : 'border-slate-100'}`}>
-            <button type="button" onClick={onToggleInteres} disabled={interesProcesando || (finalizado && !interesado)}
-              aria-pressed={interesado}
-              aria-label={interesado ? `Quitar interés en ${noticia.titulo}` : `Marcar interés en ${noticia.titulo}`}
-              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-black transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${interesado
-                ? 'border-amber-400 bg-amber-400/15 text-amber-500 hover:bg-amber-400/25'
-                : modoOscuro ? 'border-slate-600 text-slate-200 hover:border-amber-400 hover:text-amber-400'
-                  : 'border-slate-300 text-slate-700 hover:border-amber-400 hover:text-amber-600'}`}
-            >
-              <Icono nombre={interesado ? 'check' : 'star'} className="h-4 w-4" strokeWidth={2} />
-              {interesado ? 'Interesado' : finalizado ? 'Evento finalizado' : 'Me interesa'}
-            </button>
-            <span className={`text-xs ${tema.subtitle}`}>{totalInteresados} {totalInteresados === 1 ? 'persona interesada' : 'personas interesadas'}</span>
+            {interesado ? (
+              <button type="button" disabled
+                aria-label={`Interés confirmado en ${noticia.titulo}`}
+                title="Tu interés quedó guardado en tu cuenta"
+                className={`boton-interes-confirmado${modoOscuro ? '' : ' boton-interes-confirmado--claro'}${interesReciente ? ' boton-interes-confirmado--reciente' : ''}`}
+              >
+                <span className="interes-confirmado-marca">
+                  <Icono nombre="check" className="h-4 w-4" strokeWidth={3} />
+                </span>
+                Interés confirmado
+              </button>
+            ) : (
+              <button type="button" onClick={onToggleInteres} disabled={interesProcesando || finalizado}
+                aria-label={`Mostrar interés en ${noticia.titulo}`}
+                className={finalizado
+                  ? `inline-flex cursor-not-allowed items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold ${modoOscuro ? 'border-slate-700 text-slate-400' : 'border-slate-300 text-slate-500'}`
+                  : 'boton-interes-cta'}
+              >
+                {finalizado ? <Icono nombre="clock" className="h-4 w-4" strokeWidth={2.3} /> : (
+                  <span className="interes-cta-estrella" aria-hidden="true">
+                    <Icono nombre="star" className="h-4 w-4" strokeWidth={2.3} />
+                  </span>
+                )}
+                <span>{finalizado ? 'Evento finalizado' : 'Mostrar interés'}</span>
+              </button>
+            )}
+            {cantidadInteresados > 10 && (
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${modoOscuro ? 'bg-amber-400/10 text-amber-300' : 'bg-amber-50 text-amber-700'}`}>
+                <Icono nombre="zap" className="h-3.5 w-3.5" strokeWidth={2} />
+                En tendencia · {cantidadInteresados} interesados
+              </span>
+            )}
           </div>
         )}
 

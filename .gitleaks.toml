@@ -1,0 +1,29 @@
+title = "gitleaks config para clubes-unid"
+
+# Usa las reglas por defecto de gitleaks y solo excluye lo que no es secreto.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Placeholders de .env.example y lockfiles (no son credenciales reales)"
+paths = [
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)package-lock\.json$''',
+]
+regexes = [
+  '''tu_password_local''',
+  '''tu_jwt_secret''',
+  '''tu_admin_secret''',
+  '''api_key_falsa''',
+  '''api_secret_falso''',
+  '''cloud_name_falso''',
+  '''REDACTED''',
+]
+
+[[allowlists]]
+description = "Secretos historicos YA ROTADOS y sin valor. No se purgo el historial porque hay colaboradores activos; se permiten aqui para que el escaneo no marque falsos positivos conocidos."
+regexes = [
+  '''angel2007''',
+  '''clubes-unid-jwt-secret-2026''',
+  '''unid-admin-2026''',
+]

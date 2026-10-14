@@ -45,6 +45,7 @@ export function ProveedorNoticias({ children: hijos }) {
   const [modal, setModal] = useState(null);
   const [destacada, setDestacada] = useState(null);
   const [actualizacionesAbiertas, setActualizacionesAbiertas] = useState(false);
+  const [filtroActualizaciones, setFiltroActualizaciones] = useState('todos');
   // Snapshot de destacadas no leídas al abrir el historial: permite reordenar de
   // forma diferida (estable mientras el modal está abierto, se recalcula al reabrir).
   const [destacadasFijadas, setDestacadasFijadas] = useState(() => new Set());
@@ -117,7 +118,8 @@ export function ProveedorNoticias({ children: hijos }) {
   }, [modal, destacada, marcarLeida]);
 
   // Al abrir el historial, fija las destacadas no leídas para mostrarlas arriba.
-  const abrirActualizaciones = useCallback(() => {
+  const abrirActualizaciones = useCallback((filtro) => {
+    setFiltroActualizaciones(filtro === 'evento' ? 'evento' : 'todos');
     setDestacadasFijadas(
       new Set(
         noticias.filter((n) => n.destacada && !leidas.has(n.id_noticia)).map((n) => n.id_noticia)
@@ -169,6 +171,8 @@ export function ProveedorNoticias({ children: hijos }) {
         abrirActualizaciones,
         cerrarActualizaciones,
         actualizacionesAbiertas,
+        filtroActualizaciones,
+        setFiltroActualizaciones,
         destacadasFijadas,
         marcarLeida,
         marcarTodasLeidas,

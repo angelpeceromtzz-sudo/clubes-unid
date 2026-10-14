@@ -98,6 +98,7 @@ export const api = {
   actualizarConfiguracionConvocatoria: convocatoriaService.actualizarConfiguracionConvocatoria,
   cerrarConvocatoria: convocatoriaService.cerrarConvocatoria,
   getHistorialOfertas: convocatoriaService.getHistorialOfertas,
+  descargarAsistencia: convocatoriaService.descargarAsistencia,
 
   asignarBloque: ofertaService.asignarBloque,
   seleccionarOfertas: ofertaService.seleccionarOfertas,
@@ -119,7 +120,6 @@ export const api = {
   getEventos: noticiaService.getEventos,
   getMisInteresesEventos: noticiaService.getMisInteresesEventos,
   marcarInteresEvento: noticiaService.marcarInteresEvento,
-  quitarInteresEvento: noticiaService.quitarInteresEvento,
   getNoticiasAdmin: noticiaService.getNoticiasAdmin,
   createNoticia: noticiaService.createNoticia,
   updateNoticia: noticiaService.updateNoticia,

@@ -1,4 +1,5 @@
-/* Sección de gestión de noticias: buscador, alta con modal y listado con publicador/eliminar. */
+/* Sección de gestión de noticias y eventos. */
+import { useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Icono } from '../../ui/Icono';
 import { TablaNoticiasDesktop } from './TablaNoticiasDesktop';
@@ -24,15 +25,29 @@ export function SeccionNoticias({
   guardar,
   handleFormChange,
   subirImagen,
-  tipoSeccion = 'noticia',
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, labelCls, tema } = useTheme();
+  const [tipoSeccion, setTipoSeccion] = useState('noticia');
   const esEvento = tipoSeccion === 'evento';
   const publicaciones = noticias.filter((n) => (n.categoria === 'evento') === esEvento);
   const publicacionesFiltradas = noticiasFiltradas.filter((n) => (n.categoria === 'evento') === esEvento);
 
   return (
     <div>
+      <div className={`mb-5 inline-flex rounded-xl border p-1 ${modoOscuro ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-slate-50'}`} role="tablist" aria-label="Tipo de publicación">
+        {[{ value: 'noticia', label: 'Noticias' }, { value: 'evento', label: 'Eventos' }].map((opcion) => (
+          <button
+            key={opcion.value}
+            type="button"
+            role="tab"
+            aria-selected={tipoSeccion === opcion.value}
+            onClick={() => setTipoSeccion(opcion.value)}
+            className={`rounded-lg px-4 py-2 text-xs font-black transition-colors cursor-pointer ${tipoSeccion === opcion.value
+              ? 'bg-amber-400 text-slate-950 shadow-sm'
+              : modoOscuro ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-950'}`}
+          >{opcion.label}</button>
+        ))}
+      </div>
       <p className={`text-sm mb-3 ${tema.subtitle}`}>
         {publicaciones.length} {publicaciones.length === 1 ? (esEvento ? 'evento registrado' : 'noticia registrada') : (esEvento ? 'eventos registrados' : 'noticias registradas')}
       </p>

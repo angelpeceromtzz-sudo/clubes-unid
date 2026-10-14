@@ -6,7 +6,6 @@ export const ELEMENTOS_NAV_ADMIN = [
   { key: 'anuncios', label: 'Anuncios Globales', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
   { key: 'encuestas', label: 'Encuestas', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a2 2 0 01.707.293l5.414 5.414a2 2 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'noticias', label: 'Noticias', icon: 'M12 7.5H13.5M12 10.5H13.5M6 13.5H13.5M6 16.5H13.5M16.5 7.5H19.875C20.4963 7.5 21 8.00368 21 8.625V18C21 19.2426 19.9926 20.25 18.75 20.25M16.5 7.5V18C16.5 19.2426 17.5074 20.25 18.75 20.25M16.5 7.5V4.875C16.5 4.25368 15.9963 3.75 15.375 3.75H4.125C3.50368 3.75 3 4.25368 3 4.875V18C3 19.2426 4.00736 20.25 5.25 20.25H18.75M6 7.5H9V10.5H6V7.5Z' },
-  { key: 'eventos', label: 'Eventos', icon: 'M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12H3V7a2 2 0 012-2z' },
   { key: 'historial', label: 'Actividad de Clubes', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
   { key: 'actividad', label: 'Historial de Acciones', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
 ];
@@ -25,7 +24,6 @@ export const ELEMENTOS_NAV_RECTORIA = [
   // paneles se lean igual.
   { key: 'encuestas', label: 'Encuestas', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a2 2 0 01.707.293l5.414 5.414a2 2 0 01.293.707V19a2 2 0 01-2 2z' },
   { key: 'noticias', label: 'Noticias', icon: 'M12 7.5H13.5M12 10.5H13.5M6 13.5H13.5M6 16.5H13.5M16.5 7.5H19.875C20.4963 7.5 21 8.00368 21 8.625V18C21 19.2426 19.9926 20.25 18.75 20.25M16.5 7.5V18C16.5 19.2426 17.5074 20.25 18.75 20.25M16.5 7.5V4.875C16.5 4.25368 15.9963 3.75 15.375 3.75H4.125C3.50368 3.75 3 4.25368 3 4.875V18C3 19.2426 4.00736 20.25 5.25 20.25H18.75M6 7.5H9V10.5H6V7.5Z' },
-  { key: 'eventos', label: 'Eventos', icon: 'M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12H3V7a2 2 0 012-2z' },
   { key: 'actividad', label: 'Historial de Acciones', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
 ];
 

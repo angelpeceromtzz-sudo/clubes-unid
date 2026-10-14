@@ -1,6 +1,4 @@
-/* Botón "Noticias" del navbar: ícono de libro a la izquierda y, a la derecha, un punto
-   ámbar que solo aparece cuando hay publicaciones sin ver. Al pulsarlo abre el modal de
-   actualizaciones y marca todo como visto. */
+/* Acceso al historial de noticias y eventos desde la barra de navegación. */
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNoticias } from '../../contexts/NoticiasContext';
 import { Icono } from '../ui/Icono';
@@ -13,11 +11,11 @@ export function BotonNoticias({ className = '' }) {
   return (
     <button
       onClick={abrirActualizaciones}
-      aria-label={`Noticias${hayNuevas ? `, ${noLeidas} sin leer` : ''}`}
+      aria-label={`Noticias y eventos${hayNuevas ? `, ${noLeidas} sin leer` : ''}`}
       className={`inline-flex items-center gap-1.5 font-semibold text-xs lg:text-sm tracking-wide px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${
         hayNuevas ? 'text-amber-400 hover:text-amber-300' : `${tema.btnInactive} hover:text-amber-400`
       } ${className}`}
-      title="Noticias"
+      title="Noticias y eventos"
     >
       <Icono
         nombre="book"

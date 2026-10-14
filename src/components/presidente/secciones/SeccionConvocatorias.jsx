@@ -1,6 +1,6 @@
 /* Sección de convocatorias del presidente: gestiona bloques y horarios del club. */
 import { useState, useEffect } from 'react';
-import { api, API_BASE } from '../../../services/api';
+import { api } from '../../../services/api';
 import { BloqueCard } from '../bloques/BloqueCard';
 import { Spinner } from '../../ui/Spinner';
 import { EmptyState } from '../../ui/EmptyState';
@@ -43,20 +43,23 @@ export function SeccionConvocatorias({ club }) {
     );
   }
 
-  function manejarImprimir(id) {
-    const token = (() => {
-      try {
-        const raw = localStorage.getItem('unid_session');
-        if (raw) {
-          const session = JSON.parse(raw);
-          return session.token || null;
-        }
-        return null;
-      } catch {
-        return null;
+  async function manejarImprimir(id) {
+    // Se abre la pestaña dentro del gesto del usuario para que el navegador no
+    // la bloquee; el HTML se carga después con el JWT en la cabecera.
+    const ventana = window.open('', '_blank');
+    try {
+      const blob = await api.descargarAsistencia(id);
+      const url = URL.createObjectURL(blob);
+      if (ventana) {
+        ventana.location = url;
+      } else {
+        window.open(url, '_blank');
       }
-    })();
-    window.open(`${API_BASE}/convocatorias/${id}/asistencia?token=${token}`, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      if (ventana) ventana.close();
+      setError(err.message);
+    }
   }
 
   if (cargando) {
