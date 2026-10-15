@@ -20,4 +20,24 @@ export async function migrate() {
   } catch (err) {
     console.error('[migrate] Error al ejecutar schema.sql:', err.message);
   }
+
+  // Migraciones incrementales: backend/migrations/*.sql en orden alfabético.
+  // Deben ser idempotentes (IF NOT EXISTS, ON CONFLICT, CREATE OR REPLACE).
+  const migrationsDir = path.join(__dirname, 'migrations');
+  if (fs.existsSync(migrationsDir)) {
+    const archivos = fs.readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort();
+
+    for (const archivo of archivos) {
+      const ruta = path.join(migrationsDir, archivo);
+      try {
+        const sqlMigracion = fs.readFileSync(ruta, 'utf8');
+        await pool.query(sqlMigracion);
+        console.log(`[migrate] ${archivo} ejecutado correctamente.`);
+      } catch (err) {
+        console.error(`[migrate] Error al ejecutar ${archivo}:`, err.message);
+      }
+    }
+  }
 }

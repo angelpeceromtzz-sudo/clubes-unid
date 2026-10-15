@@ -1,5 +1,6 @@
 import pkg from 'pg';
 import dotenv from 'dotenv';
+import { TIMEZONE_IANA } from './config/timezone.js';
 
 dotenv.config();
 
@@ -19,6 +20,9 @@ const isProduction = Boolean(process.env.DATABASE_URL);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+
+  // Zona horaria institucional (Campeche, México) aplicada al iniciar cada conexión
+  options: `-c TimeZone=${TIMEZONE_IANA}`,
 
   ...(isProduction
     ? {

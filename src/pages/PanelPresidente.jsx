@@ -11,6 +11,7 @@ import { EstadoVacio } from '../components/presidente/EmptyState';
 import { VistaConvocatorias } from '../components/presidente/vistas/VistaConvocatorias';
 import { VistaMiembros } from '../components/presidente/vistas/VistaMiembros';
 import { VistaHistorial } from '../components/presidente/vistas/VistaHistorial';
+import { VistaAsistencia } from '../components/asistencia/VistaAsistencia';
 import { HorariosClub } from '../components/clubes/sections/HorariosClub';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -43,11 +44,19 @@ export function PanelPresidente() {
     return <EstadoVacio />;
   }
 
+  // Asistencia V1: disponible únicamente para el presidente (no vicepresidente).
+  const elementosNav = d.esPresidente
+    ? ELEMENTOS_NAV_PRESIDENTE
+    : ELEMENTOS_NAV_PRESIDENTE.filter((item) => item.key !== 'asistencia');
+
+  const vistaVisible =
+    d.vistaActiva === 'asistencia' && !d.esPresidente ? 'principal' : d.vistaActiva;
+
   return (
     <RutaProtegida>
       <NavegacionPanel
-        elementosNav={ELEMENTOS_NAV_PRESIDENTE}
-        vistaActiva={d.vistaActiva}
+        elementosNav={elementosNav}
+        vistaActiva={vistaVisible}
         onVistaChange={d.setVistaActiva}
       >
         <div className="mb-6 md:mb-8">
@@ -57,7 +66,7 @@ export function PanelPresidente() {
             />
           </div>
 
-          {d.vistaActiva === 'principal' && (
+          {vistaVisible === 'principal' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <InformacionClub club={d.club} />
@@ -69,19 +78,23 @@ export function PanelPresidente() {
             </div>
           )}
 
-          {d.vistaActiva === 'convocatorias' && (
+          {vistaVisible === 'convocatorias' && (
             <VistaConvocatorias club={d.club} />
           )}
 
-          {d.vistaActiva === 'miembros' && (
+          {vistaVisible === 'miembros' && (
             <VistaMiembros club={d.club} esPresidente={d.esPresidente} onActualizarClub={d.actualizarClub} />
           )}
 
-          {d.vistaActiva === 'historial' && (
+          {vistaVisible === 'historial' && (
             <VistaHistorial club={d.club} />
           )}
 
-          {d.vistaActiva === 'horarios' && (
+          {vistaVisible === 'asistencia' && (
+            <VistaAsistencia club={d.club} />
+          )}
+
+          {vistaVisible === 'horarios' && (
             <HorariosClub
               club={d.club}
               modoOscuro={d.isDark}

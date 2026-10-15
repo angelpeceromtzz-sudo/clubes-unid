@@ -30,6 +30,7 @@ import catalogosRoutes from './routes/catalogos.js';
 import encuestasRoutes from './routes/encuestas.js';
 import diapositivasHeroRoutes from './routes/diapositivasHero.js';
 import noticiasRoutes from './routes/noticias.js';
+import asistenciaRoutes from './routes/asistencia.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -76,6 +77,7 @@ app.use('/api/diapositivas-hero', diapositivasHeroRoutes);
 app.use('/api/catalogos', catalogosRoutes);
 app.use('/api/encuestas', encuestasRoutes);
 app.use('/api/noticias', noticiasRoutes);
+app.use('/api/asistencia', asistenciaRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

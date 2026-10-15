@@ -15,6 +15,7 @@ import { noticiaService } from './noticia.service';
 import { uploadService } from './upload.service';
 import { dashboardService } from './dashboard.service';
 import { encuestaService, catalogoService } from './encuesta.service';
+import { asistenciaService } from './asistencia.service';
 
 export { API_BASE, getToken, setSession, clearSession, getSession, request } from './api-core';
 
@@ -34,6 +35,7 @@ export { noticiaService } from './noticia.service';
 export { uploadService } from './upload.service';
 export { dashboardService } from './dashboard.service';
 export { encuestaService, catalogoService } from './encuesta.service';
+export { asistenciaService } from './asistencia.service';
 
 export const api = {
   get: (endpoint) => request(endpoint),
@@ -144,4 +146,15 @@ export const api = {
   updateOpcionesPregunta: encuestaService.actualizarOpciones,
 
   getLicenciaturas: catalogoService.getLicenciaturas,
+
+  getAsistenciaPeriodoActivo: asistenciaService.getPeriodoActivo,
+  getAsistenciaSesionesHoy: asistenciaService.getSesionesHoy,
+  getAsistenciaSesion: asistenciaService.getSesion,
+  iniciarAsistencia: asistenciaService.iniciar,
+  guardarRegistrosAsistencia: asistenciaService.guardarRegistros,
+  finalizarAsistencia: asistenciaService.finalizar,
+  cancelarSesionAsistencia: asistenciaService.cancelarSesion,
+  getAsistenciaHistorial: asistenciaService.getHistorial,
+  getAsistenciaEstadisticasClub: asistenciaService.getEstadisticasClub,
+  getAsistenciaEstadisticasIntegrante: asistenciaService.getEstadisticasIntegrante,
 };
