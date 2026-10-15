@@ -9,7 +9,7 @@ import { Badge } from '../ui/Badge';
 import { Alerta } from '../ui/Alerta';
 import { Spinner } from '../ui/Spinner';
 import { TarjetaStat } from '../ui/TarjetaStat';
-import { colorPorcentaje } from './constantesAsistencia';
+import { colorPorcentaje, categoriaDePorcentaje, CATEGORIAS_ASISTENCIA } from './constantesAsistencia';
 
 export function EstadisticasAsistencia({ idClub, idPeriodo } = {}) {
   const { modoOscuro, tema } = useTheme();
@@ -43,6 +43,8 @@ export function EstadisticasAsistencia({ idClub, idPeriodo } = {}) {
 
   const { periodo, sesiones, totales, indicadores, integrantes } = stats;
   const hayDatos = integrantes.length > 0;
+  const umbralAlta = indicadores.umbral_alta_asistencia ?? 90;
+  const umbralBaja = indicadores.umbral_baja_asistencia ?? 70;
 
   return (
     <div>
@@ -124,6 +126,8 @@ export function EstadisticasAsistencia({ idClub, idPeriodo } = {}) {
         <p className={`text-[11px] mt-3 ${tema.subtitle}`}>
           Las justificadas no perjudican el porcentaje: Presentes ÷ (Presentes + Ausentes) × 100.
           Sesiones canceladas, no registradas y no completadas no generan ausencias.
+          <br />
+          Categorías (§29): Alta ≥ {umbralAlta} % · Moderada {umbralBaja}–{(umbralAlta - 0.1).toFixed(1)} % · Baja &lt; {umbralBaja} %.
         </p>
       </div>
 
@@ -142,33 +146,36 @@ export function EstadisticasAsistencia({ idClub, idPeriodo } = {}) {
       )}
 
       <div className="space-y-3">
-        {integrantes.map((integ) => (
-          <button
-            key={integ.id_usuario}
-            onClick={() => setIntegranteSel(integ)}
-            className={`w-full text-left rounded-2xl border p-4 cursor-pointer transition-all active:scale-[0.99] ${
-              modoOscuro ? 'bg-[#0e162c] border-slate-700/50 hover:border-slate-600' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className={`text-sm font-bold ${tema.title}`}>{integ.nombre_completo}</p>
-                <p className={`text-xs mt-0.5 ${tema.subtitle}`}>
-                  {integ.presentes} P · {integ.ausentes} A · {integ.justificadas} J
-                  {integ.ausencias_consecutivas > 0 ? ` · ${integ.ausencias_consecutivas} ausencia(s) seguida(s)` : ''}
-                </p>
+        {integrantes.map((integ) => {
+          const cat = integ.categoria || categoriaDePorcentaje(integ.porcentaje);
+          return (
+            <button
+              key={integ.id_usuario}
+              onClick={() => setIntegranteSel(integ)}
+              className={`w-full text-left rounded-2xl border p-4 cursor-pointer transition-all active:scale-[0.99] ${
+                modoOscuro ? 'bg-[#0e162c] border-slate-700/50 hover:border-slate-600' : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className={`text-sm font-bold ${tema.title}`}>{integ.nombre_completo}</p>
+                  <p className={`text-xs mt-0.5 ${tema.subtitle}`}>
+                    {integ.presentes} P · {integ.ausentes} A · {integ.justificadas} J
+                    {integ.ausencias_consecutivas > 0 ? ` · ${integ.ausencias_consecutivas} ausencia(s) seguida(s)` : ''}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={`text-xl font-black ${colorPorcentaje(integ.porcentaje)}`}>
+                    {integ.porcentaje !== null ? `${integ.porcentaje}%` : '—'}
+                  </p>
+                  {(cat === 'alta' || cat === 'baja') && (
+                    <Badge texto={CATEGORIAS_ASISTENCIA[cat].label} color={CATEGORIAS_ASISTENCIA[cat].color} />
+                  )}
+                </div>
               </div>
-              <div className="text-right shrink-0">
-                <p className={`text-xl font-black ${colorPorcentaje(integ.porcentaje)}`}>
-                  {integ.porcentaje !== null ? `${integ.porcentaje}%` : '—'}
-                </p>
-                {integ.porcentaje !== null && integ.porcentaje < indicadores.umbral_baja_asistencia && (
-                  <Badge texto="Baja asistencia" color="red" />
-                )}
-              </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
 
       {/* Modal detalle individual (§26.3) */}
@@ -176,7 +183,6 @@ export function EstadisticasAsistencia({ idClub, idPeriodo } = {}) {
         <ModalDetalleIntegrante
           integrante={integranteSel}
           periodo={periodo}
-          umbral={indicadores.umbral_baja_asistencia}
           idClub={idClub}
           idPeriodo={idPeriodo}
           onCerrar={() => setIntegranteSel(null)}
@@ -187,7 +193,7 @@ export function EstadisticasAsistencia({ idClub, idPeriodo } = {}) {
 }
 
 /* Detalle individual según el ejemplo del PBI §26.3. */
-function ModalDetalleIntegrante({ integrante, periodo, umbral, idClub, idPeriodo, onCerrar }) {
+function ModalDetalleIntegrante({ integrante, periodo, idClub, idPeriodo, onCerrar }) {
   const { modoOscuro, tema } = useTheme();
   const [detalle, setDetalle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -235,9 +241,13 @@ function ModalDetalleIntegrante({ integrante, periodo, umbral, idClub, idPeriodo
                 {porcentaje !== null ? `${porcentaje}%` : '—'}
               </p>
               <p className={`text-xs mt-1 ${tema.subtitle}`}>Asistencia del periodo</p>
-              {porcentaje !== null && porcentaje < umbral && (
+              {categoriaDePorcentaje(porcentaje) && (
                 <div className="mt-2 flex justify-center">
-                  <Badge texto="Baja asistencia" color="red" size="md" />
+                  <Badge
+                    texto={CATEGORIAS_ASISTENCIA[categoriaDePorcentaje(porcentaje)].label}
+                    color={CATEGORIAS_ASISTENCIA[categoriaDePorcentaje(porcentaje)].color}
+                    size="md"
+                  />
                 </div>
               )}
             </div>

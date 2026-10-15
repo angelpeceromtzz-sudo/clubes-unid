@@ -10,9 +10,18 @@ import {
 
 const router = Router();
 
-// Umbral referencial de "baja asistencia" (PBI-05 §29 deja los umbrales
-// institucionales por definirse; 70% es un valor de referencia para indicadores).
+// Umbrales referenciales de participación (PBI-05 §29 — categorías
+// alta/moderada/baja; los valores definitivos son de criterio institucional,
+// 90/70 es la referencia acordada para V1 y coincide con colorPorcentaje del frontend).
 const UMBRAL_BAJA_ASISTENCIA = 70;
+const UMBRAL_ALTA_ASISTENCIA = 90;
+
+function categoriaDePorcentaje(porcentaje) {
+  if (porcentaje === null) return null;
+  if (porcentaje >= UMBRAL_ALTA_ASISTENCIA) return 'alta';
+  if (porcentaje >= UMBRAL_BAJA_ASISTENCIA) return 'moderada';
+  return 'baja';
+}
 
 const ESTADOS_ASISTENCIA = ['presente', 'ausente', 'justificado'];
 
@@ -221,6 +230,7 @@ async function calcularEstadisticasClub(idClub, idPeriodo) {
       ausentes: s.ausentes,
       justificadas: s.justificadas,
       porcentaje,
+      categoria: categoriaDePorcentaje(porcentaje),
       ausencias_consecutivas: consecutivas,
     });
   }
@@ -243,6 +253,7 @@ async function calcularEstadisticasClub(idClub, idPeriodo) {
     totales,
     indicadores: {
       umbral_baja_asistencia: UMBRAL_BAJA_ASISTENCIA,
+      umbral_alta_asistencia: UMBRAL_ALTA_ASISTENCIA,
       integrantes_con_baja_asistencia: bajaAsistencia,
       integrantes_con_3_o_mas_ausencias_consecutivas: ausenciasConsecutivas3Mas,
       sesiones_no_registradas: porEstado.no_registrada || 0,

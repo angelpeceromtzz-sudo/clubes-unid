@@ -27,11 +27,30 @@ export const ESTADOS_ASISTENCIA = [
   { valor: 'justificado', label: 'Justificado', corto: 'J', colorSeleccion: 'bg-amber-400 text-[#0e162c] border-amber-300', colorBase: 'border-amber-500/40 text-amber-400 hover:bg-amber-500/15' },
 ];
 
+// Umbrales referenciales de participación (PBI-05 §29). Valores de V1:
+// Alta ≥ 90 %, Moderada 70–89.9 %, Baja < 70 % (coinciden con el backend).
+export const UMBRAL_ALTA_ASISTENCIA = 90;
+export const UMBRAL_BAJA_ASISTENCIA = 70;
+
+export function categoriaDePorcentaje(porcentaje) {
+  if (porcentaje === null || porcentaje === undefined) return null;
+  if (porcentaje >= UMBRAL_ALTA_ASISTENCIA) return 'alta';
+  if (porcentaje >= UMBRAL_BAJA_ASISTENCIA) return 'moderada';
+  return 'baja';
+}
+
+// Etiqueta y color de badge por categoría de participación (§29).
+export const CATEGORIAS_ASISTENCIA = {
+  alta: { label: 'Alta participación', color: 'emerald' },
+  moderada: { label: 'Participación moderada', color: 'amber' },
+  baja: { label: 'Baja asistencia', color: 'red' },
+};
+
 // Colores de porcentaje de asistencia (§29 — umbrales referenciales).
 export function colorPorcentaje(porcentaje) {
   if (porcentaje === null || porcentaje === undefined) return 'text-slate-400';
-  if (porcentaje >= 90) return 'text-emerald-400';
-  if (porcentaje >= 70) return 'text-amber-400';
+  if (porcentaje >= UMBRAL_ALTA_ASISTENCIA) return 'text-emerald-400';
+  if (porcentaje >= UMBRAL_BAJA_ASISTENCIA) return 'text-amber-400';
   return 'text-red-400';
 }
 
