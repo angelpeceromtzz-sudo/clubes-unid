@@ -26,7 +26,7 @@ export async function migrate() {
   const migrationsDir = path.join(__dirname, 'migrations');
   if (fs.existsSync(migrationsDir)) {
     const archivos = fs.readdirSync(migrationsDir)
-      .filter((f) => f.endsWith('.sql'))
+      .filter((f) => f.endsWith('.sql') && !f.endsWith('-down.sql'))
       .sort();
 
     for (const archivo of archivos) {
