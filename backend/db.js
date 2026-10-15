@@ -1,8 +1,13 @@
 import pkg from 'pg';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { TIMEZONE_IANA } from './config/timezone.js';
 
-dotenv.config();
+// Anclar .env a este archivo: con dotenv.config() simple solo funciona si el
+// proceso arranca con cwd = backend/ (falla al lanzar desde la raiz o por servicio).
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const { Pool } = pkg;
 
