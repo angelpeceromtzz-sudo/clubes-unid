@@ -157,4 +157,9 @@ export const api = {
   getAsistenciaHistorial: asistenciaService.getHistorial,
   getAsistenciaEstadisticasClub: asistenciaService.getEstadisticasClub,
   getAsistenciaEstadisticasIntegrante: asistenciaService.getEstadisticasIntegrante,
+  getAsistenciaPeriodos: asistenciaService.getPeriodos,
+  getAsistenciaHistorialPorClub: asistenciaService.getHistorialPorClub,
+  getAsistenciaSesionPorClub: asistenciaService.getSesionPorClub,
+  getAsistenciaEstadisticasClubPor: asistenciaService.getEstadisticasClubPor,
+  getAsistenciaEstadisticasIntegrantePor: asistenciaService.getEstadisticasIntegrantePor,
 };

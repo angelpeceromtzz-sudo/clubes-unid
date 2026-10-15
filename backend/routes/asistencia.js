@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
-import { authenticate, requireClubPresident, requirePresidenteDeLaSesion } from '../middleware/auth.js';
+import { authenticate, requireClubPresident, requirePresidenteDeLaSesion, requireCoordinacion } from '../middleware/auth.js';
 import {
   getFechaInstitucional,
   aFechaISO,
@@ -65,6 +65,233 @@ function exigirMismoDiaInstitucional(sesion) {
   return null;
 }
 
+// Payload de detalle de sesión (compartido por presidente y Coordinación §27).
+async function construirDetalleSesion(sesion) {
+  const integrantes = await integrantesDeSesion(sesion.id_sesion);
+  return {
+    id_sesion: sesion.id_sesion,
+    id_club: sesion.id_club,
+    id_periodo: sesion.id_periodo,
+    fecha: aFechaISO(sesion.fecha),
+    hora_inicio: sesion.hora_inicio,
+    hora_fin: sesion.hora_fin,
+    lugar: sesion.lugar,
+    estado: estadoEfectivo(sesion),
+    estado_almacenado: sesion.estado,
+    iniciada_en: sesion.iniciada_en,
+    finalizada_en: sesion.finalizada_en,
+    cancelada_en: sesion.cancelada_en,
+    motivo_cancelacion: sesion.motivo_cancelacion,
+    observacion_cancelacion: sesion.observacion_cancelacion,
+    total_integrantes: integrantes.length,
+    registradas: integrantes.filter((i) => i.estado_asistencia !== null).length,
+    integrantes,
+  };
+}
+
+// Historial de un club (compartido presidente / Coordinación).
+async function obtenerHistorial(idClub, { estado, id_periodo, limit } = {}) {
+  const limitFinal = Math.min(parseInt(limit, 10) || 50, 200);
+
+  let sql = `
+    SELECT s.id_sesion, s.fecha, s.hora_inicio, s.hora_fin, s.lugar,
+           s.estado, s.iniciada_en, s.finalizada_en,
+           s.cancelada_en, s.motivo_cancelacion, s.observacion_cancelacion,
+           jsonb_array_length(s.integrantes_snapshot) AS total_integrantes,
+           (SELECT COUNT(*) FROM asistencias a WHERE a.id_sesion = s.id_sesion) AS registradas
+    FROM sesiones s
+    WHERE s.id_club = $1`;
+  const params = [idClub];
+  let idx = 2;
+
+  if (id_periodo) {
+    sql += ` AND s.id_periodo = $${idx++}`;
+    params.push(parseInt(id_periodo, 10));
+  } else {
+    const periodo = await obtenerPeriodoActivo();
+    if (periodo) {
+      sql += ` AND s.id_periodo = $${idx++}`;
+      params.push(periodo);
+    }
+  }
+
+  sql += ' ORDER BY s.fecha DESC, s.hora_inicio DESC LIMIT $' + idx;
+  params.push(limitFinal);
+
+  const result = await pool.query(sql, params);
+
+  let filas = result.rows.map((s) => ({
+    ...s,
+    fecha: aFechaISO(s.fecha),
+    estado: estadoEfectivo(s),
+  }));
+
+  if (estado) {
+    filas = filas.filter((s) => s.estado === estado);
+  }
+
+  return filas;
+}
+
+// Estadísticas de un club por periodo (compartido presidente / Coordinación §25–§29).
+async function calcularEstadisticasClub(idClub, idPeriodo) {
+  const periodo = await pool.query(
+    'SELECT id_periodo, nombre, fecha_inicio, fecha_fin FROM periodos_actividad WHERE id_periodo = $1',
+    [idPeriodo]
+  );
+
+  const sesiones = await pool.query(
+    `SELECT id_sesion, estado, fecha
+     FROM sesiones
+     WHERE id_club = $1 AND id_periodo = $2`,
+    [idClub, idPeriodo]
+  );
+
+  const porEstado = { pendiente: 0, en_progreso: 0, completada: 0, cancelada: 0, no_registrada: 0, no_completada: 0 };
+  for (const s of sesiones.rows) {
+    porEstado[estadoEfectivo(s)] = (porEstado[estadoEfectivo(s)] || 0) + 1;
+  }
+
+  // Estadísticas por integrante desde sesiones COMPLETADAS (snapshot por sesión)
+  const registros = await pool.query(
+    `SELECT s.id_sesion, s.fecha, a.id_usuario, a.estado
+     FROM sesiones s
+     JOIN asistencias a ON a.id_sesion = s.id_sesion
+     WHERE s.id_club = $1 AND s.id_periodo = $2 AND s.estado = 'completada'
+     ORDER BY s.fecha ASC`,
+    [idClub, idPeriodo]
+  );
+
+  // Mapear id_usuario -> nombre desde los snapshots de las sesiones del periodo
+  const nombres = await pool.query(
+    `SELECT DISTINCT ON (integrante->>'id_usuario')
+            (integrante->>'id_usuario')::int AS id_usuario,
+            integrante->>'nombre_completo' AS nombre_completo
+     FROM sesiones s
+     CROSS JOIN LATERAL jsonb_array_elements(s.integrantes_snapshot) AS integrante
+     WHERE s.id_club = $1 AND s.id_periodo = $2
+     ORDER BY integrante->>'id_usuario', s.fecha DESC`,
+    [idClub, idPeriodo]
+  );
+  const mapaNombres = new Map(nombres.rows.map((n) => [n.id_usuario, n.nombre_completo]));
+
+  const stats = new Map();
+  const ultimosRegistros = new Map(); // id_usuario -> [{fecha, estado}] ordenado desc
+  for (const r of registros.rows) {
+    if (!stats.has(r.id_usuario)) {
+      stats.set(r.id_usuario, { presentes: 0, ausentes: 0, justificadas: 0 });
+      ultimosRegistros.set(r.id_usuario, []);
+    }
+    const s = stats.get(r.id_usuario);
+    if (r.estado === 'presente') s.presentes++;
+    else if (r.estado === 'ausente') s.ausentes++;
+    else if (r.estado === 'justificado') s.justificadas++;
+    ultimosRegistros.get(r.id_usuario).push({ fecha: aFechaISO(r.fecha), estado: r.estado });
+  }
+
+  const integrantes = [];
+  let sumaPorcentajes = 0;
+  let conDatos = 0;
+  let bajaAsistencia = 0;
+  let ausenciasConsecutivas3Mas = 0;
+
+  for (const [idUsuario, s] of stats.entries()) {
+    const denominador = s.presentes + s.ausentes; // justificadas fuera del denominador (§25)
+    const porcentaje = denominador > 0 ? Math.round((s.presentes / denominador) * 1000) / 10 : null;
+
+    // Ausencias consecutivas desde la sesión más reciente
+    const cronologia = ultimosRegistros.get(idUsuario).slice().reverse(); // desc
+    let consecutivas = 0;
+    for (const reg of cronologia) {
+      if (reg.estado === 'ausente') consecutivas++;
+      else break;
+    }
+
+    if (porcentaje !== null) {
+      sumaPorcentajes += porcentaje;
+      conDatos++;
+      if (porcentaje < UMBRAL_BAJA_ASISTENCIA) bajaAsistencia++;
+    }
+    if (consecutivas >= 3) ausenciasConsecutivas3Mas++;
+
+    integrantes.push({
+      id_usuario: idUsuario,
+      nombre_completo: mapaNombres.get(idUsuario) || `Usuario ${idUsuario}`,
+      presentes: s.presentes,
+      ausentes: s.ausentes,
+      justificadas: s.justificadas,
+      porcentaje,
+      ausencias_consecutivas: consecutivas,
+    });
+  }
+
+  integrantes.sort((a, b) => (a.porcentaje ?? -1) - (b.porcentaje ?? -1));
+
+  const totales = {
+    presentes: [...stats.values()].reduce((acc, s) => acc + s.presentes, 0),
+    ausentes: [...stats.values()].reduce((acc, s) => acc + s.ausentes, 0),
+    justificadas: [...stats.values()].reduce((acc, s) => acc + s.justificadas, 0),
+  };
+
+  return {
+    periodo: periodo.rows[0] || null,
+    sesiones: {
+      total: sesiones.rows.length,
+      ...porEstado,
+    },
+    asistencia_promedio: conDatos > 0 ? Math.round((sumaPorcentajes / conDatos) * 10) / 10 : null,
+    totales,
+    indicadores: {
+      umbral_baja_asistencia: UMBRAL_BAJA_ASISTENCIA,
+      integrantes_con_baja_asistencia: bajaAsistencia,
+      integrantes_con_3_o_mas_ausencias_consecutivas: ausenciasConsecutivas3Mas,
+      sesiones_no_registradas: porEstado.no_registrada || 0,
+    },
+    integrantes,
+  };
+}
+
+// Estadísticas individuales (compartido presidente / Coordinación).
+async function calcularEstadisticasIntegrante(idClub, idPeriodo, idUsuario) {
+  const registros = await pool.query(
+    `SELECT s.fecha, a.estado
+     FROM sesiones s
+     JOIN asistencias a ON a.id_sesion = s.id_sesion AND a.id_usuario = $3
+     WHERE s.id_club = $1 AND s.id_periodo = $2 AND s.estado = 'completada'
+     ORDER BY s.fecha DESC`,
+    [idClub, idPeriodo, idUsuario]
+  );
+
+  let presentes = 0;
+  let ausentes = 0;
+  let justificadas = 0;
+  let ausenciasConsecutivas = 0;
+  let contandoAusencias = true;
+
+  for (const r of registros.rows) {
+    if (r.estado === 'presente') presentes++;
+    else if (r.estado === 'ausente') ausentes++;
+    else if (r.estado === 'justificado') justificadas++;
+
+    if (contandoAusencias && r.estado === 'ausente') ausenciasConsecutivas++;
+    else contandoAusencias = false;
+  }
+
+  const denominador = presentes + ausentes;
+  const porcentaje = denominador > 0 ? Math.round((presentes / denominador) * 1000) / 10 : null;
+
+  return {
+    id_usuario: idUsuario,
+    id_periodo: idPeriodo,
+    presentes,
+    ausentes,
+    justificadas,
+    porcentaje,
+    ausencias_consecutivas: ausenciasConsecutivas,
+    sesiones_completadas: registros.rows.length,
+  };
+}
+
 // GET /api/asistencia/periodo/activo — periodo de actividad vigente
 router.get('/periodo/activo', authenticate, async (req, res) => {
   try {
@@ -122,28 +349,7 @@ router.get('/sesiones/hoy', authenticate, requireClubPresident, async (req, res)
 // GET /api/asistencia/sesiones/:id — detalle de sesión + integrantes (snapshot)
 router.get('/sesiones/:id', authenticate, requirePresidenteDeLaSesion, async (req, res) => {
   try {
-    const sesion = req.sesion;
-    const integrantes = await integrantesDeSesion(sesion.id_sesion);
-
-    res.json({
-      id_sesion: sesion.id_sesion,
-      id_club: sesion.id_club,
-      id_periodo: sesion.id_periodo,
-      fecha: aFechaISO(sesion.fecha),
-      hora_inicio: sesion.hora_inicio,
-      hora_fin: sesion.hora_fin,
-      lugar: sesion.lugar,
-      estado: estadoEfectivo(sesion),
-      estado_almacenado: sesion.estado,
-      iniciada_en: sesion.iniciada_en,
-      finalizada_en: sesion.finalizada_en,
-      cancelada_en: sesion.cancelada_en,
-      motivo_cancelacion: sesion.motivo_cancelacion,
-      observacion_cancelacion: sesion.observacion_cancelacion,
-      total_integrantes: integrantes.length,
-      registradas: integrantes.filter((i) => i.estado_asistencia !== null).length,
-      integrantes,
-    });
+    res.json(await construirDetalleSesion(req.sesion));
   } catch (err) {
     console.error('Error al obtener sesión:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -356,47 +562,7 @@ router.put('/sesiones/:id/cancelar', authenticate, requirePresidenteDeLaSesion, 
 // GET /api/asistencia/historial — sesiones pasadas del club del presidente
 router.get('/historial', authenticate, requireClubPresident, async (req, res) => {
   try {
-    const { estado, id_periodo } = req.query;
-    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
-
-    let sql = `
-      SELECT s.id_sesion, s.fecha, s.hora_inicio, s.hora_fin, s.lugar,
-             s.estado, s.iniciada_en, s.finalizada_en,
-             s.cancelada_en, s.motivo_cancelacion, s.observacion_cancelacion,
-             jsonb_array_length(s.integrantes_snapshot) AS total_integrantes,
-             (SELECT COUNT(*) FROM asistencias a WHERE a.id_sesion = s.id_sesion) AS registradas
-      FROM sesiones s
-      WHERE s.id_club = $1`;
-    const params = [req.idClub];
-    let idx = 2;
-
-    if (id_periodo) {
-      sql += ` AND s.id_periodo = $${idx++}`;
-      params.push(parseInt(id_periodo, 10));
-    } else {
-      const periodo = await obtenerPeriodoActivo();
-      if (periodo) {
-        sql += ` AND s.id_periodo = $${idx++}`;
-        params.push(periodo);
-      }
-    }
-
-    sql += ' ORDER BY s.fecha DESC, s.hora_inicio DESC LIMIT $' + idx;
-    params.push(limit);
-
-    const result = await pool.query(sql, params);
-
-    let filas = result.rows.map((s) => ({
-      ...s,
-      fecha: aFechaISO(s.fecha),
-      estado: estadoEfectivo(s),
-    }));
-
-    if (estado) {
-      filas = filas.filter((s) => s.estado === estado);
-    }
-
-    res.json(filas);
+    res.json(await obtenerHistorial(req.idClub, req.query));
   } catch (err) {
     console.error('Error al obtener historial:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -414,120 +580,7 @@ router.get('/estadisticas/club', authenticate, requireClubPresident, async (req,
       return res.status(400).json({ error: 'No hay un periodo de actividad activo' });
     }
 
-    const periodo = await pool.query(
-      'SELECT id_periodo, nombre, fecha_inicio, fecha_fin FROM periodos_actividad WHERE id_periodo = $1',
-      [idPeriodo]
-    );
-
-    const sesiones = await pool.query(
-      `SELECT id_sesion, estado, fecha
-       FROM sesiones
-       WHERE id_club = $1 AND id_periodo = $2`,
-      [req.idClub, idPeriodo]
-    );
-
-    const porEstado = { pendiente: 0, en_progreso: 0, completada: 0, cancelada: 0, no_registrada: 0, no_completada: 0 };
-    for (const s of sesiones.rows) {
-      porEstado[estadoEfectivo(s)] = (porEstado[estadoEfectivo(s)] || 0) + 1;
-    }
-
-    // Estadísticas por integrante desde sesiones COMPLETADAS (snapshot por sesión)
-    const registros = await pool.query(
-      `SELECT s.id_sesion, s.fecha, a.id_usuario, a.estado
-       FROM sesiones s
-       JOIN asistencias a ON a.id_sesion = s.id_sesion
-       WHERE s.id_club = $1 AND s.id_periodo = $2 AND s.estado = 'completada'
-       ORDER BY s.fecha ASC`,
-      [req.idClub, idPeriodo]
-    );
-
-    // Mapear id_usuario -> nombre desde los snapshots de las sesiones del periodo
-    const nombres = await pool.query(
-      `SELECT DISTINCT ON (integrante->>'id_usuario')
-              (integrante->>'id_usuario')::int AS id_usuario,
-              integrante->>'nombre_completo' AS nombre_completo
-       FROM sesiones s
-       CROSS JOIN LATERAL jsonb_array_elements(s.integrantes_snapshot) AS integrante
-       WHERE s.id_club = $1 AND s.id_periodo = $2
-       ORDER BY integrante->>'id_usuario', s.fecha DESC`,
-      [req.idClub, idPeriodo]
-    );
-    const mapaNombres = new Map(nombres.rows.map((n) => [n.id_usuario, n.nombre_completo]));
-
-    const stats = new Map();
-    const ultimosRegistros = new Map(); // id_usuario -> [{fecha, estado}] ordenado desc
-    for (const r of registros.rows) {
-      if (!stats.has(r.id_usuario)) {
-        stats.set(r.id_usuario, { presentes: 0, ausentes: 0, justificadas: 0 });
-        ultimosRegistros.set(r.id_usuario, []);
-      }
-      const s = stats.get(r.id_usuario);
-      if (r.estado === 'presente') s.presentes++;
-      else if (r.estado === 'ausente') s.ausentes++;
-      else if (r.estado === 'justificado') s.justificadas++;
-      ultimosRegistros.get(r.id_usuario).push({ fecha: aFechaISO(r.fecha), estado: r.estado });
-    }
-
-    const integrantes = [];
-    let sumaPorcentajes = 0;
-    let conDatos = 0;
-    let bajaAsistencia = 0;
-    let ausenciasConsecutivas3Mas = 0;
-
-    for (const [idUsuario, s] of stats.entries()) {
-      const denominador = s.presentes + s.ausentes; // justificadas fuera del denominador (§25)
-      const porcentaje = denominador > 0 ? Math.round((s.presentes / denominador) * 1000) / 10 : null;
-
-      // Ausencias consecutivas desde la sesión más reciente
-      const cronologia = ultimosRegistros.get(idUsuario).slice().reverse(); // desc
-      let consecutivas = 0;
-      for (const reg of cronologia) {
-        if (reg.estado === 'ausente') consecutivas++;
-        else break;
-      }
-
-      if (porcentaje !== null) {
-        sumaPorcentajes += porcentaje;
-        conDatos++;
-        if (porcentaje < UMBRAL_BAJA_ASISTENCIA) bajaAsistencia++;
-      }
-      if (consecutivas >= 3) ausenciasConsecutivas3Mas++;
-
-      integrantes.push({
-        id_usuario: idUsuario,
-        nombre_completo: mapaNombres.get(idUsuario) || `Usuario ${idUsuario}`,
-        presentes: s.presentes,
-        ausentes: s.ausentes,
-        justificadas: s.justificadas,
-        porcentaje,
-        ausencias_consecutivas: consecutivas,
-      });
-    }
-
-    integrantes.sort((a, b) => (a.porcentaje ?? -1) - (b.porcentaje ?? -1));
-
-    const totales = {
-      presentes: [...stats.values()].reduce((acc, s) => acc + s.presentes, 0),
-      ausentes: [...stats.values()].reduce((acc, s) => acc + s.ausentes, 0),
-      justificadas: [...stats.values()].reduce((acc, s) => acc + s.justificadas, 0),
-    };
-
-    res.json({
-      periodo: periodo.rows[0] || null,
-      sesiones: {
-        total: sesiones.rows.length,
-        ...porEstado,
-      },
-      asistencia_promedio: conDatos > 0 ? Math.round((sumaPorcentajes / conDatos) * 10) / 10 : null,
-      totales,
-      indicadores: {
-        umbral_baja_asistencia: UMBRAL_BAJA_ASISTENCIA,
-        integrantes_con_baja_asistencia: bajaAsistencia,
-        integrantes_con_3_o_mas_ausencias_consecutivas: ausenciasConsecutivas3Mas,
-        sesiones_no_registradas: porEstado.no_registrada || 0,
-      },
-      integrantes,
-    });
+    res.json(await calcularEstadisticasClub(req.idClub, idPeriodo));
   } catch (err) {
     console.error('Error al obtener estadísticas del club:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -550,45 +603,128 @@ router.get('/estadisticas/integrante/:userId', authenticate, requireClubPresiden
       return res.status(400).json({ error: 'No hay un periodo de actividad activo' });
     }
 
-    const registros = await pool.query(
-      `SELECT s.fecha, a.estado
-       FROM sesiones s
-       JOIN asistencias a ON a.id_sesion = s.id_sesion AND a.id_usuario = $3
-       WHERE s.id_club = $1 AND s.id_periodo = $2 AND s.estado = 'completada'
-       ORDER BY s.fecha DESC`,
-      [req.idClub, idPeriodo, idUsuario]
-    );
-
-    let presentes = 0;
-    let ausentes = 0;
-    let justificadas = 0;
-    let ausenciasConsecutivas = 0;
-    let contandoAusencias = true;
-
-    for (const r of registros.rows) {
-      if (r.estado === 'presente') presentes++;
-      else if (r.estado === 'ausente') ausentes++;
-      else if (r.estado === 'justificado') justificadas++;
-
-      if (contandoAusencias && r.estado === 'ausente') ausenciasConsecutivas++;
-      else contandoAusencias = false;
-    }
-
-    const denominador = presentes + ausentes;
-    const porcentaje = denominador > 0 ? Math.round((presentes / denominador) * 1000) / 10 : null;
-
-    res.json({
-      id_usuario: idUsuario,
-      id_periodo: idPeriodo,
-      presentes,
-      ausentes,
-      justificadas,
-      porcentaje,
-      ausencias_consecutivas: ausenciasConsecutivas,
-      sesiones_completadas: registros.rows.length,
-    });
+    res.json(await calcularEstadisticasIntegrante(req.idClub, idPeriodo, idUsuario));
   } catch (err) {
     console.error('Error al obtener estadísticas del integrante:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /api/asistencia/periodos — catálogo de periodos de actividad (selector de cuatrimestre §5)
+router.get('/periodos', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id_periodo, nombre, fecha_inicio, fecha_fin, activo FROM periodos_actividad ORDER BY fecha_inicio DESC, id_periodo DESC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener periodos:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// ============================================================
+// Coordinación (PBI-05 §27–§28): lectura de historial y
+// estadísticas de cualquier club para admin/rectoría.
+// ============================================================
+
+// Valida :clubId y lo deja en req.idClub; responde 404 si no existe.
+async function exigirClubParametro(req, res) {
+  const idClub = parseInt(req.params.clubId, 10);
+  if (!Number.isInteger(idClub)) {
+    res.status(400).json({ error: 'ID de club inválido' });
+    return null;
+  }
+  const club = await pool.query('SELECT id_club FROM clubes WHERE id_club = $1', [idClub]);
+  if (club.rows.length === 0) {
+    res.status(404).json({ error: 'Club no encontrado' });
+    return null;
+  }
+  req.idClub = idClub;
+  return idClub;
+}
+
+// GET /api/asistencia/coordinacion/clubes/:clubId/historial
+router.get('/coordinacion/clubes/:clubId/historial', authenticate, requireCoordinacion, async (req, res) => {
+  try {
+    const idClub = await exigirClubParametro(req, res);
+    if (!idClub) return;
+    res.json(await obtenerHistorial(idClub, req.query));
+  } catch (err) {
+    console.error('Error en historial de coordinación:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /api/asistencia/coordinacion/clubes/:clubId/sesiones/:id
+router.get('/coordinacion/clubes/:clubId/sesiones/:id', authenticate, requireCoordinacion, async (req, res) => {
+  try {
+    const idClub = await exigirClubParametro(req, res);
+    if (!idClub) return;
+
+    const idSesion = parseInt(req.params.id, 10);
+    if (!Number.isInteger(idSesion)) {
+      return res.status(400).json({ error: 'ID de sesión inválido' });
+    }
+
+    const sesion = await pool.query(
+      'SELECT * FROM sesiones WHERE id_sesion = $1 AND id_club = $2',
+      [idSesion, idClub]
+    );
+    if (sesion.rows.length === 0) {
+      return res.status(404).json({ error: 'Sesión no encontrada en este club' });
+    }
+
+    res.json(await construirDetalleSesion(sesion.rows[0]));
+  } catch (err) {
+    console.error('Error en detalle de coordinación:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /api/asistencia/coordinacion/clubes/:clubId/estadisticas
+router.get('/coordinacion/clubes/:clubId/estadisticas', authenticate, requireCoordinacion, async (req, res) => {
+  try {
+    const idClub = await exigirClubParametro(req, res);
+    if (!idClub) return;
+
+    const idPeriodo = req.query.id_periodo
+      ? parseInt(req.query.id_periodo, 10)
+      : await obtenerPeriodoActivo();
+
+    if (!idPeriodo) {
+      return res.status(400).json({ error: 'No hay un periodo de actividad activo' });
+    }
+
+    res.json(await calcularEstadisticasClub(idClub, idPeriodo));
+  } catch (err) {
+    console.error('Error en estadísticas de coordinación:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /api/asistencia/coordinacion/clubes/:clubId/estadisticas/integrante/:userId
+router.get('/coordinacion/clubes/:clubId/estadisticas/integrante/:userId', authenticate, requireCoordinacion, async (req, res) => {
+  try {
+    const idClub = await exigirClubParametro(req, res);
+    if (!idClub) return;
+
+    const idUsuario = parseInt(req.params.userId, 10);
+    if (!Number.isInteger(idUsuario)) {
+      return res.status(400).json({ error: 'ID de usuario inválido' });
+    }
+
+    const idPeriodo = req.query.id_periodo
+      ? parseInt(req.query.id_periodo, 10)
+      : await obtenerPeriodoActivo();
+
+    if (!idPeriodo) {
+      return res.status(400).json({ error: 'No hay un periodo de actividad activo' });
+    }
+
+    res.json(await calcularEstadisticasIntegrante(idClub, idPeriodo, idUsuario));
+  } catch (err) {
+    console.error('Error en estadísticas de integrante (coordinación):', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

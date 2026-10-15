@@ -1,5 +1,6 @@
 /* Estadísticas de asistencia del club (PBI-05 §25–§29) — Mobile First.
-   Indicadores del periodo, tarjetas de integrantes ordenadas por porcentaje y detalle individual. */
+   Indicadores del periodo, tarjetas de integrantes ordenadas por porcentaje y detalle individual.
+   Props opcionales idClub/idPeriodo: idClub activa el modo Coordinación (§27). */
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -10,7 +11,7 @@ import { Spinner } from '../ui/Spinner';
 import { TarjetaStat } from '../ui/TarjetaStat';
 import { colorPorcentaje } from './constantesAsistencia';
 
-export function EstadisticasAsistencia() {
+export function EstadisticasAsistencia({ idClub, idPeriodo } = {}) {
   const { modoOscuro, tema } = useTheme();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,8 +21,12 @@ export function EstadisticasAsistencia() {
   useEffect(() => {
     let montado = true;
     (async () => {
+      setLoading(true);
+      setError('');
       try {
-        const data = await api.getAsistenciaEstadisticasClub();
+        const data = idClub
+          ? await api.getAsistenciaEstadisticasClubPor(idClub, idPeriodo)
+          : await api.getAsistenciaEstadisticasClub(idPeriodo);
         if (montado) setStats(data);
       } catch (err) {
         if (montado) setError(err.message);
@@ -30,7 +35,7 @@ export function EstadisticasAsistencia() {
       }
     })();
     return () => { montado = false; };
-  }, []);
+  }, [idClub, idPeriodo]);
 
   if (loading) return <Spinner className="py-16" />;
   if (error) return <Alerta tipo="error" mensaje={error} />;
@@ -172,6 +177,8 @@ export function EstadisticasAsistencia() {
           integrante={integranteSel}
           periodo={periodo}
           umbral={indicadores.umbral_baja_asistencia}
+          idClub={idClub}
+          idPeriodo={idPeriodo}
           onCerrar={() => setIntegranteSel(null)}
         />
       )}
@@ -180,7 +187,7 @@ export function EstadisticasAsistencia() {
 }
 
 /* Detalle individual según el ejemplo del PBI §26.3. */
-function ModalDetalleIntegrante({ integrante, periodo, umbral, onCerrar }) {
+function ModalDetalleIntegrante({ integrante, periodo, umbral, idClub, idPeriodo, onCerrar }) {
   const { modoOscuro, tema } = useTheme();
   const [detalle, setDetalle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -190,7 +197,9 @@ function ModalDetalleIntegrante({ integrante, periodo, umbral, onCerrar }) {
     let montado = true;
     (async () => {
       try {
-        const data = await api.getAsistenciaEstadisticasIntegrante(idIntegrante);
+        const data = idClub
+          ? await api.getAsistenciaEstadisticasIntegrantePor(idClub, idIntegrante, idPeriodo)
+          : await api.getAsistenciaEstadisticasIntegrante(idIntegrante, idPeriodo);
         if (montado) setDetalle(data);
       } catch {
         // sin detalle adicional; se muestran los datos del padre
@@ -199,7 +208,7 @@ function ModalDetalleIntegrante({ integrante, periodo, umbral, onCerrar }) {
       }
     })();
     return () => { montado = false; };
-  }, [idIntegrante]);
+  }, [idClub, idIntegrante, idPeriodo]);
 
   const porcentaje = detalle?.porcentaje ?? integrante.porcentaje;
 

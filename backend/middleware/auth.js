@@ -141,3 +141,12 @@ export async function requirePresidenteDeLaSesion(req, res, next) {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
+
+// Coordinación (PBI-05 §27): admin (rol 3) y rectoría (rol 4) en modo lectura.
+// El vicepresidente queda fuera en Asistencia V1.
+export function requireCoordinacion(req, res, next) {
+  if (!req.user || ![3, 4].includes(req.user.id_rol)) {
+    return res.status(403).json({ error: 'Solo Coordinación (rectoría o admin) puede consultar esta información' });
+  }
+  next();
+}

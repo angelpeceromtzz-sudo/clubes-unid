@@ -10,6 +10,7 @@ import { TomaAsistencia } from './TomaAsistencia';
 import { ModalCancelarSesion } from './ModalCancelarSesion';
 import { HistorialAsistencia } from './HistorialAsistencia';
 import { EstadisticasAsistencia } from './EstadisticasAsistencia';
+import { SelectorPeriodoAsistencia } from './SelectorPeriodoAsistencia';
 
 const SUB_VISTAS = [
   { key: 'hoy', label: 'Hoy' },
@@ -27,6 +28,8 @@ export function VistaAsistencia({ club }) {
   const [modalCancelar, setModalCancelar] = useState(null);
   const [cargandoCancelar, setCargandoCancelar] = useState(false);
   const [errorCancelar, setErrorCancelar] = useState('');
+  const [periodos, setPeriodos] = useState([]);
+  const [idPeriodoSel, setIdPeriodoSel] = useState('');
 
   // Carga inicial (sin setState síncrono en el effect: el estado de carga parte en true)
   useEffect(() => {
@@ -41,6 +44,15 @@ export function VistaAsistencia({ club }) {
         if (montado) setCargandoHoy(false);
       }
     })();
+    return () => { montado = false; };
+  }, []);
+
+  // Catálogo de periodos para el selector de cuatrimestre (§5)
+  useEffect(() => {
+    let montado = true;
+    api.getAsistenciaPeriodos()
+      .then((data) => { if (montado) setPeriodos(data); })
+      .catch(() => { /* el selector es auxiliar; sin catálogo se usa el periodo activo */ });
     return () => { montado = false; };
   }, []);
 
@@ -143,8 +155,26 @@ export function VistaAsistencia({ club }) {
         </>
       )}
 
-      {subVista === 'historial' && <HistorialAsistencia />}
-      {subVista === 'estadisticas' && <EstadisticasAsistencia />}
+      {subVista === 'historial' && (
+        <>
+          <SelectorPeriodoAsistencia
+            periodos={periodos}
+            valor={idPeriodoSel}
+            onChange={setIdPeriodoSel}
+          />
+          <HistorialAsistencia idPeriodo={idPeriodoSel || undefined} />
+        </>
+      )}
+      {subVista === 'estadisticas' && (
+        <>
+          <SelectorPeriodoAsistencia
+            periodos={periodos}
+            valor={idPeriodoSel}
+            onChange={setIdPeriodoSel}
+          />
+          <EstadisticasAsistencia idPeriodo={idPeriodoSel || undefined} />
+        </>
+      )}
 
       <ModalCancelarSesion
         show={!!modalCancelar}

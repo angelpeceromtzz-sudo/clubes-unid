@@ -1,5 +1,6 @@
 /* Historial de sesiones del club (PBI-05 §26.2) — Mobile First.
-   Lista apilada con filtros por estado y detalle en modal (solo lectura, §15). */
+   Lista apilada con filtros por estado y detalle en modal (solo lectura, §15).
+   Props opcionales idClub/idPeriodo: idClub activa el modo Coordinación (§27). */
 import { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -18,7 +19,7 @@ const FILTROS = [
   { key: 'no_completada', label: 'No completadas' },
 ];
 
-export function HistorialAsistencia() {
+export function HistorialAsistencia({ idClub, idPeriodo } = {}) {
   const { modoOscuro, tema } = useTheme();
   const [sesiones, setSesiones] = useState([]);
   const [filtro, setFiltro] = useState('');
@@ -30,8 +31,12 @@ export function HistorialAsistencia() {
   useEffect(() => {
     let montado = true;
     (async () => {
+      setLoading(true);
+      setError('');
       try {
-        const data = await api.getAsistenciaHistorial({ limit: 200 });
+        const data = idClub
+          ? await api.getAsistenciaHistorialPorClub(idClub, { id_periodo: idPeriodo, limit: 200 })
+          : await api.getAsistenciaHistorial({ id_periodo: idPeriodo, limit: 200 });
         if (montado) setSesiones(data);
       } catch (err) {
         if (montado) setError(err.message);
@@ -40,12 +45,14 @@ export function HistorialAsistencia() {
       }
     })();
     return () => { montado = false; };
-  }, []);
+  }, [idClub, idPeriodo]);
 
   async function abrirDetalle(sesion) {
     setCargandoDetalle(true);
     try {
-      const detalle = await api.getAsistenciaSesion(sesion.id_sesion);
+      const detalle = idClub
+        ? await api.getAsistenciaSesionPorClub(idClub, sesion.id_sesion)
+        : await api.getAsistenciaSesion(sesion.id_sesion);
       setSesionDetalle(detalle);
     } catch (err) {
       setError(err.message);

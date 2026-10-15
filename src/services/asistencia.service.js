@@ -40,4 +40,25 @@ export const asistenciaService = {
 
   getEstadisticasIntegrante: (userId, idPeriodo) =>
     request(`/asistencia/estadisticas/integrante/${userId}${idPeriodo ? `?id_periodo=${idPeriodo}` : ''}`),
+
+  getPeriodos: () => request('/asistencia/periodos'),
+
+  // Coordinación (§27): lectura de cualquier club para admin/rectoría.
+  getHistorialPorClub: (idClub, { estado, id_periodo, limit } = {}) => {
+    const params = new URLSearchParams();
+    if (estado) params.set('estado', estado);
+    if (id_periodo) params.set('id_periodo', id_periodo);
+    if (limit) params.set('limit', limit);
+    const qs = params.toString();
+    return request(`/asistencia/coordinacion/clubes/${idClub}/historial${qs ? `?${qs}` : ''}`);
+  },
+
+  getSesionPorClub: (idClub, id) =>
+    request(`/asistencia/coordinacion/clubes/${idClub}/sesiones/${id}`),
+
+  getEstadisticasClubPor: (idClub, idPeriodo) =>
+    request(`/asistencia/coordinacion/clubes/${idClub}/estadisticas${idPeriodo ? `?id_periodo=${idPeriodo}` : ''}`),
+
+  getEstadisticasIntegrantePor: (idClub, userId, idPeriodo) =>
+    request(`/asistencia/coordinacion/clubes/${idClub}/estadisticas/integrante/${userId}${idPeriodo ? `?id_periodo=${idPeriodo}` : ''}`),
 };
