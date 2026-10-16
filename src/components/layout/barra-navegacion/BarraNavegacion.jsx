@@ -28,6 +28,7 @@ export function BarraNavegacion({
 
   // El logotipo se muestra donde caben los filtros (el catálogo) y en los cuatro
   // paneles; donde no, se muestra la variante compacta "Volver al Portal".
+  // (La landing /conoce-clubs no usa esta navbar: se monta con su propia barra.)
   const muestroLogo = mostrarFiltros || mostrarLogo;
 
   return (
