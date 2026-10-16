@@ -1,7 +1,12 @@
 import pkg from 'pg';
+import dns from 'node:dns';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+// Render no alcanza por IPv6 a hosts como Neon/Supabase (ENETUNREACH con
+// direcciones AAAA). Prioriza IPv4 antes de que pg resuelva DATABASE_URL.
+dns.setDefaultResultOrder('ipv4first');
 
 const { Pool } = pkg;
 
