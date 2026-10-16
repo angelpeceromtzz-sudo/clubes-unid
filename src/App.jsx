@@ -18,6 +18,7 @@ import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { PaginaCalendario } from './pages/PaginaCalendario';
+import PaginaConoceClubs from './pages/PaginaConoceClubs';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { useClubes } from './hooks/useClubes';
@@ -77,6 +78,10 @@ function App() {
 
   const mostrarFiltros = location.pathname === '/';
 
+  // La landing /conoce-clubs se monta fuera del layout del sistema con un
+  // return temprano (ver más abajo): informativa, sin navbar del sistema.
+  const esLanding = location.pathname === '/conoce-clubs';
+
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
   // coincide con NAVBAR_HEIGHT y no con la del logotipo de NAVBAR_HEIGHT_LOGO.
@@ -104,6 +109,18 @@ function App() {
           path="/encuesta/:slug"
           element={<PaginaEncuesta key={location.pathname} />}
         />
+      </Routes>
+    );
+  }
+
+  // La landing /conoce-clubs es informativa y también se monta fuera del layout
+  // del sistema (mismo patrón que la encuesta): sin navbar ni menú hamburguesa,
+  // sin navegación inferior, splash ni popups. Lleva su propia barra de marca
+  // dentro de PaginaConoceClubs; permisos y rutas del resto no cambian.
+  if (esLanding) {
+    return (
+      <Routes>
+        <Route path="/conoce-clubs" element={<PaginaConoceClubs />} />
       </Routes>
     );
   }
@@ -182,6 +199,9 @@ function App() {
         <Route path="/noticias" element={<RedireccionNoticias />} />
         <Route path="/eventos" element={<RedireccionNoticias />} />
         <Route path="/calendario" element={<PaginaCalendario />} />
+        {/* Respaldo del early return de arriba: cubre variantes de pathname
+            (p. ej. barra final) para que la landing nunca caiga en 404. */}
+        <Route path="/conoce-clubs" element={<PaginaConoceClubs />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />

@@ -1,7 +1,7 @@
-export const API_BASE = 'https://clubes-unid.onrender.com/api';
-// export const API_BASE = 'https://clubes-unid.onrender.com/api'; (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
-// EL DE RENDER ES LA QUE ESTA DESPLEGADA, usen  (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, ''); o 'http://localhost:4000/api'; 
-// para que utilicen la base de datos local 
+// La URL por defecto es el backend de Render; VITE_API_URL permite apuntar a
+// otro entorno (p. ej. http://localhost:4000/api en desarrollo local) sin
+// cambiar código. Sin la variable, el comportamiento desplegado no cambia.
+export const API_BASE = (import.meta.env.VITE_API_URL || 'https://clubsunid-develop.onrender.com/api').replace(/\/+$/, '');
 
 export function getToken() {
   try {

@@ -48,6 +48,36 @@
   display: none;
 }
 
+/* Landing /conoce-clubs: aparición suave de secciones secundarias, una sola
+   vez. Las clases las agrega el JS solo si IntersectionObserver existe; si el
+   script falla, el contenido queda visible sin clase y sin animación. */
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 220ms ease-out, transform 220ms ease-out;
+}
+
+.landing-reveal--visible {
+  opacity: 1;
+  transform: none;
+}
+
+html.landing-scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  html.landing-scroll-smooth {
+    scroll-behavior: auto;
+  }
+}
+
 @media print {
   nav, aside, button {
     display: none !important;
