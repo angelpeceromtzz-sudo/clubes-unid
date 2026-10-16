@@ -76,7 +76,7 @@ LEFT JOIN usuarios x ON x.correo_institucional = v.correo
 WHERE x.id_usuario IS NULL;
 
 -- ============================================================
--- 3. CLUBES DE PRUEBA (10 clubes)
+-- 3. CLUBES DE PRUEBA (9 clubes)
 -- ============================================================
 -- El estatus se resuelve por nombre, no por ID.
 
@@ -91,8 +91,7 @@ FROM (VALUES
   ('Taller de Música y Ensamble Acústico',   'Clases prácticas de guitarra, canto e instrumentos rítmicos. Ideal para principiantes y músicos intermedios.',    'Cultura',    20, 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?q=80&w=600&auto=format&fit=crop', 'activo',     'mixta'),
   ('Equipo de Atletismo',                    'Entrenamientos de resistencia, velocidad y técnica de carrera. Participación en competencias locales y nacionales.', 'Deportes', 30, 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?q=80&w=600&auto=format&fit=crop', 'activo',     'mixta'),
   ('Club de Boxeo',                          'Sesiones de entrenamiento de boxeo, técnicas de defensa personal, acondicionamiento físico y preparación para competencias.', 'Deportes', 20, 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=600&auto=format&fit=crop', 'activo', 'masculina'),
-  ('Club de Literatura y Escritura Creativa','Espacio para amantes de la literatura, donde se realizan lecturas, análisis de obras y talleres de escritura creativa.', 'Cultura', 20, 'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=600&auto=format&fit=crop', 'inactivo', 'mixta'),
-  ('Equipo de Porristas',                    'Entrenamientos de coreografías, acrobacias y técnicas de animación para eventos deportivos y competencias de porristas.', 'Deportes', 50, 'https://images.unsplash.com/photo-1589748239338-afe695e833d7?q=80&w=1026&auto=format&fit=crop', 'activo', 'femenina')
+  ('Club de Literatura y Escritura Creativa','Espacio para amantes de la literatura, donde se realizan lecturas, análisis de obras y talleres de escritura creativa.', 'Cultura', 20, 'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=600&auto=format&fit=crop', 'inactivo', 'mixta')
 ) AS v(nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, estatus, participacion)
 JOIN cat_estatus_clubes e ON e.nombre_estatus = v.estatus
 LEFT JOIN clubes c ON c.nombre_club = v.nombre_club
