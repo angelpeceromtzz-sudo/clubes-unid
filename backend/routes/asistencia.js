@@ -479,6 +479,21 @@ router.post('/sesiones/:id/finalizar', authenticate, requirePresidenteDeLaSesion
     if (errorDia) return res.status(403).json({ error: errorDia });
 
     if (sesion.estado !== 'en_progreso') {
+      // Idempotente: si ya se finalizó (doble-tap o reintento), se responde
+      // el resumen vigente en lugar de un 400.
+      if (sesion.estado === 'completada') {
+        const integrantesYa = await integrantesDeSesion(sesion.id_sesion);
+        return res.json({
+          id_sesion: sesion.id_sesion,
+          estado: 'completada',
+          finalizada_en: sesion.finalizada_en,
+          resumen: {
+            presentes: integrantesYa.filter((i) => i.estado_asistencia === 'presente').length,
+            ausentes: integrantesYa.filter((i) => i.estado_asistencia === 'ausente').length,
+            justificadas: integrantesYa.filter((i) => i.estado_asistencia === 'justificado').length,
+          },
+        });
+      }
       return res.status(400).json({ error: 'Solo se puede finalizar una sesión "En progreso"' });
     }
 

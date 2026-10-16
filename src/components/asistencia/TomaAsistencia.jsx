@@ -303,18 +303,23 @@ export function TomaAsistencia({ sesion, onVolver, onActualizarSesion }) {
           </BotonAccion>
         )}
 
-        {(estadoAlmacenado === 'en_progreso' || (completada && modoCorreccion)) && (
+        {completada && modoCorreccion && (
           <>
-            {completada && modoCorreccion && (
-              <BotonAccion
-                variant="outline"
-                size="lg"
-                className="w-full"
-                onClick={() => setModoCorreccion(false)}
-              >
-                Ocultar corrección
-              </BotonAccion>
-            )}
+            <p className={`text-xs text-center ${tema.subtitle}`}>
+              Correcciones guardadas automáticamente. La sesión ya está finalizada.
+            </p>
+            <BotonAccion
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => setModoCorreccion(false)}
+            >
+              Ocultar corrección
+            </BotonAccion>
+          </>
+        )}
+        {estadoAlmacenado === 'en_progreso' && (
+          <>
             <BotonAccion
               variant="success"
               size="lg"
