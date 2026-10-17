@@ -20,6 +20,16 @@ export const LANDING = {
   kicker: 'Iniciativa estudiantil',
   invitacion:
     'Explora intereses, comparte actividades y conoce compañeros que disfrutan lo mismo que tú. Así se empieza a construir un club.',
+  // Fotografía protagonista del hero (sin carrusel). `imagen` en null deja
+  // el fallback de gradiente + panel de identidad. Para activarla: guardar
+  // el archivo en public/ (p. ej. /hero-landing.webp, ~1920×1080, <200 KB)
+  // y asignar la ruta aquí. `focal` controla el encuadre (object-position)
+  // para conservar al sujeto principal en cada recorte.
+  hero: {
+    imagen: null,
+    alt: '',
+    focal: 'center 30%',
+  },
   // Composición del panel del hero: experiencia + identidad + dato real.
   // "Clubs Lobos Rojos" es el nombre con el que el sistema ya presenta los
   // clubes (navbar y pie); aquí se explicita su relación con el nombre de la
@@ -47,6 +57,7 @@ export const LANDING = {
     { href: '#que-es-un-club', etiqueta: 'Qué es un club' },
     { href: '#propuestas', etiqueta: 'Propuestas' },
     { href: '#encuesta', etiqueta: 'Encuesta' },
+    { href: '#actividades', etiqueta: 'Actividades' },
     { href: '#acerca', etiqueta: 'Acerca' },
   ],
   queEsClub: {
@@ -137,5 +148,61 @@ export const LANDING = {
       },
     ],
     puente: 'Los clubes son una puerta de entrada a esta vida universitaria. Tu interés puede ser el primer paso.',
+  },
+  // Otras actividades universitarias (informativas, distintas a los clubes).
+  // `imagen: null` muestra el fallback diseñado (gradiente + medallón);
+  // al tener foto, asignar la ruta en public/ y ajustar `focal`.
+  // IMPORTANTE: no inventar fechas, cupos, responsables ni convocatorias.
+  actividades: {
+    titulo: 'Más formas de vivir tu universidad',
+    intro:
+      'Además de los clubes, descubre otras actividades en las que puedes participar y conectar con la comunidad UNID Campeche.',
+    // Los textos deben medir lo mismo (~69–73 caracteres ≈ 3 líneas a
+    // 320, 375 y 768 px): con longitudes iguales las 3 tarjetas quedan
+    // alineadas (títulos a la misma altura) y el texto no tapa la
+    // fotografía en móvil.
+    items: [
+      {
+        id: 'misiones',
+        titulo: 'Misiones',
+        // Copy a la espera de confirmación del equipo.
+        texto:
+          'Espacios de servicio y encuentro que fortalecen la vida en comunidad.',
+        icono: 'users',
+        imagen: '/misiones3.jpg',
+        focal: 'center 18%',
+      },
+      {
+        id: 'trineo',
+        titulo: 'Trineo de los Sueños',
+        // Texto base aportado por el equipo; resumido para el póster
+        // (el agradecimiento completo al Centro Multiple Num Cuatro y el
+        // detalle de colaboradores se conservaron en el mensaje original
+        // del equipo).
+        texto:
+          'Integración con valores de solidaridad y amor al prójimo en comunidad.',
+        icono: 'star',
+        imagen: '/trineo-sueños2.jpg',
+        focal: 'center 30%',
+      },
+      {
+        id: 'interunid',
+        titulo: 'InterUNID',
+        // Borrador basado en publicación institucional del 25 de junio
+        // de 2019. Es una experiencia documentada de la comunidad UNID,
+        // NO una convocatoria vigente: no afirmar participación actual
+        // de Campeche ni inventar fechas, sedes o requisitos. La
+        // publicación de referencia menciona ejemplos de disciplinas
+        // (fútbol, voleibol, basquetbol, fotografía, dibujo y canto);
+        // no se listan aquí para no presentarlas como oferta actual.
+        // Foto: 800×533 (apaisada) — el recorte 4:5 centrado conserva
+        // el grupo con el letrero de campus.
+        texto:
+          'Experiencia documentada de UNID: deporte, arte y convivencia entre campus.',
+        icono: 'sun',
+        imagen: '/InterUNID.jpeg',
+        focal: 'center',
+      },
+    ],
   },
 };

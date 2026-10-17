@@ -1,14 +1,16 @@
 /* Landing pública /conoce-clubs — presentación Mobile First de Clubs UNID
-   Campeche. Compuesta como bandas diferenciadas: hero con invitación y panel
-   de composición (identidad + experiencias + conteo real de propuestas),
-   banda del concepto de club, propuestas reales desde la API (carrusel
-   lateral en móvil y grid con «Mostrar más» en escritorio), encuesta
-   inmediatamente después de las propuestas, Modelo de Formación Integral
-   (VIVE) e iniciativa estudiantil. Sin accesos al catálogo ni al portal
-   principal en esta etapa. Secciones secundarias con aparición suave una
-   sola vez (IntersectionObserver + .landing-reveal, con
-   prefers-reduced-motion). No requiere sesión; los CTAs de encuesta solo se
-   activan con ENCUESTA_SLUG en src/config/landing.js.
+   Campeche. Compuesta como bandas diferenciadas: hero con fotografía
+   protagonista opcional (LANDING.hero; fallback de gradiente + panel de
+   identidad con experiencias y conteo real de propuestas), banda del
+   concepto de club, propuestas reales desde la API (carrusel lateral en
+   móvil y grid con «Mostrar más» en escritorio), encuesta inmediatamente
+   después de las propuestas, Modelo de Formación Integral (VIVE), otras
+   actividades universitarias informativas (LANDING.actividades; banners
+   con foto o fallback) e iniciativa estudiantil. Sin accesos al catálogo
+   ni al portal principal en esta etapa. Secciones secundarias con
+   aparición suave una sola vez (IntersectionObserver + .landing-reveal,
+   con prefers-reduced-motion). No requiere sesión; los CTAs de encuesta
+   solo se activan con ENCUESTA_SLUG en src/config/landing.js.
    Se monta fuera del layout del sistema (ver App.jsx) con su propia barra. */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -78,13 +80,18 @@ function BotonEncuesta({ className = '', grande = false, fondoPanel = false }) {
 function BotonExplorar({ className = '', primario = false }) {
   const { modoOscuro } = useTheme();
   const base =
-    'inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] text-sm font-black rounded-full transition duration-200 active:scale-[0.98]';
+    'inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] rounded-full transition duration-200 active:scale-[0.98]';
+  // CTA primario: un poco más de tamaño y menor peso que font-black, con
+  // tracking ligero; se lee más amable sin perder presencia sobre el ámbar.
+  const tipografia = primario
+    ? 'text-[0.95rem] font-extrabold tracking-wide'
+    : 'text-sm font-black';
 
   if (primario) {
     return (
       <a
         href={`#${LANDING.explorar.seccionPropuestas}`}
-        className={`${base} bg-amber-400 text-[#0e162c] hover:bg-amber-300 ${FOCO_PRIMARIO} ${className}`}
+        className={`${base} ${tipografia} bg-amber-400 text-[#0e162c] hover:bg-amber-300 ${FOCO_PRIMARIO} ${className}`}
       >
         <Icono nombre="search" strokeWidth={2} className="h-4 w-4 shrink-0" />
         {LANDING.explorar.btn}
@@ -99,7 +106,7 @@ function BotonExplorar({ className = '', primario = false }) {
   return (
     <a
       href={`#${LANDING.explorar.seccionPropuestas}`}
-      className={`${base} ${contorno} ${FOCO} ${className}`}
+      className={`${base} ${tipografia} ${contorno} ${FOCO} ${className}`}
     >
       <Icono nombre="search" strokeWidth={2} className="h-4 w-4 shrink-0" />
       {LANDING.explorar.btn}
@@ -163,14 +170,17 @@ function TarjetaPropuesta({ club }) {
       </div>
 
       <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+        {/* flex-nowrap: en la tarjeta móvil (w-56) ambos chips caben en
+            una sola línea con gap y padding reducidos; con wrap, «En el
+            catálogo» saltaba debajo de categorías largas. */}
+        <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2">
           {club.categoria && (
-            <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(club.categoria, modoOscuro)}`}>
+            <span className={`text-[10px] uppercase tracking-widest font-bold px-1.5 sm:px-2 py-0.5 rounded-full border whitespace-nowrap ${clasesBadge(club.categoria, modoOscuro)}`}>
               {club.categoria}
             </span>
           )}
           {esProximamente ? (
-            <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${
+            <span className={`text-[10px] uppercase tracking-widest font-bold px-1.5 sm:px-2 py-0.5 rounded-full border whitespace-nowrap ${
               modoOscuro
                 ? 'bg-slate-700/40 border-slate-600 text-slate-300'
                 : 'bg-slate-100 border-slate-300 text-slate-600'
@@ -178,7 +188,7 @@ function TarjetaPropuesta({ club }) {
               En propuesta
             </span>
           ) : (
-            <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+            <span className="text-[10px] uppercase tracking-widest font-bold px-1.5 sm:px-2 py-0.5 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 whitespace-nowrap">
               En el catálogo
             </span>
           )}
@@ -192,6 +202,73 @@ function TarjetaPropuesta({ club }) {
             {club.descripcion}
           </p>
         )}
+      </div>
+    </article>
+  );
+}
+
+// Póster informativo de «Otras actividades» (referencia de composición:
+// tarjetas destacadas tipo ViX): fotografía a sangre que cubre toda la
+// tarjeta (proporción 4:5), degradado oscuro inferior progresivo que funde
+// la imagen con el fondo y texto HTML superpuesto en la zona inferior.
+// Informativo: sin enlaces, sin hover de elevación y sin cursor pulsable.
+// Sin imagen (o si falla) conserva el mismo formato con fallback de
+// gradiente de marca + medallón ámbar.
+function BannerActividad({ actividad }) {
+  const { modoOscuro } = useTheme();
+  const [imagenFallida, setImagenFallida] = useState(false);
+  const imagen = actividad.imagen ? obtenerUrlImagen(actividad.imagen) : null;
+  const mostrarImagen = imagen && !imagenFallida;
+
+  return (
+    <article
+      className={`relative aspect-[4/5] rounded-2xl overflow-hidden ${
+        modoOscuro ? 'bg-[#18223f]' : 'bg-slate-100'
+      }`}
+    >
+      {mostrarImagen ? (
+        <img
+          src={imagen}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setImagenFallida(true)}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: actividad.focal || 'center' }}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-start justify-center bg-[radial-gradient(circle_at_50%_26%,rgba(251,191,36,0.18),transparent_72%)]">
+          <span
+            aria-hidden="true"
+            className={`mt-12 w-14 h-14 rounded-full border flex items-center justify-center ${
+              modoOscuro
+                ? 'bg-amber-400/10 border-amber-400/25 text-amber-400'
+                : 'bg-amber-100 border-amber-200 text-amber-700'
+            }`}
+          >
+            <Icono nombre={actividad.icono} strokeWidth={2} className="h-6 w-6" />
+          </span>
+        </div>
+      )}
+
+      {/* Degradado de lectura (igual en claro y oscuro): transparente
+          arriba → azul noche abajo; sin corte visible con el contenido.
+          El copy vive en landing.js con longitudes iguales (~3 líneas)
+          para que los títulos de las 3 tarjetas queden alineados y el
+          texto no tape la foto en móvil; `line-clamp-4` es solo red de
+          seguridad y no recorta el texto vigente. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/65 to-transparent"
+      />
+
+      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+        <h3 className="text-white text-base sm:text-lg font-black tracking-tight leading-snug">
+          {actividad.titulo}
+        </h3>
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-200 line-clamp-4">
+          {actividad.texto}
+        </p>
       </div>
     </article>
   );
@@ -244,6 +321,8 @@ export default function PaginaConoceClubs() {
   const [error, setError] = useState(false);
   const [intento, setIntento] = useState(0);
   const [limite, setLimite] = useState(PROPUESTAS_VISIBLES);
+  const [pistaScroll, setPistaScroll] = useState(false);
+  const [fotoHeroFallida, setFotoHeroFallida] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -315,14 +394,65 @@ export default function PaginaConoceClubs() {
     return () => observer.disconnect();
   }, []);
 
+  // Pista de scroll para móvil: la flecha aparece tras ~3 s sin interacción
+  // y solo cerca del inicio (scrollY < 300); cualquier gesto la oculta. La
+  // animación del rebote vive en .landing-scroll-hint (index.css) y se
+  // anula con prefers-reduced-motion; aquí solo se controla la opacidad.
+  useEffect(() => {
+    const UMBRAL_INICIO = 300;
+    const RETRASO_INACTIVO = 3000;
+    let temporizador = null;
+
+    function programar() {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(() => {
+        setPistaScroll(window.scrollY < UMBRAL_INICIO);
+      }, RETRASO_INACTIVO);
+    }
+
+    function ocultar() {
+      setPistaScroll(false);
+      programar();
+    }
+
+    programar();
+    window.addEventListener('scroll', ocultar, { passive: true });
+    window.addEventListener('touchstart', ocultar, { passive: true });
+    window.addEventListener('pointerdown', ocultar, { passive: true });
+    window.addEventListener('keydown', ocultar);
+    return () => {
+      clearTimeout(temporizador);
+      window.removeEventListener('scroll', ocultar);
+      window.removeEventListener('touchstart', ocultar);
+      window.removeEventListener('pointerdown', ocultar);
+      window.removeEventListener('keydown', ocultar);
+    };
+  }, []);
+
   const encuestaActiva = hayEncuesta();
+
+  // Hero fotográfico: una sola imagen configurable en landing.js. Sin
+  // imagen (o si falla al cargar) se conserva el fallback de gradiente +
+  // panel de identidad, sin saltos de layout.
+  const fotoHeroUrl = LANDING.hero.imagen ? obtenerUrlImagen(LANDING.hero.imagen) : null;
+  const heroConFoto = Boolean(fotoHeroUrl) && !fotoHeroFallida;
 
   const heroFondo = modoOscuro
     ? 'bg-gradient-to-b from-[#0e162c] to-[#0b111e]'
     : 'bg-gradient-to-b from-amber-100/70 to-slate-50';
+  // Con foto, la base es plana (el degradado de lectura lo aporta la capa
+  // superpuesta); sin foto, se mantiene el degradado de banda actual.
+  const heroBase = heroConFoto
+    ? (modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-50')
+    : heroFondo;
   const panelBase = modoOscuro
     ? 'bg-[#0e162c] border-slate-700/60'
     : 'bg-white border-slate-200 shadow-sm';
+  // Panel del hero sobre fotografía (desktop): superficie vidriosa que
+  // conserva el contenido del panel sin tapar del todo la imagen.
+  const panelHeroFoto = modoOscuro
+    ? 'bg-[#0e162c]/75 border-white/10 backdrop-blur-md'
+    : 'bg-white/80 border-white/50 backdrop-blur-md shadow-sm';
   const bandaConcepto = modoOscuro ? 'bg-[#0e162c]' : 'bg-white';
   const bandaEncuesta = modoOscuro ? 'bg-[#18223f]' : 'bg-[#0e162c]';
   const kickerColor = modoOscuro ? 'text-amber-400' : 'text-amber-600';
@@ -338,10 +468,61 @@ export default function PaginaConoceClubs() {
         </div>
       </div>
 
-      {/* A. Presentación inicial: identidad, invitación, acción principal y
-          navegación de secciones; la composición visual se apoya en la marca. */}
-      <section className={heroFondo}>
-        <div className={`${CONTENEDOR} pt-8 sm:pt-12 lg:pt-16 pb-10 sm:pb-14`}>
+      {/* A. Presentación inicial: fotografía protagonista (si está
+          configurada) con degradado de lectura, identidad, invitación,
+          acción principal y navegación de secciones. Sin foto, conserva el
+          hero de gradiente + panel. */}
+      <section id="hero" className={`relative overflow-hidden ${heroBase}`}>
+        {heroConFoto && (
+          <>
+            {/* Un solo <img>: en móvil va en flujo con alto flexible y su
+                propio encuadre; el contenido de la landing sube sobre su
+                zona inferior oscurecida (foto y texto en una sola pieza,
+                sin corte visible). En lg+ pasa a fondo absoluto con
+                degradado editorial izquierda→derecha. */}
+            <div className="lg:absolute lg:inset-0" aria-hidden={!LANDING.hero.alt}>
+              <div className="relative h-[300px] sm:h-[360px] lg:h-full">
+                <img
+                  src={fotoHeroUrl}
+                  alt={LANDING.hero.alt}
+                  aria-hidden={LANDING.hero.alt ? undefined : true}
+                  fetchPriority="high"
+                  decoding="async"
+                  onError={() => setFotoHeroFallida(true)}
+                  className="h-full w-full object-cover"
+                  style={{ objectPosition: LANDING.hero.focal }}
+                />
+                {/* Degradado inferior móvil: oscurece la zona donde se
+                    integra el contenido y funde con la banda hero. */}
+                <div
+                  className={`absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t to-transparent lg:hidden ${
+                    modoOscuro
+                      ? 'from-[#0b111e] via-[#0b111e]/70'
+                      : 'from-slate-50 via-slate-50/80'
+                  }`}
+                />
+              </div>
+            </div>
+            {/* Degradado de lectura de escritorio: el texto queda sobre la
+                zona izquierda sin ocultar innecesariamente la fotografía. */}
+            <div
+              aria-hidden="true"
+              className={`hidden lg:block absolute inset-0 bg-gradient-to-r ${
+                modoOscuro
+                  ? 'from-[#0b111e] via-[#0b111e]/90 to-[#0b111e]/25'
+                  : 'from-slate-50 via-slate-50/90 to-slate-50/25'
+              }`}
+            />
+          </>
+        )}
+        {/* Con foto: el contenido sube sobre la zona oscurecida de la
+            imagen (integración móvil). Sin foto (fallback): conserva el
+            padding normal del hero. */}
+        <div
+          className={`${CONTENEDOR} relative ${
+            heroConFoto ? '-mt-16 sm:-mt-20' : 'pt-8 sm:pt-12'
+          } lg:mt-0 lg:pt-20 pb-10 sm:pb-14 lg:pb-24`}
+        >
           <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-12 lg:items-center">
             <div className="flex flex-col items-start gap-5 min-w-0">
               <p className={`text-[11px] sm:text-xs uppercase tracking-[0.25em] font-black ${kickerColor}`}>
@@ -389,9 +570,12 @@ export default function PaginaConoceClubs() {
 
             {/* Panel de composición: identidad (lobo como ancla, no como
                 pieza aislada), experiencia concreta y dato real del catálogo.
-                Sin fotografías ilustrativas de campus. */}
+                Con foto de hero toma superficie vidriosa; sin ella, el panel
+                opaco actual. */}
             <div
-              className={`relative rounded-2xl border overflow-hidden p-6 sm:p-7 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.14),transparent_65%)] ${panelBase}`}
+              className={`relative rounded-2xl border overflow-hidden p-6 sm:p-7 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.14),transparent_65%)] ${
+                heroConFoto ? panelHeroFoto : panelBase
+              }`}
             >
               <div className="flex items-center gap-3">
                 <img
@@ -477,6 +661,9 @@ export default function PaginaConoceClubs() {
                       {ej.titulo}
                     </h3>
                     <p className={`mt-1.5 text-sm leading-relaxed ${tema.subtitle}`}>{ej.detalle}</p>
+                    {/* Separador ámbar (solo móvil): al apilarse en una
+                        columna, la línea fina evita la lectura de «tabla». */}
+                    <span aria-hidden="true" className="mt-3 block h-px bg-amber-400/40 sm:hidden" />
                   </div>
                 </li>
               ))}
@@ -615,9 +802,10 @@ export default function PaginaConoceClubs() {
               </div>
             </div>
 
-            {/* En móvil, pills compactas para no alargar la sección antes del
-                CTA; en sm+, tarjetas con icono. */}
-            <ul className="flex flex-wrap gap-2 sm:grid sm:grid-cols-2 sm:gap-3 lg:gap-4">
+            {/* Móvil: rejilla 2×2 para que las cuatro pills queden
+                parejas (con flex-wrap, una quedaba huérfana debajo); en
+                sm+ conserva la composición existente. */}
+            <ul className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4">
               {LANDING.encuesta.propositos.map((p) => (
                 <li
                   key={p.etiqueta}
@@ -642,7 +830,7 @@ export default function PaginaConoceClubs() {
           <div className="max-w-6xl mx-auto">
             <div
               data-reveal
-              className={`relative rounded-2xl border overflow-hidden p-5 sm:p-8 lg:p-9 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.10),transparent_65%)] ${panelBase}`}
+              className={`relative rounded-2xl border overflow-hidden p-4 sm:p-8 lg:p-9 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.10),transparent_65%)] ${panelBase}`}
             >
               <div className="max-w-2xl">
                 <p className={`text-[11px] sm:text-xs uppercase tracking-[0.25em] font-black ${kickerColor}`}>
@@ -663,11 +851,17 @@ export default function PaginaConoceClubs() {
                 <p className={`text-xs uppercase tracking-[0.2em] font-bold ${tema.subtitle}`}>
                   {LANDING.mfi.valoresTitulo}
                 </p>
-                <ul className="mt-3 sm:mt-2.5 flex flex-wrap gap-2">
+                {/* Siempre como en móvil M: 3 por línea (2 filas) desde
+                    375 px y en todos los tamaños; solo a 320–374 px caen
+                    a 2 («Solidaridad» no cabe 3 veces). Pills con fondo
+                    grande (w-full llenando la celda + py-2/2.5) y
+                    acotados a max-w-2xl en escritorio para que queden
+                    equilibrados dentro del panel. */}
+                <ul className="mt-3 grid grid-cols-2 min-[375px]:grid-cols-3 gap-2 sm:gap-2.5 sm:mt-2.5 max-w-2xl">
                   {LANDING.mfi.valores.map((valor) => (
                     <li
                       key={valor}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${
+                      className={`inline-flex w-full items-center justify-center gap-1 sm:gap-1.5 rounded-full border px-1 sm:px-3 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold tracking-tight sm:tracking-normal ${
                         modoOscuro
                           ? 'border-slate-600/60 text-slate-300'
                           : 'border-slate-200 text-slate-600'
@@ -713,7 +907,48 @@ export default function PaginaConoceClubs() {
         </div>
       </section>
 
-      {/* F. Acerca del proyecto: propósito, equipo estudiantil y acciones
+      {/* F. Otras actividades universitarias: banners informativos (más
+          pequeños que el hero) de actividades distintas a los clubes; sin
+          botones de inscripción ni enlaces sin destino real. */}
+      <section
+        id="actividades"
+        aria-labelledby="titulo-actividades"
+        className={`scroll-mt-8 ${bandaConcepto}`}
+      >
+        <div className={`${CONTENEDOR} py-12 sm:py-16 lg:py-20`}>
+          <div className="max-w-6xl mx-auto" data-reveal>
+            <div className="max-w-2xl">
+              <h2 id="titulo-actividades" className={tituloSeccion}>
+                {LANDING.actividades.titulo}
+              </h2>
+              <p className={`mt-3 text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
+                {LANDING.actividades.intro}
+              </p>
+            </div>
+
+            {/* Móvil (< md): fila única con sangrado a los bordes y
+                desplazamiento manual (parte de la siguiente tarjeta
+                visible); el contenedor es enfocable (tabIndex) para
+                desplazarse con teclado. md+: rejilla de 3 columnas que
+                llena el contenedor centrado (justificada, sin espacio
+                muerto a los lados). Sin autoplay ni carruseles anidados. */}
+            <ul
+              aria-label="Actividades universitarias"
+              tabIndex={0}
+              className="nf-scroll mt-8 sm:mt-10 -mx-6 sm:-mx-8 flex gap-4 overflow-x-auto px-6 sm:px-8 pb-1 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {LANDING.actividades.items.map((act) => (
+                <li key={act.id} className="shrink-0 w-[70vw] max-w-[300px] md:w-auto md:max-w-none">
+                  <BannerActividad actividad={act} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* G. Acerca del proyecto: propósito, equipo estudiantil y acciones
           finales (encuesta y exploración interna; sin accesos al catálogo ni
           al portal principal en esta etapa). */}
       <section
@@ -723,13 +958,22 @@ export default function PaginaConoceClubs() {
       >
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
           <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-2 lg:gap-12" data-reveal>
-            <div className="min-w-0">
+            <div className="min-w-0 flex flex-col">
               <h2 id="titulo-acerca" className={tituloSeccion}>
                 Acerca del proyecto
               </h2>
               <p className={`mt-3 text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
                 {LANDING.proposito}
               </p>
+              {/* Acciones finales junto al texto; con mt-auto se empujan
+                  al fondo de la columna para quedar alineadas con la
+                  última tarjeta del equipo (Gustavo Gallegos) en
+                  escritorio. pt-6 conserva la separación cuando no hay
+                  espacio extra (móvil). */}
+              <div className="mt-auto pt-6 flex flex-wrap gap-3">
+                <BotonEncuesta className="w-full sm:w-auto" />
+                <BotonExplorar className="w-full sm:w-auto" />
+              </div>
             </div>
 
             <div className="min-w-0">
@@ -754,13 +998,35 @@ export default function PaginaConoceClubs() {
               </ul>
             </div>
           </div>
-
-          <div className="mt-10 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-            <BotonEncuesta className="w-full sm:w-auto" />
-            <BotonExplorar className="w-full sm:w-auto" />
-          </div>
         </div>
       </section>
+
+      {/* Pista de scroll (solo móvil): flecha fija al fondo que invita a
+          continuar cuando el usuario se queda quieto cerca del inicio; se
+          oculta con cualquier gesto y no capta foco ni eventos al estar
+          apagada. */}
+      <div
+        aria-hidden={!pistaScroll}
+        className={`lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 transition-opacity duration-700 ${
+          pistaScroll ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <button
+          type="button"
+          tabIndex={pistaScroll ? 0 : -1}
+          onClick={() =>
+            document.getElementById(LANDING.explorar.seccionPropuestas)?.scrollIntoView()
+          }
+          aria-label="Ver las propuestas de clubes"
+          className={`landing-scroll-hint flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-sm transition-colors duration-200 ${FOCO} ${
+            modoOscuro
+              ? 'border-white/15 bg-[#0b111e]/60 text-amber-300/80'
+              : 'border-slate-300/70 bg-white/70 text-amber-600/80'
+          }`}
+        >
+          <Icono nombre="chevron-down" strokeWidth={2} className="h-5 w-5" />
+        </button>
+      </div>
     </main>
   );
 }

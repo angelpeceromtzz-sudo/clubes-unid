@@ -66,6 +66,23 @@ html.landing-scroll-smooth {
   scroll-behavior: smooth;
 }
 
+/* Pista de scroll de la landing (solo móvil): movimiento mínimo del
+   chevron mientras el usuario está inactivo cerca del inicio. Se apaga
+   con prefers-reduced-motion; la visibilidad la controla el JS. */
+@keyframes landing-scroll-hint {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+.landing-scroll-hint {
+  animation: landing-scroll-hint 2.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-reveal {
     opacity: 1;
@@ -75,6 +92,10 @@ html.landing-scroll-smooth {
 
   html.landing-scroll-smooth {
     scroll-behavior: auto;
+  }
+
+  .landing-scroll-hint {
+    animation: none;
   }
 }
 
