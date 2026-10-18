@@ -159,25 +159,38 @@ modales (`ModalBase`), incluido el caso de `ModalActualizaciones`.
 
 ## Cierre de la entrega — 17/10/2026
 
-**Estado: implementación local integrada y validada con servicios simulados.**
+**Estado: implementación local integrada y validada con servicios simulados;
+combinación completa (seguridad + hero + landing) integrada en `develop`.**
 
-- Alcance cerrado: Fase 2 (H11–H21) en `fix/seguridad-fase1` e integración
-  con `feat/hero-banner-movil` validada en la copia
-  `../clubes-unid-integracion` (backend **166/166**, lint 0, build OK,
-  navegador **14/14** con servicios simulados, cero datos reales, cero
-  conexiones a servicios externos). Ajustes de documentación de cierre en
-  `README.md` (seed solo local con `DATABASE_URL_LOCAL`, variables
-  `DB_SSL_CA_FILE`/`RATE_LIMIT_*`, guía de despliegue y orden operativo),
-  `SRS.md` (Express 5; infraestructura y destino de BD) y `MANUAL.md`
-  (nota de seed local).
-- **Ajustes de código conservados solo en la copia de integración** con su
-  reproducción en la sección "Integración temporal fase1 + hero" (merges de
-  schema/diapositivasHero, stub de revalidación H2, aserción de uploadSvg).
-- **Sin validar aún**: la combinación completa fase1 + hero + **landing**.
-  Al incorporar la landing debe aplicarse el arreglo de `ModalInicioSesion`
-  (retirar `max-h/overflow/p-*` de `panelClassName`, dejando solo clases
-  visuales en esa var) y volver a validarla; hasta entonces la integración
-  total no se considera probada.
+- Fase 2 (H11–H21), hero móvil y landing: commits y push de
+  `fix/seguridad-fase1`, `feat/hero-banner-movil` y
+  `feat/landing-clubs-campeche`; merges en
+  `integracion/seguridad-hero-landing` (base `origin/develop` 7af7dac) y de
+  ahí a `develop`. Conflictos resueltos conservando las funcionalidades:
+  `diapositivasHero.js` (versión hero + `validarParamsEnteros`),
+  `noticias.js` (versión de fase1, sin helpers locales duplicados) y
+  `schema.sql` (sin TRUNCATE + `url_imagen_movil`).
+- Arreglos de posfusionado (commit `a44c0a9`): `ModalInicioSesion` deja en
+  `panelClassName` solo clases visuales (el scroll+padding los aporta
+  ModalBase → una única zona de scroll); pruebas cruzadas adaptadas (stub de
+  revalidación H2 del test de hero; aserción de `uploadSvg` contra
+  `lib/eliminarImagenCloudinary`). Los mismos ajustes existían en la copia
+  `../clubes-unid-integracion` (reproducción en la sección siguiente).
+- **Validación de la combinación completa** (servicios simulados, cero
+  datos reales, cero conexiones externas): backend **166/166**, ESLint 0,
+  `vite build` OK; navegador **29/29** — 15 checks de combinación (landing
+  `/conoce-clubs` escritorio y móvil sin desbordamientos; ModalActualizaciones
+  con un solo scroll y cierre por backdrop; modal de login con el arreglo
+  aplicado; login ficticio con JWT válido → panel admin; sección Banner
+  Principal; formulario con imágenes de escritorio y móvil y ambas
+  previsualizadas tras subida simulada) + 14 checks de hero/H19/S1 sobre el
+  mismo build. Capturas: `Temp\opencode\pw\capturas-combinada\`. Sigue
+  pendiente de probar con backend y BD de desarrollo reales (pasos en la
+  sección de integración temporal).
+- Ajustes de documentación de cierre en `README.md` (seed solo local con
+  `DATABASE_URL_LOCAL`, variables `DB_SSL_CA_FILE`/`RATE_LIMIT_*`, guía de
+  despliegue y orden operativo), `SRS.md` (Express 5; infraestructura y
+  destino de BD) y `MANUAL.md` (nota de seed local).
 - **Pendientes conservados con su estado** (no los cierra esta entrega):
   H9 (diseño: CSP como cabecera separada de la cookie HttpOnly, que exige
   propuesta revisable antes de tocar autenticación); decisiones de negocio
@@ -186,7 +199,10 @@ modales (`ModalBase`), incluido el caso de `ModalActualizaciones`.
   Render/H21, umbrales efectivos); H17 (consulta y remediación de cuentas
   demo antes de abrir a usuarios); destino desplegado de la BD (pendiente
   de confirmación; ver "Despliegue" en `README.md`).
-- Sin commit, merge, push, despliegues ni cambios en servicios externos.
+- Pushes autorizados ejecutados: las tres ramas de trabajo, la rama de
+  integración y `develop`. `main` no cambió. Cada push dispara el workflow
+  `gitleaks` (solo escaneo); los despliegues automáticos de Vercel/Render
+  dependen de sus paneles (no modificados).
 
 ---
 
