@@ -83,7 +83,7 @@ No se integra con sistemas de pago, ERP, SGA, ni servicios de terceros adicional
 - **Tecnológica**: El frontend debe ejecutarse en un navegador web moderno con soporte para ES Modules, puesto que la aplicación se construye con Vite 8 y React 19, y utiliza Tailwind CSS v4 para estilos. El backend requiere Node.js 18+ con soporte para módulos ES (`"type": "module"`).
 - **Base de datos**: El sistema requiere una instancia PostgreSQL 12+ con capacidad para conexiones concurrentes. La estructura de datos se gestiona mediante migraciones SQL ejecutadas automáticamente al iniciar el servidor.
 - **Autenticación**: El inicio de sesión con Microsoft Azure AD requiere que el usuario tenga una cuenta institucional activa en el tenant configurado (`953420d2-c95e-4f65-9573-b601a94f4390`) y que el navegador no bloquee redirecciones OAuth.
-- **Despliegue**: El frontend se despliega en Vercel y el backend en Render. No hay soporte para despliegue on-premise documentado.
+- **Despliegue**: Infraestructura comunicada: frontend en Vercel, backend en Render y base de datos en Supabase. El destino desplegado queda pendiente de confirmación con información autorizada (los documentos de este repositorio no constituyen evidencia de él). No hay soporte para despliegue on-premise documentado.
 - **Concurrencia**: Un alumno no puede tener más de una inscripción activa simultáneamente, ni más de 3 postulaciones activas al mismo tiempo.
 
 ---
@@ -383,7 +383,7 @@ Criterio de aceptación (Gherkin):
 | Categoría | Restricción | Evidencia en código |
 |-----------|-------------|-------------------|
 | **Frontend** | React 19 con Vite 8 como bundler, Tailwind CSS v4 para estilos, React Router v7 para enrutamiento. | `package.json` (raíz): dependencias `react@^19.2.6`, `react-router-dom@^7.18.0`, devDependencies `vite@^8.0.12`, `tailwindcss@^4.3.0`. |
-| **Backend** | Node.js con Express 4 y módulos ES. PostgreSQL como base de datos con driver `pg`. | `backend/package.json`: `"type": "module"`, dependencias `express@^4.21.0`, `pg@^8.13.0`. |
+| **Backend** | Node.js con Express 5 y módulos ES. PostgreSQL como base de datos con driver `pg`. | `backend/package.json`: `"type": "module"`, dependencias `express@^5.2.1`, `pg@^8.13.0`. |
 | **Proxy de desarrollo** | Vite proxy reenvía `/api` y `/uploads` hacia el backend local en desarrollo, sin requerir CORS. | `vite.config.js:15-24` — `server.proxy`, destino leído de `VITE_PROXY_TARGET` |
 | **Separación de entornos** | El destino del backend se resuelve con variables de Vite (`VITE_*`); no hay URLs fijas en el código fuente. | `.env.development` / `.env.production`; contrato en `.env.example` |
 | **Autenticación** | Integración con MSAL de Azure AD para OAuth. | `src/services/authConfig.js`: tenant `953420d2-c95e-4f65-9573-b601a94f4390`, clientId `89262870-12e6-41ab-b212-07f34b9bde0a`. |
@@ -406,7 +406,7 @@ graph TB
     end
 
     subgraph Servidor [Render - Backend Node.js]
-        F[Express 4 + CORS + Rate Limiting]
+        F[Express 5 + CORS + Rate Limiting]
         G[JWT Auth Middleware]
         H[Role-based Access Control]
     end
