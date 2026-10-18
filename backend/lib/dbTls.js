@@ -31,6 +31,20 @@ function construirSslRemoto(databaseUrl, env, leerArchivo) {
   const ssl = { rejectUnauthorized: true };
 
   const rutaCa = typeof env.DB_SSL_CA_FILE === 'string' ? env.DB_SSL_CA_FILE.trim() : '';
+  // CA inline: para entornos efímeros (p. ej. Render) donde no existe un
+  // archivo establecible fuera del repositorio; el contenido PEM completo
+  // se declara en la variable de entorno (texto multilinea soportado).
+  // Solo se recorta para detectar vacío; el valor conserva sus saltos.
+  const crudoCa = env.DB_SSL_CA_PEM;
+  const pemEnVariable = typeof crudoCa === 'string' && crudoCa.trim() !== '' ? crudoCa : '';
+
+  if (rutaCa !== '' && pemEnVariable !== '') {
+    throw new Error(
+      'DB_SSL_CA_FILE y DB_SSL_CA_PEM están definidas a la vez. ' +
+        'Declara solo una fuente de CA: la ruta del archivo (DB_SSL_CA_FILE) o el contenido PEM inline (DB_SSL_CA_PEM).',
+    );
+  }
+
   if (rutaCa !== '') {
     let pem;
     try {
@@ -49,6 +63,15 @@ function construirSslRemoto(databaseUrl, env, leerArchivo) {
       );
     }
     ssl.ca = pem;
+  } else if (pemEnVariable !== '') {
+    if (!pemEnVariable.includes(MARCA_PEM)) {
+      throw new Error(
+        'DB_SSL_CA_PEM no contiene un certificado PEM (se espera el bloque completo ' +
+          '-----BEGIN CERTIFICATE----- … -----END CERTIFICATE-----). ' +
+          'Pega el contenido de la CA del proveedor o retira la variable para usar el almacén de confianza del sistema.',
+      );
+    }
+    ssl.ca = pemEnVariable;
   }
 
   return ssl;
