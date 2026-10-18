@@ -49,3 +49,8 @@ clubes-unid-backup/
 
 # Graphify
 graphify-out/
+
+# Agentes IA
+AGENTS.md
+SKILL.md
+.opencode/

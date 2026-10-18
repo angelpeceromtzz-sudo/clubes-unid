@@ -39,21 +39,32 @@ export function ModalInicioSesion({ onClose }) {
   }
 
   return (
-    <ModalBase show={true} onClose={onClose} maxWidth="max-w-md">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className={`text-2xl font-black ${esOscuro ? 'text-white' : 'text-slate-900'}`}>Iniciar Sesión</h2>
-        <BotonCerrar onClick={onClose} />
-      </div>
-
+    <ModalBase
+      show={true}
+      onClose={onClose}
+      maxWidth="max-w-sm"
+      panelClassName={`max-h-[85vh] overflow-y-auto overflow-x-hidden p-3 sm:p-5 scrollbar-amber ${
+        esOscuro ? 'bg-[#0e162c] border border-slate-700/30' : 'bg-white border border-slate-200/70 shadow-sm'
+      }`}
+    >
       {mostrarFormulario ? (
         <>
-          <button
-            onClick={() => setMostrarFormulario(false)}
-            className={`flex items-center gap-1.5 text-sm ${esOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'} transition-colors mb-4 cursor-pointer`}
-          >
-            <Icono nombre="arrow-left" strokeWidth={2} className="h-4 w-4" />
-            Volver
-          </button>
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={() => setMostrarFormulario(false)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 ${
+                esOscuro
+                  ? 'bg-amber-400/10 text-amber-400 hover:bg-amber-400/20'
+                  : 'bg-amber-600/10 text-amber-600 hover:bg-amber-600/20'
+              }`}
+            >
+              <Icono nombre="arrow-left" strokeWidth={2.5} className="h-4 w-4" />
+              Volver
+            </button>
+            <BotonCerrar onClick={onClose} />
+          </div>
+
+          <h2 className={`text-2xl font-black mb-6 ${esOscuro ? 'text-white' : 'text-slate-900'}`}>Iniciar Sesión</h2>
 
           <form onSubmit={manejarEnvio} className="space-y-5">
             <CampoTexto
@@ -86,16 +97,23 @@ export function ModalInicioSesion({ onClose }) {
           </form>
         </>
       ) : (
-        <div className="space-y-5">
-          <BotonMicrosoft onSuccess={onClose} />
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className={`text-2xl font-black ${esOscuro ? 'text-white' : 'text-slate-900'}`}>Iniciar Sesión</h2>
+            <BotonCerrar onClick={onClose} />
+          </div>
 
-          <button
-            onClick={() => setMostrarFormulario(true)}
-            className={`w-full border ${esOscuro ? 'border-slate-700/50 text-slate-400 hover:border-slate-600 hover:text-white' : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'} font-medium text-sm rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98]`}
-          >
-            Iniciar sesión con cuenta de administrador
-          </button>
-        </div>
+          <div className="space-y-5">
+            <BotonMicrosoft onSuccess={onClose} />
+
+            <button
+              onClick={() => setMostrarFormulario(true)}
+              className={`w-full border ${esOscuro ? 'border-slate-700/50 text-slate-400 hover:border-slate-600 hover:text-white' : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'} font-medium text-sm rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98]`}
+            >
+              Iniciar sesión con cuenta de administrador
+            </button>
+          </div>
+        </>
       )}
     </ModalBase>
   );
