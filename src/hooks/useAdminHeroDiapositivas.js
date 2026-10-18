@@ -10,7 +10,7 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
   const [busqueda, setBusqueda] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState({ titulo: '', subtitulo: '', url_imagen: '', orden: '1', activa: true });
+  const [form, setForm] = useState({ titulo: '', subtitulo: '', url_imagen: '', url_imagen_movil: '', orden: '1', activa: true });
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -54,7 +54,7 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
     for (let i = 1; i <= MAX_BANNERS; i++) {
       if (!ocupadas.has(i)) { siguienteOrden = i; break; }
     }
-    setForm({ titulo: '', subtitulo: '', url_imagen: '', orden: String(siguienteOrden), activa: true });
+    setForm({ titulo: '', subtitulo: '', url_imagen: '', url_imagen_movil: '', orden: String(siguienteOrden), activa: true });
     setEditando(null);
     setErrorModal('');
     setShowModal(true);
@@ -65,6 +65,7 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
       titulo: d.titulo,
       subtitulo: d.subtitulo || '',
       url_imagen: d.url_imagen || '',
+      url_imagen_movil: d.url_imagen_movil || '',
       orden: String(d.orden ?? 0),
       activa: d.activa,
     });
@@ -99,6 +100,19 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
     }
   }, []);
 
+  const subirImagenMovil = useCallback(async (file) => {
+    try {
+      const result = await api.uploadImagen(file);
+      setForm((prev) => ({ ...prev, url_imagen_movil: result.url }));
+    } catch (err) {
+      setErrorModal(err.message);
+    }
+  }, []);
+
+  const quitarImagenMovil = useCallback(() => {
+    setForm((prev) => ({ ...prev, url_imagen_movil: '' }));
+  }, []);
+
   const guardar = useCallback(async (e) => {
     e.preventDefault();
     setErrorModal('');
@@ -116,6 +130,8 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
         titulo: form.titulo,
         subtitulo: form.subtitulo || null,
         url_imagen: form.url_imagen || null,
+        // '' limpia la imagen móvil en el backend; string la establece.
+        url_imagen_movil: form.url_imagen_movil || '',
         orden: parseInt(form.orden, 10) || 0,
         activa: form.activa,
       };
@@ -171,6 +187,8 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
     guardar,
     handleFormChange,
     subirImagen,
+    subirImagenMovil,
+    quitarImagenMovil,
     refetch,
     pendienteConfirmacion,
     confirmarPendiente,

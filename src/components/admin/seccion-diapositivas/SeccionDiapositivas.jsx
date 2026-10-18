@@ -24,6 +24,8 @@ export function SeccionDiapositivas({
   guardar,
   handleFormChange,
   subirImagen,
+  subirImagenMovil,
+  quitarImagenMovil,
   posicionesDisponibles,
   maxBanners,
 }) {
@@ -105,6 +107,8 @@ export function SeccionDiapositivas({
         onGuardar={guardar}
         onFormChange={handleFormChange}
         onSubirImagen={subirImagen}
+        onSubirImagenMovil={subirImagenMovil}
+        onQuitarImagenMovil={quitarImagenMovil}
       />
     </div>
   );

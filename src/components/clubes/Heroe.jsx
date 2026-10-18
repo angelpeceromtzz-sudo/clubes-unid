@@ -15,12 +15,20 @@ export function Heroe({ onReady }) {
       .then((data) => {
         setDiapositivas(data);
         if (data.length > 0 && !imagenesListas.current) {
+          // Precarga la imagen que se mostrará según el viewport actual:
+          // escritorio (lg+) usa la imagen de banner; móvil la exclusiva si existe.
+          const enEscritorio = typeof window !== 'undefined'
+            && window.matchMedia?.('(min-width: 1024px)').matches;
+          const primera = data[0];
+          const urlPrevia = obtenerUrlImagen(
+            (enEscritorio || !primera.url_imagen_movil) ? primera.url_imagen : primera.url_imagen_movil
+          );
           const img = new Image();
           img.onload = () => {
             imagenesListas.current = true;
             onReady?.();
           };
-          img.src = obtenerUrlImagen(data[0].url_imagen);
+          img.src = urlPrevia;
         } else {
           onReady?.();
         }
@@ -83,11 +91,28 @@ export function Heroe({ onReady }) {
               index === slideActual ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
-            <div
-              className="absolute inset-0 bg-no-repeat bg-contain lg:bg-cover lg:bg-[center_30%]"
-              style={{ backgroundImage: `url(${obtenerUrlImagen(slide.url_imagen)})` }}
-            />
-
+            {slide.url_imagen_movil ? (
+              /*
+               * Con imagen móvil: <picture> elige la exclusiva para pantallas
+               * pequeñas y la de escritorio desde lg (donde el layout actual
+               * es bg-cover). La imagen móvil está compuesta para recorte
+               * cover; la de escritorio conserva su posición center 30%.
+               */
+              <picture>
+                <source media="(min-width: 1024px)" srcSet={obtenerUrlImagen(slide.url_imagen)} />
+                <img
+                  src={obtenerUrlImagen(slide.url_imagen_movil)}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                />
+              </picture>
+            ) : (
+              <div
+                className="absolute inset-0 bg-no-repeat bg-contain lg:bg-cover lg:bg-[center_30%]"
+                style={{ backgroundImage: `url(${obtenerUrlImagen(slide.url_imagen)})` }}
+              />
+            )}
           </div>
         ))}
 

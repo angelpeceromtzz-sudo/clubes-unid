@@ -3,12 +3,18 @@
 
    Con `externalClose` la X de cerrar se monta sobre la esquina de la tarjeta,
    fuera del contenedor con scroll, para que quede fija y sólo el contenido se
-   mueva. El scroll vive en un div interno porque un elemento (la tarjeta) con
+   mueva. La tarjeta es sólo marco visual (sin scroll ni padding): el scroll y
+   el padding viven en UN solo div interno, porque un elemento (la tarjeta) con
    `overflow` propio no puede mostrar contenido fuera de su caja: al moverle el
-   scroll al hijo, la tarjeta queda como marco estable. */
+   scroll al hijo, la tarjeta queda como marco estable. Antes llevaban scroll y
+   padding tanto la tarjeta como el div interno y se generaban doble barra y
+   doble padding. `innerClassName` permite anular ese wrapper para modales que
+   gestionan su propio alto con `panelClassName` (p.ej. ModalActualizaciones).
+   Al abrirse se bloquea el scroll del body con `useBloqueoScroll`. */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useBloqueoScroll } from '../../hooks/useBloqueoScroll';
 import { BotonCerrar } from './BotonCerrar';
 
 let portalDiv = null;
@@ -20,14 +26,17 @@ function getPortalContainer() {
   return portalDiv;
 }
 
-export function ModalBase({ show, onClose, maxWidth = 'max-w-lg', closeOnBackdrop = true, externalClose = false, panelClassName, children }) {
+export function ModalBase({ show, onClose, maxWidth = 'max-w-lg', closeOnBackdrop = true, externalClose = false, panelClassName, innerClassName, children }) {
   const { tema } = useTheme();
   const [container] = useState(getPortalContainer);
+  useBloqueoScroll(show);
 
   if (!show) return null;
 
   const clasesPanel = panelClassName
-    ?? `max-h-[85vh] overflow-y-auto overflow-x-hidden p-4 sm:p-8 border scrollbar-amber ${tema.isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`;
+    ?? `border ${tema.isDark ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`;
+  const clasesInterno = innerClassName
+    ?? 'max-h-[85vh] overflow-y-auto overscroll-contain p-5 sm:p-8 scrollbar-amber';
 
   return createPortal(
     <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4"
@@ -57,7 +66,7 @@ export function ModalBase({ show, onClose, maxWidth = 'max-w-lg', closeOnBackdro
             <BotonCerrar onClick={onClose} etiqueta="Cerrar" />
           </div>
         )}
-        <div className="max-h-[85vh] overflow-y-auto p-4 sm:p-8 scrollbar-amber">
+        <div className={clasesInterno}>
           {children}
         </div>
       </div>

@@ -170,12 +170,13 @@ Se aplica como `--navbar-height` en el root de `App.jsx`.
 | `Badge` | `ui/Badge.jsx` | 8 colores; `sm` / `md` |
 | `Spinner` | `ui/Spinner.jsx` | `sm\|md\|lg`; color por clase Tailwind (default ámbar) |
 | `CampoTexto` / `CampoSelect` | `ui/Campo*.jsx` | Usan `inputCls` / `selectCls` del tema; label uppercase; error `text-red-400` |
-| `ModalBase` / `ModalConfirmacion` | `ui/` | Portal, overlay, `rounded-2xl`, scroll interno |
+| `ModalBase` / `ModalConfirmacion` | `ui/` | Portal, overlay, `rounded-2xl`; **única** zona de scroll en el div interno (`max-h-[85vh] overflow-y-auto p-5 sm:p-8`), panel solo marco (props `panelClassName` / `innerClassName` para modales que gestionan su propio alto, p.ej. `ModalActualizaciones`); bloquea el scroll del body (`useBloqueoScroll`) |
 | `TarjetaClub` | `clubes/tarjetas/TarjetaClub.jsx` | Activa / «próximamente» (opaca, sin hover) |
-| `Heroe` | `clubes/Heroe.jsx` | Carrusel de diapositivas; alturas por breakpoint |
+| `Heroe` | `clubes/Heroe.jsx` | Carrusel de diapositivas; alturas por breakpoint; imagen móvil opcional por slide (`<picture>`, §11.8) |
 | `Icono` | `ui/Icono.jsx` | Mapa de paths; `strokeWidth` configurable |
 | `BotonAccion` CTA interés | CSS `.boton-interes-cta` | Estado normal, hover, procesando, confirmado |
 | `FondoEncuesta` | `encuestas/FondoEncuesta.jsx` | Marca de agua `lobounid.png` con tratamiento por tema |
+| `SubirImagen` | `ui/SubirImagen.jsx` | `obligatorio`, `onRemove` (botón «Quitar»), `ayuda` (texto bajo el control) |
 | Landing | `pages/PaginaConoceClubs.jsx` | `BotonEncuesta` (activo / deshabilitado con `fondoPanel`), `BotonExplorar` (primario / contorno), `EnlaceSeccion`, `TarjetaPropuesta`, carrusel de propuestas / «Mostrar más», barra propia con `Logotipo` |
 
 **Regla de uso (verificado en código):** en superficies con fondo propio, preferir `tema.cardCls` o los pares `modoOscuro ? 'bg-[#0e162c]…' : 'bg-white…'` ya existentes, no inventar fondos nuevos.
@@ -237,7 +238,7 @@ Tailwind 4 con breakpoints por defecto. Puntos **usados de forma consistente** e
 | Logo UNID (Portal) | `public/LogoU.png` | Botón «Portal» | `BotonPortal.jsx` |
 | Favicon | `public/favicon.svg` | Pestaña | `index.html` |
 | Imágenes de club | `imagen_portada` (URL o `/uploads/…`) | Tarjeta, detalle | `utils/imagen.js` → `obtenerUrlImagen` |
-| Hero banners | API diapositivas | Carrusel `/` | `Heroe.jsx` |
+| Hero banners | API diapositivas (`url_imagen` + `url_imagen_movil` opcional) | Carrusel `/` | `Heroe.jsx`, `routes/diapositivasHero.js` |
 | Hero landing (foto protagonista) | `LANDING.hero.imagen` (asset en `public/` o null) | Banda A de `/conoce-clubs` | `PaginaConoceClubs`, `src/config/landing.js` |
 | Fotos de actividades | `LANDING.actividades.items[].imagen` (`public/misiones3.jpg`, `public/trineo-sueños2.jpg`, `public/InterUNID.jpeg` 800×533) | Pósteres banda F | `PaginaConoceClubs`, `src/config/landing.js` |
 
@@ -246,6 +247,7 @@ Tailwind 4 con breakpoints por defecto. Puntos **usados de forma consistente** e
 - `obtenerUrlImagen` fuerza `https` en URLs absolutas y antepone `VITE_BACKEND_URL` a `/uploads/`.
 - Imagen de club sin URL: fallback con icono `image` / `users` centrado (`TarjetaClub`, landing).
 - Hero recomienda **1920×800** (~21:9), <500 KB (comentario en `Heroe.jsx`).
+- **Imagen móvil del carrusel (Verificado en código; pendiente de verificación visual):** cada diapositiva admite `url_imagen_movil` opcional (`diapositivas_hero.url_imagen_movil`, migración aditiva `backend/migrations/migrate-diapositivas-hero-movil.sql`, no ejecutada remotamente). Con imagen móvil, `Heroe` usa `<picture>`: `source media="(min-width: 1024px)"` con la de escritorio y `<img object-cover object-center>` (alt vacío, `aria-hidden`) para móvil; sin ella se conserva el `background-image` actual (`bg-contain` móvil / `bg-cover lg`). La recomendación de tamaño para la imagen móvil es retrato compuesto para `object-cover` (p. ej. ~1080×1350); el copy de recomendaciones vive en el modal admin (`ayuda` de `SubirImagen`). **Alcance (Inconsistencia de alcance, registrada):** `url_imagen_movil` afecta **solo al carrusel de `/`** (`Heroe.jsx`, montado únicamente en `PaginaInicio`); la landing `/conoce-clubs` usa su propio hero estático (`LANDING.hero.imagen` en `src/config/landing.js`, §11.8) y no consume `diapositivas_hero`. No es un fallo del carrusel: son dos héroes distintos.
 - Tratamiento de `lobounid.png`: en oscuro `opacity-25 brightness-110`; en claro `opacity-[0.14] brightness-[0.55] saturate-150` (`FondoEncuesta.jsx`).
 
 **Iconos:** no se usa librería externa; siempre `Icono` + nombre del mapa. Nombres inexistentes hacen `console.warn` y no renderizan.
@@ -381,6 +383,7 @@ Al diseñar pantallas de panel, reutilizar `ThemeContext` (`sbBg`, `tableBg`, `i
 | 5 | `App.css` | Archivo vacío; no se importa de forma efectiva con estilos | Baja |
 | 6 | Categoría Tecnología | Tilde en UI vs seed sin tilde | Baja |
 | 7 | CTAs | Botones de acción con y sin `uppercase`/`font-black` según contexto | Baja |
+| 8 | Modales (`ModalBase`) | Panel y div interno llevaban **ambos** `max-h-[85vh] overflow-y-auto p-4 sm:p-8` → doble barra de scroll y doble padding en las 15 llamadas a `ModalBase`. **Corregido:** panel solo marco visual, único div interno con scroll/padding (`p-5 sm:p-8`), prop `innerClassName` para `ModalActualizaciones` (layout propio) y bloqueo del scroll del body. Pendiente verificación visual | Corregida (verificación visual pendiente) |
 
 ### 13.2 Estado de verificación visual
 
@@ -388,6 +391,8 @@ Al diseñar pantallas de panel, reutilizar `ThemeContext` (`sbBg`, `tableBg`, `i
 - Contraste real de `text-slate-400` sobre `#0b111e` en cuerpos largos (fuera de landing): no auditado con herramienta.
 - Tabulación completa en `/encuesta/:slug`: no auditada en esta iteración.
 - **Iteración hero fotográfico + banda de actividades (código, sin navegador):** cambios implementados y verificados con ESLint + `vite build`; **no** se ejecutó verificación visual (sin Playwright en la sesión): queda pendiente revisar a 320/375/425/768/1440 px el recorte del hero, la integración móvil del contenido sobre la foto, la **rejilla de 3 columnas justificada** de pósteres en `md+` y la fila con scroll en móvil, el **equilibrio texto/imagen de los pósteres a 320 px** (copy ≤ 4 líneas, `line-clamp-4` sin activarse), **los 6 valores MFI siempre en grid 3×2 con pills `w-full` de fondo grande (2 por línea solo a 320–374 px)**, el chip «Actividades» (5 chips a 320 px), los **botones de Acerca alineados al fondo con la tarjeta de Gustavo Gallegos en escritorio** (junto al texto en móvil) y el copy de Misiones (borrador) e InterUNID (experiencia documentada). Recursos: fotos de Misiones, Trineo **e InterUNID** disponibles; queda pendiente **la foto del hero** (`LANDING.hero.imagen` sigue en `null`).
+- **Iteración imagen móvil del carrusel hero (código, sin navegador):** `url_imagen_movil` opcional por diapositiva (schema + migración aditiva no ejecutada + rutas + modal admin con `SubirImagen`/`onRemove` + `<picture>` en `Heroe`); verificado con 8 pruebas de ruta (pool simulado), ESLint y `vite build`. **Alcance:** aplica solo al carrusel de `/`; `/conoce-clubs` conserva su hero estático `LANDING.hero` (§9, §11.8) y no se modifica. **Pendiente:** aplicar la migración en la BD desplegada, subir una imagen móvil de prueba desde el panel, verificar en navegador el recorte `object-cover` móvil y la conmutación en `lg`, y validar la limpieza de Cloudinary al reemplazar/eliminar.
+- **Iteración doble scroll de modales (código, sin navegador):** fix de `ModalBase` (panel solo marco; único div interno con `max-h-[85vh] overflow-y-auto overscroll-contain p-5 sm:p-8`; bloqueo de scroll del body con `useBloqueoScroll`) y `ModalActualizaciones` (`innerClassName=""`, hijo `h-full` en vez de `h-[85vh]`, sin borde propio duplicado). **Alcance:** las 15 llamadas a `ModalBase` pasan de padding doble (32/64 px) a uno solo (20/32 px); los modales de capa única (`ModalConfirmacion`, `ModalidadClub`, `ModalVP`, etc.) no se modifican. `ModalActualizaciones` es el único que usa `panelClassName`/`innerClassName`. **Pendiente:** verificación visual en navegador de los modales abiertos en móvil y escritorio (una sola barra de scroll, sin desbordes, X de `externalClose` sin recorte, bloqueo del fondo).
 
 ### 13.3 Reglas de mantenimiento
 

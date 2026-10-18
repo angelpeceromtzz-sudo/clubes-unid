@@ -128,6 +128,8 @@ export function PanelAdmin() {
               guardar={d.hero.guardar}
               handleFormChange={d.hero.handleFormChange}
               subirImagen={d.hero.subirImagen}
+              subirImagenMovil={d.hero.subirImagenMovil}
+              quitarImagenMovil={d.hero.quitarImagenMovil}
               posicionesDisponibles={d.hero.posicionesDisponibles}
               maxBanners={d.hero.maxBanners}
             />
