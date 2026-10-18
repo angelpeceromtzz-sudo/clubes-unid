@@ -5,7 +5,7 @@ import { BotonAccion } from '../../ui/BotonAccion';
 import { Spinner } from '../../ui/Spinner';
 import { SubirImagen } from '../../ui/SubirImagen';
 
-export function ModalFormularioDiapositiva({ show, editando, form, enviando, errorModal, modoOscuro, tema, labelCls, inputCls, posicionesDisponibles, onClose, onGuardar, onFormChange, onSubirImagen }) {
+export function ModalFormularioDiapositiva({ show, editando, form, enviando, errorModal, modoOscuro, tema, labelCls, inputCls, posicionesDisponibles, onClose, onGuardar, onFormChange, onSubirImagen, onSubirImagenMovil, onQuitarImagenMovil }) {
 
   return (
     <ModalBase show={show} onClose={onClose} maxWidth="max-w-md">
@@ -30,6 +30,18 @@ export function ModalFormularioDiapositiva({ show, editando, form, enviando, err
         </div>
 
         <SubirImagen label="Imagen" urlImagen={form.url_imagen} onUpload={onSubirImagen} modoOscuro={modoOscuro} labelCls={labelCls} inputId="hero-image-upload" editando={editando} obligatorio />
+
+        <SubirImagen
+          label="Imagen para móvil (opcional)"
+          urlImagen={form.url_imagen_movil}
+          onUpload={onSubirImagenMovil}
+          onRemove={onQuitarImagenMovil}
+          modoOscuro={modoOscuro}
+          labelCls={labelCls}
+          inputId="hero-mobile-image-upload"
+          editando={editando}
+          ayuda="Si no se sube, en móvil se usa la imagen de escritorio. Recomendado: retrato compuesto para pantallas pequeñas."
+        />
 
         {errorModal && <p className="text-red-400 text-xs font-medium">{errorModal}</p>}
 

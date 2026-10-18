@@ -4,6 +4,7 @@ import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { v2 as cloudinary } from 'cloudinary';
+import { esUrlCloudinary } from '../lib/eliminarImagenCloudinary.js';
 
 const ROLES_EDITOR = [3, 4];
 
@@ -36,7 +37,8 @@ function errorDatosEvento(fecha, hora, lugar) {
 }
 
 function extraerPublicId(url) {
-  if (!url || !url.includes('cloudinary.com')) return null;
+  // H18: hostname por partes, no substring (ver lib/eliminarImagenCloudinary.js).
+  if (!esUrlCloudinary(url)) return null;
   const match = url.match(/upload\/(?:v\d+\/)?(.+?)\.(jpg|jpeg|png|gif|webp|svg)$/);
   return match ? `clubs-unid/${match[1]}` : null;
 }

@@ -15,6 +15,9 @@ export function TarjetasDiapositivasMobile({ diapositivas, modoOscuro, tdTitle, 
               <p className={`text-sm font-semibold truncate ${tdTitle}`}>{d.titulo}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className={`text-[10px] ${tdCls}`}>Orden: {d.orden}</span>
+                {d.url_imagen_movil && (
+                  <span className="text-[9px] uppercase tracking-wider font-bold text-amber-400">Con imagen móvil</span>
+                )}
               </div>
             </div>
             <Badge texto={d.activa ? 'Activa' : 'Inactiva'} color={d.activa ? 'emerald' : 'slate'} size="sm" />

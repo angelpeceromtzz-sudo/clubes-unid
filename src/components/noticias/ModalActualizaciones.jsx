@@ -538,8 +538,12 @@ export function ModalActualizaciones({ onLoginClick }) {
       onClose={cerrarActualizaciones}
       maxWidth="max-w-6xl"
       panelClassName="p-0 overflow-hidden border border-slate-800 bg-[#0b0f19] max-h-[92vh] md:max-h-[88vh]"
+      innerClassName=""
     >
-      <div className="relative flex h-[85vh] max-h-[92vh] flex-col overflow-hidden border border-slate-800 bg-[#0b0f19] md:max-h-[88vh] md:flex-row">
+      {/* Sin borde propio: el marco lo pone el panel de ModalBase (p-0, sin
+          wrapper con padding), y `h-full` + `max-h-*` convierten al hijo en la
+          única zona con scroll (las listas internas) sin barra exterior. */}
+      <div className="relative flex h-full max-h-[92vh] flex-col overflow-hidden bg-[#0b0f19] md:max-h-[88vh] md:flex-row">
         {/* Botón cerrar: neutro gris/blanco, sin rojo */}
         <button
           onClick={cerrarActualizaciones}
