@@ -1,5 +1,5 @@
 /* Modal de confirmación reutilizable: reemplaza window.confirm con estilo consistente.
-   Props: show, titulo, mensaje, textoConfirmar, textoCancelar, varianteDanger, onConfirmar, onCancelar, cargando. */
+   Props: show, titulo, mensaje, textoConfirmar, textoCancelar, varianteDanger, onConfirmar, onCancelar, cargando, tamanoTextoBoton. */
 import { Icono } from './Icono';
 import { BotonCerrar } from './BotonCerrar';
 import { Spinner } from './Spinner';
@@ -15,6 +15,7 @@ export function ModalConfirmacion({
   onConfirmar,
   onCancelar,
   cargando = false,
+  tamanoTextoBoton = 'text-sm',
 }) {
   const { modoOscuro } = useTheme();
   if (!show) return null;
@@ -67,7 +68,7 @@ export function ModalConfirmacion({
             <button
               onClick={onCancelar}
               disabled={cargando}
-              className={`flex-1 border rounded-xl px-5 py-3 text-sm font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] disabled:opacity-40 ${
+              className={`flex-1 border rounded-xl px-5 py-3 ${tamanoTextoBoton} font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] disabled:opacity-40 ${
                 modoOscuro
                   ? 'border-slate-600 text-slate-300 hover:bg-slate-800'
                   : 'border-slate-300 text-slate-700 hover:bg-slate-100'
@@ -78,7 +79,7 @@ export function ModalConfirmacion({
             <button
               onClick={onConfirmar}
               disabled={cargando}
-              className={`flex-1 rounded-xl px-5 py-3 text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2 ${
+              className={`flex-1 rounded-xl px-5 py-3 ${tamanoTextoBoton} font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2 ${
                 varianteDanger
                   ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40'
                   : 'bg-amber-400 hover:bg-amber-500 text-[#0e162c]'

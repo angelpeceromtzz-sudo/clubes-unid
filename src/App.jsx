@@ -176,6 +176,7 @@ function App() {
         mensaje="¿Seguro que quieres cerrar sesión?"
         textoConfirmar="Cerrar sesión"
         textoCancelar="Cancelar"
+        tamanoTextoBoton="text-xs"
         onConfirmar={handleLogout}
         onCancelar={() => setConfirmarLogout(false)}
       />
