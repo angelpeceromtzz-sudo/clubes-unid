@@ -159,7 +159,8 @@ Quien tenga el enlace puede responder.
 
 > La interfaz que genera y reparte esos enlaces **todavía no está construida**
 > (ver `PENDIENTES.md`, sección 2.1). Hoy el enlace se consigue creándose la
-> encuesta por API o con el `seed.sql`.
+> encuesta por API o con el `seed.sql` (solo contra una base de datos local
+> desechable; nunca en producción — ver la advertencia en `README.md`).
 
 - Se monta **fuera del layout autenticado**, así que no muestra la barra de
   navegación ni el botón de iniciar sesión. Quien nunca ha entrado a la

@@ -43,6 +43,7 @@ export const api = {
   getMe: autenticacionService.getMe,
 
   getClubes: clubService.getClubes,
+  getClubesAdmin: clubService.getClubesAdmin,
   getClub: clubService.getClub,
   createClub: clubService.createClub,
   updateClub: clubService.updateClub,

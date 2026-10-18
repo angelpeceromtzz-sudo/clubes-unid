@@ -30,14 +30,24 @@ import catalogosRoutes from './routes/catalogos.js';
 import encuestasRoutes from './routes/encuestas.js';
 import diapositivasHeroRoutes from './routes/diapositivasHero.js';
 import noticiasRoutes from './routes/noticias.js';
+import { limitadorGlobal } from './lib/rateLimits.js';
+import { cabecerasSeguridad } from './lib/securityHeaders.js';
+import { manejadorErroresGlobal } from './lib/errorHandler.js';
 
 const app = express();
+// Render termina TLS y reenvía con X-Forwarded-For (un solo proxy).
+// Pendiente de verificar en Render: si algún día hay un proxy adicional
+// (p. ej. CDN), el valor debe ajustarse al número real de saltos.
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 4000;
 
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
   : ['http://localhost:5173'];
+
+// Cabeceras de seguridad (H5b) antes de todo: también aplican a respuestas
+// de error, 404 y preflight.
+app.use(cabecerasSeguridad);
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -49,6 +59,11 @@ app.use(cors({
     }
   }
 }));
+
+// Cobertura general de API por IP (H5a): red de seguridad única para todas
+// las rutas /api. Va después de CORS (los OPTIONS de preflight los responde
+// CORS) y antes de express.json para frenar también el costo de parseo.
+app.use('/api', limitadorGlobal);
 
 app.use(express.json());
 
@@ -84,8 +99,16 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api', (req, res) => {
-  res.status(404).json({ error: `Ruta no encontrada: ${req.method} ${req.path}` });
+  // H19: método y ruta solo quedan en el log del servidor; la respuesta no
+  // expone la estructura interna de endpoints en la UI.
+  console.warn(`Ruta no encontrada: ${req.method} ${req.path}`);
+  res.status(404).json({ error: 'Ruta no encontrada' });
 });
+
+// H15: respaldo de errores que escapen de los handlers (incluye next(err)
+// del callback de CORS). Sin este manejador, el manejador por defecto de
+// Express puede devolver err.message y el stack en HTML.
+app.use(manejadorErroresGlobal);
 
 app.listen(PORT, () => {
   console.log(`Servidor de Clubs UNID corriendo en puerto ${PORT}`);

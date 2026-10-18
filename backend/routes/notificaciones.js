@@ -2,8 +2,13 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
+import { validarCreacionNotificacion } from '../lib/notificacionPermisos.js';
+import { limitadorNotificaciones } from '../lib/rateLimits.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
+
+validarParamsEnteros(router);
 
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -99,9 +104,11 @@ router.get('/actividad', authenticate, requireRole(3, 4), async (req, res) => {
   }
 });
 
-router.post('/', authenticate, async (req, res) => {
+// 30/min por usuario (H5a), después de authenticate para usar la identidad
+// revalidada y antes de la matriz de permisos (H7) y de cualquier escritura.
+router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
   try {
-    const { titulo, mensaje, audiencia, id_club, id_destinatario } = req.body;
+    const { titulo, mensaje, audiencia, id_club: idClub, id_destinatario: idDestinatario } = req.body;
     const userId = req.user.id;
     const roleId = req.user.id_rol;
 
@@ -109,33 +116,33 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'titulo, mensaje y audiencia son obligatorios' });
     }
 
-    const audienciasValidas = ['global', 'presidentes', 'alumnos', 'club'];
-    if (!audienciasValidas.includes(audiencia)) {
-      return res.status(400).json({ error: 'Audiencia no válida' });
-    }
-
-    if (audiencia === 'club' && !id_club) {
-      return res.status(400).json({ error: 'id_club es obligatorio para audiencia club' });
-    }
-
-    if (roleId === 2 || roleId === 5) {
-      if (audiencia !== 'club') {
-        return res.status(403).json({ error: 'Los presidentes y vicepresidentes solo pueden enviar notificaciones a su club' });
-      }
+    // Matriz de permisos por rol/audiencia/club/destinatario: lib/notificacionPermisos.js
+    let clubRow = null;
+    if (idClub !== null && idClub !== undefined) {
       const club = await pool.query(
         'SELECT id_club, id_presidente, id_vicepresidente FROM clubes WHERE id_club = $1',
-        [id_club]
+        [idClub]
       );
-      if (club.rows.length === 0 || (club.rows[0].id_presidente !== userId && club.rows[0].id_vicepresidente !== userId)) {
-        return res.status(403).json({ error: 'No eres líder de este club' });
-      }
+      clubRow = club.rows[0] ?? null;
+    }
+
+    const evaluacion = validarCreacionNotificacion({
+      idRol: roleId,
+      idEmisor: userId,
+      audiencia,
+      idClub,
+      idDestinatario,
+      club: clubRow,
+    });
+    if (!evaluacion.permitido) {
+      return res.status(evaluacion.status).json({ error: evaluacion.error });
     }
 
     const result = await pool.query(
       `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [userId, titulo, mensaje, audiencia, audiencia === 'club' ? id_club : null, id_destinatario || null]
+      [userId, titulo, mensaje, audiencia, evaluacion.valores.id_club, evaluacion.valores.id_destinatario]
     );
 
     if (roleId === 3) {
@@ -147,7 +154,7 @@ router.post('/', authenticate, async (req, res) => {
         descripcion: `${req.user.nombre_completo} envió un anuncio "${titulo}" para audiencia: ${audienciaLabel[audiencia] || audiencia}`,
         entidadTipo: 'notificacion',
         entidadId: result.rows[0].id_notificacion,
-        detalles: { titulo, audiencia, id_club },
+        detalles: { titulo, audiencia, id_club: idClub },
       });
     }
 

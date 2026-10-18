@@ -15,7 +15,7 @@ Sistema de gestión de clubes universitarios para UNID Campeche. Permite a alumn
 | **Mapas** | Leaflet / react-leaflet |
 | **Gráficos** | Recharts |
 | **Drag & Drop** | @dnd-kit |
-| **Infraestructura** | Vercel (frontend), Render (backend + DB) |
+| **Infraestructura** | Frontend en Vercel, backend en Render, base de datos en Supabase (comunicado por el equipo; **destino desplegado pendiente de confirmación** — el repositorio no es evidencia de él) |
 
 ---
 
@@ -78,6 +78,20 @@ ADMIN_CORREO=admin@ejemplo.com
 ADMIN_SECRET=tu_admin_secret
 CLOUDINARY_URL=cloudinary://api_key_falsa:api_secret_falso@cloud_name_falso
 CORS_ORIGIN=http://localhost:5173
+
+# TLS hacia la BD remota: cuando existe DATABASE_URL, el backend exige TLS con
+# verificación completa; la cadena NO debe llevar ssl/sslmode/sslrootcert.
+# Solo si el proveedor usa una CA propia:
+DB_SSL_CA_FILE=
+
+# Rate limiting (H5a/H8): activos por defecto con los valores seguros de
+# lib/rateLimits.js. Solo se sobrescribe un umbral concreto si hace falta;
+# bloque completo con sus valores por defecto en backend/.env.example. Ejemplos:
+# RATE_LIMIT_GLOBAL_MINUTO=1200
+# RATE_LIMIT_LOGIN_IP_15MIN=20
+# RATE_LIMIT_LOGIN_CUENTA_15MIN=5
+# RATE_LIMIT_UPLOAD_MINUTO=30
+# En producción (Render) debe existir NODE_ENV=production (H8).
 ```
 
 Ejecutar migraciones:
@@ -86,10 +100,16 @@ Ejecutar migraciones:
 node migrate.js
 ```
 
-(Opcional) Sembrar datos de prueba:
+(Opcional, solo desarrollo local) Sembrar datos de prueba. Úsalo **únicamente
+con una base de datos local desechable**: nunca contra Render, Supabase ni
+ninguna BD compartida o de producción (crea cuentas demo con contraseña
+pública; ver H17 en `AUDITORIA-SEGURIDAD.md`). Apunta siempre a `localhost`
+mediante una variable local propia, jamás a `DATABASE_URL`:
 
 ```bash
-node seed.sql  # o el script que corresponda
+# Requiere psql. Cadena exclusivamente local (sin credenciales reales):
+export DATABASE_URL_LOCAL="postgresql://localhost:5432/clubs_bd_local"
+psql "$DATABASE_URL_LOCAL" -f backend/seed.sql
 ```
 
 ### 3. Frontend
@@ -160,9 +180,63 @@ clubes-unid/
 | Plataforma | Componente | Configuración |
 |---|---|---|
 | **Vercel** | Frontend | `vercel.json` apunta a Vite, SPA fallback a `index.html` |
-| **Render** | Backend + DB | Servicio Web + PostgreSQL, variables de entorno desde dashboard |
+| **Render** | Backend | Servicio Web, variables de entorno desde dashboard |
+| **Supabase** | Base de datos (PostgreSQL) | Conexión desde backend vía `DATABASE_URL` (SSL) |
 
-Las variables de entorno en producción deben configurarse en cada plataforma. El backend en Render usa `DATABASE_URL` para la conexión SSL a PostgreSQL.
+> **Destino desplegado: pendiente de confirmación.** La infraestructura
+> comunicada es frontend en Vercel, backend en Render y BD en Supabase; la
+> confirmación del destino real requiere información autorizada (estos
+> documentos no la sustituyen). No imprimir `DATABASE_URL` ni credenciales
+> en documentos, reportes o logs.
+
+### Variables en producción
+
+- **Vercel**: variables `VITE_*` (URL del API, Azure), horneadas en el build.
+- **Render** (dashboard): `DATABASE_URL` **sin** parámetros `ssl`/`sslmode`
+  (el backend exige TLS verificado; ver `backend/.env.example`) y sin `DB_*`
+  locales; `JWT_SECRET` y `ADMIN_SECRET` con valores nuevos (H3);
+  `CLOUDINARY_URL`; `CORS_ORIGIN` de producción; `NODE_ENV=production` (H8);
+  `DB_SSL_CA_FILE` solo si el proveedor exige CA propia; umbrales
+  `RATE_LIMIT_*` solo si hay que ajustar un valor (defectos en
+  `backend/.env.example`).
+- `backend/seed.sql` **nunca se ejecuta en producción** (solo BD local
+  desechable; ver apartado de instalación).
+
+### Migraciones y verificación previa
+
+1. **Comprobar TLS con una conexión aislada** (cliente `psql` u otro desde
+   una terminal, fuera del servicio) contra la BD **antes** de arrancar el
+   backend: la cadena no debe llevar `sslmode` y la validación debe
+   completarse sin errores. No imprimir la URL ni credenciales.
+2. El proceso en Render ejecuta `node migrate.js` (aplica `schema.sql`,
+   idempotente) **al arrancar**: solo debe hacerlo tras superar el paso 1.
+3. **Migración aditiva del hero**: aplicar
+   `backend/migrations/migrate-diapositivas-hero-movil.sql` (o asegurar que
+   `schema.sql` versionado ya contenga `url_imagen_movil`) **antes** de
+   usar la nueva columna en API/UI. `migrate.js` solo ejecuta `schema.sql`;
+   el archivo de migración del hero no corre solo.
+
+### Orden operativo
+
+1. Revisar H17 y planificar la remediación de las cuentas demo (seed) antes
+   de abrir el servicio a usuarios reales.
+2. Coordinar la rotación de credenciales (H3) con la actualización de los
+   servicios consumidores (Render, Vercel, GitHub) para no romper llamadas
+   en vuelo.
+3. Incluir la migración aditiva del hero antes de utilizar la nueva
+   columna `url_imagen_movil`.
+4. Comprobar TLS mediante una conexión aislada antes de arrancar el backend
+   con migraciones automáticas.
+5. Desplegar en este orden, cuando se autorice: backend en Render →
+   frontend en Vercel (con los merges y arreglos registrados en
+   `SEGURIDAD-PROGRESO.md`).
+6. Verificación posterior: cabeceras H5b (`curl -I`), 404 global, rate
+   limits, login real y hero móvil con dato real.
+
+> Las comprobaciones que dependen del entorno desplegado (rotación H3, H4,
+> `NODE_ENV`, cabeceras, datos de BD, install command de Render, umbrales
+> efectivos) quedan **pendientes** con sus estados en
+> `SEGURIDAD-PROGRESO.md`.
 
 ---
 

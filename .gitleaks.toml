@@ -1,29 +1,18 @@
 title = "gitleaks config para clubes-unid"
 
-# Usa las reglas por defecto de gitleaks y solo excluye lo que no es secreto.
+# Usa las reglas por defecto de gitleaks, sin exclusiones.
+#
+# Cambio de la auditoría H3 (AUDITORIA-SEGURIDAD.md):
+# - Se retiró la allowlist que excluía por contenido los secretos históricos
+#   del repo y los placeholders de .env.example.
+# - Se retiró también la exclusión de lockfiles: verificada con gitleaks
+#   8.28.0 sobre el historial completo (217 commits), el escaneo resulta
+#   limpio incluso sin ninguna allowlist, por lo que la exclusión no era
+#   necesaria. Si una versión futura marcara hashes de lockfiles, puede
+#   reincorporarse una allowlist solo por ruta, documentando el motivo.
+# - Escaneo limpio NO significa que no existan secretos en el historial ni
+#   que las credenciales históricas estén revocadas en los servicios: la
+#   verificación/rotación en Render sigue siendo una tarea operativa
+#   pendiente (no depende de este archivo).
 [extend]
 useDefault = true
-
-[[allowlists]]
-description = "Placeholders de .env.example y lockfiles (no son credenciales reales)"
-paths = [
-  '''(^|/)pnpm-lock\.yaml$''',
-  '''(^|/)package-lock\.json$''',
-]
-regexes = [
-  '''tu_password_local''',
-  '''tu_jwt_secret''',
-  '''tu_admin_secret''',
-  '''api_key_falsa''',
-  '''api_secret_falso''',
-  '''cloud_name_falso''',
-  '''REDACTED''',
-]
-
-[[allowlists]]
-description = "Secretos historicos YA ROTADOS y sin valor. No se purgo el historial porque hay colaboradores activos; se permiten aqui para que el escaneo no marque falsos positivos conocidos."
-regexes = [
-  '''angel2007''',
-  '''clubes-unid-jwt-secret-2026''',
-  '''unid-admin-2026''',
-]

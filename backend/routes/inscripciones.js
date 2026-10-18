@@ -2,8 +2,11 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
+
+validarParamsEnteros(router);
 
 // Obtiene la inscripción activa del usuario autenticado
 router.get('/activa', authenticate, async (req, res) => {

@@ -1,18 +1,15 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+import {
+  limitadorLoginLocalIp,
+  limitadorLoginLocalCuenta,
+  limitadorLoginMicrosoft,
+  limitadorRegistro,
+} from '../lib/rateLimits.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -40,7 +37,10 @@ function generarToken(user) {
   );
 }
 
-router.post('/login-local', loginLimiter, async (req, res) => {
+// Doble límite (H5a): por IP (protege contra fuerza bruta distribuida desde
+// una máquina) y por cuenta (correo del body, normalizado; evita el ataque a
+// una cuenta concreta sin castigar al resto del NAT del campus).
+router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, async (req, res) => {
   try {
     const { correo, contrasena } = req.body;
 
@@ -50,7 +50,8 @@ router.post('/login-local', loginLimiter, async (req, res) => {
 
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
-              u.institutional_id, u.password_hash, u.id_rol, r.nombre_rol as rol
+              u.institutional_id, u.password_hash, u.id_rol, u.deleted_at,
+              r.nombre_rol as rol
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
        WHERE u.correo_institucional = $1`,
@@ -62,6 +63,12 @@ router.post('/login-local', loginLimiter, async (req, res) => {
     }
 
     const user = result.rows[0];
+
+    // Cuenta desactivada (soft-delete): no se emite token. Mismo mensaje que
+    // una contraseña incorrecta para no revelar el estado de la cuenta.
+    if (user.deleted_at) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
 
     if (!user.password_hash) {
       return res.status(401).json({ error: 'Esta cuenta usa inicio de sesión con Microsoft' });
@@ -91,7 +98,9 @@ router.post('/login-local', loginLimiter, async (req, res) => {
   }
 });
 
-router.post('/login-microsoft', async (req, res) => {
+// Cada intento dispara una llamada saliente a Microsoft Graph: el límite por
+// IP frena la amplificación de coste (H5a).
+router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
   try {
     const { accessToken } = req.body;
 
@@ -258,7 +267,9 @@ router.post('/login-microsoft', async (req, res) => {
 });
 
 // Crear usuario (solo admin)
-router.post('/register', authenticate, requireRole(3), async (req, res) => {
+// El límite por IP va antes de authenticate: también frena inundaciones de
+// peticiones sin sesión válida contra esta ruta.
+router.post('/register', limitadorRegistro, authenticate, requireRole(3), async (req, res) => {
   try {
     const { nombre_completo, correo_institucional, contrasena, id_rol } = req.body;
 

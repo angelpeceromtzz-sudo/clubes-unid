@@ -17,7 +17,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
   const { pendiente: pendienteConfirmacion, solicitar: solicitarConfirmacion, confirmar: confirmarPendienteBase, cancelar: cancelarPendienteBase } = useConfirmacionPendiente();
 
   useEffect(() => {
-    api.getClubes()
+    api.getClubesAdmin()
       .then(setClubes)
       .catch(() => setClubes([]))
       .finally(() => setCargandoClubes(false));
@@ -29,7 +29,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
 
   const refetchClubes = useCallback(async () => {
     try {
-      const actualizados = await api.getClubes();
+      const actualizados = await api.getClubesAdmin();
       setClubes(actualizados);
     } catch {
       // silently fail on background refresh
@@ -43,7 +43,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
     }
     try {
       await api.updateClubEstatus(clubId, nuevoEstatusId);
-      const actualizados = await api.getClubes();
+      const actualizados = await api.getClubesAdmin();
       setClubes(actualizados);
     } catch (err) {
       setErrorFeedback(err.message);
@@ -112,7 +112,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
         niveles: formularioClub.niveles,
       });
       setFeedback('Club creado correctamente');
-      const actualizados = await api.getClubes();
+      const actualizados = await api.getClubesAdmin();
       setClubes(actualizados);
       setMostrarModalCrear(false);
     } catch (err) {
@@ -169,7 +169,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
             setEnviando(false);
           }
         }
-        const actualizados = await api.getClubes();
+        const actualizados = await api.getClubesAdmin();
         setClubes(actualizados);
       });
     } catch (err) {

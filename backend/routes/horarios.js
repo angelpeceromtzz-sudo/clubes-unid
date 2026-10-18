@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
-import { authenticate, requireClubLeader } from '../middleware/auth.js';
+import { authenticate, requireClubLeader, requireHorarioLeader } from '../middleware/auth.js';
+import { esUrlMapsValida } from '../lib/validarUrl.js';
 
 const router = Router();
 
@@ -36,6 +37,11 @@ router.post('/club/:idClub', authenticate, requireClubLeader, async (req, res) =
 
     if (hora_fin <= hora_inicio) {
       return res.status(400).json({ error: 'La hora de fin debe ser posterior a la de inicio' });
+    }
+
+    // H10: ubicacion_maps se renderiza como <a href>; solo se admite http(s).
+    if (!esUrlMapsValida(ubicacion_maps)) {
+      return res.status(400).json({ error: 'La ubicación en el mapa debe ser una URL http(s) válida' });
     }
 
     await client.query('BEGIN');
@@ -82,7 +88,7 @@ router.post('/club/:idClub', authenticate, requireClubLeader, async (req, res) =
 });
 
 // PUT /api/horarios/:id — actualizar un horario individual
-router.put('/:id', authenticate, requireClubLeader, async (req, res) => {
+router.put('/:id', authenticate, requireHorarioLeader, async (req, res) => {
   try {
     const { id } = req.params;
     const { dia_semana, hora_inicio, hora_fin, lugar, ubicacion_maps, descripcion } = req.body;
@@ -91,7 +97,15 @@ router.put('/:id', authenticate, requireClubLeader, async (req, res) => {
       return res.status(400).json({ error: 'La hora de fin debe ser posterior a la de inicio' });
     }
 
-    // Verify the horario belongs to a club where user is leader
+    // H10: ubicacion_maps se renderiza como <a href>; solo se admite http(s).
+    if (!esUrlMapsValida(ubicacion_maps)) {
+      return res.status(400).json({ error: 'La ubicación en el mapa debe ser una URL http(s) válida' });
+    }
+
+    // H16: el liderazgo sobre el club real del horario lo verifica ya
+    // requireHorarioLeader; aquí solo se resuelve el club del horario para
+    // el control de conflictos (con 404 defensivo si desaparece entre
+    // el middleware y el handler).
     const actual = await pool.query(
       'SELECT id_club FROM horarios_club WHERE id_horario = $1', [id]
     );
@@ -99,13 +113,6 @@ router.put('/:id', authenticate, requireClubLeader, async (req, res) => {
       return res.status(404).json({ error: 'Horario no encontrado' });
     }
     const idClub = actual.rows[0].id_club;
-    const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
-      [idClub, req.user.id]
-    );
-    if (club.rows.length === 0) {
-      return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
-    }
 
     // Verificar conflicto si se cambia día/hora
     if (dia_semana !== undefined && hora_inicio && hora_fin) {
@@ -149,25 +156,12 @@ router.put('/:id', authenticate, requireClubLeader, async (req, res) => {
 });
 
 // DELETE /api/horarios/:id — eliminar un horario
-router.delete('/:id', authenticate, requireClubLeader, async (req, res) => {
+router.delete('/:id', authenticate, requireHorarioLeader, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Verify the horario belongs to a club where user is leader
-    const horario = await pool.query(
-      'SELECT id_club FROM horarios_club WHERE id_horario = $1', [id]
-    );
-    if (horario.rows.length === 0) {
-      return res.status(404).json({ error: 'Horario no encontrado' });
-    }
-    const idClub = horario.rows[0].id_club;
-    const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
-      [idClub, req.user.id]
-    );
-    if (club.rows.length === 0) {
-      return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
-    }
+    // H16: la existencia del horario y el liderazgo sobre su club los
+    // verifica requireHorarioLeader antes de llegar aquí.
 
     const result = await pool.query(
       'DELETE FROM horarios_club WHERE id_horario = $1 RETURNING id_horario',

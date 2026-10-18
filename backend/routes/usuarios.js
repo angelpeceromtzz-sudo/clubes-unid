@@ -3,8 +3,11 @@ import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { ESTATUS_INSCRIPCION } from '../lib/estatusInscripcion.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
+
+validarParamsEnteros(router);
 
 // Lista los usuarios activos (admin y rectoría). Los desactivados se ocultan;
 // se consultan por separado en GET /desactivados para su reactivación.

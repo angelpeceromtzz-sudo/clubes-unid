@@ -2,8 +2,11 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
+
+validarParamsEnteros(router);
 
 // Obtiene los avisos de un club (público)
 router.get('/:clubId', async (req, res) => {

@@ -1,3 +1,17 @@
+// Escapa texto para insertarlo como contenido HTML (nodos de texto y atributos
+// entre comillas). Los datos de la lista (nombres, matrículas, club, lugar)
+// los controlan alumnos y líderes: sin escape, un nombre con <script> o
+// con comillas se interpreta como marcado al abrir o imprimir el documento.
+// Ver auditoría H1 (AUDITORIA-SEGURIDAD.md).
+function escapeHtml(valor) {
+  return String(valor)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 export function generarListaAsistencia(nombreClub, bloque, fecha, hora, lugar, alumnos) {
   const fechaTexto = fecha
     ? fecha.toLocaleDateString('es-MX', {
@@ -9,9 +23,20 @@ export function generarListaAsistencia(nombreClub, bloque, fecha, hora, lugar, a
       })
     : '—';
   const horaTexto = hora ? hora.slice(0, 5) : '—';
+  const clubSeguro = escapeHtml(nombreClub);
+  const bloqueSeguro = escapeHtml(bloque);
+  const fechaSegura = escapeHtml(fechaTexto);
+  const horaSegura = escapeHtml(horaTexto);
+  const lugarSeguro = escapeHtml(lugar || '—');
+  const filasAlumnos = alumnos
+    .map(
+      (a, i) =>
+        `    <tr><td class="num">${i + 1}</td><td>${escapeHtml(a.nombre_completo)}</td><td>${escapeHtml(a.matricula)}</td><td class="firma"></td></tr>`
+    )
+    .join('\n');
   return `<!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"><title>Lista de Asistencia - ${nombreClub} - Bloque ${bloque}</title>
+<head><meta charset="UTF-8"><title>Lista de Asistencia - ${clubSeguro} - Bloque ${bloqueSeguro}</title>
 <style>
   body { font-family: 'Courier New', monospace; padding: 40px; }
   h1 { text-align: center; font-size: 20px; margin-bottom: 5px; }
@@ -28,16 +53,16 @@ export function generarListaAsistencia(nombreClub, bloque, fecha, hora, lugar, a
 </style></head>
 <body onload="window.print()">
   <button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
-  <h1>${nombreClub}</h1>
-  <h2>Lista de Asistencia - Bloque ${bloque}</h2>
+  <h1>${clubSeguro}</h1>
+  <h2>Lista de Asistencia - Bloque ${bloqueSeguro}</h2>
   <div class="info">
-    <span><strong>Fecha:</strong> ${fechaTexto}</span>
-    <span><strong>Hora:</strong> ${horaTexto}</span>
-    <span><strong>Lugar:</strong> ${lugar || '—'}</span>
+    <span><strong>Fecha:</strong> ${fechaSegura}</span>
+    <span><strong>Hora:</strong> ${horaSegura}</span>
+    <span><strong>Lugar:</strong> ${lugarSeguro}</span>
   </div>
   <table>
     <tr><th class="num">#</th><th>Nombre</th><th>Matrícula</th><th class="firma">Asistió</th></tr>
-${alumnos.map((a, i) => `    <tr><td class="num">${i + 1}</td><td>${a.nombre_completo}</td><td>${a.matricula}</td><td class="firma"></td></tr>`).join('\n')}
+${filasAlumnos}
   </table>
   <p style="text-align:center;margin-top:40px;font-size:10px;color:#aaa;">Documento generado por Clubes UNID</p>
 </body></html>`;

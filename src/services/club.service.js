@@ -3,6 +3,9 @@ import { request } from './api-core';
 export const clubService = {
   getClubes: () => request('/clubes'),
 
+  // Lista completa (todos los estatus + datos de presidente) — panel admin.
+  getClubesAdmin: () => request('/clubes/admin'),
+
   getClub: (id) => request(`/clubes/${id}`),
 
   createClub: (data) =>

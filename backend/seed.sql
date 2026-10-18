@@ -12,6 +12,22 @@
 -- local las secuencias no arrancan en 1 (borrar filas sin resetear
 -- la secuencia deja los IDs corridos y cualquier ID literal falla).
 --
+-- ============================================================
+-- ADVERTENCIA (H17 — AUDITORIA-SEGURIDAD.md)
+-- ============================================================
+-- SOLO para desarrollo local. NO ejecutar en producción ni en ninguna
+-- base de datos compartida o desplegada (p. ej. Render):
+--   * crea usuarios de demostración con la contraseña pública '123456';
+--   * todas las filas comparten el mismo hash bcrypt (credencial
+--     conocida) — el riesgo no es el hash, es ejecutar el seed en un
+--     entorno accesible;
+--   * el arranque del servidor NO ejecuta este archivo: migrate.js
+--     aplica únicamente schema.sql (verificado en
+--     tests/schemaArranque.test.mjs).
+-- Verificar de forma manual que la BD de Render no lo aplicó queda
+-- como pendiente de despliegue.
+-- ============================================================
+--
 -- Contraseña de todos los usuarios demo: 123456
 -- Hash generado con bcryptjs (cost 10).
 -- ============================================================
