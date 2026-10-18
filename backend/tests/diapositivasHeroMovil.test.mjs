@@ -45,6 +45,14 @@ const FILA_CON_MOVIL = {
 pool.query = async (sql, params = []) => {
   const texto = String(sql).trim();
   consultas.push({ sql: texto, params });
+  // Revalidación de authenticate (H2, fix/seguridad-fase1): el authenticate
+  // combinado consulta la BD; sin esta rama el token ficticio recibiría 401.
+  if (/FROM usuarios u[\s\S]*WHERE u\.id_usuario = \$1 AND u\.deleted_at IS NULL/.test(texto)) {
+    if (params[0] === 3) {
+      return { rows: [{ id_usuario: 3, nombre_completo: 'Admin Ficticio', id_rol: 3 }], rowCount: 1 };
+    }
+    return { rows: [], rowCount: 0 };
+  }
   const verbo = texto.split(/\s+/)[0];
   if (verbo === 'UPDATE' || verbo === 'DELETE' || verbo === 'INSERT') eventos.push(verbo);
 

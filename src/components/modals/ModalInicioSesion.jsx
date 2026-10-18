@@ -43,7 +43,7 @@ export function ModalInicioSesion({ onClose }) {
       show={true}
       onClose={onClose}
       maxWidth="max-w-sm"
-      panelClassName={`max-h-[85vh] overflow-y-auto overflow-x-hidden p-3 sm:p-5 scrollbar-amber ${
+      panelClassName={`${
         esOscuro ? 'bg-[#0e162c] border border-slate-700/30' : 'bg-white border border-slate-200/70 shadow-sm'
       }`}
     >

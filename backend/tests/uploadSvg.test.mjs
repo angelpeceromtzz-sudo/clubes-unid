@@ -86,7 +86,13 @@ test('el storage ya no declara svg entre los formatos permitidos', async () => {
     .replace(/\/\/[^\n]*/g, '');
   assert.ok(!fuente.includes("'svg'"), 'allowed_formats no debe incluir svg');
   assert.ok(!fuente.includes("'image/svg+xml'"), 'el fileFilter no debe aceptar image/svg+xml');
-  // La lectura/limpieza de recursos existentes sí conserva svg.
-  const hero = fs.readFileSync(path.join(__dirname, '..', 'routes', 'diapositivasHero.js'), 'utf8');
-  assert.ok(hero.includes('svg'), 'la extracción de public_id de recursos existentes conserva svg');
+  // La extracción de recursos existentes ahora vive en la lib compartida
+  // (noticias, clubes y diapositivas usan su `extraerPublicId`): es
+  // independiente de la extensión, así que un svg existente se extrae igual.
+  const { extraerPublicId } = await import('../lib/eliminarImagenCloudinary.js');
+  assert.equal(
+    extraerPublicId('https://res.cloudinary.com/demo/image/upload/v123/clubs-unid/logo.svg'),
+    'clubs-unid/logo',
+    'la extracción de public_id de recursos existentes conserva svg',
+  );
 });
