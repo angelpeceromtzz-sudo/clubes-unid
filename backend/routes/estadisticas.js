@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { esIdEntero, validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
+
+validarParamsEnteros(router);
 
 // Todas las rutas requieren autenticación y rol 4 (Rectoría)
 router.use(authenticate, requireRole(4));
@@ -158,8 +161,13 @@ router.get('/padron', async (req, res) => {
     let idx = 1;
 
     if (id_club) {
+      // H13: un id_club no numérico llegaba a PostgreSQL como parseInt → NaN
+      // y terminaba en 500; ahora responde 400 antes de consultar.
+      if (!esIdEntero(id_club)) {
+        return res.status(400).json({ error: 'id_club inválido' });
+      }
       sql += ` AND f.id_club = $${idx++}`;
-      params.push(parseInt(id_club, 10));
+      params.push(Number(id_club));
     }
     if (busqueda) {
       sql += ` AND (f.nombre_completo ILIKE $${idx} OR f.matricula ILIKE $${idx})`;

@@ -3,8 +3,12 @@ import pool from '../db.js';
 import { authenticate, requireRole, requireClubLeader } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { calcularEstadoClub } from '../lib/estadoClub.js';
+import { limitadorFormularios } from '../lib/rateLimits.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
+
+validarParamsEnteros(router);
 
 const LIMITE_POSTULACIONES = 3;
 const DIAS_VIGENCIA_OFERTA = 3;
@@ -42,7 +46,10 @@ router.get('/debug-postulaciones', authenticate, requireRole(3), async (req, res
       rows: result.rows,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // H14: err.message (detalle interno de PostgreSQL) ya no se devuelve al
+    // cliente; queda el log en el servidor y la respuesta genérica.
+    console.error('Error al listar debug-postulaciones:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
@@ -104,7 +111,10 @@ router.get('/mis-postulaciones', authenticate, requireRole(1), async (req, res) 
   }
 });
 
-router.post('/', authenticate, requireRole(1), async (req, res) => {
+// 5 postulaciones/hora por usuario autenticado (H5a): complementa el límite
+// de negocio de 3 postulaciones por convocatoria y frena el spam automatizado
+// desde una cuenta real. IP no sirve como clave por el NAT del campus.
+router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req, res) => {
   try {
     let {
       id_club,

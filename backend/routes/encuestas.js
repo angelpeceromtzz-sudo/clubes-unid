@@ -6,12 +6,15 @@
 // contestar no expone datos personales. La IP se lee para el rate limit, pero
 // nunca se escribe en la base.
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { generarSlugLibre } from '../lib/slug.js';
+import { limitadorEnvioEncuestas, limitadorLecturasPesadas } from '../lib/rateLimits.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
+
+validarParamsEnteros(router);
 
 const ROLES_ESCRITURA = [3];
 const ROLES_LECTURA = [3, 4];
@@ -54,7 +57,7 @@ const LIMITE_TEXTOS_RESULTADOS = 200;
 const ESTADOS = ['borrador', 'publicada', 'cerrada'];
 
 // ===========================================================================
-// Rate limit: 300 envíos por minuto y por IP.
+// Rate limit de envío público: 300/min por IP, ACTIVO EN TODOS LOS ENTORNOS.
 //
 // Protege contra ráfagas automatizadas, NO contra respuestas repetidas de una
 // misma persona: son dos problemas distintos. Con encuestas anónimas no hay
@@ -67,22 +70,11 @@ const ESTADOS = ['borrador', 'publicada', 'cerrada'];
 // El contador vive en memoria (store por defecto): se reinicia en cada deploy
 // y es por instancia. Para frenar scripts en una instancia única es suficiente.
 // Si algún día hay varias instancias, el límite efectivo se multiplica.
-const LIMITE_ENVIO_POR_MINUTO = 300;
-
-const limiteEnvio = rateLimit({
-  windowMs: 60 * 1000,
-  limit: LIMITE_ENVIO_POR_MINUTO,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  // En desarrollo hay varios alumnos detrás del mismo proxy, y frenar por IP
-  // mataría la prueba manual. En producción sí aplica.
-  skip: () => process.env.NODE_ENV !== 'production',
-  handler: (req, res) => {
-    res.status(429).json({
-      error: 'Demasiados envíos desde tu red. Espera un momento e intenta nuevamente.',
-    });
-  },
-});
+//
+// H8: se eliminó el `skip` por NODE_ENV. El backend de desarrollo es público
+// (fallback de api-core.js) y los límites deben estar activos aunque la
+// variable no esté definida. La configuración compartida vive en lib/rateLimits.js.
+const limiteEnvio = limitadorEnvioEncuestas;
 
 // ===========================================================================
 // PÚBLICO — responder
@@ -658,6 +650,8 @@ router.get(
   '/admin/:id/resultados',
   authenticate,
   requireRole(...ROLES_LECTURA),
+  // Lectura pesada (json_agg de agregados completos): 60/min por usuario (H5a).
+  limitadorLecturasPesadas,
   async (req, res) => {
     // Las otras rutas de admin pasan req.params.id crudo a la consulta, y un id
     // no numérico revienta el cast de Postgres como 500. Se valida aquí porque

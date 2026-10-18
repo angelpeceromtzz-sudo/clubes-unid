@@ -41,10 +41,21 @@ export async function request(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (err) {
+    // H19: un fallo de red (sin conexión, DNS) llega como texto crudo en
+    // inglés ('Failed to fetch'); aquí se traduce a un mensaje propio y se
+    // marca status 0 para que el consumidor pueda distinguirlo.
+    console.error(`[API] Sin conexión en ${endpoint}:`, err);
+    const error = new Error('No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.');
+    error.status = 0;
+    throw error;
+  }
 
   let data;
   const contentType = res.headers.get('content-type') || '';
@@ -54,15 +65,30 @@ export async function request(endpoint, options = {}) {
   } else {
     const text = await res.text();
     console.error(`[API] Respuesta no-JSON desde ${endpoint}:`, text.slice(0, 500));
-    throw new Error(`El servidor respondió con HTML/text (status ${res.status}). Revisa la consola.`);
+    // H19: el texto técnico no se pinta en la UI; el detalle queda en la consola.
+    const error = new Error('El servidor no respondió correctamente. Intenta de nuevo en unos momentos.');
+    error.status = res.status;
+    error.mensajeServidor = `status ${res.status} con contenido no-JSON`;
+    throw error;
   }
 
   if (!res.ok) {
-    const error = new Error(data.error || `Error ${res.status} en la solicitud`);
-    // Se adjunta el status para poder distinguir casos sin parsear el mensaje.
-    // El mensaje de la encuesta usa 410 (cerrada) contra 404 (no existe) y 403
-    // (aún no disponible), y los tres muestran pantallas distintas.
+    const servidor = typeof data?.error === 'string' && data.error ? data.error : null;
+    // H19: los fallos sistémicos llevan mensaje propio (el 500 del backend y
+    // el 404 global no son texto pensado para pintarse); el resto de 4xx son
+    // mensajes de contrato de la API —validación, credenciales, permisos— ya
+    // redactados en español para la persona usuaria, y se conservan tal cual.
+    let mensaje = servidor;
+    if (res.status >= 500) {
+      mensaje = 'El servidor tuvo un problema. Intenta de nuevo en unos momentos.';
+    } else if (res.status === 404 && servidor?.startsWith('Ruta no encontrada')) {
+      mensaje = 'La operación solicitada no está disponible.';
+    } else if (!mensaje) {
+      mensaje = `Error ${res.status} en la solicitud`;
+    }
+    const error = new Error(mensaje);
     error.status = res.status;
+    error.mensajeServidor = servidor;
     throw error;
   }
 

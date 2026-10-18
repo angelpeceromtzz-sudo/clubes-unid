@@ -4,16 +4,23 @@ import pool from '../db.js';
 import { authenticate, requireRole, requireClubLeader } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
+import { eliminarImagenCloudinary } from '../lib/eliminarImagenCloudinary.js';
+import { esImagenPortadaValida } from '../lib/validarUrl.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
 
-// Lista todos los clubes con su cupo actual calculado (público)
+validarParamsEnteros(router);
+
+// Lista de clubes aptos para exposición pública (H6): sin estatus 3 (inactivo,
+// filtro ahora también en servidor) y sin PII del presidente (id y nombre se
+// retiran del SELECT público; el detalle público conserva lo que la página de
+// club necesita). El panel admin usa GET /admin más abajo.
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
-              c.cupo_maximo, c.id_presidente, c.participacion,
-              p.nombre_completo AS presidente_nombre,
+              c.cupo_maximo, c.participacion,
               c.imagen_portada,
               c.id_estatus_club, e.nombre_estatus as estatus,
               c.estado_calculado,
@@ -32,7 +39,7 @@ router.get('/', async (req, res) => {
               ) AS cupo_actual
        FROM clubes_con_estado c
        JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
-       LEFT JOIN usuarios p ON p.id_usuario = c.id_presidente
+       WHERE c.id_estatus_club <> 3
        ORDER BY c.id_club`
     );
 
@@ -93,16 +100,74 @@ router.get('/actividad', authenticate, requireRole(3, 4), async (req, res) => {
   }
 });
 
+// Lista completa para el panel admin (H6): incluye estatus 3 y los campos de
+// presidente que el flujo de reasignación usa; requiere rol 3. El público usa
+// GET / y no ve esos datos.
+router.get('/admin', authenticate, requireRole(3), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
+              c.cupo_maximo, c.id_presidente, c.participacion,
+              p.nombre_completo AS presidente_nombre,
+              c.imagen_portada,
+              c.id_estatus_club, e.nombre_estatus as estatus,
+              c.estado_calculado,
+              c.formularios_recibidos,
+              c.max_postulaciones,
+              c.fecha_apertura_programada,
+              c.fecha_limite_cierre,
+              c.fecha_creacion,
+              COALESCE(
+                (SELECT COUNT(*) FROM inscripciones i
+                 JOIN usuarios u ON u.id_usuario = i.id_usuario
+                 WHERE i.id_club = c.id_club
+                   AND i.id_estatus_inscripcion = 1
+                   AND u.id_rol = 1),
+                0
+              ) AS cupo_actual
+       FROM clubes_con_estado c
+       JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
+       LEFT JOIN usuarios p ON p.id_usuario = c.id_presidente
+       ORDER BY c.id_club`
+    );
+
+    const nivelesResult = await pool.query(
+      `SELECT cn.id_club, n.id_nivel, n.nombre_nivel
+       FROM clubes_niveles cn
+       JOIN cat_niveles n ON n.id_nivel = cn.id_nivel
+       ORDER BY cn.id_club, n.id_nivel`
+    );
+    const nivelesPorClub = new Map();
+    for (const fila of nivelesResult.rows) {
+      if (!nivelesPorClub.has(fila.id_club)) nivelesPorClub.set(fila.id_club, []);
+      nivelesPorClub.get(fila.id_club).push({ id_nivel: fila.id_nivel, nombre_nivel: fila.nombre_nivel });
+    }
+
+    const rows = result.rows.map((r) => ({
+      ...r,
+      cupo_actual: parseInt(r.cupo_actual) || 0,
+      formularios_recibidos: parseInt(r.formularios_recibidos) || 0,
+      niveles: nivelesPorClub.get(r.id_club) || [],
+    }));
+
+    res.json(rows);
+  } catch (err) {
+    console.error('Error al listar clubes (admin):', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // Obtiene un club por ID con su cupo actual (público)
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    // H6b: el detalle público no expone el correo del presidente (sin consumidores
+    // en frontend) ni el id del vicepresidente (el panel presidente lo toma de getMe).
     const result = await pool.query(
       `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria, c.participacion,
               c.cupo_maximo, c.id_presidente,
               p.nombre_completo AS presidente_nombre,
-              p.correo_institucional AS presidente_correo,
-              c.imagen_portada, c.horario, c.id_vicepresidente,
+              c.imagen_portada, c.horario,
               c.id_estatus_club, e.nombre_estatus as estatus,
               c.estado_calculado,
               c.formularios_recibidos,
@@ -235,6 +300,12 @@ router.post('/', authenticate, requireRole(3), async (req, res) => {
       return res.status(400).json({ error: 'Debes seleccionar al menos un nivel válido' });
     }
 
+    // H10: la portada se renderiza en <img> de páginas públicas; solo http(s)
+    // o rutas /uploads/ (consistencia con las imágenes de Cloudinary).
+    if (!esImagenPortadaValida(imagen_portada)) {
+      return res.status(400).json({ error: 'La imagen de portada debe ser una URL http(s) válida o una ruta /uploads/' });
+    }
+
     await client.query('BEGIN');
 
     const result = await client.query(
@@ -298,7 +369,21 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
       return res.status(400).json({ error: 'Debes seleccionar al menos un nivel válido' });
     }
 
+    // H10: la portada se renderiza en <img> de páginas públicas; solo http(s)
+    // o rutas /uploads/ (consistencia con las imágenes de Cloudinary).
+    if (!esImagenPortadaValida(imagen_portada)) {
+      return res.status(400).json({ error: 'La imagen de portada debe ser una URL http(s) válida o una ruta /uploads/' });
+    }
+
     await client.query('BEGIN');
+
+    // Portada anterior: necesaria para la limpieza de Cloudinary solo si el
+    // UPDATE la reemplaza (se guarda el estado previo antes de tocar la fila).
+    const previo = await client.query(
+      'SELECT imagen_portada FROM clubes WHERE id_club = $1',
+      [id]
+    );
+    const urlPortadaAnterior = previo.rows[0]?.imagen_portada || null;
 
     const result = await client.query(
       `UPDATE clubes
@@ -323,6 +408,20 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    // Limpieza de Cloudinary: recién tras el COMMIT (si la transacción falló,
+    // el recurso anterior se conserva). Solo si la portada cambió y ninguna
+    // otra club sigue refiriendo el mismo recurso por identidad de public_id.
+    const urlPortadaNueva = result.rows[0]?.imagen_portada || null;
+    if (urlPortadaAnterior && urlPortadaNueva && urlPortadaAnterior !== urlPortadaNueva) {
+      const refs = await pool.query(
+        'SELECT imagen_portada FROM clubes WHERE imagen_portada IS NOT NULL AND id_club <> $1',
+        [id]
+      );
+      await eliminarImagenCloudinary(urlPortadaAnterior, {
+        candidatas: refs.rows.map((f) => f.imagen_portada),
+      });
+    }
 
     const estatusResult = await pool.query(
       'SELECT nombre_estatus FROM cat_estatus_clubes WHERE id_estatus_club = $1',

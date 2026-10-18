@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
+
+validarParamsEnteros(router);
 
 router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
   try {

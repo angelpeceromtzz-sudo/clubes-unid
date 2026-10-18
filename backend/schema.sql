@@ -440,26 +440,15 @@ CREATE TABLE IF NOT EXISTS horarios_club (
 
 CREATE INDEX IF NOT EXISTS idx_horarios_club_id ON horarios_club(id_club);
 
--- Migración: convertir horarios_club de eventos puntuales a horario semanal recurrente
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'horarios_club' AND column_name = 'fecha'
-  ) THEN
-    TRUNCATE TABLE horarios_club;
-    ALTER TABLE horarios_club DROP CONSTRAINT IF EXISTS fk_horario_club;
-    ALTER TABLE horarios_club DROP COLUMN IF EXISTS fecha;
-    ALTER TABLE horarios_club DROP COLUMN IF EXISTS hora;
-    ALTER TABLE horarios_club ADD COLUMN dia_semana   SMALLINT NOT NULL DEFAULT 1 CHECK (dia_semana BETWEEN 0 AND 6);
-    ALTER TABLE horarios_club ADD COLUMN hora_inicio  TIME NOT NULL DEFAULT '09:00';
-    ALTER TABLE horarios_club ADD COLUMN hora_fin     TIME NOT NULL DEFAULT '11:00';
-    ALTER TABLE horarios_club ADD COLUMN descripcion  TEXT DEFAULT '';
-    ALTER TABLE horarios_club ADD CONSTRAINT fk_horario_club FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE CASCADE;
-    ALTER TABLE horarios_club ADD CONSTRAINT chk_hora_valida CHECK (hora_fin > hora_inicio);
-    RAISE NOTICE 'Migración horarios_club completada: convertido a horario semanal recurrente';
-  END IF;
-END $$;
+-- Migración legacy de horarios_club (eventos puntuales → horario semanal
+-- recurrente): RETIRADA del arranque (auditoría H11). El bloque anterior
+-- ejecutaba un TRUNCATE de horarios_club dentro de DO $$ y corría en CADA
+-- arranque del backend: si una base legada aún tenía la columna 'fecha',
+-- sus horarios se vaciaban sin aviso ni respaldo. Ahora el arranque solo
+-- aplica este schema idempotente y no destructivo. Si alguna base persiste
+-- con el esquema legado, convertirla a mano (con respaldo previo) usando:
+--   backend/migrations/migrate-horarios-legado-semanal.sql
+-- (psql -f; NO se ejecuta automáticamente; es no-op en bases ya migradas).
 
 CREATE TABLE IF NOT EXISTS clubes_niveles (
     id_club INT NOT NULL,

@@ -3,8 +3,11 @@ import pool from '../db.js';
 import { authenticate, requireRole, requireClubLeader } from '../middleware/auth.js';
 import { generarListaAsistencia } from '../lib/asistenciaTemplate.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
+
+validarParamsEnteros(router);
 
 const DIAS_VIGENCIA_OFERTA = 3; // 72 horas
 

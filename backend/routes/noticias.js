@@ -3,7 +3,8 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
-import { v2 as cloudinary } from 'cloudinary';
+import { eliminarImagenCloudinary } from '../lib/eliminarImagenCloudinary.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 
 const ROLES_EDITOR = [3, 4];
 
@@ -35,23 +36,9 @@ function errorDatosEvento(fecha, hora, lugar) {
   return null;
 }
 
-function extraerPublicId(url) {
-  if (!url || !url.includes('cloudinary.com')) return null;
-  const match = url.match(/upload\/(?:v\d+\/)?(.+?)\.(jpg|jpeg|png|gif|webp|svg)$/);
-  return match ? `clubs-unid/${match[1]}` : null;
-}
-
-async function eliminarEnCloudinary(url) {
-  const publicId = extraerPublicId(url);
-  if (!publicId) return;
-  try {
-    await cloudinary.uploader.destroy(publicId);
-  } catch (err) {
-    console.error('Error al eliminar imagen de Cloudinary:', err.message);
-  }
-}
-
 const router = Router();
+
+validarParamsEnteros(router);
 
 // Lista noticias públicas, de la más reciente a la más antigua
 router.get('/', async (req, res) => {
@@ -269,7 +256,7 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
         titulo !== undefined ? titulo.trim() : null,
         subtitulo === undefined ? null : subtitulo?.trim() || '',
         contenido !== undefined ? contenido.trim() : null,
-        url_imagen !== undefined ? url_imagen : null,
+        url_imagen !== undefined ? (url_imagen || null) : null,
         destacada === undefined ? null : destacada === true,
         publicada === undefined ? null : publicada === true,
         categoria === undefined ? null : categoria,
@@ -284,8 +271,17 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
       ]
     );
 
-    if (url_imagen && url_imagen !== urlAnterior) {
-      eliminarEnCloudinary(urlAnterior);
+    // Limpieza de Cloudinary: solo tras un UPDATE exitoso (si falla, el
+    // recurso anterior se conserva) y verificando por identidad que otra
+    // noticia no siga refiriendo el mismo recurso.
+    if (result.rows.length > 0 && url_imagen && url_imagen !== urlAnterior) {
+      const refs = await pool.query(
+        'SELECT url_imagen FROM noticias WHERE url_imagen IS NOT NULL AND id_noticia <> $1',
+        [id]
+      );
+      await eliminarImagenCloudinary(urlAnterior, {
+        candidatas: refs.rows.map((f) => f.url_imagen),
+      });
     }
 
     registrarHistorial({
@@ -321,7 +317,14 @@ router.delete('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, re
 
     await pool.query('DELETE FROM noticias WHERE id_noticia = $1', [id]);
 
-    eliminarEnCloudinary(existe.rows[0].url_imagen);
+    // La noticia ya no existe en BD: el recurso solo se destruye si ninguna
+    // otra noticia lo sigue refiriendo (comparación por identidad de public_id).
+    const refs = await pool.query(
+      'SELECT url_imagen FROM noticias WHERE url_imagen IS NOT NULL'
+    );
+    await eliminarImagenCloudinary(existe.rows[0].url_imagen, {
+      candidatas: refs.rows.map((f) => f.url_imagen),
+    });
 
     registrarHistorial({
       idAdmin: req.user.id,

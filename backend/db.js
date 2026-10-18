@@ -1,6 +1,7 @@
 import pkg from 'pg';
 import dns from 'node:dns';
 import dotenv from 'dotenv';
+import { construirConfigPg } from './lib/dbTls.js';
 
 dotenv.config();
 
@@ -10,36 +11,18 @@ dns.setDefaultResultOrder('ipv4first');
 
 const { Pool } = pkg;
 
-// Falla con un error claro en vez de caer a credenciales por defecto.
-function requerido(nombre) {
-  const valor = process.env[nombre];
-  if (!valor) {
-    console.error(`FATAL: falta la variable de entorno ${nombre}. Revisa backend/.env (ver backend/.env.example).`);
-    process.exit(1);
-  }
-  return valor;
+// La construcción de la configuración (modo remoto con TLS verificado o modo
+// local explícito) vive en lib/dbTls.js. Ante cualquier error de configuración
+// se aborta el arranque con el mensaje claro, sin crear el pool.
+let config;
+try {
+  config = construirConfigPg(process.env);
+} catch (err) {
+  console.error(`FATAL: ${err.message}`);
+  process.exit(1);
 }
 
-const isProduction = Boolean(process.env.DATABASE_URL);
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-
-  ...(isProduction
-    ? {
-        ssl: {
-          rejectUnauthorized: false
-        }
-      }
-    : {
-        host: process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.DB_PORT || '5432'),
-        database: process.env.DB_NAME || 'clubs_bd',
-        user: process.env.DB_USER || 'postgres',
-        password: requerido('DB_PASSWORD'),
-      }
-  )
-});
+const pool = new Pool(config);
 
 pool.on('error', (err) => {
   console.error('Error inesperado en el pool de PostgreSQL:', err);
