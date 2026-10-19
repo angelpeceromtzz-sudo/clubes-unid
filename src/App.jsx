@@ -19,8 +19,10 @@ import { PanelRectoria } from './pages/PanelRectoria';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { PaginaCalendario } from './pages/PaginaCalendario';
 import PaginaConoceClubs from './pages/PaginaConoceClubs';
+import PaginaAcercaProyecto from './pages/PaginaAcercaProyecto';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import PaginaEncuesta from './pages/PaginaEncuesta';
+import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
 import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
 import { SplashScreen } from './components/ui/SplashScreen';
@@ -37,6 +39,18 @@ function RedireccionNoticias() {
     navigate('/', { replace: true });
   }, [abrirActualizaciones, location.pathname, location.search, navigate]);
 
+  return null;
+}
+
+// Las páginas públicas (landing y acerca) cambian entre sí como documentos
+// separados: al navegar se vuelve al inicio de la página de destino, igual
+// que un enlace tradicional. El sitio declara scroll-behavior: smooth en CSS,
+// así que se fuerza «instant» para que el salto de ruta no se anime.
+function ScrollAlInicio() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname]);
   return null;
 }
 
@@ -78,9 +92,11 @@ function App() {
 
   const mostrarFiltros = location.pathname === '/';
 
-  // La landing /conoce-clubs se monta fuera del layout del sistema con un
-  // return temprano (ver más abajo): informativa, sin navbar del sistema.
+  // La landing /conoce-clubs y la página /acerca-del-proyecto se montan
+  // fuera del layout del sistema con este return temprano (mismo patrón que
+  // la encuesta): informativas, sin navbar del sistema.
   const esLanding = location.pathname === '/conoce-clubs';
+  const esAcercaProyecto = location.pathname === '/acerca-del-proyecto';
 
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
@@ -102,6 +118,10 @@ function App() {
   //
   // El key en el pathname hace que cambiar de enlace remonte el componente y
   // que las respuestas de la encuesta anterior no queden pegadas.
+  //
+  // El catch-all es respaldo del return temprano: cualquier /encuesta/... que
+  // no sea un slug válido (vacío, segmentos extra) recibe la 404 en vez de
+  // una pantalla en blanco sin navbar.
   if (location.pathname.startsWith('/encuesta/')) {
     return (
       <Routes>
@@ -109,19 +129,28 @@ function App() {
           path="/encuesta/:slug"
           element={<PaginaEncuesta key={location.pathname} />}
         />
+        <Route path="*" element={<PaginaNoEncontrada />} />
       </Routes>
     );
   }
 
-  // La landing /conoce-clubs es informativa y también se monta fuera del layout
-  // del sistema (mismo patrón que la encuesta): sin navbar ni menú hamburguesa,
-  // sin navegación inferior, splash ni popups. Lleva su propia barra de marca
-  // dentro de PaginaConoceClubs; permisos y rutas del resto no cambian.
-  if (esLanding) {
+  // La landing /conoce-clubs y /acerca-del-proyecto son informativas y se
+  // montan fuera del layout del sistema (mismo patrón que la encuesta): sin
+  // navbar ni menú hamburguesa, sin navegación inferior, splash ni popups.
+  // Cada una lleva su propia barra de marca; permisos y rutas del resto no
+  // cambian. El guard es igualdad exacta: si este return se ejecuta, el
+  // pathname es literalmente una de las dos rutas y su <Route> siempre
+  // coincide; las variantes (p. ej. la versión mal escrita de acerca) caen
+  // en el layout del sistema y su catch-all 404.
+  if (esLanding || esAcercaProyecto) {
     return (
-      <Routes>
-        <Route path="/conoce-clubs" element={<PaginaConoceClubs />} />
-      </Routes>
+      <>
+        <ScrollAlInicio />
+        <Routes>
+          <Route path="/conoce-clubs" element={<PaginaConoceClubs />} />
+          <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />
+        </Routes>
+      </>
     );
   }
 
@@ -201,8 +230,10 @@ function App() {
         <Route path="/eventos" element={<RedireccionNoticias />} />
         <Route path="/calendario" element={<PaginaCalendario />} />
         {/* Respaldo del early return de arriba: cubre variantes de pathname
-            (p. ej. barra final) para que la landing nunca caiga en 404. */}
+            (p. ej. barra final) para que la landing y la página del proyecto
+            nunca caigan en 404. */}
         <Route path="/conoce-clubs" element={<PaginaConoceClubs />} />
+        <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />
@@ -226,6 +257,10 @@ function App() {
             <PanelRectoria />
           </RutaProtegida>
         } />
+        {/* Catch-all: cualquier ruta desconocida (incluida la versión mal
+            escrita de /acerca-del-proyecto, sin alias ni redirección) sirve
+            la 404 personalizada con la navbar del sistema. */}
+        <Route path="*" element={<PaginaNoEncontrada />} />
       </Routes>
 
       <NavegacionInferiorMovil
