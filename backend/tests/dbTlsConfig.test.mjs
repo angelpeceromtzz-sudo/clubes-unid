@@ -2,7 +2,8 @@
 //
 // Verifican el modo remoto con TLS verificado, el rechazo de parámetros TLS
 // en DATABASE_URL (por la precedencia real de pg 8.21.0), el mecanismo de CA
-// vía DB_SSL_CA_FILE, la ausencia de respaldos inseguros y el modo local.
+// vía DB_SSL_CA_FILE y DB_SSL_CA_PEM (inline, para entornos efímeros), la
+// ausencia de respaldos inseguros y el modo local.
 // Sin red y sin PostgreSQL: solo construcción de configuración. Datos ficticios.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -69,6 +70,40 @@ test('remoto con DB_SSL_CA_FILE vacío o en blanco: se ignora y se usa el almac�
   const blancos = construirConfigPg(envRemoto({ DB_SSL_CA_FILE: '   ' }), { leerArchivo: leerArchivoFalso() });
   assert.deepEqual(vacio.ssl, { rejectUnauthorized: true });
   assert.deepEqual(blancos.ssl, { rejectUnauthorized: true });
+});
+
+// --- CA inline (DB_SSL_CA_PEM): entornos efímeros como Render ---
+
+test('remoto con DB_SSL_CA_PEM: usa el PEM inline como CA y conserva la verificación', () => {
+  const config = construirConfigPg(envRemoto({ DB_SSL_CA_PEM: PEM_FICTICIO }), { leerArchivo: leerArchivoFalso() });
+  assert.equal(config.ssl.ca, PEM_FICTICIO);
+  assert.equal(config.ssl.rejectUnauthorized, true);
+});
+
+test('remoto con DB_SSL_CA_PEM en blanco: se ignora y se usa el almacén del sistema', () => {
+  const blancos = construirConfigPg(envRemoto({ DB_SSL_CA_PEM: '   ' }), { leerArchivo: leerArchivoFalso() });
+  assert.deepEqual(blancos.ssl, { rejectUnauthorized: true });
+});
+
+test('remoto con DB_SSL_CA_PEM sin marca PEM: error claro y sin degradar', () => {
+  assert.throws(
+    () => construirConfigPg(envRemoto({ DB_SSL_CA_PEM: 'no soy un pem' }), { leerArchivo: leerArchivoFalso() }),
+    /DB_SSL_CA_PEM/,
+  );
+});
+
+test('remoto con DB_SSL_CA_FILE y DB_SSL_CA_PEM a la vez: error pidiendo una sola fuente', () => {
+  assert.throws(
+    () => construirConfigPg(
+      envRemoto({ DB_SSL_CA_FILE: '/ca/ejemplo.pem', DB_SSL_CA_PEM: PEM_FICTICIO }),
+      { leerArchivo: leerArchivoFalso() },
+    ),
+    (err) => {
+      assert.match(err.message, /DB_SSL_CA_FILE/);
+      assert.match(err.message, /DB_SSL_CA_PEM/);
+      return true;
+    },
+  );
 });
 
 // --- Tratamiento de parámetros SSL en la URL ---
