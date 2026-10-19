@@ -172,7 +172,8 @@ export function Heroe({ onReady }) {
     const destino = Math.round(slide.offsetLeft - (cont.clientWidth - slide.offsetWidth) / 2);
     if (Math.abs(cont.scrollLeft - destino) <= 2) return;
     bloqueoSyncRef.current = true;
-    cont.scrollTo({ left: Math.max(0, destino), behavior: 'smooth' });
+    const reducido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    cont.scrollTo({ left: Math.max(0, destino), behavior: reducido ? 'auto' : 'smooth' });
     const limite = window.setTimeout(() => {
       bloqueoSyncRef.current = false;
     }, 900);
@@ -180,7 +181,7 @@ export function Heroe({ onReady }) {
   }, [esMovil, total, slideActual]);
 
   if (total === 0) return (
-    <section id="hero" className="w-full">
+    <section id="hero" className="hero-catalogo w-full">
       <div className="min-h-[200px] sm:min-h-[320px] lg:aspect-[21/9] lg:min-h-[400px] max-h-[600px]" />
     </section>
   );
@@ -195,7 +196,7 @@ export function Heroe({ onReady }) {
   if (esMovil) {
     const clsFondoPagina = modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-50';
     return (
-      <section id="hero" className="w-full pt-2">
+      <section id="hero" className="hero-catalogo w-full pt-2">
         <div className="relative w-full">
           <div
             ref={scrollerRef}
@@ -261,19 +262,23 @@ export function Heroe({ onReady }) {
         </div>
 
         {total > 1 && (
-          <div className="flex items-center justify-center gap-2 py-2">
+          <div className="flex items-center justify-center py-2">
             {diapositivas.map((slide, index) => (
               <button
                 key={slide.id_diapositiva}
                 onClick={() => irA(index)}
                 aria-label={`Ir a diapositiva ${index + 1}`}
                 aria-current={slideActual === index}
-                className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                  slideActual === index
-                    ? 'w-6 bg-amber-500'
-                    : `w-2 ${modoOscuro ? 'bg-white/35' : 'bg-slate-400'}`
-                }`}
-              />
+                className="flex h-6 w-6 items-center justify-center cursor-pointer"
+              >
+                <span
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    slideActual === index
+                      ? 'w-6 bg-amber-500'
+                      : `w-2 ${modoOscuro ? 'bg-white/35' : 'bg-slate-400'}`
+                  }`}
+                />
+              </button>
             ))}
           </div>
         )}
@@ -289,7 +294,7 @@ export function Heroe({ onReady }) {
    *                dejando margen inferior para texto.
    */
   return (
-    <section id="hero" className="w-full">
+    <section id="hero" className="hero-catalogo w-full">
       <div className="group relative w-full overflow-hidden min-h-[200px] sm:min-h-[320px] lg:aspect-[21/9] lg:min-h-[400px] max-h-[600px]">
 
         {diapositivas.map((slide, index) => (
