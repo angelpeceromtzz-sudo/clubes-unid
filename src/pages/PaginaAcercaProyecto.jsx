@@ -110,17 +110,20 @@ function CuadriculaPerfiles({ personas }) {
   );
 }
 
-// Subtítulo de grupo dentro de "Personas que contribuyen".
+// Subtítulo de grupo dentro de "Personas que contribuyen". Centrado con
+// filete ámbar y tamaño de subtítulo para distinguirlo de la línea de rol
+// (micro-texto mayúscula) de cada perfil.
 function TituloGrupo({ id, children }) {
   const { modoOscuro } = useTheme();
   return (
-    <h3
-      id={id}
-      className={`mt-10 first:mt-0 text-center text-xs sm:text-sm font-black uppercase tracking-[0.25em] ${
-        modoOscuro ? 'text-amber-400' : 'text-amber-600'
-      }`}
-    >
-      {children}
+    <h3 id={id} className="text-center">
+      <span
+        className={`inline-block border-l-4 border-amber-400 pl-3 sm:pl-4 text-base sm:text-lg font-black ${
+          modoOscuro ? 'text-white' : 'text-slate-900'
+        }`}
+      >
+        {children}
+      </span>
     </h3>
   );
 }
@@ -361,11 +364,11 @@ export default function PaginaAcercaProyecto() {
             <p className={`mt-3 max-w-2xl text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
               {ACERCA.colaboradores.intro}
             </p>
-            <div className="mt-10" role="group" aria-labelledby="grupo-acompanamiento">
+            <div className="mt-12" role="group" aria-labelledby="grupo-acompanamiento">
               <TituloGrupo id="grupo-acompanamiento">Acompañamiento</TituloGrupo>
               <CuadriculaPerfiles personas={ACERCA.colaboradores.acompanamiento} />
             </div>
-            <div className="mt-10" role="group" aria-labelledby="grupo-colaboracion">
+            <div className="mt-12" role="group" aria-labelledby="grupo-colaboracion">
               <TituloGrupo id="grupo-colaboracion">Colaboración</TituloGrupo>
               <CuadriculaPerfiles personas={ACERCA.colaboradores.colaboracion} />
             </div>

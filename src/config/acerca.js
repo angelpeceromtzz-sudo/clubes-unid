@@ -99,16 +99,14 @@ export const ACERCA = {
         nombre: 'Ángel Pecero',
         rol: 'Fundador y líder del proyecto',
         aportacion:
-          'Dirige el proyecto y conecta las necesidades de la comunidad con su desarrollo. Participa en la arquitectura, la programación y el diseño UI/UX para facilitar el uso de la plataforma.',
-        roles: ['Project Lead', 'Product Owner', 'Tech Lead', 'Full Stack Developer', 'Diseño UI/UX'],
+          'Dirige el proyecto y conecta las necesidades de la comunidad con su desarrollo. Participa en la arquitectura y la programación para facilitar el uso de la plataforma.',
+        roles: ['Project Lead', 'Product Owner', 'Tech Lead', 'Full Stack Developer'],
         responsabilidades: [
           'Dirigir el proyecto y definir la visión del producto.',
           'Recopilar necesidades y mantener la comunicación con el beneficiario y la universidad.',
           'Definir prioridades y requisitos.',
           'Tomar decisiones de arquitectura y establecer criterios técnicos.',
           'Desarrollar funcionalidades y revisar su integración.',
-          'Diseñar las interfaces, la navegación y los recorridos de usuario.',
-          'Revisar la experiencia en móvil y escritorio.',
           'Presentar los avances del proyecto.',
         ],
         frase: null,
@@ -121,7 +119,7 @@ export const ACERCA = {
         rol: 'Coordinador operativo y desarrollador',
         aportacion:
           'Coordina el trabajo operativo y el seguimiento de los sprints. Facilita los acuerdos del equipo, documenta los avances y desarrolla las funcionalidades asignadas.',
-        roles: ['Scrum Master', 'Coordinador operativo', 'Developer'],
+        roles: ['Scrum Master', 'Coordinador operativo', 'Full Stack Developer'],
         responsabilidades: [
           'Facilitar la organización de los sprints y el seguimiento de tareas.',
           'Coordinar reuniones y dar seguimiento a los acuerdos.',
@@ -140,7 +138,7 @@ export const ACERCA = {
         rol: 'Responsable de calidad y desarrollador',
         aportacion:
           'Coordina la revisión de calidad mediante pruebas, registro de errores y validación de correcciones. También participa en el desarrollo y aporta observaciones para mejorar el funcionamiento del sistema.',
-        roles: ['QA Lead', 'Software Tester', 'Developer'],
+        roles: ['QA Lead', 'Software Tester', 'Full Stack Developer'],
         responsabilidades: [
           'Planificar las pruebas y los criterios de revisión de calidad.',
           'Diseñar y ejecutar casos de prueba.',
@@ -183,7 +181,7 @@ export const ACERCA = {
       },
       {
         nombre: 'Aldo Roberto Echeverría',
-        rol: null,
+        rol: 'Docente de Ing. en Software y Sist.',
         aportacion: 'Nos pidió el proyecto, da seguimiento a su avance y lo califica.',
         frase: null,
         foto: null,
@@ -201,7 +199,7 @@ export const ACERCA = {
       },
       {
         nombre: 'Coordinación',
-        rol: 'De la carrera',
+        rol: 'Coordinación Académica',
         aportacion: 'Nos ha apoyado en el desarrollo del proyecto.',
         frase: null,
         foto: null,
