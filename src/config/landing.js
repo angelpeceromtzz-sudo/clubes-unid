@@ -52,13 +52,23 @@ export const LANDING = {
   equipo: ['Ángel Pecero', 'Jorge Martínez', 'Gustavo Gallegos'],
   proposito:
     'Clubs UNID Campeche es una iniciativa estudiantil que busca acercar a los alumnos a actividades que les interesan, conocer qué propuestas querrían ver en el campus y orientar las próximas decisiones sobre clubes.',
-  equipoTitulo: 'A cargo de',
+  // Invitación a la página propia del proyecto (equipo, colaboradores y
+  // origen). El detalle vive en src/config/acerca.js; aquí solo va el copy
+  // de la invitación de la landing.
+  acercaProyecto: {
+    ruta: '/acerca-del-proyecto',
+    etiqueta: 'El proyecto',
+    invitacion:
+      'Conoce el origen de Clubs UNID, el equipo que lo construye y las personas que lo apoyan.',
+    btn: 'Conoce el proyecto',
+  },
+  // Chips de navegación del hero. Sin «Acerca» a petición: la invitación a
+  // /acerca-del-proyecto vive en la sección G, no en este nav.
   secciones: [
     { href: '#que-es-un-club', etiqueta: 'Qué es un club' },
     { href: '#propuestas', etiqueta: 'Propuestas' },
     { href: '#encuesta', etiqueta: 'Encuesta' },
     { href: '#actividades', etiqueta: 'Actividades' },
-    { href: '#acerca', etiqueta: 'Acerca' },
   ],
   queEsClub: {
     titulo: '¿Qué es un club universitario?',

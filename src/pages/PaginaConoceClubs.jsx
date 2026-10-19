@@ -6,12 +6,15 @@
    móvil y grid con «Mostrar más» en escritorio), encuesta inmediatamente
    después de las propuestas, Modelo de Formación Integral (VIVE), otras
    actividades universitarias informativas (LANDING.actividades; banners
-   con foto o fallback) e iniciativa estudiantil. Sin accesos al catálogo
-   ni al portal principal en esta etapa. Secciones secundarias con
-   aparición suave una sola vez (IntersectionObserver + .landing-reveal,
-   con prefers-reduced-motion). No requiere sesión; los CTAs de encuesta
-   solo se activan con ENCUESTA_SLUG en src/config/landing.js.
-   Se monta fuera del layout del sistema (ver App.jsx) con su propia barra. */
+   con foto o fallback) e invitación a /acerca-del-proyecto (el detalle del
+   equipo y las colaboraciones vive en esa página, sin duplicarlo aquí).
+   Accesos internos: barra propia con enlace «El proyecto» y sección final
+   con encuesta (acción principal), «Explorar» y «Conoce el proyecto».
+   Aparición suave de secciones secundarias (IntersectionObserver +
+   .landing-reveal, con prefers-reduced-motion). No requiere sesión; los
+   CTAs de encuesta solo se activan con ENCUESTA_SLUG en
+   src/config/landing.js. Se monta fuera del layout del sistema (ver
+   App.jsx) con su propia barra. */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -22,10 +25,10 @@ import { Icono } from '../components/ui/Icono';
 import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';
 import { Logotipo } from '../components/layout/barra-navegacion/Logotipo';
+import { BotonEncuesta } from '../components/landing/BotonEncuesta';
 import {
   LANDING,
   hayEncuesta,
-  rutaEncuesta,
 } from '../config/landing';
 
 const CONTENEDOR = 'w-full px-6 sm:px-8 lg:px-12 xl:px-16';
@@ -40,42 +43,6 @@ const PROPUESTAS_VISIBLES = 6;
 const FOCO = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80';
 const FOCO_PRIMARIO =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e162c] focus-visible:ring-offset-2 focus-visible:ring-offset-amber-400';
-
-function BotonEncuesta({ className = '', grande = false, fondoPanel = false }) {
-  const { modoOscuro } = useTheme();
-  const disponible = hayEncuesta();
-  const base = grande
-    ? 'inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] text-sm font-black rounded-full transition duration-200 active:scale-[0.98]'
-    : 'inline-flex items-center justify-center gap-2 px-5 py-2.5 min-h-[44px] text-sm font-bold rounded-full transition duration-200 active:scale-[0.98]';
-
-  if (!disponible) {
-    const preparacion = fondoPanel
-      ? 'bg-white/5 border-dashed border-white/30 text-slate-300'
-      : modoOscuro
-        ? 'bg-slate-800/50 border-dashed border-slate-600 text-slate-300'
-        : 'bg-white border-dashed border-slate-300 text-slate-500';
-    return (
-      <span
-        className={`${base} border cursor-not-allowed ${preparacion} ${className}`}
-        aria-disabled="true"
-        title={LANDING.encuesta.sinDestino}
-      >
-        <Icono nombre="clock" strokeWidth={2} className="h-4 w-4 shrink-0" />
-        {LANDING.encuesta.btnNoDisponible}
-      </span>
-    );
-  }
-
-  return (
-    <Link
-      to={rutaEncuesta()}
-      className={`${base} bg-amber-400 text-[#0e162c] hover:bg-amber-300 ${FOCO_PRIMARIO} ${className}`}
-    >
-      <Icono nombre="clipboard" strokeWidth={2} className="h-4 w-4 shrink-0" />
-      {LANDING.encuesta.btnDisponible}
-    </Link>
-  );
-}
 
 function BotonExplorar({ className = '', primario = false }) {
   const { modoOscuro } = useTheme();
@@ -305,15 +272,6 @@ function OrdenarClubes(clubes) {
   return salida;
 }
 
-function iniciales(nombre) {
-  return nombre
-    .split(' ')
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0))
-    .join('')
-    .toUpperCase();
-}
-
 export default function PaginaConoceClubs() {
   const { tema, modoOscuro } = useTheme();
   const [clubes, setClubes] = useState([]);
@@ -460,11 +418,22 @@ export default function PaginaConoceClubs() {
 
   return (
     <main className={`pb-10 lg:pb-20 ${tema.bg} ${tema.text}`}>
-      {/* Barra propia de la landing: solo identidad; los controles del sistema
-          no forman parte de esta página. */}
+      {/* Barra propia de la landing: identidad y acceso secundario a la
+          página del proyecto; los controles del sistema no forman parte de
+          esta página. */}
       <div className={CONTENEDOR}>
-        <div className="max-w-6xl mx-auto flex items-center py-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 py-4">
           <Logotipo />
+          <Link
+            to={LANDING.acercaProyecto.ruta}
+            className={`inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full border text-xs font-bold transition-colors duration-200 active:scale-[0.98] ${FOCO} ${
+              modoOscuro
+                ? 'border-slate-700 text-slate-300 hover:border-amber-400/60 hover:text-amber-300'
+                : 'border-slate-300 text-slate-600 hover:border-amber-500/60 hover:text-amber-700'
+            }`}
+          >
+            {LANDING.acercaProyecto.etiqueta}
+          </Link>
         </div>
       </div>
 
@@ -852,12 +821,12 @@ export default function PaginaConoceClubs() {
                   {LANDING.mfi.valoresTitulo}
                 </p>
                 {/* Siempre como en móvil M: 3 por línea (2 filas) desde
-                    375 px y en todos los tamaños; solo a 320–374 px caen
-                    a 2 («Solidaridad» no cabe 3 veces). Pills con fondo
-                    grande (w-full llenando la celda + py-2/2.5) y
-                    acotados a max-w-2xl en escritorio para que queden
-                    equilibrados dentro del panel. */}
-                <ul className="mt-3 grid grid-cols-2 min-[375px]:grid-cols-3 gap-2 sm:gap-2.5 sm:mt-2.5 max-w-2xl">
+                    375 px; a 320–374 px caen a 2 («Solidaridad» no cabe 3
+                    veces). Desde xl (≥1280) los 6 caben en una sola fila a
+                    todo el ancho del panel. Pills con fondo grande (w-full
+                    llenando la celda + py-2/2.5) y acotados a max-w-2xl en
+                    escritorio para que queden equilibrados dentro del panel. */}
+                <ul className="mt-3 grid grid-cols-2 min-[375px]:grid-cols-3 gap-2 sm:gap-2.5 sm:mt-2.5 max-w-2xl xl:grid-cols-6 xl:max-w-none">
                   {LANDING.mfi.valores.map((valor) => (
                     <li
                       key={valor}
@@ -892,6 +861,10 @@ export default function PaginaConoceClubs() {
                         {dim.titulo}
                       </h3>
                       <p className={`mt-1 text-sm leading-relaxed ${tema.subtitle}`}>{dim.texto}</p>
+                      {/* Separador ámbar (solo móvil), igual que en «Qué es
+                          un club»: al apilarse, la línea fina evita la
+                          lectura de «tabla». */}
+                      <span aria-hidden="true" className="mt-3 block h-px bg-amber-400/40 sm:hidden" />
                     </div>
                   </li>
                 ))}
@@ -948,54 +921,37 @@ export default function PaginaConoceClubs() {
         </div>
       </section>
 
-      {/* G. Acerca del proyecto: propósito, equipo estudiantil y acciones
-          finales (encuesta y exploración interna; sin accesos al catálogo ni
-          al portal principal en esta etapa). */}
+      {/* G. Acerca del proyecto: presentación breve e invitación a la página
+          propia (/acerca-del-proyecto), donde viven el origen, el equipo y
+          las colaboraciones, sin duplicarlos aquí. La encuesta sigue como
+          acción principal y «Conoce el proyecto» es el acceso destacado. */}
       <section
         id="acerca"
         aria-labelledby="titulo-acerca"
         className="scroll-mt-8"
       >
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
-          <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-2 lg:gap-12" data-reveal>
-            <div className="min-w-0 flex flex-col">
+          <div className="max-w-6xl mx-auto" data-reveal>
+            <div className="max-w-2xl">
               <h2 id="titulo-acerca" className={tituloSeccion}>
                 Acerca del proyecto
               </h2>
               <p className={`mt-3 text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
                 {LANDING.proposito}
               </p>
-              {/* Acciones finales junto al texto; con mt-auto se empujan
-                  al fondo de la columna para quedar alineadas con la
-                  última tarjeta del equipo (Gustavo Gallegos) en
-                  escritorio. pt-6 conserva la separación cuando no hay
-                  espacio extra (móvil). */}
-              <div className="mt-auto pt-6 flex flex-wrap gap-3">
-                <BotonEncuesta className="w-full sm:w-auto" />
-                <BotonExplorar className="w-full sm:w-auto" />
-              </div>
+              <p className={`mt-3 text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
+                {LANDING.acercaProyecto.invitacion}
+              </p>
             </div>
-
-            <div className="min-w-0">
-              <h3 className={`text-xs uppercase tracking-[0.2em] font-bold ${tema.subtitle}`}>
-                {LANDING.equipoTitulo}
-              </h3>
-              <ul className="mt-4 grid gap-3">
-                {LANDING.equipo.map((nombre) => (
-                  <li
-                    key={nombre}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${tema.cardCls}`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="shrink-0 w-10 h-10 rounded-full bg-amber-400 text-[#0e162c] font-black text-sm flex items-center justify-center"
-                    >
-                      {iniciales(nombre)}
-                    </span>
-                    <span className="font-bold text-sm sm:text-base">{nombre}</span>
-                  </li>
-                ))}
-              </ul>
+            <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+              <BotonEncuesta className="w-full sm:w-auto" />
+              <Link
+                to={LANDING.acercaProyecto.ruta}
+                className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] w-full sm:w-auto rounded-full bg-amber-400 text-[#0e162c] font-black text-sm transition duration-200 hover:bg-amber-300 active:scale-[0.98] ${FOCO_PRIMARIO}`}
+              >
+                <Icono nombre="info" strokeWidth={2} className="h-4 w-4 shrink-0" />
+                {LANDING.acercaProyecto.btn}
+              </Link>
             </div>
           </div>
         </div>
