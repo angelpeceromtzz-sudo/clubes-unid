@@ -57,7 +57,7 @@ export const LANDING = {
   // de la invitación de la landing.
   acercaProyecto: {
     ruta: '/acerca-del-proyecto',
-    etiqueta: 'El proyecto',
+    etiqueta: 'Conocenos',
     invitacion:
       'Conoce el origen de Clubs UNID, el equipo que lo construye y las personas que lo apoyan.',
     btn: 'Conoce el proyecto',

@@ -8,7 +8,7 @@
    actividades universitarias informativas (LANDING.actividades; banners
    con foto o fallback) e invitación a /acerca-del-proyecto (el detalle del
    equipo y las colaboraciones vive en esa página, sin duplicarlo aquí).
-   Accesos internos: barra propia con enlace «El proyecto» y sección final
+   Accesos internos: barra propia con enlace «Conocenos» y sección final
    con encuesta (acción principal), «Explorar» y «Conoce el proyecto».
    Aparición suave de secciones secundarias (IntersectionObserver +
    .landing-reveal, con prefers-reduced-motion). No requiere sesión; los
@@ -84,12 +84,12 @@ function BotonExplorar({ className = '', primario = false }) {
 function EnlaceSeccion({ href, children }) {
   const { modoOscuro } = useTheme();
   const contorno = modoOscuro
-    ? 'border-slate-700 text-slate-300 hover:border-amber-400/60 hover:text-amber-300'
-    : 'border-slate-300 text-slate-600 hover:border-amber-500/60 hover:text-amber-700';
+    ? 'bg-white text-[#0e162c] hover:bg-amber-50'
+    : 'bg-white text-slate-900 border border-slate-200 shadow-sm hover:bg-amber-50';
   return (
     <a
       href={href}
-      className={`inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-full border px-1.5 min-h-[36px] text-[10px] font-bold transition-colors duration-200 flex-1 lg:flex-none lg:px-4 lg:py-2 lg:min-h-[44px] lg:text-xs ${contorno} ${FOCO}`}
+      className={`inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-full px-1.5 min-h-[36px] text-[10px] font-bold transition-colors duration-200 flex-1 xl:flex-none xl:px-4 xl:py-2 xl:min-h-[44px] xl:text-xs ${contorno} ${FOCO}`}
     >
       {children}
     </a>
@@ -426,10 +426,10 @@ export default function PaginaConoceClubs() {
           <Logotipo />
           <Link
             to={LANDING.acercaProyecto.ruta}
-            className={`inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full border text-xs font-bold transition-colors duration-200 active:scale-[0.98] ${FOCO} ${
+            className={`inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full text-xs font-bold transition-colors duration-200 active:scale-[0.98] ${FOCO} ${
               modoOscuro
-                ? 'border-slate-700 text-slate-300 hover:border-amber-400/60 hover:text-amber-300'
-                : 'border-slate-300 text-slate-600 hover:border-amber-500/60 hover:text-amber-700'
+                ? 'bg-white text-[#0e162c] hover:bg-amber-50'
+                : 'bg-white text-slate-900 border border-slate-200 shadow-sm hover:bg-amber-50'
             }`}
           >
             {LANDING.acercaProyecto.etiqueta}
@@ -492,7 +492,7 @@ export default function PaginaConoceClubs() {
             heroConFoto ? '-mt-16 sm:-mt-20' : 'pt-8 sm:pt-12'
           } lg:mt-0 lg:pt-20 pb-10 sm:pb-14 lg:pb-24`}
         >
-          <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-12 lg:items-center">
+          <div className="max-w-6xl mx-auto grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] xl:gap-12 xl:items-center">
             <div className="flex flex-col items-start gap-5 min-w-0">
               <p className={`text-[11px] sm:text-xs uppercase tracking-[0.25em] font-black ${kickerColor}`}>
                 {LANDING.kicker}
