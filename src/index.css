@@ -115,8 +115,12 @@ html.landing-scroll-smooth {
   }
 }
 
+/* Limita el carrusel de banner del catálogo (#hero + .hero-catalogo) en
+   pantallas de escritorio bajas. No usar #hero a secas: la landing
+   /conoce-clubs también declara id="hero" y este corte recortaba su
+   contenido (pills, panel) al hacer zoom. */
 @media (min-width: 1024px) and (max-height: 900px) {
-  #hero > div {
+  .hero-catalogo > div {
     max-height: 55vh !important;
   }
 }
