@@ -14,9 +14,10 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
 
   useClickOutside(dropdownRef, menuAbierto, () => setMenuAbierto(false));
 
-  // En móvil el panel es de pantalla completa: se congela el scroll del fondo.
-  // En escritorio es un dropdown (lg:absolute) y el scroll debe seguir activo.
-  const esMovil = typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
+  // En móvil (por debajo de md, 768px) el panel es de pantalla completa: se
+  // congela el scroll del fondo. Desde md en adelante es un dropdown
+  // (md:absolute) y el scroll debe seguir activo, igual que en escritorio.
+  const esMovil = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
   useBloqueoScroll(menuAbierto && esMovil);
 
   return (
@@ -24,9 +25,9 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
       {user && (
         <button
           onClick={() => setMenuAbierto((prev) => !prev)}
-          className="hidden lg:flex items-center gap-2 cursor-pointer"
+          className="hidden md:flex items-center gap-2 cursor-pointer"
         >
-          <div className="w-8 h-8 rounded-full bg-amber-500 lg:ring-2 lg:ring-[#0b111e]/60 flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-8 h-8 rounded-full bg-amber-500 md:ring-2 md:ring-[#0b111e]/60 flex items-center justify-center text-white font-bold text-sm">
             {user.nombre_completo.charAt(0)}
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${menuAbierto ? 'rotate-180' : ''} ${modoOscuro ? 'text-white' : tema.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -37,7 +38,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
 
       <button
         onClick={() => { setMenuAbierto((prev) => !prev); }}
-        className={`p-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${modoOscuro ? `${tema.iconColor} hover:text-amber-400 md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70` : `${tema.iconColor} hover:text-amber-400`} ${user ? 'lg:hidden' : ''}`}
+        className={`p-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${modoOscuro ? `${tema.iconColor} hover:text-amber-400 md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70` : `${tema.iconColor} hover:text-amber-400`} ${user ? 'md:hidden' : ''}`}
         aria-label="Menú"
       >
         <Icono nombre="menu" className="h-6 w-6" strokeWidth={2} />
@@ -47,7 +48,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
         <>
           <div className="fixed inset-0 z-40 touch-none overscroll-contain" onClick={() => setMenuAbierto(false)} />
           <div
-            className={`fixed right-0 top-0 z-50 w-[70vw] border shadow-2xl py-2 px-1 lg:absolute lg:top-12 lg:w-56 transition-colors duration-300 ${tema.dropdownBg} ${tema.dropdownBorder}`}
+            className={`fixed right-0 top-0 z-50 w-[70vw] border shadow-2xl py-2 px-1 md:absolute md:top-12 md:w-56 transition-colors duration-300 ${tema.dropdownBg} ${tema.dropdownBorder}`}
             style={{ animation: 'dropdownIn 0.2s ease-out' }}
           >
             {user ? (
@@ -70,7 +71,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                   <Icono nombre="grid" className="h-4 w-4" strokeWidth={2} />
                   Mi Dashboard
                 </button>
-                <div className="lg:hidden">
+                <div className="md:hidden">
                   <div className={`h-px ${tema.headerBorder} mx-3`} />
                   <button
                     onClick={() => { abrirActualizaciones(); setMenuAbierto(false); }}

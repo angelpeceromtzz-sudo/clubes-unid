@@ -68,7 +68,7 @@ export function BarraNavegacion({
             )}
 
             {mostrarFiltros && (
-              <div className="hidden lg:flex items-center gap-1 shrink-0">
+              <div className="hidden md:flex items-center gap-1 shrink-0">
                 <BotonNoticias />
                 <BotonCalendario />
               </div>
