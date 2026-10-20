@@ -182,7 +182,7 @@ export function Heroe({ onReady }) {
 
   if (total === 0) return (
     <section id="hero" className="hero-catalogo w-full">
-      <div className="min-h-[200px] sm:min-h-[320px] lg:aspect-[21/9] lg:min-h-[400px] max-h-[600px]" />
+      <div className="min-h-[200px] sm:min-h-[320px] lg:h-[68vh] lg:min-h-[420px] max-h-[760px]" />
     </section>
   );
 
@@ -196,7 +196,10 @@ export function Heroe({ onReady }) {
   if (esMovil) {
     const clsFondoPagina = modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-50';
     return (
-      <section id="hero" className="hero-catalogo w-full pt-2">
+      /* Móvil: sin padding superior de sección (el CSS de escritorio ajusta
+         .hero-catalogo > div, no la sección) para no acumular aire con el
+         catálogo. Los indicadores solo existen con >1 diapositiva. */
+      <section id="hero" className="hero-catalogo w-full lg:pt-2">
         <div className="relative w-full">
           <div
             ref={scrollerRef}
@@ -207,27 +210,34 @@ export function Heroe({ onReady }) {
             aria-label="Banner de clubes"
           >
             {diapositivas.map((slide, index) => (
+              /*
+               * Móvil: 4/5 (más compacto que el 3/4 anterior). object-cover
+               * recorta sin deformar; el encuadre prioriza al protagonista
+               * (tercio superior). El degradado negro arranca hacia el 52 %
+               * de la tarjeta y el fundido con el fondo del tema crece hasta
+               * integrar título y subtítulo en la transición.
+               */
               <article
                 key={slide.id_diapositiva}
                 aria-label={`Diapositiva ${index + 1} de ${total}`}
-                className={`relative shrink-0 snap-center w-full aspect-[3/4] rounded-t-2xl overflow-hidden ${clsFondoPagina}`}
+                className={`relative shrink-0 snap-center w-full aspect-[4/5] rounded-t-2xl overflow-hidden ${clsFondoPagina}`}
               >
                 <img
                   src={obtenerUrlImagen(slide.url_imagen_movil || slide.url_imagen)}
                   alt=""
                   aria-hidden="true"
-                  className="absolute inset-0 w-full h-full object-cover object-center"
+                  className="absolute inset-0 w-full h-full object-cover object-[center_30%]"
                 />
-                <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 h-[52%] bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
                 <div
                   data-hero-fundido
-                  className={`absolute inset-x-0 bottom-0 h-[14%] bg-gradient-to-t ${
+                  className={`absolute inset-x-0 bottom-0 h-[20%] bg-gradient-to-t ${
                     modoOscuro
-                      ? 'from-[#0b111e] via-[#0b111e]/45'
-                      : 'from-slate-50 via-slate-50/45'
+                      ? 'from-[#0b111e] via-[#0b111e]/55'
+                      : 'from-slate-50 via-slate-50/55'
                   } to-transparent`}
                 />
-                <div className="absolute inset-x-0 bottom-0 z-10 p-4">
+                <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-4">
                   <h3 className="text-lg sm:text-xl font-black leading-tight text-white text-balance">
                     {slide.titulo}
                   </h3>
@@ -241,41 +251,29 @@ export function Heroe({ onReady }) {
             ))}
           </div>
 
-          {total > 1 && (
-            <>
-              <button
-                onClick={anterior}
-                className="absolute left-[calc(5%+12px)] top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm border border-white/15 flex items-center justify-center text-white hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
-                aria-label="Anterior"
-              >
-                <Icono nombre="chevron-left" strokeWidth={2} className="h-5 w-5" />
-              </button>
-              <button
-                onClick={siguiente}
-                className="absolute right-[calc(5%+12px)] top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm border border-white/15 flex items-center justify-center text-white hover:bg-white/20 hover:border-white/30 transition-opacity duration-300 cursor-pointer active:scale-90"
-                aria-label="Siguiente"
-              >
-                <Icono nombre="chevron-right" strokeWidth={2} className="h-5 w-5" />
-              </button>
-            </>
-          )}
         </div>
 
         {total > 1 && (
-          <div className="flex items-center justify-center py-2">
+          /* Indicadores: sin flechas superpuestas (móvil se navega con
+             swipe/indicadores). Padding inferior mínimo (4px); el catálogo
+             pone pt-3 (12px) → ~16px visibles hasta el encabezado. */
+          <div className="flex items-center justify-center pb-1">
             {diapositivas.map((slide, index) => (
               <button
                 key={slide.id_diapositiva}
                 onClick={() => irA(index)}
                 aria-label={`Ir a diapositiva ${index + 1}`}
                 aria-current={slideActual === index}
-                className="flex h-6 w-6 items-center justify-center cursor-pointer"
+                className="flex h-6 w-6 items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
               >
+                {/* Círculos del mismo diámetro en todos los estados: el activo
+                    solo cambia de color (ámbar vs gris). El botón de 24 px da
+                    superficie táctil; el punto visible es de 8 px. */}
                 <span
-                  className={`h-2 rounded-full transition-all duration-300 ${
+                  className={`h-2 w-2 rounded-full ${
                     slideActual === index
-                      ? 'w-6 bg-amber-500'
-                      : `w-2 ${modoOscuro ? 'bg-white/35' : 'bg-slate-400'}`
+                      ? 'bg-amber-500'
+                      : `${modoOscuro ? 'bg-white/35' : 'bg-slate-400'}`
                   }`}
                 />
               </button>
@@ -295,7 +293,7 @@ export function Heroe({ onReady }) {
    */
   return (
     <section id="hero" className="hero-catalogo w-full">
-      <div className="group relative w-full overflow-hidden min-h-[200px] sm:min-h-[320px] lg:aspect-[21/9] lg:min-h-[400px] max-h-[600px]">
+      <div className="group relative w-full overflow-hidden min-h-[200px] sm:min-h-[320px] lg:h-[68vh] lg:min-h-[420px] max-h-[760px]">
 
         {diapositivas.map((slide, index) => (
           <div
@@ -329,6 +327,18 @@ export function Heroe({ onReady }) {
           </div>
         ))}
 
+        {/* Fundido inferior (solo escritorio): la imagen se integra con el
+            fondo de la página sin corte horizontal. Capa decorativa sin
+            espacio en el flujo; las flechas (z-20) siguen por encima. */}
+        <div
+          aria-hidden="true"
+          className={`hidden lg:block absolute inset-x-0 bottom-0 z-10 h-[28%] pointer-events-none bg-gradient-to-t to-transparent ${
+            modoOscuro
+              ? 'from-[#0b111e] via-[#0b111e]/70'
+              : 'from-slate-50 via-slate-50/70'
+          }`}
+        />
+
         {total > 1 && (
           <>
             <button
@@ -345,6 +355,33 @@ export function Heroe({ onReady }) {
             >
               <Icono nombre="chevron-right" strokeWidth={2} className="h-6 w-6" />
             </button>
+            {/* Indicadores escritorio (lg+): mismo estilo y estado que los
+                móviles; círculos de 8 px en botones de 24 px, centrados sobre
+                el fundido inferior. z-20 por encima del fundido (z-10,
+                pointer-events-none). Con una sola diapositiva no se pintan. */}
+            <div
+              className="hidden lg:flex absolute inset-x-0 bottom-6 z-20 items-center justify-center"
+              role="group"
+              aria-label="Seleccionar diapositiva"
+            >
+              {diapositivas.map((slide, index) => (
+                <button
+                  key={slide.id_diapositiva}
+                  onClick={() => irA(index)}
+                  aria-label={`Ir a diapositiva ${index + 1}`}
+                  aria-current={slideActual === index}
+                  className="flex h-6 w-6 items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      slideActual === index
+                        ? 'bg-amber-500'
+                        : `${modoOscuro ? 'bg-white/35' : 'bg-slate-400'}`
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
           </>
         )}
 

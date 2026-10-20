@@ -121,7 +121,7 @@ html.landing-scroll-smooth {
    contenido (pills, panel) al hacer zoom. */
 @media (min-width: 1024px) and (max-height: 900px) {
   .hero-catalogo > div {
-    max-height: 55vh !important;
+    max-height: 68vh !important;
   }
 }
 
