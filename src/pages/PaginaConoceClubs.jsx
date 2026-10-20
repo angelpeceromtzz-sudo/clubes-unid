@@ -251,13 +251,15 @@ function BannerActividad({ actividad }) {
           la columna). Altura compartida por subgrid. */}
       <div aria-hidden="true" className="row-start-1 aspect-[4/3]" />
       {/* Pistas 2 y 3: título y descripción alineados entre tarjetas y
-          agrupados con ~8px (mt-2); el espacio que antes ocupaba el
-          row-gap del grid queda bajo la descripción (pb) para no reducir
-          la altura de la tarjeta. Los títulos envuelven sin recorte. */}
+          agrupados con ~8px (mt-2). El padding inferior de la descripción
+          es el único espacio hacia el borde inferior (breve y uniforme);
+          el crecimiento por subgrid solo ocurre si una descripción es más
+          larga que las demás, sin espaciadores que dejen hueco extra bajo
+          el texto. Los títulos envuelven sin recorte. */}
       <h3 className="relative row-start-2 px-4 sm:px-5 pt-3 sm:pt-4 text-white text-base sm:text-lg font-black tracking-tight leading-snug">
         {actividad.titulo}
       </h3>
-      <p className="relative row-start-3 px-4 sm:px-5 pb-12 sm:pb-14 mt-2 text-sm leading-relaxed text-slate-200 line-clamp-4">
+      <p className="relative row-start-3 px-4 sm:px-5 pb-4 sm:pb-5 mt-2 text-sm leading-relaxed text-slate-200 line-clamp-4">
         {actividad.texto}
       </p>
     </li>

@@ -52,7 +52,7 @@ function PerfilPersona({ persona }) {
   const fraseColor = modoOscuro ? 'text-slate-200' : 'text-slate-700';
 
   return (
-    <li className="grid sm:row-span-6 sm:grid-rows-subgrid w-full justify-items-center text-center px-4 py-6 min-w-0 gap-y-2.5">
+    <li className="grid sm:row-span-6 sm:grid-rows-subgrid w-full lg:col-span-2 justify-items-center text-center px-4 py-6 min-w-0 gap-y-2.5">
       <div className="row-start-1">
         {conFoto ? (
           <img
@@ -110,11 +110,16 @@ function PerfilPersona({ persona }) {
 // Cuadrícula compartida por equipo y colaboradores. Grid de 1/2/3 columnas
 // (móvil / tableta / escritorio) con 6 pistas explícitas que los perfiles
 // referencian por subgrid (desde sm); el espacio entre pistas es uniforme
-// (gap-y) para no depender de márgenes individuales. En una fila de dos, el
-// perfil suelto cae a filas implícidas y conserva su altura natural.
+// (gap-y) para no depender de márgenes individuales. En escritorio las
+// columnas son 6 de media anchura (cada perfil ocupa col-span-2: mismo ancho
+// que una tercera parte antes) y las filas incompletas se centran con reglas
+// de layout por posición, no por nombre: una última fila de dos arranca en
+// la columna 2 y una de sola arranca en la 3. En móvil/tableta el flujo
+// sigue siendo 1 y 2 columnas; el perfil suelto de una fila de dos conserva
+// su altura natural.
 function CuadriculaPerfiles({ personas }) {
   return (
-    <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 grid-rows-[auto_auto_auto_auto_auto_auto] gap-x-6 gap-y-2.5">
+    <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 grid-rows-[auto_auto_auto_auto_auto_auto] gap-x-6 gap-y-2.5 lg:[&>li:nth-child(3n+1):nth-last-child(2)]:col-start-2 lg:[&>li:nth-child(3n+1):last-child]:col-start-3">
       {personas.map((persona) => (
         <PerfilPersona key={persona.nombre} persona={persona} />
       ))}

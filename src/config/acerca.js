@@ -159,19 +159,11 @@ export const ACERCA = {
     titulo: 'Personas que contribuyen',
     intro: 'Además del equipo, otras personas de la comunidad han aportado ideas, orientación y apoyo.',
     // Acompañamiento: docencia, coordinación y dirección que orientan el
-    // proyecto académico.
+    // proyecto académico. Orden: docentes primero, luego coordinación y, al
+    // final, el acompañamiento de mercadotecnia.
     acompanamiento: [
       {
-        nombre: 'Samai Bastarrachea',
-        rol: 'Mercadotecnia',
-        aportacion: 'Nos guió en marketing: la encuesta, la landing y la forma de presentar el proyecto.',
-        frase: null,
-        foto: null,
-        mostrarFoto: false,
-        visible: true,
-      },
-      {
-        nombre: 'Cecilia',
+        nombre: 'Cecilia Teresa Ocampo',
         rol: 'Docente de Mercadotecnia',
         aportacion: 'Nos apoyó con Samai en las decisiones de marketing de la encuesta y la landing.',
         frase: null,
@@ -206,9 +198,28 @@ export const ACERCA = {
         mostrarFoto: false,
         visible: true,
       },
+      {
+        nombre: 'Samai Bastarrachea',
+        rol: 'Mercadotecnia',
+        aportacion: 'Nos guió en marketing: la encuesta, la landing y la forma de presentar el proyecto.',
+        frase: null,
+        foto: null,
+        mostrarFoto: false,
+        visible: true,
+      },
     ],
-    // Colaboración: aportes puntuales de la comunidad universitaria.
+    // Colaboración: aportes puntuales de la comunidad universitaria. Orden:
+    // primero el beneficiario académico (rector), luego las comunicaciones.
     colaboracion: [
+      {
+        nombre: 'David Chacón',
+        rol: 'Rector de la universidad',
+        aportacion: 'Beneficiario del proyecto: aporta necesidades que orientan su desarrollo.',
+        frase: null,
+        foto: null,
+        mostrarFoto: false,
+        visible: true,
+      },
       {
         nombre: 'Alma C.',
         rol: 'Comunicaciones',
@@ -222,15 +233,6 @@ export const ACERCA = {
         nombre: 'Magui',
         rol: 'Comunicaciones',
         aportacion: 'Del periódico mural: se conversó con ella sobre una colaboración para dar a conocer el proyecto en el campus.',
-        frase: null,
-        foto: null,
-        mostrarFoto: false,
-        visible: true,
-      },
-      {
-        nombre: 'David Chacón',
-        rol: 'Rector de la universidad',
-        aportacion: 'Beneficiario del proyecto: aporta necesidades que orientan su desarrollo.',
         frase: null,
         foto: null,
         mostrarFoto: false,
