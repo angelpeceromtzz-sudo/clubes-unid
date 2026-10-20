@@ -26,6 +26,7 @@ import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';
 import { Logotipo } from '../components/layout/barra-navegacion/Logotipo';
 import { BotonEncuesta } from '../components/landing/BotonEncuesta';
+import { BotonBarraPublica } from '../components/landing/BotonBarraPublica';
 import {
   LANDING,
   hayEncuesta,
@@ -81,10 +82,14 @@ function BotonExplorar({ className = '', primario = false }) {
   );
 }
 
+// Pastillas-ancla de las secciones del hero. Tema oscuro: superficie
+// azul-noche #0e162c con texto #F8FAFC y borde blanco/15 (hover #18223f);
+// foco visible ámbar. Tema claro conserva la píldora blanca con borde
+// slate.
 function EnlaceSeccion({ href, children }) {
   const { modoOscuro } = useTheme();
   const contorno = modoOscuro
-    ? 'bg-white text-[#0e162c] hover:bg-amber-50'
+    ? 'bg-[#0e162c] text-[#F8FAFC] border border-white/15 hover:bg-[#18223f]'
     : 'bg-white text-slate-900 border border-slate-200 shadow-sm hover:bg-amber-50';
   return (
     <a
@@ -176,11 +181,26 @@ function TarjetaPropuesta({ club }) {
 
 // Póster informativo de «Otras actividades» (referencia de composición:
 // tarjetas destacadas tipo ViX): fotografía a sangre que cubre toda la
-// tarjeta (proporción 4:5), degradado oscuro inferior progresivo que funde
-// la imagen con el fondo y texto HTML superpuesto en la zona inferior.
+// tarjeta, degradado oscuro inferior progresivo que funde la imagen con
+// el fondo y texto HTML superpuesto en la zona inferior.
 // Informativo: sin enlaces, sin hover de elevación y sin cursor pulsable.
 // Sin imagen (o si falla) conserva el mismo formato con fallback de
-// gradiente de marca + medallón ámbar.
+// gradiente de marca + medallón ámbar. `focal` ajusta el encuadre
+// individual (object-position) sin deformar la foto (object-cover).
+//
+// Altura y alineación entre tarjetas: el <li> es la tarjeta y comparte
+// con sus hermanas las tres pistas de la fila (subgrid de la lista),
+// todas `auto` para que nada colapse:
+//   1) zona despejada de fotografía con aspect-[4/3] (más aire para la
+//      foto que con el póster 4:5 anterior; crece con el ancho de la
+//      columna),
+//   2) título,
+//   3) descripción.
+// Los títulos y las descripciones empiezan a la misma altura en las
+// tres tarjetas y el conjunto crece si el texto necesita más espacio
+// (la tarjeta no se recorta para alinear). La foto y el degradado son
+// capas absolutas que cubren la tarjeta completa: el texto queda sobre
+// el degradado y la zona superior permanece despejada.
 function BannerActividad({ actividad }) {
   const { modoOscuro } = useTheme();
   const [imagenFallida, setImagenFallida] = useState(false);
@@ -188,8 +208,8 @@ function BannerActividad({ actividad }) {
   const mostrarImagen = imagen && !imagenFallida;
 
   return (
-    <article
-      className={`relative aspect-[4/5] rounded-2xl overflow-hidden ${
+    <li
+      className={`relative row-span-3 min-w-0 overflow-hidden rounded-2xl grid grid-rows-subgrid ${
         modoOscuro ? 'bg-[#18223f]' : 'bg-slate-100'
       }`}
     >
@@ -220,24 +240,27 @@ function BannerActividad({ actividad }) {
 
       {/* Degradado de lectura (igual en claro y oscuro): transparente
           arriba → azul noche abajo; sin corte visible con el contenido.
-          El copy vive en landing.js con longitudes iguales (~3 líneas)
-          para que los títulos de las 3 tarjetas queden alineados y el
-          texto no tape la foto en móvil; `line-clamp-4` es solo red de
+          El copy vive en landing.js; `line-clamp-4` es solo red de
           seguridad y no recorta el texto vigente. */}
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/65 to-transparent"
       />
 
-      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-        <h3 className="text-white text-base sm:text-lg font-black tracking-tight leading-snug">
-          {actividad.titulo}
-        </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-slate-200 line-clamp-4">
-          {actividad.texto}
-        </p>
-      </div>
-    </article>
+      {/* Pista 1: reserva la zona despejada de la foto (≈4:3 del ancho de
+          la columna). Altura compartida por subgrid. */}
+      <div aria-hidden="true" className="row-start-1 aspect-[4/3]" />
+      {/* Pistas 2 y 3: título y descripción alineados entre tarjetas y
+          agrupados con ~8px (mt-2); el espacio que antes ocupaba el
+          row-gap del grid queda bajo la descripción (pb) para no reducir
+          la altura de la tarjeta. Los títulos envuelven sin recorte. */}
+      <h3 className="relative row-start-2 px-4 sm:px-5 pt-3 sm:pt-4 text-white text-base sm:text-lg font-black tracking-tight leading-snug">
+        {actividad.titulo}
+      </h3>
+      <p className="relative row-start-3 px-4 sm:px-5 pb-12 sm:pb-14 mt-2 text-sm leading-relaxed text-slate-200 line-clamp-4">
+        {actividad.texto}
+      </p>
+    </li>
   );
 }
 
@@ -424,16 +447,9 @@ export default function PaginaConoceClubs() {
       <div className={CONTENEDOR}>
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 py-4">
           <Logotipo />
-          <Link
-            to={LANDING.acercaProyecto.ruta}
-            className={`inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full text-xs font-bold transition-colors duration-200 active:scale-[0.98] ${FOCO} ${
-              modoOscuro
-                ? 'bg-white text-[#0e162c] hover:bg-amber-50'
-                : 'bg-white text-slate-900 border border-slate-200 shadow-sm hover:bg-amber-50'
-            }`}
-          >
+          <BotonBarraPublica to={LANDING.acercaProyecto.ruta}>
             {LANDING.acercaProyecto.etiqueta}
-          </Link>
+          </BotonBarraPublica>
         </div>
       </div>
 
@@ -904,17 +920,19 @@ export default function PaginaConoceClubs() {
                 visible); el contenedor es enfocable (tabIndex) para
                 desplazarse con teclado. md+: rejilla de 3 columnas que
                 llena el contenedor centrado (justificada, sin espacio
-                muerto a los lados). Sin autoplay ni carruseles anidados. */}
+                muerto a los lados). Sin autoplay ni carruseles anidados.
+                La lista es un grid de 3 pistas `auto` (zona de foto,
+                título y descripción) compartidas por subgrid: los
+                títulos y las descripciones de las tres tarjetas arrancan
+                a la misma altura y el conjunto crece con el texto. */}
             <ul
               aria-label="Actividades universitarias"
               tabIndex={0}
-              className="nf-scroll mt-8 sm:mt-10 -mx-6 sm:-mx-8 flex gap-4 overflow-x-auto px-6 sm:px-8 pb-1 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible"
+              className="nf-scroll mt-8 sm:mt-10 -mx-6 sm:-mx-8 grid grid-flow-col auto-cols-[min(70vw,300px)] grid-rows-[auto_auto_auto] gap-x-4 overflow-x-auto px-6 sm:px-8 pb-1 md:mx-0 md:px-0 md:grid-flow-row md:grid-cols-3 md:auto-cols-auto md:gap-x-5 md:overflow-visible"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {LANDING.actividades.items.map((act) => (
-                <li key={act.id} className="shrink-0 w-[70vw] max-w-[300px] md:w-auto md:max-w-none">
-                  <BannerActividad actividad={act} />
-                </li>
+                <BannerActividad key={act.id} actividad={act} />
               ))}
             </ul>
           </div>
@@ -923,8 +941,9 @@ export default function PaginaConoceClubs() {
 
       {/* G. Acerca del proyecto: presentación breve e invitación a la página
           propia (/acerca-del-proyecto), donde viven el origen, el equipo y
-          las colaboraciones, sin duplicarlos aquí. La encuesta sigue como
-          acción principal y «Conoce el proyecto» es el acceso destacado. */}
+          las colaboraciones, sin duplicarlos aquí. «Conoce el proyecto» es
+          la única acción de la banda (sin el botón de encuesta en
+          preparación) y se refuerza con tipografía y sombra ámbar. */}
       <section
         id="acerca"
         aria-labelledby="titulo-acerca"
@@ -944,10 +963,9 @@ export default function PaginaConoceClubs() {
               </p>
             </div>
             <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-              <BotonEncuesta className="w-full sm:w-auto" />
               <Link
                 to={LANDING.acercaProyecto.ruta}
-                className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] w-full sm:w-auto rounded-full bg-amber-400 text-[#0e162c] font-black text-sm transition duration-200 hover:bg-amber-300 active:scale-[0.98] ${FOCO_PRIMARIO}`}
+                className={`inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3.5 min-h-[48px] w-full sm:w-auto rounded-full bg-amber-400 text-[#0e162c] text-[0.95rem] sm:text-base font-black shadow-lg shadow-amber-400/25 transition duration-200 hover:bg-amber-300 hover:shadow-xl hover:shadow-amber-400/35 active:scale-[0.98] ${FOCO_PRIMARIO}`}
               >
                 <Icono nombre="info" strokeWidth={2} className="h-4 w-4 shrink-0" />
                 {LANDING.acercaProyecto.btn}

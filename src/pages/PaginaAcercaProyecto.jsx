@@ -14,6 +14,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Icono } from '../components/ui/Icono';
 import { Logotipo } from '../components/layout/barra-navegacion/Logotipo';
 import { ACERCA } from '../config/acerca';
+import { BotonBarraPublica } from '../components/landing/BotonBarraPublica';
 
 const CONTENEDOR = 'w-full px-6 sm:px-8 lg:px-12 xl:px-16';
 const FOCO_PRIMARIO =
@@ -33,6 +34,15 @@ function Parrafos({ items, clases }) {
 // y, en el equipo, los roles de trabajo como línea discreta (no como
 // etiquetas saturadas ni logros). Cada campo en null/ausente se omite sin
 // dejar huecos artificiales.
+//
+// Filas equivalentes: el perfil es un grid que comparte con sus hermanas
+// las pistas de la fila (subgrid desde sm) en este orden: 1) foto/avatar,
+// 2) frase, 3) nombre, 4) cargo, 5) descripción y 6) roles. Los perfiles de
+// una misma fila quedan alineados (nombres a la misma altura, cargo con el
+// espacio del más alto, descripciones y roles que arrancan donde termina la
+// zona compartida de cada pista). Cuando el perfil queda en una fila propia
+// (móvil, o el suelto de una fila de dos), el subgrid no aplica y el
+// contenido toma su altura natural, sin espacio reservado.
 function PerfilPersona({ persona }) {
   const { tema, modoOscuro } = useTheme();
   if (persona.visible === false) return null;
@@ -42,37 +52,39 @@ function PerfilPersona({ persona }) {
   const fraseColor = modoOscuro ? 'text-slate-200' : 'text-slate-700';
 
   return (
-    <li className="flex w-full flex-col items-center text-center px-4 py-6 min-w-0 sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]">
-      {conFoto ? (
-        <img
-          src={persona.foto}
-          alt={`Foto de ${persona.nombre}`}
-          loading="lazy"
-          className="shrink-0 w-24 h-24 rounded-full object-cover"
-        />
-      ) : (
-        <span
-          aria-hidden="true"
-          className={`shrink-0 w-24 h-24 rounded-full flex items-center justify-center ${
-            modoOscuro ? 'bg-amber-400/10 text-amber-400/80' : 'bg-amber-100 text-amber-500'
-          }`}
-        >
-          <Icono nombre="profile" strokeWidth={1.5} className="h-10 w-10" />
-        </span>
-      )}
+    <li className="grid sm:row-span-6 sm:grid-rows-subgrid w-full justify-items-center text-center px-4 py-6 min-w-0 gap-y-2.5">
+      <div className="row-start-1">
+        {conFoto ? (
+          <img
+            src={persona.foto}
+            alt={`Foto de ${persona.nombre}`}
+            loading="lazy"
+            className="shrink-0 w-24 h-24 rounded-full object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className={`shrink-0 w-24 h-24 rounded-full flex items-center justify-center ${
+              modoOscuro ? 'bg-amber-400/10 text-amber-400/80' : 'bg-amber-100 text-amber-500'
+            }`}
+          >
+            <Icono nombre="profile" strokeWidth={1.5} className="h-10 w-10" />
+          </span>
+        )}
+      </div>
 
       {persona.frase && (
-        <blockquote className={`mt-5 max-w-[28ch] text-lg sm:text-xl font-semibold italic leading-snug ${fraseColor}`}>
+        <blockquote className={`row-start-2 max-w-[28ch] text-lg sm:text-xl font-semibold italic leading-snug ${fraseColor}`}>
           <span aria-hidden="true" className="not-italic text-amber-500">“</span>
           {persona.frase}
           <span aria-hidden="true" className="not-italic text-amber-500">”</span>
         </blockquote>
       )}
 
-      <p className={`mt-4 font-black text-base sm:text-lg ${nombreColor}`}>{persona.nombre}</p>
+      <p className={`row-start-3 font-black text-base sm:text-lg ${nombreColor}`}>{persona.nombre}</p>
       {persona.rol && (
         <p
-          className={`mt-1 text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] ${
+          className={`row-start-4 text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] ${
             modoOscuro ? 'text-amber-400' : 'text-amber-600'
           }`}
         >
@@ -80,11 +92,11 @@ function PerfilPersona({ persona }) {
         </p>
       )}
       {persona.aportacion && (
-        <p className={`mt-2.5 text-sm leading-relaxed max-w-[36ch] ${tema.subtitle}`}>{persona.aportacion}</p>
+        <p className={`row-start-5 text-sm leading-relaxed max-w-[36ch] ${tema.subtitle}`}>{persona.aportacion}</p>
       )}
       {persona.roles?.length > 0 && (
         <p
-          className={`mt-3 text-[11px] leading-relaxed max-w-[38ch] ${
+          className={`row-start-6 text-[11px] leading-relaxed max-w-[38ch] ${
             modoOscuro ? 'text-slate-400' : 'text-slate-500'
           }`}
         >
@@ -95,14 +107,14 @@ function PerfilPersona({ persona }) {
   );
 }
 
-// Cuadrícula compartida por equipo y colaboradores, en flex-wrap con
-// justificación centrada: las filas incompletas (p. ej. 5 perfiles en
-// escritorio → 3 + 2) quedan centradas en vez de pegadas a la izquierda.
-// Anchos por breakpoint con la matemática de los gaps (1.5rem); en móvil
-// ocupa el ancho completo.
+// Cuadrícula compartida por equipo y colaboradores. Grid de 1/2/3 columnas
+// (móvil / tableta / escritorio) con 6 pistas explícitas que los perfiles
+// referencian por subgrid (desde sm); el espacio entre pistas es uniforme
+// (gap-y) para no depender de márgenes individuales. En una fila de dos, el
+// perfil suelto cae a filas implícidas y conserva su altura natural.
 function CuadriculaPerfiles({ personas }) {
   return (
-    <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-4">
+    <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 grid-rows-[auto_auto_auto_auto_auto_auto] gap-x-6 gap-y-2.5">
       {personas.map((persona) => (
         <PerfilPersona key={persona.nombre} persona={persona} />
       ))}
@@ -156,9 +168,11 @@ export default function PaginaAcercaProyecto() {
   const bandaSuave = modoOscuro ? 'bg-[#0e162c]' : 'bg-white';
   const textoParrafos = `text-sm sm:text-base leading-relaxed ${tema.subtitle}`;
   const estiloVolver = `inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] rounded-full bg-amber-400 text-[#0e162c] font-black text-sm transition duration-200 hover:bg-amber-300 active:scale-[0.98] ${FOCO_PRIMARIO}`;
-  // Variante compacta para el retorno de la barra superior: en móvil el
-  // estilo grande (píldora de ancho completo, 48px) dominaba la cabecera.
-  const estiloVolverBarra = `inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-amber-400 text-[#0e162c] font-black text-xs transition duration-200 hover:bg-amber-300 active:scale-[0.98] ${FOCO_PRIMARIO}`;
+  // El retorno de la barra superior usa el botón secundario compartido
+  // (BotonBarraPublica), el mismo que el chip «Conocenos» de la landing:
+  // así ambos miden lo mismo (~38px en móvil, 44px desde sm; mismo
+  // padding, tipografía, radio y estados) sin que el ancho deje de
+  // ajustarse al contenido.
 
   return (
     <main className={`pb-10 lg:pb-20 ${tema.bg} ${tema.text}`}>
@@ -172,10 +186,10 @@ export default function PaginaAcercaProyecto() {
           >
             <Logotipo />
           </Link>
-          <Link to="/conoce-clubs" className={estiloVolverBarra}>
+          <BotonBarraPublica to="/conoce-clubs">
             <Icono nombre="arrow-left" strokeWidth={2} className="h-3.5 w-3.5 shrink-0" />
             {ACERCA.cierre.btnVolver}
-          </Link>
+          </BotonBarraPublica>
         </div>
       </div>
 
