@@ -73,16 +73,14 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
         </div>
       )}
       <Heroe onReady={() => setHeroListo(true)} />
-      <main id="catalogo" className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 py-12 pb-24 md:pb-12">
-        <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="shrink-0">
-            <h2 className={`text-2xl lg:text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>
-              Explorar Clubes
-            </h2>
-            <p className={`text-sm mt-1 transition-colors duration-300 ${tema.subtitle}`}>
-              Catálogo oficial UNID Campus Campeche
-            </p>
-          </div>
+      {/* Compactación solo móvil: pt-3 (12px) + pb-1 (4px) de los
+          indicadores = ~16px hasta el encabezado. Escritorio conserva
+          pt-12 (48px) y mb-10 de la fila con filtros (referencia develop). */}
+      <main id="catalogo" className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 pt-3 pb-24 md:py-12 lg:pt-12">
+        <div className="mb-6 lg:mb-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <h2 className={`shrink-0 text-2xl lg:text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>
+            Explorar Clubes
+          </h2>
 
           <div className="hidden lg:flex flex-col gap-3 lg:items-end">
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-start lg:justify-end">
@@ -96,7 +94,7 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
         </div>
 
         {!estaAutenticado && (
-          <Alerta tipo="warning" mensaje="Inicia sesión para inscribirte en un club." className="mb-8" />
+          <Alerta tipo="warning" mensaje="Inicia sesión para inscribirte en un club." className="mb-4 lg:mb-8" />
         )}
 
         {clubesLoading ? (
@@ -127,7 +125,7 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
             </div>
 
             {/* Mobile: Netflix-style rows per category */}
-            <div className="lg:hidden space-y-8">
+            <div className="lg:hidden space-y-6 lg:space-y-8">
               {categoriasMobile.map(([categoria, clubs]) => (
                 <section key={categoria}>
                   <div className="flex items-center gap-2 mb-3">

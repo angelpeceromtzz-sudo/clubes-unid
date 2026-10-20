@@ -1,20 +1,20 @@
 /* Landing pública /conoce-clubs — presentación Mobile First de Clubs UNID
-   Campeche. Compuesta como bandas diferenciadas: hero con fotografía
-   protagonista opcional (LANDING.hero; fallback de gradiente + panel de
-   identidad con experiencias y conteo real de propuestas), banda del
-   concepto de club, propuestas reales desde la API (carrusel lateral en
-   móvil y grid con «Mostrar más» en escritorio), encuesta inmediatamente
-   después de las propuestas, Modelo de Formación Integral (VIVE), otras
-   actividades universitarias informativas (LANDING.actividades; banners
-   con foto o fallback) e invitación a /acerca-del-proyecto (el detalle del
-   equipo y las colaboraciones vive en esa página, sin duplicarlo aquí).
-   Accesos internos: barra propia con enlace «Conocenos» y sección final
-   con encuesta (acción principal), «Explorar» y «Conoce el proyecto».
-   Aparición suave de secciones secundarias (IntersectionObserver +
-   .landing-reveal, con prefers-reduced-motion). No requiere sesión; los
-   CTAs de encuesta solo se activan con ENCUESTA_SLUG en
-   src/config/landing.js. Se monta fuera del layout del sistema (ver
-   App.jsx) con su propia barra. */
+   Campeche. Compuesta como bandas diferenciadas: hero con kicker, imagen
+   vertical, título, invitación y cuadro Lobos Rojos (LANDING.hero en
+   src/config/landing.js; sin CTA, aviso de encuesta ni chips de secciones
+   en el hero), banda del concepto de club, propuestas reales desde la API
+   (carrusel lateral en móvil y grid con «Mostrar más» en escritorio),
+   encuesta inmediatamente después de las propuestas, Modelo de Formación
+   Integral (VIVE), otras actividades universitarias informativas
+   (LANDING.actividades; banners con foto o fallback) e invitación a
+   /acerca-del-proyecto (el detalle del equipo y las colaboraciones vive
+   en esa página, sin duplicarlo aquí). Accesos internos: barra propia con
+   enlace «Conocenos» y sección final con encuesta (acción principal),
+   «Explorar» y «Conoce el proyecto». Aparición suave de secciones
+   secundarias (IntersectionObserver + .landing-reveal, con
+   prefers-reduced-motion). No requiere sesión; los CTAs de encuesta solo
+   se activan con ENCUESTA_SLUG en src/config/landing.js. Se monta fuera
+   del layout del sistema (ver App.jsx) con su propia barra. */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -40,66 +40,10 @@ const PROPUESTAS_VISIBLES = 6;
 
 // Foco visible compartido: anillo ámbar sobre superficies; en botones ámbar
 // sólidos el anillo va con offset del mismo ámbar para leerse sobre cualquier
-// fondo de sección sin depend del tema.
+// fondo de sección sin depender del tema.
 const FOCO = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80';
 const FOCO_PRIMARIO =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e162c] focus-visible:ring-offset-2 focus-visible:ring-offset-amber-400';
-
-function BotonExplorar({ className = '', primario = false }) {
-  const { modoOscuro } = useTheme();
-  const base =
-    'inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] rounded-full transition duration-200 active:scale-[0.98]';
-  // CTA primario: un poco más de tamaño y menor peso que font-black, con
-  // tracking ligero; se lee más amable sin perder presencia sobre el ámbar.
-  const tipografia = primario
-    ? 'text-[0.95rem] font-extrabold tracking-wide'
-    : 'text-sm font-black';
-
-  if (primario) {
-    return (
-      <a
-        href={`#${LANDING.explorar.seccionPropuestas}`}
-        className={`${base} ${tipografia} bg-amber-400 text-[#0e162c] hover:bg-amber-300 ${FOCO_PRIMARIO} ${className}`}
-      >
-        <Icono nombre="search" strokeWidth={2} className="h-4 w-4 shrink-0" />
-        {LANDING.explorar.btn}
-      </a>
-    );
-  }
-
-  const contorno = modoOscuro
-    ? 'border border-slate-600 text-white hover:border-amber-400/60 hover:bg-slate-800/60'
-    : 'border border-slate-300 text-slate-900 hover:border-amber-500/60 hover:bg-amber-50';
-
-  return (
-    <a
-      href={`#${LANDING.explorar.seccionPropuestas}`}
-      className={`${base} ${tipografia} ${contorno} ${FOCO} ${className}`}
-    >
-      <Icono nombre="search" strokeWidth={2} className="h-4 w-4 shrink-0" />
-      {LANDING.explorar.btn}
-    </a>
-  );
-}
-
-// Pastillas-ancla de las secciones del hero. Tema oscuro: superficie
-// azul-noche #0e162c con texto #F8FAFC y borde blanco/15 (hover #18223f);
-// foco visible ámbar. Tema claro conserva la píldora blanca con borde
-// slate.
-function EnlaceSeccion({ href, children }) {
-  const { modoOscuro } = useTheme();
-  const contorno = modoOscuro
-    ? 'bg-[#0e162c] text-[#F8FAFC] border border-white/15 hover:bg-[#18223f]'
-    : 'bg-white text-slate-900 border border-slate-200 shadow-sm hover:bg-amber-50';
-  return (
-    <a
-      href={href}
-      className={`inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-full px-1.5 min-h-[36px] text-[10px] font-bold transition-colors duration-200 flex-1 xl:flex-none xl:px-4 xl:py-2 xl:min-h-[44px] xl:text-xs ${contorno} ${FOCO}`}
-    >
-      {children}
-    </a>
-  );
-}
 
 function TarjetaPropuesta({ club }) {
   const { modoOscuro } = useTheme();
@@ -414,28 +358,16 @@ export default function PaginaConoceClubs() {
 
   const encuestaActiva = hayEncuesta();
 
-  // Hero fotográfico: una sola imagen configurable en landing.js. Sin
-  // imagen (o si falla al cargar) se conserva el fallback de gradiente +
-  // panel de identidad, sin saltos de layout.
+  // Hero: kicker + imagen vertical + título + intro + cuadro Lobos Rojos.
+  // Una sola imagen configurable en landing.js. Sin imagen (o si falla al
+  // cargar) se conserva el fallback de gradiente + panel de identidad.
   const fotoHeroUrl = LANDING.hero.imagen ? obtenerUrlImagen(LANDING.hero.imagen) : null;
   const heroConFoto = Boolean(fotoHeroUrl) && !fotoHeroFallida;
 
-  const heroFondo = modoOscuro
-    ? 'bg-gradient-to-b from-[#0e162c] to-[#0b111e]'
-    : 'bg-gradient-to-b from-amber-100/70 to-slate-50';
-  // Con foto, la base es plana (el degradado de lectura lo aporta la capa
-  // superpuesta); sin foto, se mantiene el degradado de banda actual.
-  const heroBase = heroConFoto
-    ? (modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-50')
-    : heroFondo;
+  const heroBase = modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-50';
   const panelBase = modoOscuro
     ? 'bg-[#0e162c] border-slate-700/60'
     : 'bg-white border-slate-200 shadow-sm';
-  // Panel del hero sobre fotografía (desktop): superficie vidriosa que
-  // conserva el contenido del panel sin tapar del todo la imagen.
-  const panelHeroFoto = modoOscuro
-    ? 'bg-[#0e162c]/75 border-white/10 backdrop-blur-md'
-    : 'bg-white/80 border-white/50 backdrop-blur-md shadow-sm';
   const bandaConcepto = modoOscuro ? 'bg-[#0e162c]' : 'bg-white';
   const bandaEncuesta = modoOscuro ? 'bg-[#18223f]' : 'bg-[#0e162c]';
   const kickerColor = modoOscuro ? 'text-amber-400' : 'text-amber-600';
@@ -455,159 +387,144 @@ export default function PaginaConoceClubs() {
         </div>
       </div>
 
-      {/* A. Presentación inicial: fotografía protagonista (si está
-          configurada) con degradado de lectura, identidad, invitación,
-          acción principal y navegación de secciones. Sin foto, conserva el
-          hero de gradiente + panel. */}
+      {/* A. Presentación: kicker, imagen vertical, título, invitación y
+          cuadro Lobos Rojos. Sin CTA de explorar, aviso de encuesta ni
+          chips de secciones en el hero (esos accesos viven en las secciones
+          y en el pie). Móvil: kicker → bloque visual (imagen de fondo +
+          título/intro por encima) → cuadro; escritorio: texto + cuadro a la
+          izquierda, imagen a la derecha. */}
       <section id="hero" className={`relative overflow-hidden ${heroBase}`}>
-        {heroConFoto && (
-          <>
-            {/* Un solo <img>: en móvil va en flujo con alto flexible y su
-                propio encuadre; el contenido de la landing sube sobre su
-                zona inferior oscurecida (foto y texto en una sola pieza,
-                sin corte visible). En lg+ pasa a fondo absoluto con
-                degradado editorial izquierda→derecha. */}
-            <div className="lg:absolute lg:inset-0" aria-hidden={!LANDING.hero.alt}>
-              <div className="relative h-[300px] sm:h-[360px] lg:h-full">
-                <img
-                  src={fotoHeroUrl}
-                  alt={LANDING.hero.alt}
-                  aria-hidden={LANDING.hero.alt ? undefined : true}
-                  fetchPriority="high"
-                  decoding="async"
-                  onError={() => setFotoHeroFallida(true)}
-                  className="h-full w-full object-cover"
-                  style={{ objectPosition: LANDING.hero.focal }}
-                />
-                {/* Degradado inferior móvil: oscurece la zona donde se
-                    integra el contenido y funde con la banda hero. */}
-                <div
-                  className={`absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t to-transparent lg:hidden ${
-                    modoOscuro
-                      ? 'from-[#0b111e] via-[#0b111e]/70'
-                      : 'from-slate-50 via-slate-50/80'
-                  }`}
-                />
-              </div>
-            </div>
-            {/* Degradado de lectura de escritorio: el texto queda sobre la
-                zona izquierda sin ocultar innecesariamente la fotografía. */}
-            <div
-              aria-hidden="true"
-              className={`hidden lg:block absolute inset-0 bg-gradient-to-r ${
-                modoOscuro
-                  ? 'from-[#0b111e] via-[#0b111e]/90 to-[#0b111e]/25'
-                  : 'from-slate-50 via-slate-50/90 to-slate-50/25'
-              }`}
-            />
-          </>
-        )}
-        {/* Con foto: el contenido sube sobre la zona oscurecida de la
-            imagen (integración móvil). Sin foto (fallback): conserva el
-            padding normal del hero. */}
-        <div
-          className={`${CONTENEDOR} relative ${
-            heroConFoto ? '-mt-16 sm:-mt-20' : 'pt-8 sm:pt-12'
-          } lg:mt-0 lg:pt-20 pb-10 sm:pb-14 lg:pb-24`}
-        >
-          <div className="max-w-6xl mx-auto grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] xl:gap-12 xl:items-center">
-            <div className="flex flex-col items-start gap-5 min-w-0">
+        <div className={`${CONTENEDOR} relative pt-8 sm:pt-12 lg:pt-20 pb-10 sm:pb-14 lg:pb-24`}>
+          <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-2 lg:gap-12 lg:items-stretch">
+            <div className="flex flex-col min-w-0">
               <p className={`text-[11px] sm:text-xs uppercase tracking-[0.25em] font-black ${kickerColor}`}>
                 {LANDING.kicker}
               </p>
-              <h1 className={`text-[1.75rem] leading-[1.15] sm:text-4xl lg:text-5xl font-black tracking-tight text-balance ${tema.title}`}>
-                {LANDING.nombre}
-              </h1>
-              <p className={`text-base sm:text-lg leading-relaxed max-w-xl ${tema.subtitle}`}>
-                {LANDING.invitacion}
-              </p>
 
-              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
-                {encuestaActiva ? (
-                  <BotonEncuesta grande className="w-full sm:w-auto" />
-                ) : (
-                  <BotonExplorar primario className="w-full sm:w-auto" />
-                )}
-                {encuestaActiva && <BotonExplorar className="w-full sm:w-auto" />}
-              </div>
+              {heroConFoto ? (
+                <>
+                  {/* Bloque visual móvil: un único fondo continuo. Zona
+                      superior clara (~250px de fotografía visible), luego el
+                      título/intro en el flujo con espaciado explícito. La
+                      foto se extiende por detrás de los textos; el
+                      oscurecimiento empieza en la zona del texto y funde con
+                      el tema al final de la introducción. */}
+                  <div className="relative mt-5 lg:hidden" aria-hidden={!LANDING.hero.alt}>
+                    <img
+                      src={fotoHeroUrl}
+                      alt={LANDING.hero.alt}
+                      aria-hidden={LANDING.hero.alt ? undefined : true}
+                      fetchPriority="high"
+                      decoding="async"
+                      onError={() => setFotoHeroFallida(true)}
+                      className="absolute inset-0 h-full w-full object-cover"
+                      style={{ objectPosition: LANDING.hero.focal }}
+                    />
+                    <div
+                      aria-hidden="true"
+                      className={`absolute inset-0 bg-gradient-to-t ${
+                        modoOscuro
+                          ? 'from-[#0b111e] via-[#0b111e]/88 via-[45%] to-transparent'
+                          : 'from-slate-50 via-slate-50/88 via-[45%] to-transparent'
+                      }`}
+                    />
+                    <div className="relative h-[250px] sm:h-[280px]" />
+                    <div className="relative pt-6 pb-6 px-5 sm:pt-7 sm:pb-7 sm:px-6">
+                      <h1 className={`text-[1.75rem] leading-[1.15] sm:text-4xl font-black tracking-tight text-balance ${tema.title}`}>
+                        {LANDING.nombre}
+                      </h1>
+                      <p className={`mt-4 text-base sm:text-lg leading-relaxed ${tema.subtitle}`}>
+                        {LANDING.invitacion}
+                      </p>
+                    </div>
+                  </div>
 
-              {!encuestaActiva && (
-                <p className={`flex items-start gap-2 text-xs leading-relaxed max-w-md ${tema.subtitle}`}>
-                  <span aria-hidden="true" className="shrink-0 mt-px">
-                    <Icono nombre="clock" strokeWidth={2} className={`h-4 w-4 ${kickerColor}`} />
-                  </span>
-                  {LANDING.encuesta.sinDestino}
-                </p>
+                  {/* Escritorio: columna izquierda con texto y cuadro. */}
+                  <div className="hidden lg:block">
+                    <h1 className={`mt-5 text-[1.75rem] leading-[1.15] sm:text-4xl lg:text-5xl font-black tracking-tight text-balance ${tema.title}`}>
+                      {LANDING.nombre}
+                    </h1>
+                    <p className={`mt-4 text-base sm:text-lg leading-relaxed max-w-xl ${tema.subtitle}`}>
+                      {LANDING.invitacion}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h1 className={`mt-5 text-[1.75rem] leading-[1.15] sm:text-4xl lg:text-5xl font-black tracking-tight text-balance ${tema.title}`}>
+                    {LANDING.nombre}
+                  </h1>
+                  <p className={`mt-4 text-base sm:text-lg leading-relaxed max-w-xl ${tema.subtitle}`}>
+                    {LANDING.invitacion}
+                  </p>
+                </>
               )}
 
-              {/* w-full: en la columna flex con items-start el nav, sin esto,
-                  se estira a su contenido y desborda el viewport en móvil. */}
-              <nav
-                aria-label="Secciones de la presentación"
-                className="nf-scroll w-full flex flex-nowrap gap-1 pt-1 overflow-x-auto pb-1"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              <div
+                className={`mt-6 relative rounded-2xl border overflow-hidden p-6 sm:p-7 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.14),transparent_65%)] ${panelBase}`}
               >
-                {LANDING.secciones.map((s) => (
-                  <EnlaceSeccion key={s.href} href={s.href}>
-                    {s.etiqueta}
-                  </EnlaceSeccion>
-                ))}
-              </nav>
+                <div className="flex items-center gap-3">
+                  <img
+                    src="/lobounid.png"
+                    alt=""
+                    aria-hidden="true"
+                    className={`w-14 sm:w-16 shrink-0 ${
+                      modoOscuro ? 'opacity-90 brightness-110' : 'opacity-80 brightness-[0.7] saturate-150'
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <p className={`text-sm font-black ${tema.title}`}>{LANDING.heroPanel.identidadRotulo}</p>
+                    <p className={`mt-0.5 text-xs leading-snug ${tema.subtitle}`}>
+                      {LANDING.heroPanel.identidadRelacion}
+                    </p>
+                  </div>
+                </div>
+
+                <p className={`mt-5 text-[11px] uppercase tracking-[0.2em] font-bold ${tema.subtitle}`}>
+                  {LANDING.heroPanel.experienciasTitulo}
+                </p>
+                <ul className="mt-3 grid grid-cols-2 gap-2.5">
+                  {LANDING.heroPanel.experiencias.map((ex) => (
+                    <li
+                      key={ex.texto}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 ${
+                        modoOscuro ? 'border-slate-700/60 bg-[#0b111e]/60' : 'border-slate-200 bg-slate-50'
+                      }`}
+                    >
+                      <Icono
+                        nombre={ex.icono}
+                        strokeWidth={2}
+                        className={`h-4 w-4 shrink-0 ${kickerColor}`}
+                      />
+                      <span className={`text-xs font-bold leading-tight ${tema.title}`}>{ex.texto}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {clubes.length > 0 && (
+                  <p className={`mt-5 text-xs sm:text-sm font-bold ${kickerColor}`}>
+                    {LANDING.heroPanel.propuestasCount(clubes.length)}
+                  </p>
+                )}
+              </div>
             </div>
 
-            {/* Panel de composición: identidad (lobo como ancla, no como
-                pieza aislada), experiencia concreta y dato real del catálogo.
-                Con foto de hero toma superficie vidriosa; sin ella, el panel
-                opaco actual. */}
-            <div
-              className={`relative rounded-2xl border overflow-hidden p-6 sm:p-7 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.14),transparent_65%)] ${
-                heroConFoto ? panelHeroFoto : panelBase
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <img
-                  src="/lobounid.png"
-                  alt=""
-                  aria-hidden="true"
-                  className={`w-14 sm:w-16 shrink-0 ${
-                    modoOscuro ? 'opacity-90 brightness-110' : 'opacity-80 brightness-[0.7] saturate-150'
-                  }`}
-                />
-                <div className="min-w-0">
-                  <p className={`text-sm font-black ${tema.title}`}>{LANDING.heroPanel.identidadRotulo}</p>
-                  <p className={`mt-0.5 text-xs leading-snug ${tema.subtitle}`}>
-                    {LANDING.heroPanel.identidadRelacion}
-                  </p>
+            {heroConFoto && (
+              <div className="hidden lg:flex w-full min-w-0" aria-hidden={!LANDING.hero.alt}>
+                <div className="relative w-full overflow-hidden rounded-2xl min-h-[320px]">
+                  <img
+                    src={fotoHeroUrl}
+                    alt={LANDING.hero.alt}
+                    aria-hidden={LANDING.hero.alt ? undefined : true}
+                    fetchPriority="high"
+                    decoding="async"
+                    onError={() => setFotoHeroFallida(true)}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{ objectPosition: LANDING.hero.focal }}
+                  />
                 </div>
               </div>
-
-              <p className={`mt-5 text-[11px] uppercase tracking-[0.2em] font-bold ${tema.subtitle}`}>
-                {LANDING.heroPanel.experienciasTitulo}
-              </p>
-              <ul className="mt-3 grid grid-cols-2 gap-2.5">
-                {LANDING.heroPanel.experiencias.map((ex) => (
-                  <li
-                    key={ex.texto}
-                    className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 ${
-                      modoOscuro ? 'border-slate-700/60 bg-[#0b111e]/60' : 'border-slate-200 bg-slate-50'
-                    }`}
-                  >
-                    <Icono
-                      nombre={ex.icono}
-                      strokeWidth={2}
-                      className={`h-4 w-4 shrink-0 ${kickerColor}`}
-                    />
-                    <span className={`text-xs font-bold leading-tight ${tema.title}`}>{ex.texto}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {clubes.length > 0 && (
-                <p className={`mt-5 text-xs sm:text-sm font-bold ${kickerColor}`}>
-                  {LANDING.heroPanel.propuestasCount(clubes.length)}
-                </p>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </section>
