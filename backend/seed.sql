@@ -341,3 +341,16 @@ SELECT setval(pg_get_serial_sequence('avisos_clubes', 'id_aviso'),
               COALESCE((SELECT MAX(id_aviso) FROM avisos_clubes), 0) + 1, false);
 SELECT setval(pg_get_serial_sequence('formularios', 'id_formulario'),
               COALESCE((SELECT MAX(id_formulario) FROM formularios), 0) + 1, false);
+
+-- ============================================================
+-- 9. PERIODOS DE ACTIVIDAD - MODULO ASISTENCIA V1
+-- ============================================================
+-- Las fechas academicas exactas del cuatrimestre DEBEN ser
+-- configuradas por la institucion. No se insertan fechas por
+-- defecto para evitar valores inventados.
+--
+-- Plantilla (descomentar y ajustar con las fechas reales):
+--
+-- INSERT INTO periodos_actividad (nombre, fecha_inicio, fecha_fin, activo) VALUES
+--   ('Septiembre-Diciembre 2026', 'AAAA-MM-DD', 'AAAA-MM-DD', TRUE)
+-- ON CONFLICT DO NOTHING;

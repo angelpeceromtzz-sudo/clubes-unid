@@ -167,8 +167,19 @@ router.delete('/:id', authenticate, requireHorarioLeader, async (req, res) => {
       'DELETE FROM horarios_club WHERE id_horario = $1 RETURNING id_horario',
       [id]
     );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Horario no encontrado' });
+    }
     res.json({ mensaje: 'Horario eliminado correctamente' });
   } catch (err) {
+    // sesiones.id_horario tiene ON DELETE RESTRICT (historial inmutable §32):
+    // un horario con sesiones generadas no puede borrarse y el intento es un
+    // conflicto de negocio, no un error del servidor.
+    if (err && err.code === '23503') {
+      return res.status(409).json({
+        error: 'No se puede eliminar: el horario ya tiene sesiones de asistencia asociadas',
+      });
+    }
     console.error('Error al eliminar horario:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }

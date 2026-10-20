@@ -148,3 +148,100 @@ export async function requireHorarioLeader(req, res, next) {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
+
+// Solo el PRESIDENTE del club (rol 2). El vicepresidente NO tiene acceso en Asistencia V1.
+// Si no llega id_club en la petición, se resuelve el club donde el usuario es presidente.
+export async function requireClubPresident(req, res, next) {
+  try {
+    if (!req.user || req.user.id_rol !== 2) {
+      return res.status(403).json({ error: 'Solo el presidente del club puede realizar esta acción' });
+    }
+
+    const clubId = req.params.id_club || req.params.idClub || req.body?.id_club || req.query?.id_club;
+
+    if (clubId) {
+      // H13: un id no numérico (o repetido como array en query) hoy llegaría
+      // al casteo de PostgreSQL y terminaría en 500.
+      if (!esIdEntero(clubId)) {
+        return res.status(400).json({ error: 'id_club inválido' });
+      }
+      const club = await pool.query(
+        'SELECT id_presidente FROM clubes WHERE id_club = $1',
+        [clubId]
+      );
+      if (club.rows.length === 0) {
+        return res.status(404).json({ error: 'Club no encontrado' });
+      }
+      if (club.rows[0].id_presidente !== req.user.id) {
+        return res.status(403).json({ error: 'No eres el presidente de este club' });
+      }
+      req.idClub = parseInt(clubId, 10);
+      return next();
+    }
+
+    const propios = await pool.query(
+      'SELECT id_club FROM clubes WHERE id_presidente = $1 ORDER BY id_club LIMIT 1',
+      [req.user.id]
+    );
+    if (propios.rows.length === 0) {
+      return res.status(403).json({ error: 'No eres presidente de ningún club' });
+    }
+    req.idClub = propios.rows[0].id_club;
+    next();
+  } catch (err) {
+    console.error('Error en requireClubPresident:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+// Verifica que el usuario autenticado sea el presidente del club de la sesión indicada en :id.
+// Carga la sesión en req.sesion y el club en req.idClub. La propiedad se
+// verifica SIEMPRE contra la BD (sesión → club → presidente), nunca contra un
+// id_club enviado por el cliente.
+export async function requirePresidenteDeLaSesion(req, res, next) {
+  try {
+    if (!req.user || req.user.id_rol !== 2) {
+      return res.status(403).json({ error: 'Solo el presidente del club puede realizar esta acción' });
+    }
+
+    const idSesion = req.params.id;
+    if (!esIdEntero(idSesion)) {
+      return res.status(400).json({ error: 'id de sesión inválido' });
+    }
+
+    const sesion = await pool.query(
+      'SELECT * FROM sesiones WHERE id_sesion = $1',
+      [idSesion]
+    );
+    if (sesion.rows.length === 0) {
+      return res.status(404).json({ error: 'Sesión no encontrada' });
+    }
+
+    const club = await pool.query(
+      'SELECT id_presidente FROM clubes WHERE id_club = $1',
+      [sesion.rows[0].id_club]
+    );
+    if (club.rows.length === 0) {
+      return res.status(404).json({ error: 'Club no encontrado' });
+    }
+    if (club.rows[0].id_presidente !== req.user.id) {
+      return res.status(403).json({ error: 'No eres el presidente del club de esta sesión' });
+    }
+
+    req.sesion = sesion.rows[0];
+    req.idClub = sesion.rows[0].id_club;
+    next();
+  } catch (err) {
+    console.error('Error en requirePresidenteDeLaSesion:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+// Coordinación (PBI-05 §27): admin (rol 3) y rectoría (rol 4) en modo lectura.
+// El vicepresidente queda fuera en Asistencia V1.
+export function requireCoordinacion(req, res, next) {
+  if (!req.user || ![3, 4].includes(req.user.id_rol)) {
+    return res.status(403).json({ error: 'Solo Coordinación (rectoría o admin) puede consultar esta información' });
+  }
+  next();
+}
