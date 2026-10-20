@@ -26,9 +26,11 @@ export const LANDING = {
   // y asignar la ruta aquí. `focal` controla el encuadre (object-position)
   // para conservar al sujeto principal en cada recorte.
   hero: {
-    imagen: null,
-    alt: '',
-    focal: 'center 30%',
+    imagen: '/uriel.jpeg',
+    alt: 'Clubs UNID Campeche',
+    // Retrato vertical 900×1600: prioriza cabeza y torso en el recorte
+    // cover (móvil a ancho completo, escritorio a alto de columna).
+    focal: 'center 22%',
   },
   // Composición del panel del hero: experiencia + identidad + dato real.
   // "Clubs Lobos Rojos" es el nombre con el que el sistema ya presenta los
@@ -192,7 +194,7 @@ export const LANDING = {
         texto:
           'Integración con valores de solidaridad y amor al prójimo en comunidad.',
         icono: 'star',
-        imagen: '/trineo-sueños2.jpg',
+        imagen: '/trineo-sueños1.jpg',
         focal: 'center 30%',
       },
       {

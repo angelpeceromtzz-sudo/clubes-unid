@@ -64,8 +64,8 @@ export const ACERCA = {
     // un momento de Clubs UNID): se muestra con leyenda honesta. Reemplazar
     // por una foto propia del proyecto cuando exista autorización.
     imagen: {
-      src: '/trineo-sueños3.jpg',
-      alt: 'Estudiantes de UNID Campeche en una actividad de vida universitaria en el campus',
+      src: '/como-nacio.jpeg',
+      alt: 'Estudiantes de UNID Campeche en el campus',
       leyenda: 'Vida universitaria en UNID Campeche',
     },
   },
@@ -84,7 +84,7 @@ export const ACERCA = {
     // Fotografía opcional: estudiantes participando en una actividad del
     // campus (no es un momento de Clubs UNID). Misma regla de reemplazo.
     imagen: {
-      src: '/trineo-sueños1.jpg',
+      src: '/para-quien.jpeg',
       alt: 'Estudiantes de UNID Campeche interactuando con una niña durante una actividad en el campus',
       leyenda: 'Estudiantes de UNID Campeche en actividad universitaria',
     },
