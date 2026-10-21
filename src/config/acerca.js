@@ -190,7 +190,7 @@ export const ACERCA = {
         visible: true,
       },
       {
-        nombre: 'Coordinación',
+        nombre: 'Avelina García Romero',
         rol: 'Coordinación Académica',
         aportacion: 'Nos ha apoyado en el desarrollo del proyecto.',
         frase: null,
@@ -212,7 +212,7 @@ export const ACERCA = {
     // primero el beneficiario académico (rector), luego las comunicaciones.
     colaboracion: [
       {
-        nombre: 'David Chacón',
+        nombre: 'David Antonio Chacón González',
         rol: 'Rector de la universidad',
         aportacion: 'Beneficiario del proyecto: aporta necesidades que orientan su desarrollo.',
         frase: null,
@@ -221,18 +221,18 @@ export const ACERCA = {
         visible: true,
       },
       {
-        nombre: 'Alma C.',
+        nombre: 'Alma Celeste Márquez Moctezuma',
         rol: 'Comunicaciones',
-        aportacion: 'Del periódico mural: se conversó con ella sobre una colaboración para dar a conocer el proyecto en el campus.',
+        aportacion: 'Colaboración para dar a conocer el proyecto en el campus y expandir noticias del periodico mural.',
         frase: null,
         foto: null,
         mostrarFoto: false,
         visible: true,
       },
       {
-        nombre: 'Magui',
+        nombre: 'Margarita Elena Moo Matú',
         rol: 'Comunicaciones',
-        aportacion: 'Del periódico mural: se conversó con ella sobre una colaboración para dar a conocer el proyecto en el campus.',
+        aportacion: 'Colaboración para dar a conocer el proyecto en el campus y expandir noticias del periodico mural.',
         frase: null,
         foto: null,
         mostrarFoto: false,
