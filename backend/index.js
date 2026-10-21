@@ -112,6 +112,39 @@ app.use('/api', (req, res) => {
 // Express puede devolver err.message y el stack en HTML.
 app.use(manejadorErroresGlobal);
 
-app.listen(PORT, () => {
+// Arranque del servidor HTTP.
+//
+// `app.listen` sin manejo de errores es silencioso cuando el puerto ya está
+// ocupado: el callback de 'listening' se ejecuta igual (aunque el enlace
+// falló), el evento 'error' con EADDRINUSE no interrumpe el proceso y el
+// backend termina solo, con código 0 y sin ningún mensaje, cuando el bucle de
+// eventos se queda sin trabajo (a los ~10 s, cuando el pool de PostgreSQL
+// suelta la conexión ociosa). `node --watch` lo resumía como "Completed
+// running 'index.js'" y la API se quedaba abajo sin explicación.
+//
+// Por eso se comprueba que el servidor quedó escuchando de verdad y se
+// informa con claridad en cualquiera de los dos casos.
+const servidor = app.listen(PORT, () => {
+  // Si otro proceso tiene el puerto, `listening` es false y `address()` es
+  // null: el callback corrió, pero no hay socket.
+  if (!servidor.listening || !servidor.address()) {
+    console.error(
+      `FATAL: no se pudo abrir el puerto ${PORT}. Es muy probable que otro proceso lo esté usando.`
+    );
+    process.exit(1);
+  }
+
   console.log(`Servidor de Clubs UNID corriendo en puerto ${PORT}`);
+});
+
+servidor.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `FATAL: el puerto ${PORT} ya está en uso. Cierra el proceso que lo ocupe o cambia PORT en backend/.env.`
+    );
+  } else {
+    console.error('FATAL: no se pudo iniciar el servidor:', err.message);
+  }
+
+  process.exit(1);
 });
