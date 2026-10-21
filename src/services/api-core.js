@@ -1,7 +1,7 @@
-// La URL por defecto es el backend de Render; VITE_API_URL permite apuntar a
-// otro entorno (p. ej. http://localhost:4000/api en desarrollo local) sin
-// cambiar código. Sin la variable, el comportamiento desplegado no cambia.
-export const API_BASE = (import.meta.env.VITE_API_URL || 'https://clubsunid-develop.onrender.com/api').replace(/\/+$/, '');
+// La URL por defecto es el backend de produccion en Render (clubes-unid);
+// VITE_API_URL permite apuntar a otro entorno (p. ej. http://localhost:4000/api
+// en desarrollo local o el backend de develop) sin cambiar código.
+export const API_BASE = (import.meta.env.VITE_API_URL || 'https://clubes-unid.onrender.com/api').replace(/\/+$/, '');
 
 export function getToken() {
   try {
