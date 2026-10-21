@@ -48,6 +48,14 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
       return res.status(400).json({ error: 'Correo y contraseña son obligatorios' });
     }
 
+    // El correo se normaliza antes de comparar: en la base está en minúsculas
+    // y el alumno lo escribe como le da la gana. La misma comprobación de
+    // dominio se hace sobre el valor ya limpio.
+    const correoLimpio = correo.toLowerCase().trim();
+    if (!correoLimpio.endsWith('@red.unid.mx')) {
+      return res.status(403).json({ error: 'Solo se permiten correos institucionales con dominio @red.unid.mx' });
+    }
+
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
               u.institutional_id, u.password_hash, u.id_rol, u.deleted_at,
@@ -55,7 +63,7 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
        WHERE u.correo_institucional = $1`,
-      [correo],
+      [correoLimpio],
     );
 
     if (result.rows.length === 0) {
@@ -120,11 +128,18 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
 
     const microsoftId = graphData.id;
     const nombre = graphData.displayName || 'Usuario Microsoft';
-    const correo = graphData.mail || graphData.userPrincipalName;
+    const correo = (graphData.mail || graphData.userPrincipalName || '').toLowerCase().trim();
     const userPrincipalName = graphData.userPrincipalName || '';
 
     if (!correo) {
       return res.status(400).json({ error: 'No se pudo obtener el correo desde Microsoft' });
+    }
+
+    // 🔒 Validación estricta de dominio institucional UNID
+    if (!correo.endsWith('@red.unid.mx')) {
+      return res.status(403).json({
+        error: 'Acceso denegado: Únicamente se permiten correos institucionales con dominio @red.unid.mx',
+      });
     }
 
     // El ID institucional es la parte local del UPN (ej: "00906641" de
@@ -275,6 +290,11 @@ router.post('/register', limitadorRegistro, authenticate, requireRole(3), async 
 
     if (!nombre_completo || !correo_institucional || !contrasena) {
       return res.status(400).json({ error: 'nombre_completo, correo_institucional y contrasena son obligatorios' });
+    }
+
+    const correoLimpio = correo_institucional.toLowerCase().trim();
+    if (!correoLimpio.endsWith('@red.unid.mx')) {
+      return res.status(400).json({ error: 'El correo debe ser institucional con dominio @red.unid.mx' });
     }
 
     if (id_rol != null && ![1, 2, 4].includes(id_rol)) {
