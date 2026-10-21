@@ -407,6 +407,144 @@ Al diseñar pantallas de panel, reutilizar `ThemeContext` (`sbBg`, `tableBg`, `i
 
 ---
 
+## 14. Editor de encuestas (panel de administración)
+
+Pantalla del admin para crear y editar una encuesta (`src/components/admin/seccion-encuestas/`). Rediseñada con principios de interacción de Google Forms, conservando la identidad visual de Clubs UNID.
+
+### 14.1 Barra contextual (Verificado en navegador)
+
+| Elemento | Regla |
+|----------|-------|
+| Ubicación | Dentro del área del editor, encima de las pestañas. La navbar global y el menú lateral del panel no cambian. |
+| Izquierda | «Volver a las encuestas», nombre de la encuesta (se recorta con `truncate`) y badge de estado. |
+| Derecha | Vista previa · Compartir · Guardar · acción principal. |
+| Acento | Sólo la acción principal usa el ámbar de `BotonAccion` (`bg-amber-400`); las demás van en `outline`. |
+| Acción principal | Se adapta al estado real: `Publicar` (borrador), `Cerrar encuesta` (publicada), `Reabrir encuesta` (cerrada). Nunca queda un «Publicar» activo cuando no corresponde. |
+| Guardar | Se llama «Guardar borrador» en borrador y «Guardar cambios» en los demás estados. |
+| Estado del guardado | Texto explícito: «Tienes cambios sin guardar» / «Guardando…» / «Guardado» / el error. «Guardado» sólo aparece tras la confirmación del backend. |
+| Móvil | Las acciones pasan a su propia fila (`basis-full`); Vista previa y Compartir se agrupan en el menú «Más» (`MenuAcciones`). Sin desbordes a 320 px. |
+
+### 14.2 El editor es su propio contenedor de scroll (Verificado)
+
+`position: sticky` **no funciona** dentro de `<main class="overflow-auto">` del panel: `main` es un contenedor de scroll que nunca se desplaza, así que un hijo `sticky` se va con la página. Comprobado con CDP: la barra pasó de `top: 152` a `top: -448` al hacer scroll.
+
+Por eso el editor se monta como un panel de alto propio (`SeccionEncuestas.jsx`):
+
+- La barra y las pestañas son **partes fijas** del panel (no `sticky`): nunca tapan contenido, errores ni controles enfocados. La barra lleva `shrink-0` para que el reparto de alturas no la aplaste.
+- El contenido de la pestaña se recorre en el div con `flex-1 min-h-0 overflow-y-auto overscroll-contain`: es el **único** contenedor con scroll vertical del editor. `min-h-0` es lo que permite que esa zona se encoja dentro de la columna flex (sin él, el tamaño mínimo automático sería su contenido y el panel se saldría de su caja en vez de quedarse con scroll propio). `overscroll-contain` evita que al llegar al final el desplazamiento se encadene a la ventana.
+- El alto se calcula, no se fija: `100dvh` menos el espacio que queda entre el borde superior del panel y el final de la ventana, menos el hueco de la navegación inferior en móvil. Se recalcula con un `ResizeObserver` sobre `document.body`, porque el aviso de éxito del panel aparece por encima y desplaza el editor. El suelo es pequeño (140 px) a propósito: con un suelo alto, en una ventana baja el panel se saldría de la pantalla y su parte final quedaría inalcanzable.
+- **No se bloquea el scroll global.** La ventana puede desplazarse (el espacio que deja el panel del admin por debajo) sin que eso arrastre la barra, porque el contenedor del contenido usa `overscroll-contain`.
+
+Medido (CDP, `scrollHeight` vs `clientHeight`):
+
+| Elemento | 1440×900 | 390×844 | 320×640 |
+|-----------|----------|----------|----------|
+| Barra de acciones | 57 / 57 | 90 / 90 | 129 / 129 |
+| Pestañas (`tablist`) | 32 / 32 | 32 / 32 | 32 / 32 |
+| Panel del editor | 714 / 714 | 564 / 564 | 332 / 332 |
+| Contenido de la pestaña | 622 / 622 (cabe) | 439 / 761 | 168 / 788 |
+
+> **Scroll global del panel padre (preexistente, no del editor):** el documento mide 72 px más que la ventana en escritorio (972 vs 900) y 124 px en móvil. La causa está en el contenedor del panel de administración, no en el editor: la raíz reserva `pt-[var(--navbar-height)]` (72 px) para la navbar fija y la fila del panel usa `min-h-screen` (900 px), así que siempre sobra ese trozo. Es el mismo comportamiento en el dashboard y en las demás secciones, y no se tocó por mantener el alcance en el editor.
+
+### 14.3 Pestañas: la línea de la fila (Verificado)
+
+El truco clásico para que la pestaña activa tape la línea de la fila (`border-b-2` en el botón + `-mb-px`) hace que el botón se pinte 1 px por debajo de la caja del contenedor. Sin barra vertical visible, pero en cuanto el contenedor lleva `overflow-x-auto` (el scroll horizontal del móvil) ese 1 px se convierte en **una barra vertical de 1 px al lado de las pestañas**.
+
+Solución: la línea es un elemento absoluto (`absolute bottom-0` con `border-b` del tema) y los botones son `relative z-10`. Así el desbordamiento vertical es cero (el `scrollHeight` del `tablist` iguala a su `clientHeight`), el scroll horizontal sigue funcionando y el subrayado ámbar de la pestaña activa sigue tapando la línea gris.
+
+### 14.4 Pestañas y estado del formulario (Verificado)
+
+| Pestaña | Contenido |
+|---------|-----------|
+| Preguntas | Título y descripción editables al principio, barra de herramientas con el contador (`N/60`) y «Agregar pregunta», y el listado. |
+| Resultados | Sin cambios respecto a la versión anterior (`PanelResults`). |
+| Configuración | Mensaje de agradecimiento y ventana de vigencia (apertura y cierre). |
+
+- **El estado de la encuesta no se cambia en Configuración.** Todas las transiciones pasan por la barra contextual: `Publicar` (borrador), `Cerrar encuesta` (publicada), `Reabrir encuesta` (cerrada) y `Volver a borrador` (menú «Más»). El selector de estado que estaba en Configuración se retiró: duplicaba las acciones de la barra y daba dos caminos para cambiar lo mismo, con el riesgo de que mostrara un estado que el servidor todavía no había confirmado. Lo que sólo ofrecía ese selector —volver a borrador— quedó como acción secundaria del menú «Más», con confirmación. El distintivo de estado sigue junto al nombre de la encuesta y **sólo cambia cuando el servidor confirma** el cambio.
+- El formulario (título, descripción, agradecimiento, fechas) vive **en el hook** (`useSeccionEncuestas`), no en un componente: es la única fuente de estado y por eso cambiar de pestaña no borra lo escrito.
+- El modal de pregunta también vive en el hook, para que siga abierto al cambiar de pestaña.
+- Al guardar una pregunta, el foco va al botón de editar de esa pregunta y el desplazamiento se aplica al contenedor del editor (`utils/scroll.js`), no a la ventana.
+
+### 14.5 Edición de preguntas dentro del listado (Verificado)
+
+Las preguntas ya no se editan en un modal: se editan **en su propia tarjeta**.
+
+| Elemento | Comportamiento |
+|----------|---------------|
+| «Agregar pregunta» | Inserta una tarjeta editable **al final** del listado, enfoca el texto de la pregunta y la revela desplazando lo justo (por debajo de la barra de herramientas fija). |
+| Editar una existente | Expande su propia tarjeta; las demás siguen mostrando su resumen y sus acciones (editar, duplicar, reordenar ↑↓, eliminar). |
+| Sólo una en edición | El estado de la edición vive en el hook (`modoEdicion`, `preguntaEnEdicionId`), no en el componente: cambiar de pestaña no pierde lo escrito. |
+| Acciones | **Añadir pregunta** (nueva), **Aplicar cambios** (edición) y **Cancelar** (descarta sólo esa edición; si era nueva y sin confirmar, desaparece del listado). |
+| Ayuda opcional | Va en un desplegable («Añadir texto de ayuda»): casi ninguna pregunta la lleva y abierta siempre añade ruido a la tarjeta. |
+| Tipos, opciones, escala y límites | Sin cambios: se reutiliza el formulario que estaba en el modal (`FormularioPregunta.jsx`, extraído de `ModalPreguntaEncuesta.jsx`, que se eliminó al quedarse sin consumidores). |
+
+**Pendiente ≠ tarjeta abierta.** Abrir una pregunta sin tocarla no marca «cambios sin guardar» ni provoca ninguna petición: el hook guarda una copia del borrador tal como se abrió (`formPreguntaOriginal`) y la compara con lo escrito (`borradorModificado`). Sólo una tarjeta con contenido cuenta como pendiente (`edicionPendiente`).
+
+**Nada se pierde en silencio.** Si una acción exige cerrar la edición en curso (duplicar o eliminar desde la propia tarjeta), se pide confirmación con tres salidas: *Aplicar cambios*, *Descartar* y *Seguir editando la anterior*. Cambiar de pestaña conserva la edición (vive en el hook) y al volver la tarjeta sigue expandida.
+
+**Guardar y publicar resuelven primero la edición.** La barra llama a `aplicarEdicion()` antes de tocar los metadatos: si la pregunta se guarda pero la encuesta falla después, la pregunta ya está en el servidor, la encuesta no dice «Guardado» y **reintentar no crea una segunda copia** (la edición se cierra al guardarse la pregunta, no al guardarse la encuesta).
+
+### 14.6 Distribución de la tarjeta (Verificado)
+
+| Parte | Escritorio | Móvil |
+|-------|-----------|--------|
+| Cabecera | El texto de la pregunta a la izquierda, con el espacio principal, y el selector de tipo a la derecha, **alineado con el campo** (mismo `inputCls` ⇒ misma altura y tipografía). | El campo de texto primero y el selector debajo, dentro del ancho disponible. |
+| Cuerpo | Los campos del tipo elegido y el desplegable de ayuda. | Igual, en una columna. |
+| Franja inferior | Separada con una línea discreta (`border-t`): **Duplicar**, **Eliminar** y el control **Obligatoria**. | Igual, repartida en varias filas. |
+
+- El selector de tipo se renderiza con el `inputCls` del tema (no con el `selectCls` del kit, que es más bajo): así el `select` queda a la misma altura que el campo de texto.
+- La franja de utilidades la pinta la **tarjeta** (no el formulario), porque esas acciones son de la tarjeta. **Duplicar** y **Eliminar** necesitan un identificador que una pregunta nueva todavía no tiene: no se ofrecen en ella (se descarta con «Cancelar»); el control de «Obligatoria» sí está siempre.
+- Los botones de la franja miden 40×40 px, llevan `aria-label` y anillo de foco visible.
+- **Cancelar** y **Añadir pregunta / Aplicar cambios** quedan como acciones explícitas, con texto, en su propia fila y distinguibles de las utilidades.
+
+### 14.7 Un solo acceso para agregar preguntas (Verificado)
+
+- El botón de la barra fija se retiró: el contador y la nota se quedan, el acceso no.
+- Queda **un** «Agregar pregunta» **al final del listado** (también en el estado vacío), con borde discontinuo, deshabilitado en el límite de 60 opciones y **visible sólo cuando no hay ninguna tarjeta en edición**.
+- Mientras se edita, las demás tarjetas se quedan sólo con su resumen (sin flechas ni iconos): hay una sola acción a la vista y no hay dos sitios donde pulsar.
+
+### 14.8 Opción especial «Otro: especifica» (Verificado)
+
+| Capa | Decisión |
+|------|----------|
+| Modelo | `opciones_pregunta.es_otro BOOLEAN NOT NULL DEFAULT false` + índice parcial único `uq_opcion_otro ON opciones_pregunta (id_pregunta) WHERE es_otro` (como máximo una por pregunta). `detalle_respuestas.texto_otro TEXT` para el texto libre, con `CHECK (<= 200)`. |
+| Identificación | Por la **propiedad** `es_otro`, nunca por la etiqueta: una opción normal escrita a mano como «Otro» es otra cosa. |
+| Texto guardado | «Otro» (en español). La fila del editor muestra «Otro:» y una línea ilustrativa. |
+| SQL | `schema.sql` lleva las columnas (en el `CREATE TABLE` y como `ALTER` idempotente, para que se apliquen también en bases ya creadas) y `backend/migrations/migrate-encuestas-otro.sql` es el paso manual para entornos donde `schema.sql` no se vuelve a ejecutar. El runner (`migrate.js`) aplica `schema.sql` en cada arranque. |
+| Editor | Sólo en opción única y opción múltiple. «Añadir respuesta «Otro»» añade la fila especial **al final**; las opciones normales nuevas se insertan **antes** que ella; la acción desaparece mientras exista y vuelve si se elimina. El texto se edita en línea y los círculos/casillas del editor son **decorativos** (no son controles ni reciben foco). |
+| Alumno | Al marcar «Otro» aparece un campo «Especifica tu respuesta» (máx. 200). Sin marcarlo, el campo no se pinta y su texto no se envía. En opción múltiple puede convivir con opciones normales. |
+| Servidor | Exige texto no vacío (tras recortar) si «Otro» está marcada, rechaza el texto si esa opción no está marcada, y `texto_otro` se guarda **sólo** en la fila de la opción especial. |
+| Resultados | «Otro» cuenta como una opción más en la gráfica (su conteo es el de siempre) y sus textos se listan aparte, sin crear una categoría por texto. |
+| Compatibilidad | Las preguntas sin «Otro» se comportan exactamente igual que antes: `es_otro` vale false y `texto_otro` es NULL. El `CHECK` de «un valor por fila» no se toca. |
+
+### 14.9 Scrollbar del área de contenido y marco exterior (Verificado)
+
+La zona de contenido del editor (`flex-1 min-h-0 overflow-y-auto overscroll-contain`) usa la barra de scroll del sistema:
+
+| Tema | Clase | Por qué |
+|------|-------|---------|
+| Oscuro | `scrollbar-dark` | Es la clase que el proyecto ya usa en los paneles sobre fondo azul noche (`ModalActualizaciones`): pulgar slate-700 y pista oscura. |
+| Claro | `scrollbar-amber` | La que usa el kit de modales en ambos temas (`ModalBase`, `ModalConfirmacion`): pulgar ámbar y pista transparente. |
+
+No hay CSS nuevo ni reglas globales: son las dos clases que ya existían en `src/index.css`. La barra **no se oculta** y el scroll de rueda, arrastre, teclado y táctil sigue siendo el del navegador. La barra de acciones y las pestañas quedan fuera del scroll, y ninguna tarjeta crea una zona de scroll propia (las opciones crecen y las recorre la zona de contenido).
+
+**El contenedor del editor no lleva `border`.** El marco exterior salía de la utilidad `border` (1 px `solid`) con el color heredado: el preflight de Tailwind deja `border-color` en `currentColor` y el panel hereda el color de texto del panel, así que en tema oscuro quedaba una línea clara rodeando la barra, las pestañas y el contenido. Se retira esa clase y nothing más: los bordes internos (barra de acciones, barra de herramientas, tarjetas, campos y botones) y el anillo ámbar de la tarjeta en edición se conservan.
+
+La barra de herramientas de la lista es `sticky` con `top: -1rem` en escritorio: el negativo compensa el relleno de la zona de contenido, para que el contenido no se transparente por esa banda mientras la barra está fija.
+
+### 14.10 Guardado, publicación y vista previa (Verificado)
+
+- **Publicar** guarda y publica en un solo `PUT` con `estado: 'publicada'`. Si el guardado falla, no se publica y el formulario queda intacto para reintentar.
+- Publicar sin preguntas, con el título vacío o con fechas invertidas se explica con un mensaje accesible y un enlace «Ir a lo que falta» que lleva al control correspondiente.
+- **Vista previa**: reutiliza `CampoPregunta` y el render del formulario público; refleja el estado actual del editor, guardado o no; **se puede marcar una opción y escribir en «Otro»** (estado local del propio modal) y el aviso dice que nada se registra. No hay botón de envío ni peticiones a `/publico/` (verificado en el registro de la prueba).
+- **Compartir**: agrupa enlace, copiar y QR. Muestra el estado real del enlace (`En borrador`, `Programada`, `Abierta`, `Cerrada`) y si se puede responder en ese momento (`utils/encuesta.js` → `estadoEnlaceEncuesta`).
+
+### 14.11 Pendiente de revisión
+
+La verificación fue automatizada (DOM, estilos y comportamiento con CDP sobre las rutas de encuestas interceptadas en el navegador) y con capturas en claro y oscuro a 320/390/1440 px, más una ventana baja (1440×600) y las pestañas ampliadas ×3. La persistencia de «Otro» se comprobó aparte, contra el backend real y la base local. Falta la revisión visual humana de esas capturas.
+
+---
+
 ## Archivos inspeccionados (principales)
 
 | Archivo | Motivo |
