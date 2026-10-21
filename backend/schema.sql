@@ -679,6 +679,10 @@ CREATE TABLE IF NOT EXISTS opciones_pregunta (
     -- Vínculo opcional con un club, para recomendar clubes tras la encuesta.
     -- Si el club se elimina, el vínculo queda en NULL sin perder la respuesta.
     id_club     INT,
+    -- Marca de la opción especial «Otro»: la última opción de respuesta, con
+    -- un texto libre que escribe el alumno. La identifica esta propiedad y
+    -- no su texto: una opción normal escrita a mano como «Otro» es otra cosa.
+    es_otro     BOOLEAN NOT NULL DEFAULT false,
     CONSTRAINT chk_opcion_orden      CHECK (orden >= 1),
     CONSTRAINT uq_opcion_orden       UNIQUE (id_pregunta, orden) DEFERRABLE INITIALLY DEFERRED,
     -- Destino de la FK compuesta de detalle_respuestas: garantiza que la
@@ -730,14 +734,38 @@ CREATE TABLE IF NOT EXISTS detalle_respuestas (
     id_opcion    INT,
     texto        TEXT,
     numero       INT,
+    -- Texto libre de la opción especial «Otro». Vive en su propia columna para
+    -- no tocar el CHECK de «un valor por fila»: la fila de la opción «Otro»
+    -- lleva el id de la opción (el valor) y aquí el texto que escribió el
+    -- alumno. Sólo se rellena en esa fila.
+    texto_otro   TEXT,
     CONSTRAINT chk_detalle_valor CHECK (num_nonnulls(id_opcion, texto, numero) = 1),
     CONSTRAINT chk_detalle_texto CHECK (char_length(texto) <= 2000),
+    CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 200),
     CONSTRAINT fk_detalle_respuesta FOREIGN KEY (id_respuesta) REFERENCES respuestas_encuesta(id_respuesta) ON DELETE CASCADE,
     -- Integridad histórica: con respuestas registradas, ni la pregunta ni la
     -- opción se pueden borrar (RESTRICT, no CASCADE).
     CONSTRAINT fk_detalle_pregunta  FOREIGN KEY (id_pregunta) REFERENCES preguntas(id_pregunta) ON DELETE RESTRICT,
     CONSTRAINT fk_detalle_opcion    FOREIGN KEY (id_opcion, id_pregunta) REFERENCES opciones_pregunta(id_opcion, id_pregunta) ON DELETE RESTRICT
 );
+
+-- Columnas de la opción especial «Otro».
+--
+-- Van aquí como ALTER (idempotentes) y no sólo dentro del CREATE TABLE porque
+-- `CREATE TABLE IF NOT EXISTS` no altera una tabla que ya existe: sin esto, una
+-- base con el módulo ya aplicado se quedaría sin las columnas al volver a
+-- ejecutar schema.sql y el índice de más abajo fallaría.
+ALTER TABLE opciones_pregunta
+    ADD COLUMN IF NOT EXISTS es_otro BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE detalle_respuestas
+    ADD COLUMN IF NOT EXISTS texto_otro TEXT;
+
+ALTER TABLE detalle_respuestas
+    DROP CONSTRAINT IF EXISTS chk_detalle_texto_otro;
+
+ALTER TABLE detalle_respuestas
+    ADD CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 200);
 
 -- Índices para las consultas de resultados
 CREATE INDEX IF NOT EXISTS idx_preguntas_encuesta        ON preguntas(id_encuesta);
@@ -755,6 +783,13 @@ CREATE INDEX IF NOT EXISTS idx_respuestas_licenciatura  ON respuestas_encuesta(i
 CREATE UNIQUE INDEX IF NOT EXISTS uq_detalle_opcion ON detalle_respuestas(id_respuesta, id_pregunta, id_opcion) WHERE id_opcion IS NOT NULL;
 -- Un texto o una escala no se repite para la misma pregunta
 CREATE UNIQUE INDEX IF NOT EXISTS uq_detalle_texto_numero ON detalle_respuestas(id_respuesta, id_pregunta) WHERE id_opcion IS NULL;
+
+-- Una sola opción «Otro» por pregunta (mismo criterio que la pregunta
+-- única de licenciatura): es lo que permite que el formulario ofrezca el
+-- texto libre una sola vez.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_opcion_otro ON opciones_pregunta(id_pregunta) WHERE es_otro;
+-- Lectura de los textos libres de «Otro» en los resultados
+CREATE INDEX IF NOT EXISTS idx_detalle_texto_otro ON detalle_respuestas(id_pregunta) WHERE texto_otro IS NOT NULL;
 
 -- Trigger: reutiliza la función genérica de fecha_actualizacion
 DROP TRIGGER IF EXISTS trg_actualizar_fecha_encuesta ON encuestas;

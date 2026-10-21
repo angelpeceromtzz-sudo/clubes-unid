@@ -8,11 +8,12 @@
 // La sección tiene tres pantallas (lista, editor y resultados) y se navega entre
 // ellas con `vista`, no con rutas: el enlace de la encuesta pública es lo único
 // que necesita URL propia.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { encuestaService } from '../services/encuesta.service';
-import { TIPOS_CON_OPCIONES } from '../constants/encuesta';
+import { ESTADO_GUARDADO, TIPOS_CON_OPCIONES } from '../constants/encuesta';
 import { ESTADO_ENCUESTA } from '../constants/estatus';
 import { ROL_ADMIN } from '../constants/roles';
+import { aInputDateTime } from '../utils/encuesta';
 import { useFeedback } from './useFeedback';
 
 // Filtro de la lista. `null` = todas.
@@ -23,13 +24,57 @@ const SIN_FILTRO = null;
 // completo se recarga únicamente si ese total cambió.
 const CHEQUEO_MS = 7000;
 
+// Estados del guardado del formulario de la encuesta.
+//
+// `inactivo`  → nada que guardar (o ya se guardó y no se volvió a tocar).
+// `pendiente` → hay cambios sin guardar.
+// `guardando` → viaje al servidor en curso.
+// `guardado`  → el servidor confirmó.
+// `error`     → el servidor rechazó: el formulario sigue intacto y se puede
+//                reintentar.
+//
+// La tabla vive en `constants/encuesta.js` para que la barra y el hook
+// compartan los mismos nombres sin que uno dependa del otro.
+
 const ENCUESTA_VACIA = {
   titulo: '',
   descripcion: '',
   mensaje_agradecimiento: '',
+  estado: ESTADO_ENCUESTA.BORRADOR,
   fecha_inicio: '',
   fecha_fin: '',
 };
+
+// La encuesta nueva se crea siempre en borrador (lo decide el backend) y sólo
+// lleva título, descripción y ventana de vigencia, así que su formulario
+// vacío no comparte campos con el de edición.
+const ENCUESTA_NUEVA_VACIA = {
+  titulo: '',
+  descripcion: '',
+  fecha_inicio: '',
+  fecha_fin: '',
+};
+
+/**
+ * El formulario de la encuesta tal como lo ve el admin.
+ *
+ * Vive aquí y no en un componente a propósito: las pestañas (Preguntas,
+ * Resultados, Configuración) se montan y desmontan al cambiar, así que si el
+ * formulario viviera en el componente de la pestaña de Preguntas, cambiar de
+ * pestaña borraría lo que estaba a medio escribir. Con el estado en el hook,
+ * cambiar de pestaña no toca nada y las dos pestañas escriben en el mismo
+ * objeto.
+ */
+function formDesdeDetalle(detalle) {
+  return {
+    titulo: detalle.titulo ?? '',
+    descripcion: detalle.descripcion ?? '',
+    mensaje_agradecimiento: detalle.mensaje_agradecimiento ?? '',
+    estado: detalle.estado ?? ESTADO_ENCUESTA.BORRADOR,
+    fecha_inicio: aInputDateTime(detalle.fecha_inicio),
+    fecha_fin: aInputDateTime(detalle.fecha_fin),
+  };
+}
 
 const PREGUNTA_VACIA = {
   texto: '',
@@ -40,7 +85,14 @@ const PREGUNTA_VACIA = {
   escala_max: 5,
   escala_min_texto: '',
   escala_max_texto: '',
-  opciones: ['', ''],
+  // Las opciones son objetos con su texto y la marca de la opción especial
+  // «Otro» (`es_otro`). Antes eran sólo textos: la marca es lo que permite
+  // distinguir la opción especial de una opción normal escrita a mano como
+  // «Otro».
+  opciones: [
+    { texto: '', es_otro: false },
+    { texto: '', es_otro: false },
+  ],
 };
 
 // `usuario` llega del panel para poder distinguir a rectoría (rol 4) de admin
@@ -65,22 +117,47 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
   const [vista, setVista] = useState('lista');
   const [filtro, setFiltro] = useState(SIN_FILTRO);
 
-  // Pestaña activa dentro de la encuesta abierta: 'preguntas' o 'resultados'.
-  // Vive aquí y no en el componente porque tiene que sobrevivir a que la vista
-  // siga siendo 'editor': cambiar de pestaña no es cambiar de `vista`.
+  // Pestaña activa dentro de la encuesta abierta: 'preguntas', 'resultados' o
+  // 'configuracion'. Vive aquí y no en el componente porque tiene que sobrevivir
+  // a que la vista siga siendo 'editor': cambiar de pestaña no es cambiar de
+  // `vista`.
   const [pestana, setPestana] = useState('preguntas');
 
-  // El formulario de metadatos vive en `EditorEncuesta`, pero el aviso de
-  // "cambiaste de pestaña y hay cosas sin guardar" tiene que decidirlo el
-  // contenedor. Por eso el editor reporta su estado sucio acá en vez de resolver
-  // el cambio de pestaña él mismo.
-  const [metadatosSucios, setMetadatosSucios] = useState(false);
+  // --- formulario de la encuesta ---
+  //
+  // Es la única fuente de estado del formulario: lo escriben la pestaña de
+  // Preguntas (título y descripción) y la de Configuración (agradecimiento y
+  // fechas) y lo guarda la barra de la cabecera. Que esté aquí es lo que
+  // permite cambiar de pestaña sin perder lo escrito.
+  const [formEncuesta, setFormEncuesta] = useState(ENCUESTA_VACIA);
 
-  // Mismo problema con los modales de pregunta y de opciones: viven en
-  // `EditorPreguntas` y se desmontan al cambiar de pestaña, así que lo que el
-  // admin escribió en ellos se perdería sin avisar. El editor reporta si tiene
-  // algo abierto y el contenedor pregunta antes de dejarlo ir.
-  const [preguntasPendientes, setPreguntasPendientes] = useState(false);
+  // Estado del guardado: pendiente, guardando, guardado o error.
+  const [estadoGuardado, setEstadoGuardado] = useState(ESTADO_GUARDADO.INACTIVO);
+  const [errorGuardado, setErrorGuardado] = useState(null);
+
+  // --- edición de preguntas dentro del listado ---
+  //
+  // La pregunta en edición ya no vive en un modal sino en su propia tarjeta, y
+  // el estado de esa edición vive aquí (y no en el componente) por dos razones:
+  // cambiar de pestaña no puede perder lo escrito, y la barra de la cabecera
+  // necesita poder resolver la edición antes de guardar o publicar la
+  // encuesta.
+  //
+  // `modoEdicion` distingue las dos situaciones:
+  //   'nueva'      → tarjeta en borrador al final del listado, sin persistir.
+  //   'existente'  → tarjeta de una pregunta ya guardada, abierta para editar.
+  //   null         → no hay ninguna tarjeta en edición.
+  //
+  // `borradorModificado` es lo que separa "tarjeta abierta" de "borrador
+  // modificado": abrir una pregunta existente sin tocarla no marca cambios sin
+  // guardar ni provoca ninguna petición al guardar la encuesta.
+  const [modoEdicion, setModoEdicion] = useState(null);
+  const [preguntaEnEdicionId, setPreguntaEnEdicionId] = useState(null);
+  const [preguntaEliminando, setPreguntaEliminando] = useState(null);
+
+  // Id de la pregunta recién guardada. El editor de preguntas lo usa para
+  // dejar el foco en ella, que es lo que se espera al terminar de escribir una.
+  const [preguntaEnFoco, setPreguntaEnFoco] = useState(null);
 
   const [lista, setLista] = useState([]);
   const [cargandoLista, setCargandoLista] = useState(true);
@@ -92,9 +169,12 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  const [formNueva, setFormNueva] = useState(ENCUESTA_VACIA);
+  const [formNueva, setFormNueva] = useState(ENCUESTA_NUEVA_VACIA);
   const [formPregunta, setFormPregunta] = useState(PREGUNTA_VACIA);
-  const [editandoPregunta, setEditandoPregunta] = useState(null);
+
+  // Copia del borrador tal como se abrió, para poder saber si el admin lo
+  // cambió. Es lo que permite abrir una pregunta sin marcarla como pendiente.
+  const [formPreguntaOriginal, setFormPreguntaOriginal] = useState(PREGUNTA_VACIA);
 
   const [resultados, setResultados] = useState(null);
   const [cargandoResultados, setCargandoResultados] = useState(false);
@@ -161,17 +241,64 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     [cargarLista]
   );
 
-  const cargarDetalle = useCallback(async (id) => {
-    setCargandoDetalle(true);
+  // Carga el detalle de una encuesta.
+  //
+  // `recargarFormulario` decide si además se llena el formulario con lo que
+  // vino del servidor. Sólo se rellena al abrir una encuesta: agregar o
+  // reordenar una pregunta también recarga el detalle y, si el formulario se
+  // recargara ahí, se perdería el título a medio escribir.
+  const cargarDetalle = useCallback(
+    async (id, { recargarFormulario = false } = {}) => {
+      setCargandoDetalle(true);
 
-    try {
-      setDetalle(await encuestaService.obtener(id));
-    } catch (err) {
-      setErrorFeedback(err.message);
-    } finally {
-      setCargandoDetalle(false);
-    }
-  }, [setErrorFeedback]);
+      try {
+        const datos = await encuestaService.obtener(id);
+        setDetalle(datos);
+
+        if (recargarFormulario) {
+          setFormEncuesta(formDesdeDetalle(datos));
+          setEstadoGuardado(ESTADO_GUARDADO.INACTIVO);
+          setErrorGuardado(null);
+        }
+      } catch (err) {
+        setErrorFeedback(err.message);
+      } finally {
+        setCargandoDetalle(false);
+      }
+    },
+    [setErrorFeedback]
+  );
+
+  // ¿Hay cambios sin guardar? Se compara contra lo que devolvió el servidor,
+  // que es la referencia real: el formulario es lo que el admin está editando y
+  // `detalle` lo que está guardado.
+  const formularioSucio = useMemo(() => {
+    if (!detalle) return false;
+
+    return (
+      formEncuesta.titulo !== (detalle.titulo ?? '') ||
+      formEncuesta.descripcion !== (detalle.descripcion ?? '') ||
+      formEncuesta.mensaje_agradecimiento !== (detalle.mensaje_agradecimiento ?? '') ||
+      formEncuesta.estado !== detalle.estado ||
+      formEncuesta.fecha_inicio !== aInputDateTime(detalle.fecha_inicio) ||
+      formEncuesta.fecha_fin !== aInputDateTime(detalle.fecha_fin)
+    );
+  }, [formEncuesta, detalle]);
+
+  // Escribir en el formulario. Cada cambio devuelve el estado de guardado a
+  // "pendiente": en cuanto el admin toca algo, deja de tener sentido decir que
+  // está guardado.
+  const actualizarFormulario = useCallback((cambio) => {
+    setFormEncuesta((anterior) => ({
+      ...anterior,
+      ...(typeof cambio === 'function' ? cambio(anterior) : cambio),
+    }));
+
+    setEstadoGuardado((anterior) =>
+      anterior === ESTADO_GUARDADO.GUARDANDO ? anterior : ESTADO_GUARDADO.PENDIENTE
+    );
+    setErrorGuardado(null);
+  }, []);
 
   const cargarResultados = useCallback(async (id, carrera = null) => {
     setCargandoResultados(true);
@@ -251,9 +378,14 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     setResultados(null);
     setCarreraActiva(SIN_FILTRO);
     setUltimaRespuesta(null);
-    setEditandoPregunta(null);
-    setMetadatosSucios(false);
-    setPreguntasPendientes(false);
+    setModoEdicion(null);
+    setPreguntaEnEdicionId(null);
+    setFormPreguntaOriginal(PREGUNTA_VACIA);
+    setFormEncuesta(ENCUESTA_VACIA);
+     setEstadoGuardado(ESTADO_GUARDADO.INACTIVO);
+    setErrorGuardado(null);
+    setPreguntaEliminando(null);
+    setPreguntaEnFoco(null);
     setPestana('preguntas');
   }, []);
 
@@ -267,37 +399,58 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
       setCarreraActiva(SIN_FILTRO);
       setUltimaRespuesta(null);
       setFormPregunta(PREGUNTA_VACIA);
-      setEditandoPregunta(null);
+      setFormPreguntaOriginal(PREGUNTA_VACIA);
+      setModoEdicion(null);
+      setPreguntaEnEdicionId(null);
+      // El formulario se vuelve a llenar con lo que traiga el servidor: si se
+      // entrara con el formulario de la encuesta anterior, se editaría a ciegas.
+       setEstadoGuardado(ESTADO_GUARDADO.INACTIVO);
+      setErrorGuardado(null);
       // Siempre se entra por la pestaña de preguntas, aunque la última vez que
       // se abrió esta encuesta se terminó en resultados: reaparecer donde se
       // dejó sería raro al abrir desde la lista.
       setPestana('preguntas');
-      setMetadatosSucios(false);
-      setPreguntasPendientes(false);
-      cargarDetalle(encuesta.id_encuesta);
+      setPreguntaEliminando(null);
+      setPreguntaEnFoco(null);
+      cargarDetalle(encuesta.id_encuesta, { recargarFormulario: true });
       await refrescarSeleccion(encuesta.id_encuesta);
     },
     [cargarDetalle, refrescarSeleccion]
   );
 
+  // Abrir los resultados es entrar al editor con la pestaña de resultados
+  // abierta. Antes era una pantalla aparte; ahora es la misma pantalla con
+  // otra pestaña, para que el admin vea siempre el nombre de la encuesta y
+  // tenga la misma barra de acciones (vista previa, compartir) sin importar en
+  // qué pestaña esté.
   const abrirResultados = useCallback(
     async (encuesta) => {
       setSeleccion(encuesta);
-      setVista('resultados');
-      setDetalle(null);
+      setVista('editor');
       setCarreraActiva(SIN_FILTRO);
       setUltimaRespuesta(null);
-      setMetadatosSucios(false);
-      setPreguntasPendientes(false);
+      setModoEdicion(null);
+      setPreguntaEnEdicionId(null);
+      setFormPreguntaOriginal(PREGUNTA_VACIA);
+      setPreguntaEliminando(null);
+      setPreguntaEnFoco(null);
+       setEstadoGuardado(ESTADO_GUARDADO.INACTIVO);
+      setErrorGuardado(null);
       setPestana('resultados');
+      cargarDetalle(encuesta.id_encuesta, { recargarFormulario: true });
       cargarResultados(encuesta.id_encuesta);
       await refrescarSeleccion(encuesta.id_encuesta);
     },
-    [cargarResultados, refrescarSeleccion]
+    [cargarDetalle, cargarResultados, refrescarSeleccion]
   );
+
 
   /**
    * Cambia la pestaña sin volver a la lista ni perder lo editado.
+   *
+   * No hay nada que confirmar: el formulario vive en el hook (no en el
+   * componente de la pestaña) y el modal de pregunta también, así que cambiar
+   * de pestaña no desmonta nada de lo que el admin escribió.
    *
    * Cambiar a resultados carga los agregados la primera vez; si ya estaban
    * cargados se conservan, porque volver a pedirlos en cada cambio de pestaña
@@ -306,15 +459,6 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
   const cambiarPestana = useCallback(
     (nueva) => {
       if (nueva === pestana) return;
-
-      // El formulario de metadatos y los modales de pregunta viven en la vista
-      // de preguntas. Si se cambia a resultados con algo a medias, todo eso se
-      // desmonta y lo escrito se pierde; quien llama es responsable de haber
-      // avisado antes.
-      if (pestana === 'preguntas' && nueva === 'resultados') {
-        setMetadatosSucios(false);
-        setPreguntasPendientes(false);
-      }
 
       setPestana(nueva);
 
@@ -325,7 +469,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
       // Al revés también hace falta: entrando por "Resultados" el detalle viene
       // en null a propósito, y sin esto la pestaña de Preguntas abriría con el
       // error de "no se pudo cargar la encuesta".
-      if (nueva === 'preguntas' && !detalle && seleccion) {
+      if ((nueva === 'preguntas' || nueva === 'configuracion') && !detalle && seleccion) {
         cargarDetalle(seleccion.id_encuesta);
       }
     },
@@ -350,7 +494,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
         fecha_fin: formNueva.fecha_fin,
       });
 
-      setFormNueva(ENCUESTA_VACIA);
+      setFormNueva(ENCUESTA_NUEVA_VACIA);
       await cargarLista();
       avisar('Encuesta creada. Ya puedes agregar sus preguntas.');
       setSeleccion(nueva);
@@ -365,50 +509,123 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     }
   }, [formNueva, cargarLista, avisar, cargarDetalle, setErrorFeedback]);
 
-  // El formulario se recibe como argumento, no se lee de `detalle`. `detalle` es
-  // lo que devolvió el servidor en la última carga, así que leerlo aquí mandaba
-  // los valores viejos: el select de estado escribía en el borrador local pero el
-  // PUT enviaba el estado previo y el servidor lo reescribía con COALESCE,
-  // dejando el panel como estaba. Todos los campos del formulario sufrían lo mismo.
-  const guardarMetadatos = useCallback(async (formulario) => {
-    if (!seleccion) return;
+  /**
+   * Guarda el formulario de la encuesta.
+   *
+   * Devuelve `true` sólo cuando el servidor confirmó. Quien llama (la barra
+   * del editor) usa ese booleano para no seguir adelante --publicar, por
+   * ejemplo-- si el guardado falló.
+   *
+   * `opciones.estado` permite guardar con un estado distinto al del formulario
+   * sin tocarlo: es lo que hace "Publicar" (guarda y publica en un solo viaje)
+   * y lo que hace "Cerrar encuesta" (cierra conservando lo que se escribió).
+   *
+   * El formulario se lee del estado del hook y no de `detalle`: `detalle` es lo
+   * que devolvió el servidor en la última carga, así que leerlo aquí mandaba
+   * los valores viejos y el select de estado escribía en el formulario pero el
+   * PUT enviaba el estado previo.
+   */
+  const guardarFormulario = useCallback(
+    async (opciones = {}) => {
+      if (!seleccion) return false;
 
-    // Publicar sin preguntas no lo bloquea el backend (pendiente #4 de
-    // docs/pbi-10-pendientes-backend.md). La comprobación vive aquí y no sólo en
-    // el botón del editor para que ninguna otra vía de guardado --una tecla, un
-    // acceso directo, o el botón del futuro que alguien añada-- pueda mandar
-    // ese PUT. Se lee `detalle.preguntas`, que es lo que el backend acaba de
-    // devolver, en lugar del conteo de la fila del listado.
-    const sinPreguntas = (detalle?.preguntas?.length ?? 0) === 0;
+      const estadoObjetivo = opciones.estado ?? formEncuesta.estado;
 
-    if (formulario.estado === ESTADO_ENCUESTA.PUBLICADA && sinPreguntas) {
-      setErrorFeedback('No se puede publicar una encuesta sin preguntas');
-      return;
-    }
+      // --- validaciones antes de gastar el viaje ---
+      //
+      // Se comprueban aquí y no sólo en el botón: cualquier vía de guardado
+      // (el botón, un acceso directo, o la acción que se añada mañana) pasa
+      // por esta función, así que ninguna puede saltarse las reglas.
 
-    setEnviando(true);
+      if (!formEncuesta.titulo.trim()) {
+        setErrorGuardado('El título de la encuesta es obligatorio.');
+        setEstadoGuardado(ESTADO_GUARDADO.ERROR);
+        return false;
+      }
 
-    try {
-      const actualizada = await encuestaService.actualizar(seleccion.id_encuesta, {
-        titulo: formulario.titulo,
-        descripcion: formulario.descripcion,
-        mensaje_agradecimiento: formulario.mensaje_agradecimiento,
-        estado: formulario.estado,
-        fecha_inicio: formulario.fecha_inicio,
-        fecha_fin: formulario.fecha_fin,
-      });
+      if (
+        formEncuesta.fecha_inicio &&
+        formEncuesta.fecha_fin &&
+        formEncuesta.fecha_fin <= formEncuesta.fecha_inicio
+      ) {
+        setErrorGuardado('La fecha de cierre debe ser posterior a la de apertura.');
+        setEstadoGuardado(ESTADO_GUARDADO.ERROR);
+        return false;
+      }
 
-      // El detalle se reemplaza por lo que devolvió el servidor, no por el form:
-      // las fechas hacen round-trip por UTC y es fácil que difieran un día.
-      setDetalle((anterior) => ({ ...anterior, ...actualizada }));
-      await cargarLista();
-      avisar('Encuesta actualizada');
-    } catch (err) {
-      setErrorFeedback(err.message);
-    } finally {
-      setEnviando(false);
-    }
-  }, [seleccion, detalle, cargarLista, avisar, setErrorFeedback]);
+      // Publicar sin preguntas dejaría una encuesta que el alumno abre y no
+      // tiene nada que contestar. El backend también lo rechaza, pero aquí se
+      // dice antes para poder llevar al admin a donde se arregla.
+      const totalPreguntas = detalle?.preguntas?.length ?? 0;
+
+      if (estadoObjetivo === ESTADO_ENCUESTA.PUBLICADA && totalPreguntas === 0) {
+        setErrorGuardado('No se puede publicar una encuesta sin preguntas.');
+        setEstadoGuardado(ESTADO_GUARDADO.ERROR);
+        return false;
+      }
+
+      // Reabrir una encuesta cerrada o vencida sin tocar `fecha_fin` deja el
+      // enlace sirviendo un 410: el estado dice "publicada" pero el alumno lee
+      // "Esta encuesta ya se cerró". Se pide una fecha nueva antes de guardar
+      // en vez de dejar que el admin lo descubra cuando alguien abra el QR.
+      //
+      // El bloqueo es sólo para la reapertura: una encuesta que ya está
+      // publicada y venció sola por su `fecha_fin` se puede seguir editando.
+      const reabriendoVencida =
+        estadoObjetivo === ESTADO_ENCUESTA.PUBLICADA &&
+        detalle?.estado !== ESTADO_ENCUESTA.PUBLICADA &&
+        Boolean(formEncuesta.fecha_fin) &&
+        new Date(formEncuesta.fecha_fin).getTime() < Date.now();
+
+      if (reabriendoVencida) {
+        setErrorGuardado(
+          'Para reabrirla necesita una fecha de cierre futura. Ponla en Configuración o quita la de cierre.'
+        );
+        setEstadoGuardado(ESTADO_GUARDADO.ERROR);
+        return false;
+      }
+
+      setEnviando(true);
+      setEstadoGuardado(ESTADO_GUARDADO.GUARDANDO);
+      setErrorGuardado(null);
+
+      try {
+        const actualizada = await encuestaService.actualizar(seleccion.id_encuesta, {
+          titulo: formEncuesta.titulo,
+          descripcion: formEncuesta.descripcion,
+          mensaje_agradecimiento: formEncuesta.mensaje_agradecimiento,
+          estado: estadoObjetivo,
+          fecha_inicio: formEncuesta.fecha_inicio,
+          fecha_fin: formEncuesta.fecha_fin,
+        });
+
+        // El detalle se reemplaza por lo que devolvió el servidor, no por el
+        // form: las fechas hacen round-trip por UTC y es fácil que difieran.
+        setDetalle((anterior) => ({ ...anterior, ...actualizada }));
+        // El formulario se realinea con lo que quedó guardado, para que el
+        // estado "guardado" sea cierto y no una promesa.
+        setFormEncuesta(formDesdeDetalle(actualizada));
+        setEstadoGuardado(ESTADO_GUARDADO.GUARDADO);
+
+        await cargarLista();
+        avisar(
+          estadoObjetivo === ESTADO_ENCUESTA.PUBLICADA
+            ? 'Encuesta publicada'
+            : 'Encuesta actualizada'
+        );
+        return true;
+      } catch (err) {
+        // El formulario no se toca: lo que escribió el admin se queda escrito
+        // y se puede reintentar el guardado.
+        setEstadoGuardado(ESTADO_GUARDADO.ERROR);
+        setErrorGuardado(err.message);
+        return false;
+      } finally {
+        setEnviando(false);
+      }
+    },
+    [seleccion, formEncuesta, detalle, cargarLista, avisar]
+  );
 
   // El id llega por parámetro, no se toma de `seleccion`: el borrado se dispara
   // desde la fila de la lista, y ahí `seleccion` puede ser null o ser otra
@@ -491,6 +708,11 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
         // mostrando el estado anterior.
         if (detalle?.id_encuesta === idEncuesta) {
           setDetalle(await encuestaService.obtener(idEncuesta));
+          // El formulario se entera del cambio de estado: si no, el editor
+          // compararía el estado del formulario contra el del servidor, lo
+          // vería como un cambio sin guardar y ofrecería guardar algo que en
+          // realidad ya está guardado.
+          setFormEncuesta((anterior) => ({ ...anterior, estado: nuevoEstado }));
         }
 
         avisar(nuevoEstado === 'cerrada' ? 'Encuesta cerrada' : 'Encuesta actualizada');
@@ -505,6 +727,90 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
 
   // --- preguntas ---
 
+  // El borrador de una pregunta tal como se abre, para poder compararlo con
+  // lo que el admin escribe y saber si hay algo pendiente de verdad.
+  function borradorDesdePregunta(pregunta) {
+    return {
+      texto: pregunta.texto,
+      ayuda: pregunta.ayuda ?? '',
+      // El tipo se pinta pero no se manda: ver la nota del formulario.
+      tipo: pregunta.tipo,
+      es_obligatoria: pregunta.es_obligatoria,
+      escala_min: pregunta.escala_min ?? 0,
+      escala_max: pregunta.escala_max ?? 5,
+      escala_min_texto: pregunta.escala_min_texto ?? '',
+      escala_max_texto: pregunta.escala_max_texto ?? '',
+      // La opción especial «Otro» conserva su marca: es lo que la
+      // distingue de una opción normal escrita a mano.
+      opciones: (pregunta.opciones ?? []).map((o) => ({
+        texto: o.texto ?? '',
+        es_otro: Boolean(o.es_otro),
+      })),
+    };
+  }
+
+  // Dos borradores son iguales si todo lo que se guarda coincide. La escala se
+  // compara como texto porque el input es de texto y el backend lo recibe
+  // como número.
+  function borradoresIguales(a, b) {
+    if (!a || !b) return false;
+
+    return (
+      a.texto === b.texto &&
+      a.ayuda === b.ayuda &&
+      a.tipo === b.tipo &&
+      Boolean(a.es_obligatoria) === Boolean(b.es_obligatoria) &&
+      String(a.escala_min) === String(b.escala_min) &&
+      String(a.escala_max) === String(b.escala_max) &&
+      a.escala_min_texto === b.escala_min_texto &&
+      a.escala_max_texto === b.escala_max_texto &&
+      a.opciones.length === b.opciones.length &&
+      a.opciones.every(
+        (o, i) =>
+          o.texto === b.opciones[i].texto &&
+          Boolean(o.es_otro) === Boolean(b.opciones[i].es_otro)
+      )
+    );
+  }
+
+  // Abrir una tarjeta nueva (en blanco) al final del listado.
+  const abrirNuevaPregunta = useCallback(() => {
+    setModoEdicion('nueva');
+    setPreguntaEnEdicionId(null);
+    setFormPregunta(PREGUNTA_VACIA);
+    setFormPreguntaOriginal(PREGUNTA_VACIA);
+  }, []);
+
+  // Expandir la tarjeta de una pregunta existente.
+  const abrirEdicionPregunta = useCallback((pregunta) => {
+    const borrador = borradorDesdePregunta(pregunta);
+
+    setModoEdicion('existente');
+    setPreguntaEnEdicionId(pregunta.id_pregunta);
+    setFormPregunta(borrador);
+    setFormPreguntaOriginal(borrador);
+  }, []);
+
+  // Descartar la edición en curso. Si la tarjeta era nueva y no se confirmó,
+  // desaparece del listado: nunca llegó a persistirse.
+  const cancelarEdicion = useCallback(() => {
+    setModoEdicion(null);
+    setPreguntaEnEdicionId(null);
+    setFormPregunta(PREGUNTA_VACIA);
+    setFormPreguntaOriginal(PREGUNTA_VACIA);
+  }, []);
+
+  // ¿Hay algo de verdad pendiente? Abrir una tarjeta sin tocarla no cuenta:
+  // no hay nada que guardar ni que perder.
+  const borradorModificado = useMemo(
+    () => !borradoresIguales(formPregunta, formPreguntaOriginal),
+    [formPregunta, formPreguntaOriginal]
+  );
+
+  // Pendiente = una edición con contenido. Es lo que la barra resuelve antes
+  // de guardar la encuesta y lo que avisa antes de abandonar el editor.
+  const edicionPendiente = modoEdicion !== null && borradorModificado;
+
   const guardarPregunta = useCallback(async () => {
     if (!formPregunta.texto.trim()) {
       setErrorFeedback('El texto de la pregunta es obligatorio');
@@ -514,12 +820,15 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     setEnviando(true);
 
     try {
-      if (editandoPregunta) {
+      let idGuardada = null;
+      const editando = modoEdicion === 'existente' && preguntaEnEdicionId !== null;
+
+      if (editando) {
         // El tipo NO se manda al editar, y las opciones tampoco: van en su propio
         // endpoint. El backend ignora el tipo a propósito (cambiarlo dejaría la
         // pregunta sin opciones), pero mandarlo sería confiar en que un campo
         // se ignora. Se arma el payload a mano para que quede claro qué se envía.
-        await encuestaService.actualizarPregunta(editandoPregunta, {
+        await encuestaService.actualizarPregunta(preguntaEnEdicionId, {
           texto: formPregunta.texto,
           ayuda: formPregunta.ayuda,
           es_obligatoria: formPregunta.es_obligatoria,
@@ -537,17 +846,25 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
         // en el editor de opciones del modal se descartaba al cerrar, y la
         // única vía real era el botón de opciones de la lista.
         if (TIPOS_CON_OPCIONES.includes(formPregunta.tipo)) {
-          const origen = detalle?.preguntas?.find((p) => p.id_pregunta === editandoPregunta);
-          const previas = (origen?.opciones ?? []).map((o) => o.texto);
+          const origen = detalle?.preguntas?.find((p) => p.id_pregunta === preguntaEnEdicionId);
+          const previas = (origen?.opciones ?? []).map((o) => ({
+            texto: o.texto ?? '',
+            es_otro: Boolean(o.es_otro),
+          }));
           const sinCambios =
             previas.length === formPregunta.opciones.length &&
-            previas.every((t, i) => t === formPregunta.opciones[i]);
+            previas.every(
+              (o, i) =>
+                o.texto === formPregunta.opciones[i].texto &&
+                o.es_otro === Boolean(formPregunta.opciones[i].es_otro)
+            );
 
           if (!sinCambios) {
-            await encuestaService.actualizarOpciones(editandoPregunta, formPregunta.opciones);
+            await encuestaService.actualizarOpciones(preguntaEnEdicionId, formPregunta.opciones);
           }
         }
 
+        idGuardada = preguntaEnEdicionId;
         avisar('Pregunta actualizada');
       } else {
         // Los valores de la escala llegan como string desde el <input type="number">
@@ -563,7 +880,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
               }
             : { escala_min: null, escala_max: null, escala_min_texto: null, escala_max_texto: null };
 
-        await encuestaService.crearPregunta(seleccion.id_encuesta, {
+        const creada = await encuestaService.crearPregunta(seleccion.id_encuesta, {
           texto: formPregunta.texto,
           ayuda: formPregunta.ayuda,
           tipo: formPregunta.tipo,
@@ -573,14 +890,28 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
             : undefined,
           ...escalaEsNumero,
         });
+
+        idGuardada = creada?.id_pregunta ?? null;
         avisar('Pregunta agregada');
       }
 
+      // La edición se cierra aquí, no cuando se guarda la encuesta: si la
+      // pregunta quedó guardada pero la encuesta falla después, la pregunta ya
+      // está en el servidor y reintentar no puede crear una segunda copia.
+      setModoEdicion(null);
+      setPreguntaEnEdicionId(null);
       setFormPregunta(PREGUNTA_VACIA);
-      setEditandoPregunta(null);
+      setFormPreguntaOriginal(PREGUNTA_VACIA);
+      // El error anterior era de este guardado: se limpia para que la tarjeta
+      // no lo siga mostrando ya resuelto.
+      setErrorFeedback(null);
+
       await cargarDetalle(seleccion.id_encuesta);
-      // El booleano le dice al modal si ya puede cerrarse. Antes no devolvía nada
-      // y el modal cerraba también cuando el guardado había fallado, con lo que
+      // La pregunta recién guardada recibe el foco: al terminar de escribir una
+      // pregunta lo natural es seguir con ella, no con el botón de agregar.
+      setPreguntaEnFoco(idGuardada);
+      // El booleano le dice a la tarjeta si ya puede cerrarse. Antes no devolvía
+      // nada y se cerraba también cuando el guardado había fallado, con lo que
       // el admin perdía lo que había escrito.
       return true;
     } catch (err) {
@@ -589,7 +920,22 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     } finally {
       setEnviando(false);
     }
-  }, [formPregunta, editandoPregunta, detalle, seleccion, cargarDetalle, avisar, setErrorFeedback]);
+  }, [formPregunta, modoEdicion, preguntaEnEdicionId, detalle, seleccion, cargarDetalle, avisar, setErrorFeedback]);
+
+  // Resolver la edición en curso (crear o actualizar la tarjeta abierta).
+  //
+  // Lo usa la barra de la cabecera antes de guardar o publicar la encuesta:
+  // una pregunta en edición no se puede quedar sin aplicar, y la encuesta no
+  // puede decir "guardada" mientras esa pregunta siga sin guardar.
+  //
+  // Si no hay nada pendiente, no se hace ninguna petición: abrir una tarjeta
+  // sin tocarla no puede generar un PUT de más.
+  const aplicarEdicion = useCallback(async () => {
+    if (modoEdicion === null) return true;
+    if (!borradorModificado) return true;
+
+    return guardarPregunta();
+  }, [modoEdicion, borradorModificado, guardarPregunta]);
 
   const eliminarPregunta = useCallback(
     async (idPregunta) => {
@@ -624,8 +970,14 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
           ayuda: pregunta.ayuda,
           tipo: pregunta.tipo,
           es_obligatoria: pregunta.es_obligatoria,
+          // La copia lleva su propia marca de «Otro»: el backend crea ids
+          // nuevos para las opciones, así que la copia no reutiliza los de la
+          // original.
           opciones: TIPOS_CON_OPCIONES.includes(pregunta.tipo)
-            ? (pregunta.opciones ?? []).map((o) => o.texto)
+            ? (pregunta.opciones ?? []).map((o) => ({
+                texto: o.texto ?? '',
+                es_otro: Boolean(o.es_otro),
+              }))
             : undefined,
           escala_min: pregunta.tipo === 'escala' ? pregunta.escala_min : null,
           escala_max: pregunta.tipo === 'escala' ? pregunta.escala_max : null,
@@ -711,12 +1063,19 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     pestana,
     cambiarPestana,
 
-    // El editor de metadatos reporta acá si el formulario tiene cambios sin
-    // guardar, para poder avisar antes de cambiar de pestaña y desmontarlo.
-    metadatosSucios,
-    setMetadatosSucios,
-    preguntasPendientes,
-    setPreguntasPendientes,
+    // --- formulario de la encuesta ---
+    //
+    // Una sola fuente de estado para el formulario: lo escriben las pestañas de
+    // Preguntas y de Configuración y lo guarda la barra de la cabecera.
+    formEncuesta,
+    actualizarFormulario,
+    formularioSucio,
+    estadoGuardado,
+    errorGuardado,
+    guardarFormulario,
+
+    // Hay algo a medias (un modal de pregunta abierto) que se perdería al
+    // abandonar el editor.
 
     // Rol y capacidad de escritura. Rectoría entra al panel pero sólo lee:
     // el backend le da acceso de lectura a las encuestas y no de escritura.
@@ -771,14 +1130,28 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     setFormNueva,
     crear,
 
-    guardarMetadatos,
     aplicarEstado,
     eliminar,
 
+    // --- edición de preguntas en las tarjetas ---
+    //
+    // `modoEdicion` es 'nueva', 'existente' o null. `borradorModificado` dice
+    // si lo escrito difiere de lo que se abrió: abrir una tarjeta sin tocarla
+    // no es un cambio pendiente.
     formPregunta,
     setFormPregunta,
-    editandoPregunta,
-    setEditandoPregunta,
+    modoEdicion,
+    preguntaEnEdicionId,
+    borradorModificado,
+    edicionPendiente,
+    abrirNuevaPregunta,
+    abrirEdicionPregunta,
+    cancelarEdicion,
+    aplicarEdicion,
+    preguntaEliminando,
+    setPreguntaEliminando,
+    preguntaEnFoco,
+    setPreguntaEnFoco,
     guardarPregunta,
     eliminarPregunta,
     duplicarPregunta,

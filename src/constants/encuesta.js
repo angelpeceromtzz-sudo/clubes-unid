@@ -46,3 +46,30 @@ export function etiquetaTipoPregunta(tipo) {
 // Una pregunta de opción necesita al menos dos para que una respuesta signifique
 // algo. El backend lo rechaza con 400, así que el formulario ni lo envía.
 export const MIN_OPCIONES_POR_PREGUNTA = 2;
+
+// Opción especial « Otro »: la última opción de una pregunta de opción única o
+// múltiple, con un texto libre que escribe el alumno.
+//
+// Se identifica con la propiedad `es_otro` del modelo (columna
+// `opciones_pregunta.es_otro`), nunca por su etiqueta: una opción normal
+// escrita a mano como «Otro» es otra cosa.
+export const ETIQUETA_OPCION_OTRO = 'Otro';
+
+// Texto libre que el alumno escribe al elegir la opción «Otro». Usa el límite
+// vigente del texto corto.
+export const MAX_CARACTERES_TEXTO_OTRO = 200;
+
+// Estados del guardado del formulario de una encuesta.
+//
+// Son cuatro y se distinguen a propósito: "pendiente" (hay cambios sin
+// guardar), "guardando" (el viaje está en curso), "guardado" (el servidor
+// confirmó) y "error" (el servidor rechazó). El texto "Guardado" sólo puede
+// aparecer después de la confirmación del backend: prometerlo antes sería
+// mentirle al admin si el guardado fallara.
+export const ESTADO_GUARDADO = {
+  INACTIVO: 'inactivo',
+  PENDIENTE: 'pendiente',
+  GUARDANDO: 'guardando',
+  GUARDADO: 'guardado',
+  ERROR: 'error',
+};

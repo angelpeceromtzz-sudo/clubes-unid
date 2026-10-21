@@ -43,6 +43,15 @@ const LONGITUD_TEXTO = {
   texto_largo: 2000,
 };
 
+// Texto libre que el alumno escribe al elegir la opción especial «Otro».
+// Usa el mismo límite que el texto corto.
+const LONGITUD_TEXTO_OTRO = 200;
+
+// Etiqueta de la opción especial «Otro». La opción se identifica por la
+// propiedad `es_otro`, no por este texto: una opción normal escrita a mano
+// como «Otro» es otra cosa.
+const ETIQUETA_OPCION_OTRO = 'Otro';
+
 const MAX_PREGUNTAS_POR_ENCUESTA = 60;
 const MAX_OPCIONES_POR_PREGUNTA = 30;
 
@@ -119,7 +128,7 @@ router.get('/publico/:slug', async (req, res) => {
       `SELECT p.id_pregunta, p.texto, p.ayuda, p.tipo, p.es_obligatoria,
               p.escala_min, p.escala_max, p.escala_min_texto, p.escala_max_texto,
               COALESCE(
-                (SELECT json_agg(json_build_object('id', o.id_opcion, 'texto', o.texto)
+                (SELECT json_agg(json_build_object('id', o.id_opcion, 'texto', o.texto, 'es_otro', o.es_otro)
                                  ORDER BY o.orden ASC)
                  FROM opciones_pregunta o WHERE o.id_pregunta = p.id_pregunta),
                 '[]'::json
@@ -225,12 +234,24 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
       // detalle_respuestas guarda UN valor por fila y chk_detalle_valor exige
       // exactamente uno de (id_opcion, texto, numero). Por eso la opción
       // múltiple no va como array: se inserta una fila por opción marcada.
+      //
+      // El texto libre de la opción «Otro» va en su propia columna
+      // (`texto_otro`), que sólo se rellena en la fila de esa opción: el
+      // CHECK de «un valor por fila» sigue igual y las respuestas antiguas
+      // (que no tienen esa columna) no se tocan.
       for (const fila of validado.filas) {
         await client.query(
           `INSERT INTO detalle_respuestas
-             (id_respuesta, id_pregunta, id_opcion, texto, numero)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [idRespuesta, fila.id_pregunta, fila.id_opcion, fila.texto, fila.numero]
+             (id_respuesta, id_pregunta, id_opcion, texto, numero, texto_otro)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            idRespuesta,
+            fila.id_pregunta,
+            fila.id_opcion ?? null,
+            fila.texto ?? null,
+            fila.numero ?? null,
+            fila.texto_otro ?? null,
+          ]
         );
       }
 
@@ -324,14 +345,14 @@ async function cargarDefiniciones(idEncuesta) {
   const definiciones = new Map(
     preguntas.rows.map((p) => [
       p.id_pregunta,
-      { ...p, opciones: new Set(), respondida: false },
+      { ...p, opciones: new Set(), otro_opcion: null, respondida: false },
     ])
   );
 
   if (definiciones.size === 0) return definiciones;
 
   const opciones = await pool.query(
-    `SELECT o.id_opcion, o.id_pregunta
+    `SELECT o.id_opcion, o.id_pregunta, o.es_otro
      FROM opciones_pregunta o
      JOIN preguntas p ON p.id_pregunta = o.id_pregunta
      WHERE p.id_encuesta = $1`,
@@ -347,7 +368,13 @@ async function cargarDefiniciones(idEncuesta) {
   for (const o of opciones.rows) {
     const definicion = definiciones.get(o.id_pregunta);
 
-    if (definicion) definicion.opciones.add(o.id_opcion);
+    if (!definicion) continue;
+
+    definicion.opciones.add(o.id_opcion);
+
+    // La opción especial «Otro» de la pregunta (como máximo una, lo garantiza
+    // el índice parcial único uq_opcion_otro).
+    if (o.es_otro) definicion.otro_opcion = o.id_opcion;
   }
 
   return definiciones;
@@ -377,7 +404,7 @@ function validarRespuestas(respuestas, definiciones) {
     }
 
     const definicion = definiciones.get(idPregunta);
-    const valor = valorDeRespuesta(r.valor, definicion);
+    const valor = valorDeRespuesta(r.valor, definicion, r.texto_otro);
 
     if (valor.error) {
       return { error: valor.error };
@@ -412,6 +439,35 @@ function validarRespuestas(respuestas, definiciones) {
 }
 
 /**
+ * Valida el texto libre de la opción «Otro».
+ *
+ * @returns {{texto: string}|{error: string}}
+ */
+function textoDeOtro(textoCrudo) {
+  if (textoCrudo === undefined || textoCrudo === null) {
+    return { error: 'Especifica tu respuesta' };
+  }
+
+  if (typeof textoCrudo !== 'string') {
+    return { error: 'La respuesta de «Otro» debe ser texto' };
+  }
+
+  const limpio = textoCrudo.trim();
+
+  if (limpio.length === 0) {
+    return { error: 'Especifica tu respuesta' };
+  }
+
+  if (limpio.length > LONGITUD_TEXTO_OTRO) {
+    return {
+      error: `La respuesta de «Otro» no puede exceder ${LONGITUD_TEXTO_OTRO} caracteres`,
+    };
+  }
+
+  return { texto: limpio };
+}
+
+/**
  * Valida el valor de una respuesta y devuelve las filas de detalle a insertar.
  *
  * Una pregunta puede producir varias filas (opción múltiple) o ninguna (queda
@@ -420,7 +476,7 @@ function validarRespuestas(respuestas, definiciones) {
  *
  * @returns {{vacio: boolean, filas: object[], idLicenciatura?: number}|{error: string}}
  */
-function valorDeRespuesta(valorCrudo, definicion) {
+function valorDeRespuesta(valorCrudo, definicion, textoOtroCrudo) {
   const { tipo, opciones } = definicion;
 
   const vacio =
@@ -492,7 +548,28 @@ function valorDeRespuesta(valorCrudo, definicion) {
       return { error: 'La opción seleccionada no pertenece a esta pregunta' };
     }
 
-    return { vacio: false, filas: [{ id_pregunta: definicion.id_pregunta, id_opcion: id }] };
+    const esOtro = definicion.otro_opcion != null && id === definicion.otro_opcion;
+
+    // Texto de «Otro»: sólo tiene sentido si la opción seleccionada es la
+    // especial. Un texto suelto con otra opción marcada es incoherente.
+    if (textoOtroCrudo !== undefined && textoOtroCrudo !== null && !esOtro) {
+      return { error: 'La respuesta de «Otro» sólo se acepta si esa opción está seleccionada' };
+    }
+
+    if (esOtro) {
+      const texto = textoDeOtro(textoOtroCrudo);
+      if (texto.error) return { error: texto.error };
+
+      return {
+        vacio: false,
+        filas: [{ id_pregunta: definicion.id_pregunta, id_opcion: id, texto_otro: texto.texto }],
+      };
+    }
+
+    return {
+      vacio: false,
+      filas: [{ id_pregunta: definicion.id_pregunta, id_opcion: id, texto_otro: null }],
+    };
   }
 
   if (tipo === 'opcion_multiple') {
@@ -514,9 +591,35 @@ function valorDeRespuesta(valorCrudo, definicion) {
       }
     }
 
+    // En opción múltiple «Otro» puede convivir con opciones normales: el texto
+    // libre se guarda sólo en la fila de la opción especial.
+    const marcadasConOtro = ids.filter(
+      (id) => definicion.otro_opcion != null && id === definicion.otro_opcion
+    );
+    let textoOtro = null;
+
+    if (textoOtroCrudo !== undefined && textoOtroCrudo !== null) {
+      if (marcadasConOtro.length === 0) {
+        return { error: 'La respuesta de «Otro» sólo se acepta si esa opción está seleccionada' };
+      }
+
+      const texto = textoDeOtro(textoOtroCrudo);
+      if (texto.error) return { error: texto.error };
+
+      textoOtro = texto.texto;
+    } else if (marcadasConOtro.length > 0) {
+      // «Otro» marcado sin texto: hay que especificarlo.
+      return { error: 'Especifica tu respuesta' };
+    }
+
     return {
       vacio: false,
-      filas: ids.map((id) => ({ id_pregunta: definicion.id_pregunta, id_opcion: id })),
+      filas: ids.map((id) => ({
+        id_pregunta: definicion.id_pregunta,
+        id_opcion: id,
+        texto_otro:
+          definicion.otro_opcion != null && id === definicion.otro_opcion ? textoOtro : null,
+      })),
     };
   }
 
@@ -608,7 +711,7 @@ router.get('/admin/:id', authenticate, requireRole(...ROLES_LECTURA), async (req
               p.orden, p.escala_min, p.escala_max,
               p.escala_min_texto, p.escala_max_texto,
               COALESCE(
-                (SELECT json_agg(json_build_object('id', o.id_opcion, 'texto', o.texto)
+                (SELECT json_agg(json_build_object('id', o.id_opcion, 'texto', o.texto, 'es_otro', o.es_otro)
                                  ORDER BY o.orden ASC)
                  FROM opciones_pregunta o WHERE o.id_pregunta = p.id_pregunta),
                 '[]'::json
@@ -686,7 +789,7 @@ router.get(
         `SELECT p.id_pregunta, p.texto, p.tipo, p.es_obligatoria, p.orden,
                 p.escala_min, p.escala_max, p.escala_min_texto, p.escala_max_texto,
                 COALESCE(
-                  (SELECT json_agg(json_build_object('id', o.id_opcion, 'texto', o.texto, 'orden', o.orden)
+                  (SELECT json_agg(json_build_object('id', o.id_opcion, 'texto', o.texto, 'orden', o.orden, 'es_otro', o.es_otro)
                                    ORDER BY o.orden ASC)
                    FROM opciones_pregunta o WHERE o.id_pregunta = p.id_pregunta),
                   '[]'::json
@@ -749,6 +852,28 @@ router.get(
         textosArgs
       );
 
+      // Textos libres de la opción especial «Other»: se listan tal cual, sin
+      // convertir cada texto en una categoría de la gráfica. La opción «Other»
+      // ya se contabiliza como una opción más en su conteo.
+      const textosOtroArgs = carreraFilter ? [idEncuesta, 200, carreraFilter] : [idEncuesta, 200];
+      const textosOtroFilterSQL = carreraFilter ? ' AND r.id_licenciatura = $3' : '';
+      const textosOtro = await pool.query(
+        `SELECT id_pregunta, texto_otro, fecha_envio
+         FROM (
+           SELECT d.id_pregunta, d.texto_otro, r.fecha_envio,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY d.id_pregunta
+                    ORDER BY r.fecha_envio DESC, d.id_detalle DESC
+                  ) AS rn
+           FROM detalle_respuestas d
+           JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
+           WHERE r.id_encuesta = $1 AND d.texto_otro IS NOT NULL ${textosOtroFilterSQL}
+         ) t
+         WHERE rn <= $2
+         ORDER BY id_pregunta, fecha_envio DESC`,
+        textosOtroArgs
+      );
+
       // Además del total, la fecha de la respuesta más reciente: es lo que el
       // panel muestra como "Última respuesta" y sale gratis aquí, en la misma
       // consulta indexada que ya cuenta.
@@ -795,6 +920,7 @@ router.get(
           conteoOpciones: conteoOpciones.rows,
           escala: escala.rows,
           textos: textos.rows,
+          textosOtro: textosOtro.rows,
           porLicenciatura: porLicenciatura.rows,
         }),
       });
@@ -868,6 +994,7 @@ function armarResultadosPreguntas({
   conteoOpciones,
   escala,
   textos,
+  textosOtro,
   porLicenciatura,
 }) {
   const mapaConteos = new Map(conteos.map((fila) => [fila.id_pregunta, fila]));
@@ -876,6 +1003,16 @@ function armarResultadosPreguntas({
     if (!mapaTextos.has(fila.id_pregunta)) mapaTextos.set(fila.id_pregunta, []);
     mapaTextos.get(fila.id_pregunta).push({
       texto: fila.texto,
+      fecha: fila.fecha_envio,
+    });
+  }
+
+  // Textos libres de la opción especial «Otro», por pregunta.
+  const mapaTextosOtro = new Map();
+  for (const fila of textosOtro) {
+    if (!mapaTextosOtro.has(fila.id_pregunta)) mapaTextosOtro.set(fila.id_pregunta, []);
+    mapaTextosOtro.get(fila.id_pregunta).push({
+      texto: fila.texto_otro,
       fecha: fila.fecha_envio,
     });
   }
@@ -961,9 +1098,20 @@ function armarResultadosPreguntas({
           id_opcion: opcion.id,
           texto: opcion.texto,
           orden: opcion.orden,
+          // La opción especial se marca para que el panel pueda distinguirla y
+          // listar debajo los textos que escribieron los alumnos.
+          es_otro: Boolean(opcion.es_otro),
           conteo: conteoPorOpcion.get(opcion.id) ?? 0,
           porcentaje: porcentaje(conteoPorOpcion.get(opcion.id) ?? 0, denominador),
         })),
+        // Los textos libres de «Otro» se listan tal cual, debajo de la
+        // gráfica: no crean una categoría nueva.
+        ...(mapaTextosOtro.get(pregunta.id_pregunta)?.length
+          ? {
+              textos_otro: mapaTextosOtro.get(pregunta.id_pregunta),
+              total_textos_otro: mapaTextosOtro.get(pregunta.id_pregunta).length,
+            }
+          : {}),
       };
     }
 
@@ -1322,10 +1470,10 @@ router.post(
       const idPregunta = pregunta.rows[0].id_pregunta;
 
       if (llevaOpciones) {
-        for (const [i, textoOpcion] of opcionesLimpias.valores.entries()) {
+        for (const [i, opcion] of opcionesLimpias.valores.entries()) {
           await client.query(
-            'INSERT INTO opciones_pregunta (id_pregunta, texto, orden) VALUES ($1, $2, $3)',
-            [idPregunta, textoOpcion, i + 1]
+            'INSERT INTO opciones_pregunta (id_pregunta, texto, orden, es_otro) VALUES ($1, $2, $3, $4)',
+            [idPregunta, opcion.texto, i + 1, opcion.es_otro]
           );
         }
       }
@@ -1490,10 +1638,10 @@ router.put(
         req.params.idPregunta,
       ]);
 
-      for (const [i, texto] of opciones.valores.entries()) {
+      for (const [i, opcion] of opciones.valores.entries()) {
         await client.query(
-          'INSERT INTO opciones_pregunta (id_pregunta, texto, orden) VALUES ($1, $2, $3)',
-          [req.params.idPregunta, texto, i + 1]
+          'INSERT INTO opciones_pregunta (id_pregunta, texto, orden, es_otro) VALUES ($1, $2, $3, $4)',
+          [req.params.idPregunta, opcion.texto, i + 1, opcion.es_otro]
         );
       }
 
@@ -1744,7 +1892,15 @@ router.put(
  * Descarta vacíos y repetidos en vez de fallar: el editor deja el campo en
  * blanco al quitar una opción, y rechazar el guardado por eso sería molesto.
  *
- * @returns {{valores: string[]}|{error: string}}
+ * Acepta las dos formas del payload: la antigua (lista de textos) y la nueva
+ * (lista de `{ texto, es_otro }`). La marca `es_otro` es lo que identifica la
+ * opción especial «Otro»; su texto no la distingue de una opción normal
+ * escrita a mano con el mismo texto.
+ *
+ * «Otro» es siempre la última opción de respuesta: si llega en otro sitio, se
+ * mueve al final en vez de fallar.
+ *
+ * @returns {{valores: {texto: string, es_otro: boolean}[]}|{error: string}}
  */
 function sanitizarOpciones(opciones) {
   if (opciones === undefined || opciones === null) {
@@ -1761,9 +1917,12 @@ function sanitizarOpciones(opciones) {
 
   const valores = [];
   const vistos = new Set();
+  let otro = null;
 
   for (const o of opciones) {
-    const texto = String(o ?? '').trim();
+    const esObjeto = typeof o === 'object' && o !== null;
+    const texto = String(esObjeto ? o.texto ?? '' : o ?? '').trim();
+    const esOtro = Boolean(esObjeto && o.es_otro);
 
     if (texto.length === 0) continue;
 
@@ -1771,12 +1930,26 @@ function sanitizarOpciones(opciones) {
       return { error: 'Una opción no puede exceder 300 caracteres' };
     }
 
+    if (esOtro) {
+      // Como máximo una opción «Otro» por pregunta. El índice parcial único
+      // uq_opcion_otro lo garantiza en la base; aquí se avisa antes.
+      if (otro) {
+        return { error: 'Una pregunta sólo puede tener una opción «Otro»' };
+      }
+
+      otro = { texto: ETIQUETA_OPCION_OTRO, es_otro: true };
+      continue;
+    }
+
     const clave = texto.toLowerCase();
     if (vistos.has(clave)) continue;
 
     vistos.add(clave);
-    valores.push(texto);
+    valores.push({ texto, es_otro: false });
   }
+
+  // «Otro» siempre es la última opción de respuesta.
+  if (otro) valores.push(otro);
 
   return { valores };
 }

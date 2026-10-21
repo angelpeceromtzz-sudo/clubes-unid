@@ -9,6 +9,7 @@
 // público sólo sirve encuestas publicadas (GET /publico/:slug filtra por estado),
 // así que una encuesta en borrador no se podría previsualizar por ahí. Además el
 // detalle trae lo que el público no expone, como el estado.
+import { useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Alerta } from '../../ui/Alerta';
 import { Badge } from '../../ui/Badge';
@@ -44,7 +45,19 @@ export function VistaPreviaEncuesta({
 }) {
   const { cardCls, tema } = useTheme();
 
-  const valorDe = (pregunta) => VALOR_INICIAL[pregunta.tipo] ?? null;
+  // Estado local de la vista previa: aquí se puede marcar una opción y
+  // escribir en «Otro» para comprobar cómo queda. Nada de esto se envía: el
+  // formulario público no se toca y esta pantalla no tiene botón de enviar.
+  const [respuestas, setRespuestas] = useState({});
+  const [textosOtro, setTextosOtro] = useState({});
+
+  const valorDe = (pregunta) => {
+    const local = respuestas[pregunta.id_pregunta];
+
+    if (local !== undefined) return local;
+
+    return VALOR_INICIAL[pregunta.tipo] ?? null;
+  };
 
   // Se reutiliza el mismo helper que el formulario público, no una copia: la
   // vista previa existe para mostrar lo que va a ver el alumno, y dos
@@ -79,8 +92,8 @@ export function VistaPreviaEncuesta({
             Vista previa
           </p>
           <p className="text-xs mt-1">
-            Así la verá el alumno, pero los campos están deshabilitados: no se puede
-            contestar ni enviar nada desde aquí.
+            Así la verá el alumno. Puedes marcar opciones y escribir en «Otro» para
+            probarlo, pero nada se envía: esta pantalla no registra respuestas.
           </p>
         </div>
       </div>
@@ -140,8 +153,13 @@ export function VistaPreviaEncuesta({
               <CampoPregunta
                 pregunta={pregunta}
                 valor={valorDe(pregunta)}
-                onChange={() => {}}
-                deshabilitado
+                onChange={(v) =>
+                  setRespuestas((previas) => ({ ...previas, [pregunta.id_pregunta]: v }))
+                }
+                textoOtro={textosOtro[pregunta.id_pregunta]}
+                onTextoOtroChange={(t) =>
+                  setTextosOtro((previas) => ({ ...previas, [pregunta.id_pregunta]: t }))
+                }
               />
             </div>
           ))

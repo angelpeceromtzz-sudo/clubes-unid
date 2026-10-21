@@ -137,6 +137,27 @@ function ResultadoOpciones({ pregunta, escalaBase }) {
         </>
       )}
 
+      {/* Textos libres de la opción «Otro»: se listan tal cual debajo de la
+          gráfica, sin crear una categoría nueva por texto. */}
+      {(pregunta.textos_otro ?? []).length > 0 && (
+        <div className="mt-4 border-t border-slate-700/40 dark:border-slate-700/60 pt-3">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+            Respuestas de «Otro»
+          </p>
+          <ul className="space-y-1.5">
+            {(pregunta.textos_otro ?? []).map((texto, i) => (
+              <li key={`${texto.fecha}-${i}`} className="text-sm">
+                {texto.texto}
+                {texto.fecha && (
+                  <span className="text-[11px] opacity-60 ml-2">
+                    {new Date(texto.fecha).toLocaleString('es-MX')}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Tarjeta>
   );
 }

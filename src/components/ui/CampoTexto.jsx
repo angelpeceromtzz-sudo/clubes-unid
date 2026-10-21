@@ -1,7 +1,10 @@
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from './Icono';
 
-export function CampoTexto({ label, name, placeholder, value, onChange, type = 'text', disabled, readOnly, error, required, maxLength, min }) {
+// `inputRef` es opcional: sirve para que quien lo usa pueda llevar el foco al
+// campo (por ejemplo, al abrir una pregunta en línea). Los usos que no lo
+// pasan no cambian.
+export function CampoTexto({ label, name, placeholder, value, onChange, type = 'text', disabled, readOnly, error, required, maxLength, min, inputRef }) {
   const { inputCls, labelCls } = useTheme();
 
   const lockedCls = readOnly
@@ -20,6 +23,7 @@ export function CampoTexto({ label, name, placeholder, value, onChange, type = '
         </label>
       )}
       <InputTag
+        ref={inputRef}
         id={name}
         name={name}
         type={type === 'textarea' ? undefined : type}

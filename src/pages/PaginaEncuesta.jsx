@@ -44,6 +44,8 @@ export default function PaginaEncuesta() {
 
   const [respuestas, setRespuestas] = useState({});
   const [errores, setErrores] = useState({});
+  // Texto libre de la opción «Otro», por pregunta.
+  const [textosOtro, setTextosOtro] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
 
@@ -82,6 +84,16 @@ export default function PaginaEncuesta() {
     cargar().catch(() => {});
   }
 
+  // Texto libre de la opción «Otro», por pregunta. Vive aparte del valor de
+  // la respuesta (que es el id de la opción) para no cambiar el contrato
+  // que el resto del formulario ya usa.
+  function cambiarTextoOtro(idPregunta, texto) {
+    setTextosOtro((previos) => ({ ...previos, [idPregunta]: texto }));
+    setErrores((previos) =>
+      Object.fromEntries(Object.entries(previos).filter(([k]) => k !== String(idPregunta)))
+    );
+  }
+
   function cambiarRespuesta(idPregunta, valor) {
     setRespuestas((previas) => ({ ...previas, [idPregunta]: valor }));
     // El error de esa pregunta desaparece en cuanto se toca: reprovar todo en
@@ -97,6 +109,13 @@ export default function PaginaEncuesta() {
     const nuevos = {};
 
     for (const p of encuesta.preguntas) {
+      // La opción «Otro» marcada exige su texto, aunque la pregunta sea
+      // opcional: se eligió una respuesta concreta y hay que decir cuál.
+      if (tieneOtroMarcado(p) && !(textosOtro[p.id_pregunta] ?? '').trim()) {
+        nuevos[p.id_pregunta] = 'Especifica tu respuesta';
+        continue;
+      }
+
       if (!p.es_obligatoria) continue;
 
       if (respuestaVacia(respuestas[p.id_pregunta])) {
@@ -106,6 +125,16 @@ export default function PaginaEncuesta() {
 
     setErrores(nuevos);
     return Object.keys(nuevos).length === 0;
+  }
+
+  // ¿Está marcada la opción especial «Otro» de esta pregunta?
+  function tieneOtroMarcado(pregunta) {
+    const opcionOtro = (pregunta.opciones ?? []).find((o) => o.es_otro);
+    if (!opcionOtro) return false;
+
+    const valor = respuestas[pregunta.id_pregunta];
+
+    return Array.isArray(valor) ? valor.includes(opcionOtro.id) : valor === opcionOtro.id;
   }
 
   async function manejarEnvio(e) {
@@ -124,15 +153,26 @@ export default function PaginaEncuesta() {
       await encuestaService.enviarRespuestas(slug, {
         respuestas: encuesta.preguntas
           .filter((p) => respuestas[p.id_pregunta] !== undefined)
-          .map((p) => ({
-            id_pregunta: p.id_pregunta,
-            valor: respuestas[p.id_pregunta],
-          })),
+          .map((p) => {
+            const respuesta = {
+              id_pregunta: p.id_pregunta,
+              valor: respuestas[p.id_pregunta],
+            };
+
+            // El texto de «Otro» sólo se manda si esa opción está marcada:
+            // si se desmarca, su texto no forma parte de la respuesta.
+            if (tieneOtroMarcado(p)) {
+              respuesta.texto_otro = (textosOtro[p.id_pregunta] ?? '').trim();
+            }
+
+            return respuesta;
+          }),
       });
       setEnviado(true);
       // Sin location.reload(): recargar tiraría los avisos y el scroll. Sólo
       // hace falta limpiar, porque la pantalla de gracias reemplaza el form.
       setRespuestas({});
+      setTextosOtro({});
     } catch (err) {
       // El 429 del rate limit y el 410 de encuesta cerrada llegan hasta aquí.
       setError(err);
@@ -297,10 +337,16 @@ export default function PaginaEncuesta() {
                           onChange={(v) => cambiarRespuesta(pregunta.id_pregunta, v)}
                           error={conError}
                           deshabilitado={enviando}
+                          textoOtro={textosOtro[pregunta.id_pregunta]}
+                          onTextoOtroChange={(t) => cambiarTextoOtro(pregunta.id_pregunta, t)}
+                          errorTextoOtro={conError === 'Especifica tu respuesta' ? conError : null}
                         />
                       </div>
 
-                      {conError && (
+                      {/* El error de «Especifica tu respuesta» se pinta junto a su
+                          campo (dentro de CampoPregunta), no aquí: repetirlo
+                          dos veces confunde. */}
+                      {conError && conError !== 'Especifica tu respuesta' && (
                         <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-red-500">
                           <Icono nombre="alert-circle" className="h-4 w-4 shrink-0" strokeWidth={2} />
                           {conError}

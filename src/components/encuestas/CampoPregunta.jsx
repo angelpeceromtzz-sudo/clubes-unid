@@ -29,9 +29,63 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useLicenciaturas } from '../../hooks/useLicenciaturas';
 import { BotonCerrar } from '../ui/BotonCerrar';
 import { Icono } from '../ui/Icono';
+import { MAX_CARACTERES_TEXTO_OTRO } from '../../constants/encuesta';
 
-export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado }) {
+// Campo de texto libre de la opción «Otro». Sólo aparece cuando esa opción
+// está marcada: es la respuesta que el alumno escribe ahí.
+function CampoTextoOtro({ idPregunta, valor, onChange, error, deshabilitado, claseInput }) {
+  return (
+    <div className="pt-1 pl-7 sm:pl-8">
+      <label
+        htmlFor={`texto-otro-${idPregunta}`}
+        className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1.5"
+      >
+        Especifica tu respuesta
+      </label>
+      <input
+        id={`texto-otro-${idPregunta}`}
+        name={`texto-otro-${idPregunta}`}
+        type="text"
+        value={valor ?? ''}
+        maxLength={MAX_CARACTERES_TEXTO_OTRO}
+        onChange={(e) => onChange?.(e.target.value)}
+        disabled={deshabilitado}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `error-texto-otro-${idPregunta}` : undefined}
+        placeholder="Escribe tu respuesta"
+        className={claseInput}
+      />
+      {error && (
+        <p
+          id={`error-texto-otro-${idPregunta}`}
+          className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-red-500"
+        >
+          <Icono nombre="alert-circle" className="h-4 w-4 shrink-0" strokeWidth={2} />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function CampoPregunta({
+  pregunta,
+  valor,
+  onChange,
+  error,
+  deshabilitado,
+  textoOtro,
+  onTextoOtroChange,
+  errorTextoOtro,
+}) {
   const { modoOscuro, tema } = useTheme();
+
+  // Opción especial «Otro»: la que lleva el texto libre del alumno. Se
+  // identifica por la marca del modelo (`es_otro`), no por su texto.
+  const opcionOtro = (pregunta.opciones ?? []).find((o) => o.es_otro) ?? null;
+  const otroMarcado =
+    opcionOtro != null &&
+    (Array.isArray(valor) ? valor.includes(opcionOtro.id) : valor === opcionOtro.id);
 
   const base = `w-full rounded-xl border px-4 py-3 text-sm transition-colors focus:outline-none focus:ring-4 ${
     error
@@ -93,6 +147,15 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
               </label>
             );
           })}
+
+          {otroMarcado && (
+            <CampoTextoOtro
+              valor={textoOtro ?? ''}
+              onChange={onTextoOtroChange}
+              error={errorTextoOtro}
+              deshabilitado={deshabilitado}
+            />
+          )}
         </div>
       );
 
@@ -130,6 +193,15 @@ export function CampoPregunta({ pregunta, valor, onChange, error, deshabilitado 
               </label>
             );
           })}
+
+          {otroMarcado && (
+            <CampoTextoOtro
+              valor={textoOtro ?? ''}
+              onChange={onTextoOtroChange}
+              error={errorTextoOtro}
+              deshabilitado={deshabilitado}
+            />
+          )}
         </div>
       );
 

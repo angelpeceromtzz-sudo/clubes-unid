@@ -2,7 +2,7 @@
 //
 // Es el contenedor de la sección y decide cuál de las tres pantallas se muestra:
 // lista, editor o resultados. El estado vive en useSeccionEncuestas.
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Alerta } from '../../ui/Alerta';
 import { Badge } from '../../ui/Badge';
@@ -23,6 +23,8 @@ import {
 } from '../../../utils/encuesta';
 import { useSeccionEncuestas } from '../../../hooks/useSeccionEncuestas';
 import { useDetalleEncuesta } from '../../../hooks/useDetalleEncuesta';
+import { BarraEditorEncuesta } from './BarraEditorEncuesta';
+import { ConfiguracionEncuesta } from './ConfiguracionEncuesta';
 import { EditorEncuesta } from './EditorEncuesta';
 import { EditorPreguntas } from './EditorPreguntas';
 import { PanelResultados } from './PanelResultados';
@@ -519,94 +521,231 @@ export function SeccionEncuestas({ d }) {
   // pero de encuestas sólo puede leer.
   const hook = useSeccionEncuestas(d?.setFeedback, d?.user);
 
-  // Pestaña a la que se quiere ir, pendiente de confirmar. Es `null` salvo que
-  // haya cambios sin guardar que haya que confirmar antes de perderlos.
-  const [cambioPendiente, setCambioPendiente] = useState(null);
+  // El tema decide la barra de scroll del área de contenido (oscura sobre el
+  // fondo azul noche, ámbar en el tema claro).
+  const { tema } = useTheme();
 
-// Pedir un cambio de pestaña pasa siempre por aquí, no por `cambiarPestana`
-  // directo: los hijos sólo saben si tienen algo a medias, y descartar eso es
-  // decisión del que tiene el botón delante.
-  const pedirCambioPestana = (nueva) => {
-    if (nueva === hook.pestana) return;
+  // Diálogo de confirmación al salir del editor con algo sin guardar.
+  const [salirConPendientes, setSalirConPendientes] = useState(false);
 
-    // El formulario de metadatos y los modales de pregunta viven en la pestaña
-    // de preguntas. Salir de ahí los desmonta, así que con algo a medias hay que
-    // preguntar. El texto del modal es genérico a propósito: puede ser el
-    // título a medio escribir o una pregunta a medio formular.
-    const hayPendientes = hook.metadatosSucios || hook.preguntasPendientes;
+  // El editor es un panel con su propio alto: la barra de arriba se queda
+  // siempre visible y el contenido de la pestaña se recorre dentro. El alto se
+  // mide contra la ventana para que el panel ocupe lo que queda debajo de la
+  // navbar y del encabezado del panel de administración.
+  //
+  // `medidas` arranca en `null` a propósito: en el primer render el panel se
+  // pinta con un alto provisional y el `useLayoutEffect` lo corrige antes de
+  // que el navegador llegue a pintar. Si el primer render usara ya el alto
+  // definitivo, el documento sería más alto que la ventana durante un
+  // instante, y cualquier `scrollIntoView` (por ejemplo, el que deja el foco
+  // en la pregunta recién guardada) desplazaría la página y se llevaría la
+  // barra contextual fuera de la vista.
+  const refPanel = useRef(null);
+  const [medidas, setMedidas] = useState(null);
 
-    if (hayPendientes && hook.pestana === 'preguntas' && nueva === 'resultados') {
-      setCambioPendiente(nueva);
+  useLayoutEffect(() => {
+    const el = refPanel.current;
+    if (!el) return undefined;
+
+    const medir = () => {
+      const arriba = el.getBoundingClientRect().top + window.scrollY;
+      // En móvil la navegación inferior del sistema ocupa la parte baja de la
+      // pantalla: se le deja su sitio para que la última fila de la lista no
+      // quede debajo de ella.
+      const margen = window.innerWidth >= 1024 ? 0 : 64;
+
+      setMedidas((anterior) =>
+        anterior && anterior.arriba === arriba && anterior.margen === margen
+          ? anterior
+          : { arriba, margen }
+      );
+    };
+
+    medir();
+    window.addEventListener('resize', medir);
+
+    // Se observa el cuerpo y no sólo el padre del panel: el aviso de éxito del
+    // panel (por ejemplo, "Pregunta agregada") aparece por encima del editor y
+    // lo baja. Si no se midiera de nuevo, el panel quedaría más alto que la
+    // ventana y la página podría desplazarse, llevándose la barra contextual
+    // fuera de la vista.
+    const observador = new ResizeObserver(medir);
+    observador.observe(document.body);
+    if (el.parentElement) observador.observe(el.parentElement);
+
+    return () => {
+      window.removeEventListener('resize', medir);
+      observador.disconnect();
+    };
+    // La medición se hace cuando se abre el editor: antes de eso el panel no
+    // existe y no hay nada que medir.
+  }, [hook.vista]);
+
+  // Mientras el editor está abierto, el contenido de la pestaña se recorre
+  // dentro del panel (el div con `overflow-y-auto`) y no en la página. Para que
+  // el desplazamiento no se encadene hacia la ventana --y con ella se mueva la
+  // barra contextual-- el contenedor usa `overscroll-contain`, y por eso no
+  // hace falta bloquear el scroll global: la ventana puede desplazarse (el
+  // espacio que deja el panel del admin por debajo) sin que eso arrastre la
+  // barra.
+
+  // Aviso al intentar cerrar la pestaña con cambios sin guardar. Es el aviso
+  // estándar del navegador: no se puede garantizar que el admin lo lea, pero
+  // es la única red de seguridad que no depende de que pase por un botón.
+  useEffect(() => {
+    const hayPendientes = hook.formularioSucio || hook.edicionPendiente;
+    if (!hayPendientes) return undefined;
+
+    const alCerrar = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', alCerrar);
+    return () => window.removeEventListener('beforeunload', alCerrar);
+  }, [hook.formularioSucio, hook.edicionPendiente]);
+
+  // Volver al listado pide confirmación si hay algo a medias. Cambiar de
+  // pestaña no: el formulario vive en el hook y el modal de pregunta también,
+  // así que nada de lo escrito se pierde al cambiar de vista.
+  const pedirVolver = () => {
+    if (hook.formularioSucio || hook.edicionPendiente) {
+      setSalirConPendientes(true);
       return;
     }
 
-    hook.cambiarPestana(nueva);
+    hook.volverALista();
   };
 
   if (hook.vista === 'editor' || hook.vista === 'resultados') {
     return (
       <div className="space-y-4">
-        <button
-          onClick={hook.volverALista}
-          className="text-xs font-bold uppercase tracking-wider opacity-70 hover:opacity-100 cursor-pointer inline-flex items-center gap-1"
+        <div
+          ref={refPanel}
+          // Sin `border`: el marco exterior del editor salía en el color de
+          // texto heredado (el preflight de Tailwind deja `border-color` en
+          // `currentColor`) y quedaba una línea clara rodeando la barra, las
+          // pestañas y el contenido. Los bordes internos de la barra, de las
+          // herramientas y de las tarjetas se conservan.
+          className="flex flex-col rounded-2xl overflow-hidden"
+          style={{
+            // `dvh` y no `vh`: en móvil el alto útil cambia cuando la barra del
+            // navegador se esconde, y con `vh` el panel quedaría más alto que la
+            // pantalla.
+            //
+            // El alto se calcula, no se fija: es el espacio que queda entre el
+            // borde superior del panel y el final de la ventana, menos el hueco
+            // que ocupa la navegación inferior del sistema en móvil. El suelo
+            // es pequeño a propósito: con un suelo alto, en una ventana baja el
+            // panel se saldría de la pantalla y su parte final quedaría
+            // inalcanzable. El contenido, en cualquier caso, se recorre dentro
+            // del panel.
+            height: medidas
+              ? `max(140px, calc(100dvh - ${medidas.arriba}px - ${medidas.margen}px))`
+              : '140px',
+          }}
         >
-          <Icono nombre="arrow-left" className="h-3.5 w-3.5" />
-          Volver a las encuestas
-        </button>
+          <BarraEditorEncuesta hook={hook} onVolver={pedirVolver} />
 
-        {/* Las pestañas van siempre, incluso sin respuestas: entrar y ver que no
-            hay nada todavía es una respuesta válida, y esconder la pestaña sólo
-            cuando hay datos hace que la encuesta parezca cambiar de forma al
-            llegar la primera respuesta. */}
-        <PestanasEncuesta
-          pestanas={[
-            { clave: 'preguntas', etiqueta: 'Preguntas' },
-            { clave: 'resultados', etiqueta: 'Resultados' },
-          ]}
-          activa={hook.pestana}
-          onCambio={pedirCambioPestana}
-        />
-
-        {hook.errorFeedback && <Alerta tipo="error" mensaje={hook.errorFeedback} />}
-
-        {hook.pestana === 'resultados' ? (
-          <PanelResultados
-            hook={hook}
-            cargando={hook.cargandoResultados}
-            resultados={hook.resultados}
-          />
-        ) : hook.cargandoDetalle ? (
-          <Spinner size="md" />
-        ) : !hook.detalle ? (
-          <Alerta
-            tipo="error"
-            mensaje="No se pudo cargar la encuesta. Vuelve al listado e inténtalo otra vez."
-          />
-        ) : (
-          /* Columna angosta y centrada, a lo Google Forms. El main del panel da
-             el ancho completo y con el enlace largo y las tarjetas de pregunta
-             quedaba una hoja de cálculo; a 3xl el editor se lee como un
-             documento. El límite va acá y no en NavegacionPanel para que los
-             demás paneles del admin no cambien de ancho. */
-          <div className="max-w-3xl mx-auto space-y-8">
-            <EditorEncuesta hook={hook} />
-            <EditorPreguntas hook={hook} />
+          {/* Las pestañas van siempre, incluso sin respuestas: entrar y ver que
+              no hay nada todavía es una respuesta válida, y esconder la pestaña
+              sólo cuando hay datos hace que la encuesta parezca cambiar de
+              forma al llegar la primera respuesta. */}
+          <div className="shrink-0 px-2 sm:px-5">
+            <PestanasEncuesta
+              pestanas={[
+                { clave: 'preguntas', etiqueta: 'Preguntas' },
+                { clave: 'resultados', etiqueta: 'Resultados' },
+                { clave: 'configuracion', etiqueta: 'Configuración' },
+              ]}
+              activa={hook.pestana}
+              onCambio={hook.cambiarPestana}
+            />
           </div>
-        )}
+
+          {/* El contenido de la pestaña se recorre aquí dentro: es el contenedor
+              real de scroll del editor, y la barra de arriba queda fuera para
+              que nunca tape un error ni un control enfocado.
+
+              `min-h-0` es lo que permite que esta zona se encoja dentro de la
+              columna flex: sin él, el tamaño mínimo automático del elemento
+              sería su contenido y el panel se saldría de su caja en vez de
+              quedarse con scroll propio. `overscroll-contain` evita que al
+              llegar al final el desplazamiento se encadene a la ventana.
+
+              La barra de scroll es la del sistema: `scrollbar-dark` sobre el
+              fondo azul noche del panel y `scrollbar-amber` en el tema claro.
+              Son las dos clases que ya usa el proyecto (la primera en los
+              paneles oscuros, la segunda en las superficies con ambos temas);
+              no hace falta ninguna regla nueva ni esconder la barra. */}
+          <div
+            className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 ${
+              tema.isDark ? 'scrollbar-dark' : 'scrollbar-amber'
+            }`}
+          >
+            {hook.errorFeedback && <Alerta tipo="error" mensaje={hook.errorFeedback} />}
+
+            {hook.cargandoDetalle ? (
+              <Spinner size="md" />
+            ) : !hook.detalle ? (
+              <Alerta
+                tipo="error"
+                mensaje="No se pudo cargar la encuesta. Vuelve al listado e inténtalo otra vez."
+              />
+            ) : (
+              <>
+                {hook.pestana === 'preguntas' && (
+                  <div
+                    id="panel-preguntas"
+                    role="tabpanel"
+                    aria-labelledby="pestana-preguntas"
+                    className="space-y-8"
+                  >
+                    <EditorEncuesta hook={hook} />
+                    <EditorPreguntas hook={hook} />
+                  </div>
+                )}
+
+                {hook.pestana === 'configuracion' && (
+                  <div
+                    id="panel-configuracion"
+                    role="tabpanel"
+                    aria-labelledby="pestana-configuracion"
+                  >
+                    <ConfiguracionEncuesta hook={hook} />
+                  </div>
+                )}
+
+                {hook.pestana === 'resultados' && (
+                  <div
+                    id="panel-resultados"
+                    role="tabpanel"
+                    aria-labelledby="pestana-resultados"
+                  >
+                    <PanelResultados
+                      hook={hook}
+                      cargando={hook.cargandoResultados}
+                      resultados={hook.resultados}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
 
         <ModalConfirmacion
-          show={cambioPendiente !== null}
+          show={salirConPendientes}
           titulo="Hay cambios sin guardar"
-          mensaje="Lo que escribiste en las preguntas o en los datos de la encuesta se perderá si cambias de pestaña. Puedes quedarte aquí y guardarlo antes."
-          textoConfirmar="Descartar y cambiar de pestaña"
+          mensaje="Lo que escribiste se perderá si sales del editor. Puedes quedarte aquí y guardarlo antes."
+          textoConfirmar="Descartar y salir"
           textoCancelar="Quedarme aquí"
           varianteDanger
           onConfirmar={() => {
-            const destino = cambioPendiente;
-            setCambioPendiente(null);
-            hook.cambiarPestana(destino);
+            setSalirConPendientes(false);
+            hook.volverALista();
           }}
-          onCancelar={() => setCambioPendiente(null)}
+          onCancelar={() => setSalirConPendientes(false)}
         />
       </div>
     );

@@ -32,6 +32,104 @@ export function enlaceEsLocalhost(slug) {
 }
 
 /**
+ * Convierte una fecha ISO a lo que quiere `<input type="datetime-local">`.
+ *
+ * El input pide "YYYY-MM-DDTHH:mm" en hora local, no un ISO con Z. Sin esta
+ * conversión el input aparece vacío aunque la encuesta tenga fecha, que es el
+ * peor síntoma posible en un campo de formulario.
+ *
+ * Vive aquí y no en el editor porque el hook (que es quien guarda) y los
+ * componentes (que son quien pintan) tienen que comparar exactamente lo mismo:
+ * si cada uno hiciera su conversión, el guardado detectaría como cambio una
+ * fecha que en realidad no se movió.
+ */
+export function aInputDateTime(iso) {
+  if (!iso) return '';
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return '';
+  const dosDigitos = (n) => String(n).padStart(2, '0');
+  return (
+    `${fecha.getFullYear()}-${dosDigitos(fecha.getMonth() + 1)}-${dosDigitos(fecha.getDate())}` +
+    `T${dosDigitos(fecha.getHours())}:${dosDigitos(fecha.getMinutes())}`
+  );
+}
+
+/**
+ * Estado del enlace público de una encuesta: si se puede responder o no.
+ *
+ * El backend sólo sirve las encuestas en estado `publicada` y, dentro de ese
+ * estado, decide con las fechas si todavía se puede contestar:
+ *
+ * - `borrador`: 404. El enlace no abre nada todavía.
+ * - `publicada` con `fecha_inicio` futura: 403 "todavía no está disponible".
+ * - `publicada` con `fecha_fin` pasada: 410 "esta encuesta ya se cerró".
+ * - `publicada` dentro de la ventana: sí acepta respuestas.
+ * - `cerrada`: 410.
+ *
+ * El share muestra esto al lado del enlace para que el admin no reparta un
+ * enlace que no responde sin saber por qué.
+ *
+ * La comparación con el reloj se hace aquí, y no en el render, porque quien la
+ * llama la abre en un momento concreto (al abrir el diálogo de compartir): el
+ * valor se recalcula cada vez que se abre, que es cuando importa.
+ */
+export function estadoEnlaceEncuesta(encuesta) {
+  if (!encuesta) {
+    return { etiqueta: '—', color: 'slate', respondible: false, detalle: '' };
+  }
+
+  if (encuesta.estado === 'borrador') {
+    return {
+      etiqueta: 'En borrador',
+      color: 'slate',
+      respondible: false,
+      detalle:
+        'La encuesta todavía no está publicada: el enlace no muestra el formulario hasta que se publique.',
+    };
+  }
+
+  if (encuesta.estado === 'cerrada') {
+    return {
+      etiqueta: 'Cerrada',
+      color: 'amber',
+      respondible: false,
+      detalle:
+        'La encuesta se cerró: el enlace sigue ahí, pero ya no acepta respuestas.',
+    };
+  }
+
+  const ahora = Date.now();
+
+  if (encuesta.fecha_inicio && new Date(encuesta.fecha_inicio).getTime() > ahora) {
+    return {
+      etiqueta: 'Programada',
+      color: 'blue',
+      respondible: false,
+      detalle: `Abrirá el ${formatearDia(encuesta.fecha_inicio)}. Antes de esa fecha el enlace dice que todavía no está disponible.`,
+    };
+  }
+
+  if (encuesta.fecha_fin && new Date(encuesta.fecha_fin).getTime() < ahora) {
+    return {
+      etiqueta: 'Cerrada por fecha',
+      color: 'amber',
+      respondible: false,
+      detalle:
+        'Ya pasó la fecha de cierre: el enlace responde que la encuesta se cerró.',
+    };
+  }
+
+  return {
+    etiqueta: 'Abierta',
+    color: 'emerald',
+    respondible: true,
+    detalle: encuesta.fecha_fin
+      ? `Acepta respuestas hasta el ${formatearDia(encuesta.fecha_fin)}.`
+      : 'Acepta respuestas: no tiene fecha de cierre.',
+  };
+}
+
+/**
  * Texto de vigencia de una encuesta para la fila del listado.
  *
  * Dice una sola cosa según el estado, para que la fila se lea de un vistazo:
