@@ -398,21 +398,31 @@ function PantallaCarga() {
 
 // El status decide el texto: 'no disponible', 'cerrada' y 'no existe' son
 // finales distintos y confundir al alumno con un error genérico hace que pida
-// ayuda por algo que ya no tiene solución.
+// ayuda por algo que ya no tiene solución. El 429 (límite de envíos por IP) es
+// el cuarto caso: la encuesta SÍ existe y SÍ está abierta, así que decir
+// "Encuesta no encontrada" mandaría al alumno a revisar un enlace que está
+// bien. Es un final con salida —reintentar— y por eso conserva el botón.
 function PantallaError({ error, onReintentar }) {
   const { tema, modoOscuro } = useTheme();
   const status = error?.status;
   const titulo =
     status === 410 ? 'Esta encuesta ya se cerró'
     : status === 403 ? 'Esta encuesta todavía no está disponible'
+    : status === 429 ? 'Demasiados envíos desde tu red'
     : 'Encuesta no encontrada';
 
   const detalle =
     status === 410 ? 'Gracias por tu interés, pero el periodo de respuestas terminó.'
     : status === 403 ? 'Vuelve más tarde, cuando se abra el periodo de respuestas.'
-    : 'Revisa el enlace que te compartieron. Es posible que esté mal copiado.';
+    : status === 429
+      ? 'Tu red ya envió suficientes respuestas por ahora. Espera un momento e inténtalo de nuevo.'
+      : 'Revisa el enlace que te compartieron. Es posible que esté mal copiado.';
 
-  const icono = status === 410 ? 'clock' : status === 403 ? 'info' : 'help';
+  const icono =
+    status === 410 ? 'clock'
+    : status === 403 ? 'info'
+    : status === 429 ? 'alert-triangle'
+    : 'help';
 
   return (
     <FondoEncuesta>

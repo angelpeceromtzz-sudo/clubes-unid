@@ -4,8 +4,13 @@
 // mientras sea null, los CTAs de la landing muestran un estado honesto y no
 // navegan a ninguna ruta. Al tener el enlace real, se asigna el slug y los
 // botones apuntan a /encuesta/<slug> (ver rutaEncuesta()).
+//
+// Slug activo: la encuesta publicada en producción. Si se cierra desde el
+// panel, el enlace público responde 410 ("Esta encuesta ya se cerró"); para
+// quitar el botón de la landing hay que volver a dejar ENCUESTA_SLUG en null
+// y redesplegar el frontend.
 
-export const ENCUESTA_SLUG = null;
+export const ENCUESTA_SLUG = '3793c3gie3tteg5ftv7v9d';
 
 export function hayEncuesta() {
   return Boolean(ENCUESTA_SLUG);
