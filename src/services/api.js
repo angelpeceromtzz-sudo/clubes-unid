@@ -127,6 +127,10 @@ export const api = {
   createNoticia: noticiaService.createNoticia,
   updateNoticia: noticiaService.updateNoticia,
   deleteNoticia: noticiaService.deleteNoticia,
+  enviarRevisionNoticia: noticiaService.enviarRevisionNoticia,
+  aprobarNoticia: noticiaService.aprobarNoticia,
+  rechazarNoticia: noticiaService.rechazarNoticia,
+  ocultarNoticia: noticiaService.ocultarNoticia,
 
   uploadImagen: uploadService.uploadImagen,
 

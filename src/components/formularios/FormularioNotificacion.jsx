@@ -62,7 +62,11 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
       if (resultado.publicacion_mural) actualizarPublicacion(resultado.publicacion_mural);
       const tituloEnviado = titulo.trim();
       const mensajeEnviado = mensaje.trim();
-      setMensajeExito(resultado.publicacion_mural ? 'Aviso publicado y agregado al mural.' : 'Anuncio publicado correctamente');
+      setMensajeExito(resultado.publicacion_mural
+        ? resultado.publicacion_mural.status === 'published'
+          ? 'Aviso publicado y agregado al mural.'
+          : 'Aviso enviado. La publicación del mural se guardó como borrador en Noticias; envíala a revisión.'
+        : 'Anuncio publicado correctamente');
       if (onSuccess) onSuccess(tituloEnviado, mensajeEnviado, resultado.publicacion_mural);
       setTitulo('');
       setMensaje('');
@@ -110,6 +114,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
       {puedePublicarEnMural && <div className="space-y-3">
         <OpcionMural checked={mostrarEnMural} onChange={(evento) => setMostrarEnMural(evento.target.checked)} disabled={enviando || subiendo} />
         {mostrarEnMural && <SubirImagen label="Cartel o imagen (opcional)" urlImagen={imagen} onUpload={subirImagen} modoOscuro={modoOscuro} labelCls={labelCls} inputId="imagen-aviso-mural" />}
+        {mostrarEnMural && !esRectoria && <p className={`text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>La publicación del mural se guardará como borrador en Noticias. Envíala a revisión para que rectoría la apruebe.</p>}
       </div>}
 
       {mensajeError && <Alerta tipo="error" mensaje={mensajeError} />}
@@ -119,7 +124,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
         disabled={enviando || subiendo || !titulo.trim() || !mensaje.trim() || (audiencia === 'club' && !audienciaFija && !clubSeleccionado)}
         className="w-full bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl px-8 py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {subiendo ? 'Subiendo imagen…' : enviando ? 'Publicando…' : mostrarEnMural && puedePublicarEnMural ? 'Publicar aviso y agregar al mural' : 'Publicar Anuncio'}
+        {subiendo ? 'Subiendo imagen…' : enviando ? 'Publicando…' : mostrarEnMural && puedePublicarEnMural ? esRectoria ? 'Publicar aviso y agregar al mural' : 'Enviar aviso y guardar borrador del mural' : 'Publicar Anuncio'}
       </button>
     </form>
   );

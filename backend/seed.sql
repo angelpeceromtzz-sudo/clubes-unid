@@ -24,7 +24,8 @@ INSERT INTO cat_roles (nombre_rol) VALUES
     ('alumno'),
     ('presidente'),
     ('admin'),
-    ('rectoria')
+    ('rectoria'),
+    ('responsable_mural')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO cat_estatus_clubes (nombre_estatus) VALUES
@@ -69,7 +70,8 @@ FROM (VALUES
   ('María Fernanda López García',   'alumno.inscrito@unid.mx', 'alumno'),
   ('Carlos Alberto Méndez Rivas',   'presidente@unid.mx',      'presidente'),
   ('Ana Sofía Ramírez Domínguez',   'admin@unid.mx',           'admin'),
-  ('Roberto Carlos Mendoza Lopez',  'rectoria@unid.mx',        'rectoria')
+  ('Roberto Carlos Mendoza Lopez',  'rectoria@unid.mx',        'rectoria'),
+  ('Diana Laura Ortiz Castillo',    'mural@unid.mx',           'responsable_mural')
 ) AS v(nombre_completo, correo, rol)
 JOIN cat_roles r ON r.nombre_rol = v.rol
 LEFT JOIN usuarios x ON x.correo_institucional = v.correo

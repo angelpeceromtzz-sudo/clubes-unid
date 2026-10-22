@@ -9,7 +9,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
   const { modoOscuro } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { esAdmin, esPresidente } = useAutenticacion();
+  const { esAdmin, esPresidente, esResponsableMural } = useAutenticacion();
 
   const [mostrarNav, setMostrarNav] = useState(true);
   const ultimoScrollY = useRef(0);
@@ -33,6 +33,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
   function irPanel() {
     if (esAdmin) navigate('/admin/dashboard');
     else if (esPresidente) navigate('/presidente/dashboard');
+    else if (esResponsableMural) navigate('/mural/dashboard');
     else navigate('/dashboard');
   }
 
@@ -67,7 +68,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
             ) : (
               <Icono nombre="logout" strokeWidth={2} className="h-5 w-5" />
             )}
-            <span className="text-[10px] font-medium">{estaAutenticado ? (esAdmin || esPresidente ? 'Panel' : 'Mis Postulaciones') : 'Iniciar Sesión'}</span>
+            <span className="text-[10px] font-medium">{estaAutenticado ? (esAdmin || esPresidente || esResponsableMural ? 'Panel' : 'Mis Postulaciones') : 'Iniciar Sesión'}</span>
           </button>
         )}
       </div>

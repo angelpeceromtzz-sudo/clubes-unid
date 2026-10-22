@@ -17,6 +17,7 @@ export function useAuthRedirect() {
         const { id_rol } = sesion.user;
         if (id_rol === 4) navigate('/rectoria/dashboard', { replace: true });
         else if (id_rol === 3) navigate('/admin/dashboard', { replace: true });
+        else if (id_rol === 6) navigate('/mural/dashboard', { replace: true });
         else if (id_rol === 2) navigate('/presidente/dashboard', { replace: true });
         else if (id_rol === 1 && tieneInscripcionActiva) navigate('/dashboard', { replace: true });
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -41,6 +42,7 @@ export function useAuthRedirect() {
       const { id_rol } = session.user;
       if (id_rol === 4) navigate('/rectoria/dashboard', { replace: true });
       else if (id_rol === 3) navigate('/admin/dashboard', { replace: true });
+      else if (id_rol === 6) navigate('/mural/dashboard', { replace: true });
       else if (id_rol === 2) navigate('/presidente/dashboard', { replace: true });
       else if (id_rol === 1) {
         api.getInscripcionActiva().then((insc) => {

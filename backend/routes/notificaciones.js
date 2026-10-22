@@ -153,9 +153,9 @@ router.post('/', authenticate, async (req, res) => {
     let publicacionMural = null;
     if (conexion) {
       const publicacion = await conexion.query(
-        `INSERT INTO noticias (titulo, contenido, categoria, publicada, mostrar_en_mural, url_imagen, id_autor)
-         VALUES ($1, $2, 'informativo', TRUE, TRUE, $3, $4) RETURNING *`,
-        [titulo.trim(), mensaje.trim(), url_imagen || null, userId]
+        `INSERT INTO noticias (titulo, contenido, categoria, publicada, mostrar_en_mural, url_imagen, id_autor, status)
+         VALUES ($1, $2, 'informativo', $5 = 'published', TRUE, $3, $4, $5) RETURNING *`,
+        [titulo.trim(), mensaje.trim(), url_imagen || null, userId, roleId === 4 ? 'published' : 'draft']
       );
       publicacionMural = publicacion.rows[0];
       await conexion.query('COMMIT');

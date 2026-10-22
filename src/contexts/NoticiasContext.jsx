@@ -3,6 +3,7 @@
    de modo que cada noticia mantiene su propio estado "no leída" de forma independiente. */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
+import { esPublicable, filtrarPublicadas } from '../constants/noticias';
 
 const ContextoNoticias = createContext(null);
 
@@ -60,14 +61,19 @@ export function ProveedorNoticias({ children: hijos }) {
         api.getEventos(),
         api.getMural(),
       ]);
-      const lista = respuestaNoticias.status === 'fulfilled' && Array.isArray(respuestaNoticias.value) ? respuestaNoticias.value : [];
+      // El backend ya sólo devuelve `published`, pero el filtro se repite aquí
+      // (red de seguridad y semántica del contexto): fuera de los paneles no
+      // puede colarse un borrador, un pendiente ni uno rechazado.
+      const lista = filtrarPublicadas(
+        respuestaNoticias.status === 'fulfilled' && Array.isArray(respuestaNoticias.value) ? respuestaNoticias.value : []
+      );
       setNoticias(lista);
       if (respuestaEventos.status === 'fulfilled' && Array.isArray(respuestaEventos.value)) {
-        setEventos(respuestaEventos.value);
+        setEventos(filtrarPublicadas(respuestaEventos.value));
         setErrorEventos('');
       } else setErrorEventos('No se pudieron cargar los eventos del campus.');
       if (respuestaMural.status === 'fulfilled' && Array.isArray(respuestaMural.value)) {
-        setAvisosMural(respuestaMural.value);
+        setAvisosMural(filtrarPublicadas(respuestaMural.value));
         setErrorMural('');
       } else setErrorMural('No se pudieron cargar los avisos del mural.');
       // Migración del esquema antiguo (umbral "visto hasta") al conjunto de ids.
@@ -98,7 +104,7 @@ export function ProveedorNoticias({ children: hijos }) {
   const actualizarPublicacion = useCallback((publicacion) => {
     const actualizarLista = (lista, incluir) => {
       const otras = lista.filter((item) => item.id_noticia !== publicacion.id_noticia);
-      return incluir && publicacion.publicada ? [publicacion, ...otras] : otras;
+      return incluir && esPublicable(publicacion) ? [publicacion, ...otras] : otras;
     };
     setNoticias((lista) => actualizarLista(lista, true));
     setEventos((lista) => actualizarLista(lista, publicacion.categoria === 'evento'));

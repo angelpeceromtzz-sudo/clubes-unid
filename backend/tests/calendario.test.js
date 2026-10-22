@@ -49,12 +49,12 @@ test('valida fechas reales, fin opcional e inicio anterior al fin', () => {
   assert.match(errorPeriodoEvento('2026-10-16', '2026-10-15'), /anterior/);
 });
 
-test('solo administración y rectoría pueden publicar', async () => {
+test('solo administración, rectoría y responsable del mural pueden redactar', async () => {
   for (const rol of [null, 1, 2, 5]) {
     assert.equal((await enviar('POST', datosEvento, rol)).status, rol ? 403 : 401);
     assert.equal(consultas.length, 0);
   }
-  for (const rol of [3, 4]) assert.equal((await enviar('POST', datosEvento, rol)).status, 201);
+  for (const rol of [3, 4, 6]) assert.equal((await enviar('POST', datosEvento, rol)).status, 201);
 });
 
 test('guarda las tres categorías de eventos y el periodo completo', async () => {
@@ -62,36 +62,37 @@ test('guarda las tres categorías de eventos y el periodo completo', async () =>
     assert.equal((await enviar('POST', { ...datosEvento, categoria_evento: categoria })).status, 201);
     const insercion = consultas.find((item) => item.sql.includes('INSERT INTO noticias'));
     assert.equal(insercion.valores[10], categoria);
-    assert.equal(insercion.valores[12], '2100-01-06');
+    assert.equal(insercion.valores[13], '2100-01-06');
   }
 });
 
 test('rechaza periodos inválidos al crear y al cambiar parcialmente la fecha de inicio', async () => {
   assert.equal((await enviar('POST', { ...datosEvento, fecha_fin_evento: '2099-12-19' })).status, 400);
   assert.equal(consultas.length, 0);
-  actual = { categoria: 'evento', fecha_evento: '2099-12-20', fecha_fin_evento: '2100-01-06' };
+  actual = { categoria: 'evento', fecha_evento: '2099-12-20', fecha_fin_evento: '2100-01-06', status: 'draft', id_autor: 7 };
   assert.equal((await enviar('PUT', { fecha_evento: '2100-01-10' }, 3, '/8')).status, 400);
   assert.equal(consultas.some((item) => item.sql.includes('UPDATE noticias')), false);
   assert.equal((await enviar('PUT', { fecha_fin_evento: '2100-02-30' }, 3, '/8')).status, 400);
 });
 
 test('permite quitar el fin de un periodo y conserva los datos omitidos en otras ediciones', async () => {
-  actual = { categoria: 'evento', fecha_evento: '2099-12-20', fecha_fin_evento: '2100-01-06' };
+  actual = { categoria: 'evento', fecha_evento: '2099-12-20', fecha_fin_evento: '2100-01-06', status: 'draft', id_autor: 7 };
   assert.equal((await enviar('PUT', { fecha_fin_evento: null }, 3, '/8')).status, 200);
   let cambio = consultas.find((item) => item.sql.includes('UPDATE noticias'));
-  assert.equal(cambio.valores[15], true);
-  assert.equal(cambio.valores[16], null);
+  assert.equal(cambio.valores[16], true);
+  assert.equal(cambio.valores[17], null);
   assert.equal((await enviar('PUT', { titulo: 'Título corregido' }, 3, '/8')).status, 200);
   cambio = consultas.find((item) => item.sql.includes('UPDATE noticias'));
-  assert.equal(cambio.valores[15], false);
-  assert.equal(cambio.valores[17], null);
+  assert.equal(cambio.valores[16], false);
+  assert.equal(cambio.valores[18], null);
 });
 
-test('publica avisos de mural y la consulta pública exige publicación y selección explícita', async () => {
-  assert.equal((await enviar('POST', { titulo: 'Aviso', contenido: 'Información', mostrar_en_mural: true })).status, 201);
-  assert.equal(consultas.find((item) => item.sql.includes('INSERT INTO noticias')).valores[13], true);
+test('rectoría publica avisos de mural y la consulta pública exige aprobación y selección explícita', async () => {
+  assert.equal((await enviar('POST', { titulo: 'Aviso', contenido: 'Información', mostrar_en_mural: true }, 4)).status, 201);
+  assert.equal(consultas.find((item) => item.sql.includes('INSERT INTO noticias')).valores[14], true);
   assert.equal((await enviar('GET', null, null, '/mural')).status, 200);
   assert.match(consultas[0].sql, /publicada = TRUE AND mostrar_en_mural = TRUE AND solo_calendario = FALSE/);
+  assert.match(consultas[0].sql, /status = 'published'/);
   assert.equal((await enviar('POST', { titulo: 'Aviso', contenido: 'Información', mostrar_en_mural: 'true' })).status, 400);
 });
 
@@ -109,7 +110,7 @@ test('las fechas académicas no pueden crearse ni editarse como eventos', async 
   assert.equal((await enviar('PUT', { solo_calendario: true }, 3, '/8')).status, 400);
 });
 
-test('publica el aviso y su tarjeta en una sola transacción, con imagen opcional', async () => {
+test('guarda el aviso y su tarjeta en una transacción; solo rectoría publica directamente en el mural', async () => {
   for (const rol of [3, 4]) {
     const resultado = await enviar('POST', { titulo: 'Aviso', mensaje: 'Información pública', audiencia: 'global', mostrar_en_mural: true, url_imagen: 'https://example.com/cartel.png' }, rol, '', 'notificaciones');
     assert.equal(resultado.status, 201);
@@ -117,6 +118,7 @@ test('publica el aviso y su tarjeta en una sola transacción, con imagen opciona
     assert.equal(consultas[0].sql, 'BEGIN');
     assert.equal(consultas.some((item) => item.sql === 'COMMIT'), true);
     assert.equal(consultas.find((item) => item.sql.includes('INSERT INTO noticias')).valores[2], 'https://example.com/cartel.png');
+    assert.equal(consultas.find((item) => item.sql.includes('INSERT INTO noticias')).valores[4], rol === 4 ? 'published' : 'draft');
   }
   assert.equal(liberadas, 2);
 });

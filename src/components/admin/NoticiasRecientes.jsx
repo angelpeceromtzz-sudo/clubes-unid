@@ -7,6 +7,9 @@ import { fechaRelativa } from '../../utils/formato';
 export function NoticiasRecientes({ noticias, cargando }) {
   const { cardCls, tdTitle, tdCls, modoOscuro } = useTheme();
   const recientes = noticias?.filter((n) => n.categoria !== 'evento').slice(0, 5) || [];
+  // `status` manda (PBI-17); `publicada` sólo queda de respaldo si la respuesta
+  // viene de un servicio anterior que no lo trae.
+  const estaPublicada = (n) => (n.status ? n.status === 'published' : n.publicada === true);
 
   return (
     <div className={`${cardCls} border rounded-2xl overflow-hidden`}>
@@ -32,12 +35,12 @@ export function NoticiasRecientes({ noticias, cargando }) {
           {recientes.map((n) => (
             <div key={n.id_noticia} className="px-5 py-3.5 flex items-start gap-3">
               <div className={`shrink-0 flex items-center justify-center h-8 w-8 rounded-full ${
-                n.publicada ? 'bg-emerald-500/10' : 'bg-slate-500/10'
+                estaPublicada(n) ? 'bg-emerald-500/10' : 'bg-slate-500/10'
               }`}>
                 <Icono
                   nombre="newspaper"
                   strokeWidth={2}
-                  className={`h-4 w-4 ${n.publicada ? 'text-emerald-400' : 'text-slate-400'}`}
+                  className={`h-4 w-4 ${estaPublicada(n) ? 'text-emerald-400' : 'text-slate-400'}`}
                 />
               </div>
               <div className="min-w-0 flex-1">
