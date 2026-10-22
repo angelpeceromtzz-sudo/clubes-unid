@@ -27,6 +27,13 @@ export const ELEMENTOS_NAV_RECTORIA = [
   { key: 'actividad', label: 'Historial de Acciones', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
 ];
 
+// Panel del responsable del mural (rol 6, PBI-16): sólo el periódico mural.
+// No hay más secciones porque su alcance es redactar y enviar a revisión;
+// aprobar y publicar es de rectoría.
+export const ELEMENTOS_NAV_MURAL = [
+  { key: 'noticias', label: 'Periódico Mural', icon: 'M12 7.5H13.5M12 10.5H13.5M6 13.5H13.5M6 16.5H13.5M16.5 7.5H19.875C20.4963 7.5 21 8.00368 21 8.625V18C21 19.2426 19.9926 20.25 18.75 20.25M16.5 7.5V18C16.5 19.2426 17.5074 20.25 18.75 20.25M16.5 7.5V4.875C16.5 4.25368 15.9963 3.75 15.375 3.75H4.125C3.50368 3.75 3 4.25368 3 4.875V18C3 19.2426 4.00736 20.25 5.25 20.25H18.75M6 7.5H9V10.5H6V7.5Z' },
+];
+
 export const ELEMENTOS_NAV_ALUMNO = [
   { key: 'mi-club', label: 'Mi Club', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
   { key: 'horarios', label: 'Horarios', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },

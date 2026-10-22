@@ -119,6 +119,11 @@ export function ProveedorAutenticacion({ children: hijos }) {
   const esAdmin = usuario?.id_rol === 3;
   const esPresidente = usuario?.id_rol === 2;
   const esRectoria = usuario?.id_rol === 4;
+  // PBI-16: rol nuevo dedicado al periódico mural. Redacta y gestiona
+  // noticias, pero no aprueba ni publica: eso es exclusivo de rectoría.
+  const esResponsableMural = usuario?.id_rol === 6;
+  const puedeGestionarNoticias = esAdmin || esRectoria || esResponsableMural;
+  const puedeAprobarNoticias = esRectoria;
 
   return (
     <ContextoAutenticacion.Provider
@@ -126,6 +131,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
         usuario, authReady,
         iniciarSesion, iniciarSesionMicrosoft, cerrarSesion,
         estaAutenticado, esAdmin, esPresidente, esRectoria,
+        esResponsableMural, puedeGestionarNoticias, puedeAprobarNoticias,
         tieneInscripcionActiva, clubesPostulados,
         actualizarClubesPostulados: setClubesPostulados,
         refrescarInscripcionActiva,

@@ -2,8 +2,8 @@
 import { Navigate } from 'react-router-dom';
 import { useAutenticacion } from '../../contexts/AuthContext';
 
-export function RutaProtegida({ children, requiereAdmin = false, requierePresidente = false, requiereRectoria = false }) {
-  const { estaAutenticado, esAdmin, esPresidente, esRectoria } = useAutenticacion();
+export function RutaProtegida({ children, requiereAdmin = false, requierePresidente = false, requiereRectoria = false, requiereResponsableMural = false }) {
+  const { estaAutenticado, esAdmin, esPresidente, esRectoria, esResponsableMural } = useAutenticacion();
 
   if (!estaAutenticado) {
     return <Navigate to="/" replace />;
@@ -18,6 +18,10 @@ export function RutaProtegida({ children, requiereAdmin = false, requierePreside
   }
 
   if (requiereRectoria && !esRectoria) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requiereResponsableMural && !esResponsableMural) {
     return <Navigate to="/" replace />;
   }
 

@@ -10,7 +10,9 @@ export const noticiaService = {
 
   marcarInteresEvento: (id) => request(`/noticias/eventos/${id}/interes`, { method: 'POST' }),
 
-  getNoticiasAdmin: () => request('/noticias/admin'),
+  // `estado` filtra por el estado del flujo de aprobación (PBI-17).
+  getNoticiasAdmin: (estado) =>
+    request(estado && estado !== 'todos' ? `/noticias/admin?status=${encodeURIComponent(estado)}` : '/noticias/admin'),
 
   createNoticia: (data) =>
     request('/noticias', {
@@ -26,4 +28,25 @@ export const noticiaService = {
 
   deleteNoticia: (id) =>
     request(`/noticias/${id}`, { method: 'DELETE' }),
+
+  /* --- Flujo de aprobación previa (PBI-17) --- */
+
+  // draft|rejected → pending (admin o responsable del mural)
+  enviarRevisionNoticia: (id) =>
+    request(`/noticias/${id}/enviar-revision`, { method: 'POST' }),
+
+  // pending → published (sólo rectoría)
+  aprobarNoticia: (id) =>
+    request(`/noticias/${id}/aprobar`, { method: 'POST' }),
+
+  // pending → rejected, con motivo opcional (sólo rectoría)
+  rechazarNoticia: (id, motivo) =>
+    request(`/noticias/${id}/rechazar`, {
+      method: 'POST',
+      body: JSON.stringify({ motivo }),
+    }),
+
+  // published → draft: la saca del muro sin eliminarla (sólo rectoría)
+  ocultarNoticia: (id) =>
+    request(`/noticias/${id}/ocultar`, { method: 'POST' }),
 };
