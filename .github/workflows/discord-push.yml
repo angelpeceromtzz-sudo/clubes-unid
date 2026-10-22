@@ -1,0 +1,112 @@
+
+name: Discord - Notificar pushes
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  notificar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Enviar aviso a Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GH_ANGEL: ${{ vars.GH_ANGEL }}
+          GH_JORGE: ${{ vars.GH_JORGE }}
+          GH_GUSTAVO: ${{ vars.GH_GUSTAVO }}
+          DISCORD_ANGEL: ${{ vars.DISCORD_ANGEL }}
+          DISCORD_JORGE: ${{ vars.DISCORD_JORGE }}
+          DISCORD_GUSTAVO: ${{ vars.DISCORD_GUSTAVO }}
+          EVENT_FILE: ${{ github.event_path }}
+          REPOSITORY: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          REF_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          webhook = os.environ["WEBHOOK"]
+          if not webhook:
+              raise SystemExit("Falta DISCORD_WEBHOOK_URL")
+
+          with open(os.environ["EVENT_FILE"], encoding="utf-8") as f:
+              event = json.load(f)
+
+          members = {
+              os.environ["GH_ANGEL"].lower():
+                  os.environ["DISCORD_ANGEL"],
+              os.environ["GH_JORGE"].lower():
+                  os.environ["DISCORD_JORGE"],
+              os.environ["GH_GUSTAVO"].lower():
+                  os.environ["DISCORD_GUSTAVO"],
+          }
+
+          actor = os.environ["ACTOR"].lower()
+
+          # Evitar mencionar a todos si el autor
+          # no es uno de los integrantes registrados.
+          if actor not in members:
+              print("Autor no registrado; sin menciones.")
+              mentions = []
+          else:
+              mentions = [
+                  uid for username, uid in members.items()
+                  if username != actor and uid.isdigit()
+              ]
+
+          commits = event.get("commits", [])
+          lines = []
+          for commit in commits[:8]:
+              sha = commit["id"][:7]
+              message = commit["message"].splitlines()[0]
+              message = message[:120]
+              lines.append(f"`{sha}` {message}")
+
+          if len(commits) > 8:
+              lines.append(f"... y {len(commits)-8} más")
+
+          # Evitar menciones inesperadas desde
+          # los mensajes de commit.
+          def escape(text):
+              return text.replace("@", "@\u200b")
+
+          content = (
+              f"🚀 **Nuevo push en Clubs UNID**\n"
+              f"**Autor:** {escape(os.environ['ACTOR'])}\n"
+              f"**Rama:** `{escape(os.environ['REF_NAME'])}`\n"
+              f"**Repositorio:** {escape(os.environ['REPOSITORY'])}\n\n"
+              + "\n".join(escape(x) for x in lines)
+              + f"\n\n[Ver cambios]({event.get('compare', '')})"
+          )
+
+          if mentions:
+              content += "\n\n📢 " + " ".join(
+                  f"<@{uid}>" for uid in mentions
+              )
+
+          payload = {
+              "username": "Clubs UNID Bot",
+              "content": content[:2000],
+              "allowed_mentions": {
+                  "parse": [],
+                  "users": mentions
+              }
+          }
+
+          request = urllib.request.Request(
+              webhook,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={"Content-Type": "application/json"},
+              method="POST"
+          )
+
+          with urllib.request.urlopen(request, timeout=15) as response:
+              print("Discord respondió:", response.status)
+          PY
