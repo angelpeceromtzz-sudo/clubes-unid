@@ -2,6 +2,7 @@ name: Discord - Notificar pushes
 
 on:
   push:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -9,8 +10,9 @@ permissions:
 jobs:
   notificar:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Enviar aviso a Discord
+      - name: Enviar aviso profesional a Discord
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
           GH_ANGEL: ${{ secrets.GH_ANGEL }}
@@ -38,75 +40,102 @@ jobs:
                   or parsed.hostname not in ('discord.com', 'discordapp.com')
                   or not re.fullmatch(r'/api(?:/v\d+)?/webhooks/\d+/[^/]+', parsed.path)
                   or parsed.query or parsed.fragment):
-              raise SystemExit('DISCORD_WEBHOOK_URL no tiene el formato esperado (sin /github).')
+              raise SystemExit(
+                  'DISCORD_WEBHOOK_URL debe tener el formato '
+                  'https://discord.com/api/webhooks/<id>/<token>.'
+              )
 
-          with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as f:
-              event = json.load(f)
+          with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as file:
+              event = json.load(file)
 
           members = {}
           for name in ('ANGEL', 'JORGE', 'GUSTAVO'):
               gh = os.environ.get('GH_' + name, '').strip().lower()
               discord_id = os.environ.get('DISCORD_' + name, '').strip()
-              if not gh or not discord_id.isdigit():
-                  raise SystemExit(f'Configura correctamente GH_{name} y DISCORD_{name} en Secrets.')
+              if not gh or not re.fullmatch(r'\d{15,22}', discord_id):
+                  raise SystemExit(f'Revisa GH_{name} y DISCORD_{name} en Repository secrets.')
               if gh in members:
-                  raise SystemExit('Hay nombres de GitHub duplicados en los Secrets.')
+                  raise SystemExit('Hay cuentas de GitHub duplicadas en los Secrets.')
               members[gh] = discord_id
 
           actor = os.environ['ACTOR'].strip().lower()
           if actor not in members:
-              print('Autor no registrado:', actor, '; sin menciones.')
+              print('Push de cuenta no registrada: se enviará sin menciones.')
               mentions = []
           else:
               mentions = list(dict.fromkeys(
-                  uid for username, uid in members.items() if username != actor
+                  discord_id for username, discord_id in members.items()
+                  if username != actor
               ))
 
-          def safe(value):
-              return str(value).replace('@', '@\u200b').replace('`', "'")
+          def clean(value, limit=180):
+              text = str(value or '').replace('@', '@\u200b')
+              text = text.replace('`', "'").replace('\r', ' ').replace('\n', ' ')
+              return text[:limit]
 
-          commits = event.get('commits') or []
-          lines = []
-          for commit in commits[:8]:
-              sha = safe(commit.get('id', '')[:7])
-              msg = safe((commit.get('message') or '(sin mensaje)').splitlines()[0][:120])
-              lines.append(f'`{sha}` {msg}')
-          if len(commits) > 8:
-              lines.append(f'... y {len(commits) - 8} más')
-          if not lines:
-              lines.append('(Push sin commits listados)')
+          repository = os.environ['REPOSITORY']
+          branch = os.environ['REF_NAME']
+          branch_lower = branch.lower()
+          if branch_lower == 'main':
+              color, category = 0x2EA043, 'Producción'
+          elif branch_lower in ('develop', 'development'):
+              color, category = 0x3B82F6, 'Desarrollo'
+          elif branch_lower.startswith(('feat/', 'feature/')):
+              color, category = 0xA855F7, 'Funcionalidad'
+          elif branch_lower.startswith(('fix/', 'bugfix/', 'hotfix/')):
+              color, category = 0xF59E0B, 'Corrección'
+          else:
+              color, category = 0x64748B, 'Otra rama'
 
           compare = event.get('compare') or ''
           if not compare.startswith('https://github.com/'):
-              compare = 'https://github.com/' + os.environ['REPOSITORY']
+              compare = 'https://github.com/' + repository
 
-          prefix = (
-              '🚀 **Nuevo push en Clubs UNID**\n'
-              f"**Autor:** {safe(os.environ['ACTOR'])}\n"
-              f"**Rama:** `{safe(os.environ['REF_NAME'])}`\n"
-              f"**Repositorio:** {safe(os.environ['REPOSITORY'])}\n\n"
-          )
-          suffix = f'\n\n[Ver cambios]({compare})'
-          mentions_text = ('\n\n📢 ' + ' '.join(f'<@{uid}>' for uid in mentions)) if mentions else ''
-          content = prefix
-          for line in lines:
-              candidate = content + line + '\n' + suffix + mentions_text
-              if len(candidate) > 1900:
-                  content += '... (lista abreviada)\n'
-                  break
-              content += line + '\n'
-          content = (content.rstrip() + suffix + mentions_text)
+          commits = event.get('commits') or []
+          commit_lines = []
+          for commit in commits[-8:]:
+              full_sha = str(commit.get('id') or '')
+              sha = full_sha[:7]
+              message = clean((commit.get('message') or '(sin mensaje)').splitlines()[0], 110)
+              if re.fullmatch(r'[a-fA-F0-9]{7,64}', full_sha):
+                  url = f'https://github.com/{repository}/commit/{full_sha}'
+                  commit_lines.append(f'[`{sha}`]({url}) {message}')
+              else:
+                  commit_lines.append(f'`{sha}` {message}')
+          if len(commits) > 8:
+              commit_lines.append(f'... y {len(commits) - 8} más')
+          if not commit_lines:
+              commit_lines.append('(Push sin commits listados)')
+
+          description = '\n'.join(commit_lines)
+          if len(description) > 4000:
+              description = description[:4000].rsplit('\n', 1)[0] + '\n... (lista abreviada)'
+
+          embed = {
+              'title': f'🚀 {category} · {clean(branch, 80)}',
+              'description': description,
+              'color': color,
+              'url': compare,
+              'author': {'name': 'Clubs UNID', 'url': f'https://github.com/{repository}'},
+              'footer': {'text': f'Autor: {clean(os.environ["ACTOR"], 64)}'},
+          }
+          timestamp = (event.get('head_commit') or {}).get('timestamp')
+          if timestamp:
+              embed['timestamp'] = timestamp
 
           payload = {
               'username': 'Clubs UNID Bot',
-              'content': content,
-              'allowed_mentions': {'parse': [], 'users': mentions}
+              'embeds': [embed],
+              'allowed_mentions': {'parse': [], 'users': mentions},
           }
+          if mentions:
+              payload['content'] = '📢 ' + ' '.join(f'<@{uid}>' for uid in mentions)
+
           request = urllib.request.Request(
               webhook,
               data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
               headers={
-                  'Content-Type': 'application/json',
+                  'Content-Type': 'application/json; charset=utf-8',
                   'User-Agent': 'ClubsUNID-GitHubActions/1.0'
               },
               method='POST'
