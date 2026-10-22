@@ -3,6 +3,7 @@
    de modo que cada noticia mantiene su propio estado "no leída" de forma independiente. */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
+import { filtrarPublicadas } from '../constants/noticias';
 
 const ContextoNoticias = createContext(null);
 
@@ -56,9 +57,16 @@ export function ProveedorNoticias({ children: hijos }) {
         api.getNoticias(),
         api.getEventos(),
       ]);
-      const lista = respuestaNoticias.status === 'fulfilled' && Array.isArray(respuestaNoticias.value) ? respuestaNoticias.value : [];
+      // El backend ya sólo devuelve `published`, pero el filtro se repite aquí
+      // (red de seguridad y semántica del contexto): fuera de los paneles no
+      // puede colarse un borrador, un pendiente ni uno rechazado.
+      const lista = filtrarPublicadas(
+        respuestaNoticias.status === 'fulfilled' && Array.isArray(respuestaNoticias.value) ? respuestaNoticias.value : []
+      );
       setNoticias(lista);
-      setEventos(respuestaEventos.status === 'fulfilled' && Array.isArray(respuestaEventos.value) ? respuestaEventos.value : []);
+      setEventos(filtrarPublicadas(
+        respuestaEventos.status === 'fulfilled' && Array.isArray(respuestaEventos.value) ? respuestaEventos.value : []
+      ));
       // Migración del esquema antiguo (umbral "visto hasta") al conjunto de ids.
       const legacy = leerVistoHastaLegacy();
       if (legacy > 0) {

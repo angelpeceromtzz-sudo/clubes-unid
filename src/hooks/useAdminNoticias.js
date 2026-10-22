@@ -1,11 +1,20 @@
-/* Hook de gestión de noticias para los paneles de admin y rectoría. */
-import { useState, useEffect, useCallback } from 'react';
+/* Hook de gestión de noticias para los paneles de admin, rectoría y el
+   responsable del mural.
+
+   PBI-17: el estado editorial (`status`) reemplazó al viejo booleano
+   `publicada` como control de la UI. De aquí salen las tres vistas del flujo:
+   el redactor envía a revisión, rectoría aprueba o rechaza, y el listado se
+   filtra por estado. Las reglas de qué botón toca viven en
+   `constants/noticias.js`; el backend las vuelve a validar. */
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
 import { useConfirmacionPendiente } from './useConfirmacionPendiente';
 import { filtrarPorTexto } from '../utils/filtros';
 import { useNoticias } from '../contexts/NoticiasContext';
+import { useAutenticacion } from '../contexts/AuthContext';
 import { fechaHoyCampus } from '../utils/fechas';
 import { normalizarCategoriaEvento } from '../constants/categoriasEvento';
+import { esAprobadorNoticias, esRolResponsableMural } from '../constants/noticias';
 
 const FORMULARIO_VACIO = {
   titulo: '',
@@ -13,7 +22,9 @@ const FORMULARIO_VACIO = {
   contenido: '',
   url_imagen: '',
   destacada: false,
-  publicada: true,
+  // Sólo tiene efecto para rectoría al CREAR: "publicar directamente". Para
+  // admin y responsable la noticia nace siempre como borrador.
+  publicada: false,
   categoria: 'informativo',
   fecha_evento: '',
   hora_evento: '',
@@ -21,16 +32,25 @@ const FORMULARIO_VACIO = {
   categoria_evento: 'social',
 };
 
+const MOTIVO_MAX = 500;
+
 export function useAdminNoticias(setFeedback, setErrorFeedback) {
   const { refetch: refetchPublicaciones } = useNoticias();
+  const { usuario } = useAutenticacion();
+  const idRol = usuario?.id_rol;
+  const esAprobador = esAprobadorNoticias(idRol);
+
   const [noticias, setNoticias] = useState([]);
   const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('todos');
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState(null);
   const [form, setForm] = useState(FORMULARIO_VACIO);
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [cargando, setCargando] = useState(true);
+  // Modal de rechazo (sólo rectoría): motivo opcional.
+  const [rechazo, setRechazo] = useState(null);
 
   const { pendiente: pendienteConfirmacion, solicitar: solicitarConfirmacion, confirmar: confirmarPendienteBase, cancelar: cancelarPendiente } = useConfirmacionPendiente();
 
@@ -41,7 +61,23 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       .finally(() => setCargando(false));
   }, []);
 
-  const noticiasFiltradas = filtrarPorTexto(noticias, busqueda, ['titulo', 'subtitulo', 'contenido']);
+  const porEstado = useCallback(
+    (estado) => (estado === 'todos' ? noticias : noticias.filter((n) => n.status === estado)),
+    [noticias]
+  );
+
+  const noticiasFiltradas = useMemo(
+    () => filtrarPorTexto(porEstado(filtroEstado), busqueda, ['titulo', 'subtitulo', 'contenido']),
+    [porEstado, filtroEstado, busqueda]
+  );
+
+  const contadores = useMemo(() => {
+    const base = { todos: noticias.length, draft: 0, pending: 0, published: 0, rejected: 0 };
+    noticias.forEach((n) => {
+      if (base[n.status] !== undefined && n.status !== 'todos') base[n.status] += 1;
+    });
+    return base;
+  }, [noticias]);
 
   const refetch = useCallback(async () => {
     try {
@@ -54,7 +90,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
   }, [refetchPublicaciones]);
 
   const abrirModalCrear = useCallback((categoria = 'informativo') => {
-    setForm({ ...FORMULARIO_VACIO, categoria });
+    setForm({ ...FORMULARIO_VACIO, categoria, publicada: false });
     setEditando(null);
     setErrorModal('');
     setShowModal(true);
@@ -67,7 +103,9 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       contenido: noticia.contenido || '',
       url_imagen: noticia.url_imagen || '',
       destacada: noticia.destacada === true,
-      publicada: noticia.publicada === true,
+      // El estado de una noticia ya existente no se toca desde el formulario:
+      // lo mueven los botones de revisión. Sólo sirve para reflejarlo.
+      publicada: noticia.status === 'published',
       categoria: noticia.categoria || 'informativo',
       fecha_evento: noticia.fecha_evento ? String(noticia.fecha_evento).slice(0, 10) : '',
       hora_evento: noticia.hora_evento ? String(noticia.hora_evento).slice(0, 5) : '',
@@ -81,18 +119,70 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
 
   const cerrarModal = useCallback(() => setShowModal(false), []);
 
-  const togglePublicada = useCallback(async (noticia) => {
+  /* ---------- Transiciones del flujo (PBI-17) ---------- */
+
+  const ejecutarTransicion = useCallback(async (fn, noticia, mensajeExito) => {
     try {
-      await api.updateNoticia(noticia.id_noticia, { publicada: !noticia.publicada });
+      await fn(noticia);
+      setFeedback(mensajeExito);
       await refetch();
     } catch (err) {
       setErrorFeedback(err.message);
     }
-  }, [refetch, setErrorFeedback]);
+  }, [refetch, setFeedback, setErrorFeedback]);
 
-  const eliminar = useCallback((noticia) => {
-    solicitarConfirmacion(noticia);
-  }, [solicitarConfirmacion]);
+  const enviarRevision = useCallback((noticia) =>
+    ejecutarTransicion(
+      (n) => api.enviarRevisionNoticia(n.id_noticia),
+      noticia,
+      'Noticia enviada a revisión. Rectoría la validará antes de publicarla.'
+    ), [ejecutarTransicion]);
+
+  const aprobar = useCallback((noticia) =>
+    ejecutarTransicion(
+      (n) => api.aprobarNoticia(n.id_noticia),
+      noticia,
+      'Noticia aprobada y publicada en el periódico mural.'
+    ), [ejecutarTransicion]);
+
+  const ocultar = useCallback((noticia) =>
+    ejecutarTransicion(
+      (n) => api.ocultarNoticia(n.id_noticia),
+      noticia,
+      'Noticia ocultada del periódico mural. Sigue guardada como borrador.'
+    ), [ejecutarTransicion]);
+
+  const abrirRechazo = useCallback((noticia) => {
+    setRechazo({ noticia, motivo: '', error: '', enviando: false });
+  }, []);
+
+  const cerrarRechazo = useCallback(() => setRechazo(null), []);
+
+  const setMotivoRechazo = useCallback((motivo) => {
+    setRechazo((prev) => (prev ? { ...prev, motivo, error: '' } : prev));
+  }, []);
+
+  const confirmarRechazo = useCallback(async () => {
+    if (!rechazo) return;
+    const motivo = rechazo.motivo.trim();
+    if (motivo.length > MOTIVO_MAX) {
+      setRechazo((prev) => ({ ...prev, error: `El motivo no puede exceder ${MOTIVO_MAX} caracteres` }));
+      return;
+    }
+    setRechazo((prev) => ({ ...prev, enviando: true, error: '' }));
+    try {
+      await api.rechazarNoticia(rechazo.noticia.id_noticia, motivo);
+      setRechazo(null);
+      setFeedback(motivo
+        ? 'Noticia rechazada. El autor verá el motivo y podrá corregirla.'
+        : 'Noticia rechazada.');
+      await refetch();
+    } catch (err) {
+      setRechazo((prev) => (prev ? { ...prev, enviando: false, error: err.message } : prev));
+    }
+  }, [rechazo, refetch, setFeedback]);
+
+  /* ---------- Alta y edición ---------- */
 
   const subirImagen = useCallback(async (file) => {
     try {
@@ -131,19 +221,25 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
         contenido: form.contenido,
         url_imagen: form.url_imagen || null,
         destacada: form.destacada,
-        publicada: form.publicada,
         categoria: form.categoria,
         fecha_evento: form.categoria === 'evento' ? form.fecha_evento : null,
         hora_evento: form.categoria === 'evento' ? form.hora_evento || null : null,
         lugar_evento: form.categoria === 'evento' ? form.lugar_evento : null,
         categoria_evento: form.categoria === 'evento' ? form.categoria_evento : 'social',
       };
+
       if (editando) {
         await api.updateNoticia(editando.id_noticia, payload);
         setFeedback(form.categoria === 'evento' ? 'Evento actualizado correctamente' : 'Noticia actualizada correctamente');
       } else {
+        // Sólo rectoría puede nacer publicada; para el resto el backend lo
+        // ignora y guarda borrador, pero mandamos el estado explícito para que
+        // el mensaje de confirmación diga la verdad.
+        payload.status = esAprobador && form.publicada ? 'published' : 'draft';
         await api.createNoticia(payload);
-        setFeedback(form.categoria === 'evento' ? 'Evento guardado correctamente' : 'Noticia publicada correctamente');
+        setFeedback(payload.status === 'published'
+          ? (form.categoria === 'evento' ? 'Evento publicado correctamente' : 'Noticia publicada correctamente')
+          : (form.categoria === 'evento' ? 'Evento guardado como borrador' : 'Borrador guardado. Envíalo a revisión cuando esté listo.'));
       }
       await refetch();
       setShowModal(false);
@@ -152,12 +248,16 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
     } finally {
       setEnviando(false);
     }
-  }, [form, editando, refetch, setFeedback]);
+  }, [form, editando, esAprobador, refetch, setFeedback]);
 
   const handleFormChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   }, []);
+
+  const eliminar = useCallback((noticia) => {
+    solicitarConfirmacion(noticia);
+  }, [solicitarConfirmacion]);
 
   const confirmarPendiente = useCallback(async () => {
     try {
@@ -174,6 +274,9 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
   return {
     noticias,
     noticiasFiltradas,
+    contadores,
+    filtroEstado,
+    setFiltroEstado,
     cargando,
     busqueda,
     setBusqueda,
@@ -182,10 +285,20 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
     form,
     enviando,
     errorModal,
+    esAprobador,
+    esResponsable: esRolResponsableMural(idRol),
+    idRol,
     abrirModalCrear,
     abrirModalEditar,
     cerrarModal,
-    togglePublicada,
+    enviarRevision,
+    aprobar,
+    ocultar,
+    rechazo,
+    abrirRechazo,
+    cerrarRechazo,
+    setMotivoRechazo,
+    confirmarRechazo,
     eliminar,
     guardar,
     handleFormChange,

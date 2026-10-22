@@ -1,10 +1,11 @@
-import { Badge } from '../../ui/Badge';
 import { Icono } from '../../ui/Icono';
 import { obtenerUrlImagen } from '../../../utils/imagen';
 import { fechaCorta, fechaEventoCorta } from '../../../utils/formato';
 import { nombreCategoriaEvento } from '../../../constants/categoriasEvento';
+import { BadgeEstadoNoticia } from './BadgeEstadoNoticia';
+import { AccionesNoticia } from './AccionesNoticia';
 
-export function TablaNoticiasDesktop({ noticias, modoOscuro, tableBg, thCls, tdCls, tdTitle, onToggle, onEditar, onEliminar }) {
+export function TablaNoticiasDesktop({ noticias, modoOscuro, tableBg, thCls, tdCls, tdTitle, idRol, onEnviarRevision, onAprobar, onRechazar, onOcultar, onEditar, onEliminar }) {
   return (
     <div className={`${tableBg} rounded-2xl overflow-hidden hidden md:block`}>
       <div className="overflow-x-auto">
@@ -38,6 +39,16 @@ export function TablaNoticiasDesktop({ noticias, modoOscuro, tableBg, thCls, tdC
                   <p className={`font-medium ${tdTitle}`}>{n.titulo}</p>
                   {n.categoria === 'evento' && <p className={`mt-1 text-xs ${tdCls}`}>{nombreCategoriaEvento(n.categoria_evento)} · {n.total_interesados ?? 0} interesados</p>}
                   {n.categoria === 'evento' && n.lugar_evento && <p className={`mt-1 text-xs ${tdCls}`}>📍 {n.lugar_evento}</p>}
+                  {/* Motivo del rechazo (PBI-17): para que el autor sepa qué corregir. */}
+                  {n.status === 'rejected' && n.motivo_rechazo && (
+                    <p className="mt-1.5 text-xs text-red-400 flex items-start gap-1.5" title="Motivo del rechazo">
+                      <Icono nombre="alert-triangle" strokeWidth={2} className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span>{n.motivo_rechazo}</span>
+                    </p>
+                  )}
+                  {n.status === 'pending' && (
+                    <p className={`mt-1.5 text-xs ${tdCls}`}>En revisión de rectoría</p>
+                  )}
                   {n.destacada && (
                     <span className="inline-block mt-1 text-[10px] uppercase font-bold text-amber-400">Destacada</span>
                   )}
@@ -47,34 +58,19 @@ export function TablaNoticiasDesktop({ noticias, modoOscuro, tableBg, thCls, tdC
                   {n.categoria === 'evento' && n.hora_evento && <span className="block text-xs">{String(n.hora_evento).slice(0, 5)}</span>}
                 </td>
                 <td className="px-5 py-4">
-                  <Badge texto={n.publicada ? 'Publicada' : 'Borrador'} color={n.publicada ? 'emerald' : 'slate'} size="md" />
+                  <BadgeEstadoNoticia estado={n.status} motivo={n.motivo_rechazo} size="md" />
                 </td>
                 <td className="px-5 py-4">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => onToggle(n)}
-                      className={`text-xs font-bold px-2 py-1.5 rounded-lg border cursor-pointer active:scale-95 transition-colors ${
-                        n.publicada
-                          ? 'text-amber-400 border-amber-400/30 bg-amber-400/10 hover:bg-amber-400/20'
-                          : 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10 hover:bg-emerald-400/20'
-                      }`}
-                      title={n.publicada ? 'Despublicar' : 'Publicar'}
-                    >
-                      {n.publicada ? 'Ocultar' : 'Publicar'}
-                    </button>
-                    <button onClick={() => onEditar(n)}
-                      className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1"
-                      title="Editar"
-                    >
-                      <Icono nombre="edit" strokeWidth={2} className="h-4 w-4" />
-                      Editar
-                    </button>
-                    <button onClick={() => onEliminar(n)}
-                      className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1.5 rounded-lg border border-red-400/30 bg-red-400/10 cursor-pointer active:scale-95"
-                      title="Eliminar"
-                    >
-                      <Icono nombre="trash" strokeWidth={2} className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <AccionesNoticia
+                    noticia={n}
+                    idRol={idRol}
+                    onEnviarRevision={onEnviarRevision}
+                    onAprobar={onAprobar}
+                    onRechazar={onRechazar}
+                    onOcultar={onOcultar}
+                    onEditar={onEditar}
+                    onEliminar={onEliminar}
+                  />
                 </td>
               </tr>
             ))}

@@ -12,10 +12,14 @@ const CATEGORIAS_NOTICIA = [
   { value: 'informativo', label: 'Informativo' },
 ];
 
-export function ModalFormularioNoticia({ show, editando, form, enviando, errorModal, modoOscuro, tema, labelCls, onClose, onGuardar, onFormChange, onSubirImagen, tipoSeccion = 'noticia' }) {
+export function ModalFormularioNoticia({ show, editando, form, enviando, errorModal, modoOscuro, tema, labelCls, esAprobador = false, onClose, onGuardar, onFormChange, onSubirImagen, tipoSeccion = 'noticia' }) {
   const hoy = fechaHoyCampus();
   const fechaAnterior = editando?.fecha_evento ? String(editando.fecha_evento).slice(0, 10) : '';
   const fechaMinima = fechaAnterior && fechaAnterior < hoy ? fechaAnterior : hoy;
+  // PBI-17: publicar directo es exclusivo de rectoría, y sólo al crear; una
+  // noticia ya existente cambia de estado desde los botones de revisión.
+  const puedePublicarDirecto = esAprobador && !editando;
+  const publicaDirecta = puedePublicarDirecto && form.publicada;
 
   return (
     <ModalBase show={show} onClose={onClose} maxWidth="max-w-lg">
@@ -98,15 +102,23 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
         </div>}
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <label className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-            <input type="checkbox" name="publicada" checked={form.publicada} onChange={onFormChange} className="w-4 h-4 accent-amber-400 cursor-pointer" />
-            Publicada
-          </label>
+          {puedePublicarDirecto && (
+            <label className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+              <input type="checkbox" name="publicada" checked={form.publicada} onChange={onFormChange} className="w-4 h-4 accent-amber-400 cursor-pointer" />
+              Publicar directo
+            </label>
+          )}
           <label className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider cursor-pointer ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
             <input type="checkbox" name="destacada" checked={form.destacada} onChange={onFormChange} className="w-4 h-4 accent-amber-400 cursor-pointer" />
             Destacada
           </label>
         </div>
+
+        {!publicaDirecta && !editando && (
+          <p className={`text-[11px] ${tema.subtitle}`}>
+            Se guardará como borrador. Para que aparezca en el periódico mural, envíala a revisión y rectoría la aprobará.
+          </p>
+        )}
 
         {errorModal && <p className="text-red-400 text-xs font-medium">{errorModal}</p>}
 
@@ -116,10 +128,14 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
             {enviando ? (
               <>
                 <Spinner size="sm" color="border-[#0e162c]" className="!py-0" />
-                {editando ? 'Guardando...' : 'Publicando...'}
+                Guardando...
               </>
             ) : (
-              editando ? 'Guardar Cambios' : (tipoSeccion === 'evento' ? 'Guardar Evento' : 'Publicar Noticia')
+              editando
+                ? 'Guardar Cambios'
+                : publicaDirecta
+                  ? (tipoSeccion === 'evento' ? 'Publicar Evento' : 'Publicar')
+                  : (tipoSeccion === 'evento' ? 'Guardar Evento' : 'Guardar Borrador')
             )}
           </BotonAccion>
         </div>

@@ -75,26 +75,7 @@ export function PanelAdmin() {
           {d.vistaActiva === 'encuestas' && <SeccionEncuestas d={d} />}
 
           {d.vistaActiva === 'noticias' && (
-            <SeccionNoticias
-              noticias={d.noticias.noticias}
-              noticiasFiltradas={d.noticias.noticiasFiltradas}
-              cargando={d.noticias.cargando}
-              busqueda={d.noticias.busqueda}
-              setBusqueda={d.noticias.setBusqueda}
-              showModal={d.noticias.showModal}
-              editando={d.noticias.editando}
-              form={d.noticias.form}
-              enviando={d.noticias.enviando}
-              errorModal={d.noticias.errorModal}
-              abrirModalCrear={d.noticias.abrirModalCrear}
-              abrirModalEditar={d.noticias.abrirModalEditar}
-              cerrarModal={d.noticias.cerrarModal}
-              togglePublicada={d.noticias.togglePublicada}
-              eliminar={d.noticias.eliminar}
-              guardar={d.noticias.guardar}
-              handleFormChange={d.noticias.handleFormChange}
-              subirImagen={d.noticias.subirImagen}
-            />
+            <SeccionNoticias gestion={d.noticias} />
           )}
 
           {d.vistaActiva === 'historial' && (
