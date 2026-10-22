@@ -49,12 +49,8 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
     }
 
     // El correo se normaliza antes de comparar: en la base está en minúsculas
-    // y el alumno lo escribe como le da la gana. La misma comprobación de
-    // dominio se hace sobre el valor ya limpio.
+    // y el alumno lo escribe como le da la gana.
     const correoLimpio = correo.toLowerCase().trim();
-    if (!correoLimpio.endsWith('@red.unid.mx')) {
-      return res.status(403).json({ error: 'Solo se permiten correos institucionales con dominio @red.unid.mx' });
-    }
 
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
@@ -133,13 +129,6 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
 
     if (!correo) {
       return res.status(400).json({ error: 'No se pudo obtener el correo desde Microsoft' });
-    }
-
-    // 🔒 Validación estricta de dominio institucional UNID
-    if (!correo.endsWith('@red.unid.mx')) {
-      return res.status(403).json({
-        error: 'Acceso denegado: Únicamente se permiten correos institucionales con dominio @red.unid.mx',
-      });
     }
 
     // El ID institucional es la parte local del UPN (ej: "00906641" de
@@ -292,16 +281,14 @@ router.post('/register', limitadorRegistro, authenticate, requireRole(3), async 
       return res.status(400).json({ error: 'nombre_completo, correo_institucional y contrasena son obligatorios' });
     }
 
+    // El correo se normaliza para no duplicar cuentas por mayúsculas/minúsculas.
     const correoLimpio = correo_institucional.toLowerCase().trim();
-    if (!correoLimpio.endsWith('@red.unid.mx')) {
-      return res.status(400).json({ error: 'El correo debe ser institucional con dominio @red.unid.mx' });
-    }
 
     if (id_rol != null && ![1, 2, 4].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
 
-    const existe = await pool.query('SELECT id_usuario FROM usuarios WHERE correo_institucional = $1', [correo_institucional]);
+    const existe = await pool.query('SELECT id_usuario FROM usuarios WHERE correo_institucional = $1', [correoLimpio]);
     if (existe.rows.length > 0) {
       return res.status(409).json({ error: 'El correo ya está registrado' });
     }
@@ -314,7 +301,7 @@ router.post('/register', limitadorRegistro, authenticate, requireRole(3), async 
       `INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol)
        VALUES ($1, $2, $3, $4)
        RETURNING id_usuario, nombre_completo, correo_institucional, id_rol`,
-      [nombre_completo.trim(), correo_institucional.trim(), password_hash, rolFinal],
+      [nombre_completo.trim(), correoLimpio, password_hash, rolFinal],
     );
 
     res.status(201).json(result.rows[0]);

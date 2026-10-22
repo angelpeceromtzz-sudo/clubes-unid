@@ -120,12 +120,3 @@ test('los limitadores están montados en la ruta real de login', async () => {
   assert.equal(segunda.status, 401, 'el segundo intento responde 401');
   assert.equal(tercera.status, 429, 'el tercero debe chocar con el límite por cuenta');
 });
-
-test('el dominio institucional se exige en el login local', async () => {
-  usuario = null;
-
-  const r = await pedirLogin('alguien@ejemplo.com');
-
-  assert.equal(r.status, 403);
-  assert.match(r.cuerpo.error, /red\.unid\.mx/);
-});
