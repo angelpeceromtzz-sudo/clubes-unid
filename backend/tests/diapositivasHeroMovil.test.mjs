@@ -42,7 +42,7 @@ const FILA_CON_MOVIL = {
   fecha_actualizacion: new Date(),
 };
 
-pool.query = async (sql, params = []) => {
+const responder = async (sql, params = []) => {
   const texto = String(sql).trim();
   consultas.push({ sql: texto, params });
   // Revalidación de authenticate (H2, fix/seguridad-fase1): el authenticate
@@ -56,6 +56,10 @@ pool.query = async (sql, params = []) => {
   const verbo = texto.split(/\s+/)[0];
   if (verbo === 'UPDATE' || verbo === 'DELETE' || verbo === 'INSERT') eventos.push(verbo);
 
+  // Conteo del máximo de banners (POST dentro de la transacción).
+  if (/COUNT\(\*\)::int AS total FROM diapositivas_hero/.test(texto)) {
+    return { rows: [{ total: 1 }], rowCount: 1 };
+  }
   if (/FROM diapositivas_hero[\s\S]*WHERE activa = TRUE/.test(texto)) {
     return { rows: [FILA_CON_MOVIL], rowCount: 1 };
   }
@@ -113,6 +117,15 @@ pool.query = async (sql, params = []) => {
   }
   return { rows: [], rowCount: 0 };
 };
+
+// El POST abre una transacción con pool.connect(): el cliente simulado usa el
+// mismo respondedor, de modo que las consultas de la transacción quedan
+// registradas igual que las del pool.
+pool.query = responder;
+pool.connect = async () => ({
+  query: (sql, params = []) => responder(sql, params),
+  release: () => {},
+});
 
 const token = jwt.sign(
   { id: 3, nombre_completo: 'Admin Ficticio', id_rol: 3 },

@@ -543,7 +543,7 @@ Las públicas **no piden token**: es el único caso en el sistema.
 
 | Método | Endpoint | Rol | Descripción |
 |--------|----------|-----|-------------|
-| GET | `/api/catalogos/licenciaturas` | público | Los 10 programas del catálogo, cacheados 10 min |
+| GET | `/api/catalogos/licenciaturas` | público | Los 14 programas del catálogo (10 regulares + 4 ejecutivas), cacheados 10 min |
 
 Dos notas sobre las rutas de escritura:
 

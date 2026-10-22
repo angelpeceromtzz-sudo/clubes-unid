@@ -31,7 +31,9 @@ export function SeccionDiapositivas({
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, inputCls, labelCls, tema } = useTheme();
 
-  const limiteAlcanzado = !editando && posicionesDisponibles.length === 0;
+  // El límite se mide por banners registrados (no solo por posiciones libres):
+  // si dos banners comparten posición, el conteo es el que manda.
+  const limiteAlcanzado = !editando && (diapositivas.length >= maxBanners || posicionesDisponibles.length === 0);
 
   return (
     <div>

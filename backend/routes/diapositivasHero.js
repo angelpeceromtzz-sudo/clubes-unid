@@ -62,26 +62,64 @@ router.post('/', authenticate, requireRole(3), async (req, res) => {
       return res.status(400).json({ error: `El orden debe estar entre 1 y ${MAX_BANNERS}` });
     }
 
-    const result = await pool.query(
-      `INSERT INTO diapositivas_hero (titulo, subtitulo, url_imagen, url_imagen_movil, orden, activa)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id_diapositiva, titulo, subtitulo, url_imagen, url_imagen_movil, orden, activa, fecha_creacion, fecha_actualizacion`,
-      [titulo, subtitulo || null, url_imagen, url_imagen_movil || null, ordenNum, activa !== false]
-    );
+    const client = await pool.connect();
+    let enTransaccion = false;
+    try {
+      await client.query('BEGIN');
+      enTransaccion = true;
 
-    const diapositiva = result.rows[0];
+      // El máximo NO puede depender solo de la UI: un panel abierto con un
+      // estado anterior (o dos administradores a la vez) puede intentar crear
+      // un banner de más. El bloqueo de aviso serializa las creaciones para
+      // que el conteo y el INSERT sean una sola sección crítica: sin él, dos
+      // peticiones simultáneas verían el mismo total y las dos insertarían.
+      // Es un bloqueo de transacción: se libera solo en COMMIT/ROLLBACK.
+      await client.query(
+        `SELECT pg_advisory_xact_lock(hashtext('clubes-unid:diapositivas_hero')::bigint)`
+      );
 
-    registrarHistorial({
-      idAdmin: req.user.id,
-      adminNombre: req.user.nombre_completo,
-      accion: 'crear_diapositiva_hero',
-      descripcion: `${req.user.nombre_completo} creó la diapositiva "${titulo}"`,
-      entidadTipo: 'diapositiva_hero',
-      entidadId: diapositiva.id_diapositiva,
-      detalles: { titulo },
-    });
+      const conteo = await client.query('SELECT COUNT(*)::int AS total FROM diapositivas_hero');
+      const total = conteo.rows[0]?.total ?? 0;
 
-    res.status(201).json(diapositiva);
+      if (total >= MAX_BANNERS) {
+        await client.query('ROLLBACK');
+        enTransaccion = false;
+        return res.status(409).json({
+          error: `Límite de ${MAX_BANNERS} banners alcanzado. Elimina uno para agregar otro.`,
+        });
+      }
+
+      const result = await client.query(
+        `INSERT INTO diapositivas_hero (titulo, subtitulo, url_imagen, url_imagen_movil, orden, activa)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id_diapositiva, titulo, subtitulo, url_imagen, url_imagen_movil, orden, activa, fecha_creacion, fecha_actualizacion`,
+        [titulo, subtitulo || null, url_imagen, url_imagen_movil || null, ordenNum, activa !== false]
+      );
+
+      await client.query('COMMIT');
+      enTransaccion = false;
+
+      const diapositiva = result.rows[0];
+
+      registrarHistorial({
+        idAdmin: req.user.id,
+        adminNombre: req.user.nombre_completo,
+        accion: 'crear_diapositiva_hero',
+        descripcion: `${req.user.nombre_completo} creó la diapositiva "${titulo}"`,
+        entidadTipo: 'diapositiva_hero',
+        entidadId: diapositiva.id_diapositiva,
+        detalles: { titulo },
+      });
+
+      res.status(201).json(diapositiva);
+    } catch (err) {
+      if (enTransaccion) {
+        await client.query('ROLLBACK').catch(() => {});
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error('Error al crear diapositiva:', err);
     res.status(500).json({ error: 'Error interno del servidor' });

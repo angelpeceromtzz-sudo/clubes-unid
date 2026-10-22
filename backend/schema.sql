@@ -99,7 +99,16 @@ INSERT INTO cat_licenciaturas (nombre, orden) VALUES
     ('Licenciatura en Diseño Gráfico Digital', 7),
     ('Licenciatura en Educación Física, Recreación y Deporte', 8),
     ('Licenciatura en Ingeniería de Software y Sistemas Computacionales', 9),
-    ('Licenciatura en Mercadotecnia Estratégica', 10)
+    ('Licenciatura en Mercadotecnia Estratégica', 10),
+    -- Licenciaturas Ejecutivas: son programas distintos de los regulares, no
+    -- nombres alternativos (cada uno tiene su propio RVOE: Contabilidad
+    -- Financiera 20221767 vs. Contabilidad y Finanzas 20193846; Derecho
+    -- 20193847 vs. Derecho y Ciencias Jurídicas 20193848). Se listan sin
+    -- distinguir modalidad porque el catálogo no tiene ese campo.
+    ('Licenciatura en Administración de Empresas', 11),
+    ('Licenciatura en Contabilidad Financiera', 12),
+    ('Licenciatura en Derecho', 13),
+    ('Licenciatura en Educación y Tecnologías para el Aprendizaje', 14)
 ON CONFLICT (nombre) DO UPDATE SET orden = EXCLUDED.orden;
 
 -- ============================================================
