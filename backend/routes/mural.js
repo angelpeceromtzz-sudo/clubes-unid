@@ -69,7 +69,7 @@ router.get('/config', async (_req, res) => {
 });
 
 // Toda escritura y la consulta de borradores requieren un editor autorizado.
-router.use(authenticate, requireRole(3, 4));
+router.use(authenticate, requireRole(3, 4, 6));
 router.get('/admin', async (_req, res) => {
   try {
     const resultado = await pool.query(`SELECT ${CAMPOS} FROM publicaciones_mural ORDER BY fecha_creacion DESC, id_publicacion DESC`);

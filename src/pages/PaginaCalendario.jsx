@@ -30,7 +30,8 @@ export function PaginaCalendario() {
   const [editorMural, setEditorMural] = useState(null);
   const [compartir, setCompartir] = useState(false);
   const [mensajeMural, setMensajeMural] = useState('');
-  const { esAdmin, esRectoria } = useAutenticacion();
+  const { esAdmin, esRectoria, esResponsableMural, puedeGestionarMural } = useAutenticacion();
+  const basePanel = `${esAdmin ? '/admin' : esResponsableMural ? '/mural' : '/rectoria'}/dashboard`;
   const [parametros, setParametros] = useSearchParams();
   const vista = parametros.get('vista') === 'mural' ? 'mural' : 'calendario';
   const [mesVisible, setMesVisible] = useState(() => {
@@ -51,8 +52,8 @@ export function PaginaCalendario() {
   const erroresMural = [errorMural, calendario.errorCarga, propios.error].filter(Boolean).join(' ');
   function editarDesdeMural(item) {
     if (item.origen === 'mural') { setEditorMural(item); return; }
-    const base = `${esAdmin ? '/admin' : '/rectoria'}/dashboard`;
-    navegar(item.origen === 'fecha' ? `${base}?seccion=calendario&editar_fecha=${item.id_fecha}` : `${base}?seccion=noticias&editar_noticia=${item.id_noticia}`);
+    if (esResponsableMural) return;
+    navegar(item.origen === 'fecha' ? `${basePanel}?seccion=calendario&editar_fecha=${item.id_fecha}` : `${basePanel}?seccion=noticias&editar_noticia=${item.id_noticia}`);
   }
   const celdas = useMemo(() => {
     const primerDia = (mesVisible.getDay() + 6) % 7;
@@ -85,11 +86,11 @@ export function PaginaCalendario() {
       <div className="max-w-5xl mx-auto">
         <header className="flex flex-wrap items-center justify-between gap-4 mb-7">
           <div><p className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-2 ${modoOscuro ? 'text-amber-300' : 'text-amber-700'}`}>Comunidad UNID</p><h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${tema.title}`}>Tu vida en el campus</h1><p className={`text-sm mt-2 ${tema.subtitle}`}>Las fechas que importan. Las novedades que nos unen.</p></div>
-          {(esAdmin || esRectoria) && <Link to={`${esAdmin ? '/admin' : '/rectoria'}/dashboard?seccion=${vista === 'mural' ? 'mural' : 'calendario'}`} className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 ${tema.btnInactive}`}><Icono nombre="edit" className="h-3.5 w-3.5" />{vista === 'mural' ? 'Administrar mural' : 'Administrar fechas'}</Link>}
+          {(vista === 'mural' ? puedeGestionarMural : esAdmin || esRectoria) && <Link to={`${basePanel}?seccion=${vista === 'mural' ? 'mural' : 'calendario'}`} className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 ${tema.btnInactive}`}><Icono nombre="edit" className="h-3.5 w-3.5" />{vista === 'mural' ? 'Administrar mural' : 'Administrar fechas'}</Link>}
         </header>
         <SelectorVistasCalendario vista={vista} onChange={cambiarVista} />
         {mensajeMural && vista === 'mural' && <p role="status" className="mb-4 text-sm text-emerald-600">{mensajeMural}</p>}
-        {(cargando || calendario.cargando || (vista === 'mural' && propios.cargando)) ? <Spinner className="py-20" /> : vista === 'mural' ? <div id="panel-mural" role="tabpanel" aria-labelledby="pestana-mural"><MuralCalendario publicaciones={mural} onDetalle={(publicacion) => setDetalle({ origen: publicacion.origen === 'fecha' ? 'fecha' : 'publicacion', original: publicacion })} onCrear={esAdmin || esRectoria ? () => setEditorMural({}) : undefined} onEditar={esAdmin || esRectoria ? editarDesdeMural : undefined} onCompartir={() => setCompartir(true)} error={erroresMural} onReintentar={() => { refetch(); calendario.cargar(); propios.cargar(); }} /></div> : <div id="panel-calendario" role="tabpanel" aria-labelledby="pestana-calendario">
+        {(cargando || calendario.cargando || (vista === 'mural' && propios.cargando)) ? <Spinner className="py-20" /> : vista === 'mural' ? <div id="panel-mural" role="tabpanel" aria-labelledby="pestana-mural"><MuralCalendario publicaciones={mural} onDetalle={(publicacion) => setDetalle({ origen: publicacion.origen === 'fecha' ? 'fecha' : 'publicacion', original: publicacion })} onCrear={puedeGestionarMural ? () => setEditorMural({}) : undefined} onEditar={puedeGestionarMural ? editarDesdeMural : undefined} puedeEditar={(item) => esAdmin || esRectoria || (esResponsableMural && item.origen === 'mural')} onCompartir={() => setCompartir(true)} error={erroresMural} onReintentar={() => { refetch(); calendario.cargar(); propios.cargar(); }} /></div> : <div id="panel-calendario" role="tabpanel" aria-labelledby="pestana-calendario">
           {errorEventos && <p role="alert" className="mb-4 text-sm text-red-500">{errorEventos} <button type="button" onClick={refetch} className="underline cursor-pointer">Reintentar</button></p>}
           {calendario.errorCarga && <p role="alert" className="mb-4 text-sm text-red-500">{calendario.errorCarga} <button type="button" onClick={calendario.cargar} className="underline cursor-pointer">Reintentar</button></p>}
           <div className="grid lg:grid-cols-[minmax(0,1fr)_270px] items-start gap-5">

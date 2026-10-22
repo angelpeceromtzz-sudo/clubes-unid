@@ -6,7 +6,7 @@ Sistema de gestión de clubes universitarios para UNID Campeche. Permite a alumn
 
 ## Mural digital
 
-Administración y Rectoría tienen la sección **Mural digital** para crear publicaciones propias con imagen, resumen, mensaje, enlace, destacado, borrador y último día visible. Se pueden editar desde el panel o desde las tarjetas públicas al iniciar sesión como editor. Noticias y fechas compartidas conservan su editor original.
+Administración, Rectoría y el rol **responsable del mural** tienen la sección **Mural digital** para crear, editar, publicar, destacar, ocultar y eliminar publicaciones con imagen, resumen, mensaje, enlace y último día visible. También pueden configurar la dirección del QR. Se pueden editar desde el panel o desde las tarjetas públicas al iniciar sesión como editor. El responsable accede desde `/mural/dashboard`; sus noticias y eventos siguen el flujo de aprobación de Rectoría. Las fechas académicas se administran desde Coordinación y Rectoría.
 
 En el panel, **Dirección pública del sitio** guarda en la base de datos el destino del QR. También se utiliza `VITE_PUBLIC_URL` o el origen actual si no hay una dirección guardada. El QR abre `/calendario?vista=mural`, sin sesión, y se descarga en PNG o SVG. Una dirección localhost solo sirve en el equipo de desarrollo; usa el dominio publicado para compartirlo con teléfonos.
 

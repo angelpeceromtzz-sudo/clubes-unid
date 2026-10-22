@@ -14,7 +14,7 @@ import { QrMural } from '../../calendario/QrMural';
 
 export function SeccionMuralAdmin() {
   const { tema, cardCls, inputCls, selectCls, modoOscuro } = useTheme();
-  const { esAdmin } = useAutenticacion();
+  const { esAdmin, esResponsableMural } = useAutenticacion();
   const gestor = useMural(true);
   const [editor, setEditor] = useState(null);
   const [detalle, setDetalle] = useState(null);
@@ -25,7 +25,7 @@ export function SeccionMuralAdmin() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const hoy = fechaHoyCampus();
-  const basePanel = `${esAdmin ? '/admin' : '/rectoria'}/dashboard`;
+  const basePanel = `${esAdmin ? '/admin' : esResponsableMural ? '/mural' : '/rectoria'}/dashboard`;
   const lista = useMemo(() => gestor.publicaciones.filter((item) =>
     `${item.titulo} ${item.subtitulo || ''} ${item.contenido}`.toLocaleLowerCase('es').includes(busqueda.toLocaleLowerCase('es')) &&
     (estado === 'todos' || estadoPublicacionMural(item, hoy) === estado)), [gestor.publicaciones, busqueda, estado, hoy]);
@@ -61,7 +61,7 @@ export function SeccionMuralAdmin() {
               <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => setEditor(item)} disabled={enviando} className={`rounded-lg border px-3 py-2 text-xs font-bold cursor-pointer ${cardCls}`}>Editar</button><button type="button" onClick={() => setDetalle(item)} className={`px-2 py-2 text-xs font-semibold cursor-pointer ${tema.btnInactive}`}>Vista previa</button><button type="button" disabled={enviando} onClick={() => cambiar(item, { destacada: !item.destacada })} className={`px-2 py-2 text-xs font-semibold cursor-pointer ${tema.btnInactive}`}>{item.destacada ? 'Quitar destacado' : 'Destacar'}</button><button type="button" disabled={enviando} onClick={() => situacion === 'Retirada' ? setEditor(item) : cambiar(item, { publicada: !item.publicada })} className={`px-2 py-2 text-xs font-semibold cursor-pointer ${tema.btnInactive}`}>{situacion === 'Publicada' ? 'Ocultar' : situacion === 'Retirada' ? 'Renovar vigencia' : 'Publicar'}</button><button type="button" disabled={enviando} onClick={() => setPendiente(item)} aria-label={`Eliminar ${item.titulo}`} className="ml-auto p-2 text-slate-400 hover:text-red-500 cursor-pointer"><Icono nombre="trash" className="h-4 w-4" /></button></div>
             </article>;
           })}
-          <div className={`rounded-xl border p-4 ${cardCls}`}><h3 className={`text-xs font-bold ${tema.title}`}>También aparecen en el mural</h3><p className={`mt-1 text-xs leading-relaxed ${tema.subtitle}`}>Las noticias, eventos y fechas que marques con «Mostrar también en el mural». Puedes editar su información desde cada sección.</p><div className="mt-3 flex flex-wrap gap-4"><Link className="text-xs font-semibold text-blue-500 underline" to={`${basePanel}?seccion=noticias`}>Noticias y eventos</Link><Link className="text-xs font-semibold text-blue-500 underline" to={`${basePanel}?seccion=calendario`}>Fechas académicas</Link></div></div>
+          <div className={`rounded-xl border p-4 ${cardCls}`}><h3 className={`text-xs font-bold ${tema.title}`}>También aparecen en el mural</h3><p className={`mt-1 text-xs leading-relaxed ${tema.subtitle}`}>{esResponsableMural ? 'Las noticias y eventos que marques con «Mostrar también en el mural» aparecen cuando rectoría los aprueba. Las fechas académicas las administra Coordinación y Rectoría.' : 'Las noticias, eventos y fechas que marques con «Mostrar también en el mural». Puedes editar su información desde cada sección.'}</p><div className="mt-3 flex flex-wrap gap-4"><Link className="text-xs font-semibold text-blue-500 underline" to={`${basePanel}?seccion=noticias`}>Noticias y eventos</Link>{!esResponsableMural && <Link className="text-xs font-semibold text-blue-500 underline" to={`${basePanel}?seccion=calendario`}>Fechas académicas</Link>}</div></div>
         </div>
         <aside className={`min-w-0 rounded-2xl border p-4 ${cardCls}`}><QrMural editable /></aside>
       </div>

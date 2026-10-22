@@ -49,24 +49,51 @@ const servidor = app.listen(0, '127.0.0.1');
 await new Promise((resolve) => servidor.once('listening', resolve));
 after(async () => { await new Promise((resolve) => servidor.close(resolve)); await pool.end(); });
 const base = `http://127.0.0.1:${servidor.address().port}/mural`;
-async function enviar(metodo, datos, rol = 3, ruta = '') {
+async function enviar(metodo, datos, rol = 3, ruta = '', usuario = 7) {
   consultas = [];
   const headers = { 'Content-Type': 'application/json' };
-  if (rol) headers.Authorization = `Bearer ${jwt.sign({ id: 7, id_rol: rol, nombre_completo: 'Editor de prueba' }, process.env.JWT_SECRET)}`;
+  if (rol) headers.Authorization = `Bearer ${jwt.sign({ id: usuario, id_rol: rol, nombre_completo: 'Editor de prueba' }, process.env.JWT_SECRET)}`;
   const res = await fetch(`${base}${ruta}`, { method: metodo, headers, body: datos ? JSON.stringify(datos) : undefined });
   return { status: res.status, datos: await res.json() };
 }
 const datos = { titulo: ' Convocatoria cultural ', contenido: 'Participa en las actividades del campus.', enlace_url: 'https://example.org/registro', enlace_texto: 'Inscribirme' };
 
-test('la consulta pública y el QR no requieren sesión; borradores y escritura solo aceptan admin y rectoría', async () => {
+test('la consulta pública y el QR no requieren sesión; administración, rectoría y responsable editan el mural', async () => {
   for (const ruta of ['', '/config']) assert.equal((await enviar('GET', null, null, ruta)).status, 200);
-  for (const rol of [null, 1, 2, 5]) {
+  for (const rol of [null, 1, 2, 5, 7]) {
     for (const [metodo, ruta] of [['GET', '/admin'], ['POST', ''], ['PUT', '/1'], ['DELETE', '/1'], ['PUT', '/config']]) {
       assert.equal((await enviar(metodo, metodo === 'GET' ? null : datos, rol, ruta)).status, rol ? 403 : 401);
       assert.equal(consultas.length, 0);
     }
   }
-  for (const rol of [3, 4]) assert.equal((await enviar('POST', datos, rol)).status, 201);
+  for (const rol of [3, 4, 6]) assert.equal((await enviar('POST', datos, rol)).status, 201);
+});
+
+test('el responsable edita publicaciones existentes, administra visibilidad y QR, y elimina desde su panel', async () => {
+  const creada = (await enviar('POST', datos, 3)).datos;
+  const ruta = `/${creada.id_publicacion}`;
+  const borradores = await enviar('GET', null, 6, '/admin', 9);
+  assert.equal(borradores.status, 200);
+  assert.ok(borradores.datos.some((item) => item.id_publicacion === creada.id_publicacion));
+
+  const editada = await enviar('PUT', { titulo: 'Cartel actualizado', publicada: true, destacada: true,
+    url_imagen: 'https://example.org/cartel.png', fecha_retiro: '2099-12-31' }, 6, ruta, 9);
+  assert.equal(editada.status, 200);
+  assert.equal(editada.datos.titulo, 'Cartel actualizado');
+  assert.equal(editada.datos.contenido, datos.contenido);
+  assert.equal(editada.datos.enlace_url, datos.enlace_url);
+  assert.equal(editada.datos.url_imagen, 'https://example.org/cartel.png');
+  assert.equal(editada.datos.destacada, true);
+  assert.ok((await enviar('GET', null, null)).datos.some((item) => item.id_publicacion === creada.id_publicacion));
+
+  assert.equal((await enviar('PUT', { publicada: false }, 6, ruta, 9)).status, 200);
+  assert.equal((await enviar('GET', null, null)).datos.some((item) => item.id_publicacion === creada.id_publicacion), false);
+  const config = await enviar('PUT', { url_publica: 'https://campus.example.org' }, 6, '/config', 9);
+  assert.equal(config.status, 200);
+  assert.equal(config.datos.url_publica, 'https://campus.example.org/calendario?vista=mural');
+  assert.equal((await enviar('DELETE', null, 6, ruta, 9)).status, 200);
+  assert.equal((await enviar('GET', null, 6, '/admin', 9)).datos.some((item) => item.id_publicacion === creada.id_publicacion), false);
+  assert.equal(consultas.some((item) => item.sql.includes('noticias') || item.sql.includes('fechas_calendario')), false);
 });
 
 test('crear, editar, destacar, ocultar y eliminar conserva una publicación independiente del feed', async () => {
