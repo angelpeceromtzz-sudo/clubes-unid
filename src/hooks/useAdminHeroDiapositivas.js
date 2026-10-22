@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
 import { useConfirmacionPendiente } from './useConfirmacionPendiente';
 import { filtrarPorTexto } from '../utils/filtros';
-
-const MAX_BANNERS = 6;
+import { MAX_BANNERS } from '../constants/limites';
 
 export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
   const [diapositivas, setDiapositivas] = useState([]);
@@ -124,6 +123,13 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
       setErrorModal('La imagen es obligatoria');
       return;
     }
+    // Comprobación previa (el backend es la autoridad): evita el viaje
+    // inútil cuando el panel quedó desactualizado. El contador y el aviso
+    // del panel se basan en el número de banners registrados.
+    if (!editando && diapositivas.length >= MAX_BANNERS) {
+      setErrorModal(`Límite de ${MAX_BANNERS} banners alcanzado. Elimina uno para agregar otro.`);
+      return;
+    }
     setEnviando(true);
     try {
       const payload = {
@@ -145,11 +151,17 @@ export function useAdminHeroDiapositivas(setFeedback, setErrorFeedback) {
       await refetch();
       setShowModal(false);
     } catch (err) {
+      // 409 = error de negocio del backend (máximo alcanzado). El listado se
+      // refresca para mostrar el estado real (y el botón queda bloqueado);
+      // el modal sigue abierto con el aviso.
+      if (err.status === 409) {
+        await refetch();
+      }
       setErrorModal(err.message);
     } finally {
       setEnviando(false);
     }
-  }, [form, editando, refetch, setFeedback]);
+  }, [form, editando, refetch, setFeedback, diapositivas]);
 
   const handleFormChange = useCallback((e) => {
     const { name, value } = e.target;
