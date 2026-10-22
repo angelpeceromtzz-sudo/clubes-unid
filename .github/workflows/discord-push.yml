@@ -21,7 +21,6 @@ jobs:
           DISCORD_ANGEL: ${{ vars.DISCORD_ANGEL }}
           DISCORD_JORGE: ${{ vars.DISCORD_JORGE }}
           DISCORD_GUSTAVO: ${{ vars.DISCORD_GUSTAVO }}
-          EVENT_FILE: ${{ github.event_path }}
           REPOSITORY: ${{ github.repository }}
           ACTOR: ${{ github.actor }}
           REF_NAME: ${{ github.ref_name }}
@@ -36,7 +35,7 @@ jobs:
           if not webhook:
               raise SystemExit("Falta DISCORD_WEBHOOK_URL")
 
-          with open(os.environ["EVENT_FILE"], encoding="utf-8") as f:
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as f:
               event = json.load(f)
 
           members = {
