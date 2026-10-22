@@ -1,4 +1,3 @@
-
 name: Discord - Notificar pushes
 
 on:
@@ -10,17 +9,16 @@ permissions:
 jobs:
   notificar:
     runs-on: ubuntu-latest
-
     steps:
       - name: Enviar aviso a Discord
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          GH_ANGEL: ${{ vars.GH_ANGEL }}
-          GH_JORGE: ${{ vars.GH_JORGE }}
-          GH_GUSTAVO: ${{ vars.GH_GUSTAVO }}
-          DISCORD_ANGEL: ${{ vars.DISCORD_ANGEL }}
-          DISCORD_JORGE: ${{ vars.DISCORD_JORGE }}
-          DISCORD_GUSTAVO: ${{ vars.DISCORD_GUSTAVO }}
+          GH_ANGEL: ${{ secrets.GH_ANGEL }}
+          GH_JORGE: ${{ secrets.GH_JORGE }}
+          GH_GUSTAVO: ${{ secrets.GH_GUSTAVO }}
+          DISCORD_ANGEL: ${{ secrets.DISCORD_ANGEL }}
+          DISCORD_JORGE: ${{ secrets.DISCORD_JORGE }}
+          DISCORD_GUSTAVO: ${{ secrets.DISCORD_GUSTAVO }}
           REPOSITORY: ${{ github.repository }}
           ACTOR: ${{ github.actor }}
           REF_NAME: ${{ github.ref_name }}
@@ -29,83 +27,95 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import re
+          import urllib.error
           import urllib.request
+          from urllib.parse import urlparse
 
-          webhook = os.environ["WEBHOOK"]
-          if not webhook:
-              raise SystemExit("Falta DISCORD_WEBHOOK_URL")
+          webhook = os.environ.get('WEBHOOK', '').strip()
+          parsed = urlparse(webhook)
+          if (parsed.scheme != 'https'
+                  or parsed.hostname not in ('discord.com', 'discordapp.com')
+                  or not re.fullmatch(r'/api(?:/v\d+)?/webhooks/\d+/[^/]+', parsed.path)
+                  or parsed.query or parsed.fragment):
+              raise SystemExit('DISCORD_WEBHOOK_URL no tiene el formato esperado (sin /github).')
 
-          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as f:
+          with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as f:
               event = json.load(f)
 
-          members = {
-              os.environ["GH_ANGEL"].lower():
-                  os.environ["DISCORD_ANGEL"],
-              os.environ["GH_JORGE"].lower():
-                  os.environ["DISCORD_JORGE"],
-              os.environ["GH_GUSTAVO"].lower():
-                  os.environ["DISCORD_GUSTAVO"],
-          }
+          members = {}
+          for name in ('ANGEL', 'JORGE', 'GUSTAVO'):
+              gh = os.environ.get('GH_' + name, '').strip().lower()
+              discord_id = os.environ.get('DISCORD_' + name, '').strip()
+              if not gh or not discord_id.isdigit():
+                  raise SystemExit(f'Configura correctamente GH_{name} y DISCORD_{name} en Secrets.')
+              if gh in members:
+                  raise SystemExit('Hay nombres de GitHub duplicados en los Secrets.')
+              members[gh] = discord_id
 
-          actor = os.environ["ACTOR"].lower()
-
-          # Evitar mencionar a todos si el autor
-          # no es uno de los integrantes registrados.
+          actor = os.environ['ACTOR'].strip().lower()
           if actor not in members:
-              print("Autor no registrado; sin menciones.")
+              print('Autor no registrado:', actor, '; sin menciones.')
               mentions = []
           else:
-              mentions = [
-                  uid for username, uid in members.items()
-                  if username != actor and uid.isdigit()
-              ]
+              mentions = list(dict.fromkeys(
+                  uid for username, uid in members.items() if username != actor
+              ))
 
-          commits = event.get("commits", [])
+          def safe(value):
+              return str(value).replace('@', '@\u200b').replace('`', "'")
+
+          commits = event.get('commits') or []
           lines = []
           for commit in commits[:8]:
-              sha = commit["id"][:7]
-              message = commit["message"].splitlines()[0]
-              message = message[:120]
-              lines.append(f"`{sha}` {message}")
-
+              sha = safe(commit.get('id', '')[:7])
+              msg = safe((commit.get('message') or '(sin mensaje)').splitlines()[0][:120])
+              lines.append(f'`{sha}` {msg}')
           if len(commits) > 8:
-              lines.append(f"... y {len(commits)-8} más")
+              lines.append(f'... y {len(commits) - 8} más')
+          if not lines:
+              lines.append('(Push sin commits listados)')
 
-          # Evitar menciones inesperadas desde
-          # los mensajes de commit.
-          def escape(text):
-              return text.replace("@", "@\u200b")
+          compare = event.get('compare') or ''
+          if not compare.startswith('https://github.com/'):
+              compare = 'https://github.com/' + os.environ['REPOSITORY']
 
-          content = (
-              f"🚀 **Nuevo push en Clubs UNID**\n"
-              f"**Autor:** {escape(os.environ['ACTOR'])}\n"
-              f"**Rama:** `{escape(os.environ['REF_NAME'])}`\n"
-              f"**Repositorio:** {escape(os.environ['REPOSITORY'])}\n\n"
-              + "\n".join(escape(x) for x in lines)
-              + f"\n\n[Ver cambios]({event.get('compare', '')})"
+          prefix = (
+              '🚀 **Nuevo push en Clubs UNID**\n'
+              f"**Autor:** {safe(os.environ['ACTOR'])}\n"
+              f"**Rama:** `{safe(os.environ['REF_NAME'])}`\n"
+              f"**Repositorio:** {safe(os.environ['REPOSITORY'])}\n\n"
           )
-
-          if mentions:
-              content += "\n\n📢 " + " ".join(
-                  f"<@{uid}>" for uid in mentions
-              )
+          suffix = f'\n\n[Ver cambios]({compare})'
+          mentions_text = ('\n\n📢 ' + ' '.join(f'<@{uid}>' for uid in mentions)) if mentions else ''
+          content = prefix
+          for line in lines:
+              candidate = content + line + '\n' + suffix + mentions_text
+              if len(candidate) > 1900:
+                  content += '... (lista abreviada)\n'
+                  break
+              content += line + '\n'
+          content = (content.rstrip() + suffix + mentions_text)
 
           payload = {
-              "username": "Clubs UNID Bot",
-              "content": content[:2000],
-              "allowed_mentions": {
-                  "parse": [],
-                  "users": mentions
-              }
+              'username': 'Clubs UNID Bot',
+              'content': content,
+              'allowed_mentions': {'parse': [], 'users': mentions}
           }
-
           request = urllib.request.Request(
               webhook,
-              data=json.dumps(payload).encode("utf-8"),
-              headers={"Content-Type": "application/json"},
-              method="POST"
+              data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+              headers={
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'ClubsUNID-GitHubActions/1.0'
+              },
+              method='POST'
           )
-
-          with urllib.request.urlopen(request, timeout=15) as response:
-              print("Discord respondió:", response.status)
+          try:
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  print('Discord respondió:', response.status)
+          except urllib.error.HTTPError as error:
+              print('Error HTTP al publicar en Discord:', error.code)
+              # Evitar imprimir el cuerpo completo o URLs privadas en los logs.
+              raise SystemExit('No se pudo enviar el mensaje; verifica el webhook y los permisos.') from None
           PY
