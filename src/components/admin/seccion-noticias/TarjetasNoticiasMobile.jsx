@@ -1,7 +1,8 @@
 import { Badge } from '../../ui/Badge';
 import { Icono } from '../../ui/Icono';
 import { obtenerUrlImagen } from '../../../utils/imagen';
-import { fechaCorta, fechaEventoCorta } from '../../../utils/formato';
+import { fechaCorta } from '../../../utils/formato';
+import { periodoEvento } from '../../../utils/calendario';
 import { nombreCategoriaEvento } from '../../../constants/categoriasEvento';
 
 export function TarjetasNoticiasMobile({ noticias, modoOscuro, tdTitle, tdCls, onToggle, onEditar, onEliminar }) {
@@ -21,9 +22,10 @@ export function TarjetasNoticiasMobile({ noticias, modoOscuro, tdTitle, tdCls, o
             )}
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold ${tdTitle}`}>{n.titulo}</p>
+              {n.mostrar_en_mural && <span className={`inline-flex items-center gap-1 mt-1 text-[10px] font-semibold ${tdCls}`}><span aria-hidden="true">📌</span>En el mural</span>}
               {n.categoria === 'evento' && <p className={`text-[10px] mt-0.5 ${tdCls}`}>{nombreCategoriaEvento(n.categoria_evento)} · {n.total_interesados ?? 0} interesados</p>}
               <div className="flex items-center gap-2 mt-0.5">
-                <span className={`text-[10px] ${tdCls}`}>{n.categoria === 'evento' && n.fecha_evento ? fechaEventoCorta(n.fecha_evento) : fechaCorta(n.fecha_publicacion)}{n.categoria === 'evento' && n.hora_evento ? ` · ${String(n.hora_evento).slice(0, 5)}` : ''}</span>
+                <span className={`text-[10px] ${tdCls}`}>{n.categoria === 'evento' && n.fecha_evento ? periodoEvento(n) : fechaCorta(n.fecha_publicacion)}{n.categoria === 'evento' && n.hora_evento ? ` · ${String(n.hora_evento).slice(0, 5)}` : ''}</span>
                 {n.destacada && <span className="text-[10px] uppercase font-bold text-amber-400">Destacada</span>}
               </div>
               {n.categoria === 'evento' && n.lugar_evento && <p className={`text-[10px] mt-1 ${tdCls}`}>📍 {n.lugar_evento}</p>}

@@ -13,7 +13,8 @@ import { useAutenticacion } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { fechaHoyCampus } from '../../utils/fechas';
 import { obtenerUrlImagen } from '../../utils/imagen';
-import { fechaCorta, fechaEventoCorta, fechaRelativa, recortarPalabras } from '../../utils/formato';
+import { fechaCorta, fechaRelativa, recortarPalabras } from '../../utils/formato';
+import { periodoEvento } from '../../utils/calendario';
 
 const CATEGORIAS = {
   promocion: {
@@ -335,7 +336,7 @@ export function ModalActualizaciones({ onLoginClick }) {
   function renderInteres(evento) {
     if (evento.categoria !== 'evento') return null;
     const interesado = intereses.includes(evento.id_noticia);
-    const finalizado = !evento.fecha_evento || String(evento.fecha_evento).slice(0, 10) < fechaHoyCampus();
+    const finalizado = !evento.fecha_evento || String(evento.fecha_fin_evento || evento.fecha_evento).slice(0, 10) < fechaHoyCampus();
     const errorConsulta = usuarioId && errorConsultaIntereses.id === usuarioId ? errorConsultaIntereses.mensaje : '';
     const comprobandoInteres = Boolean(usuarioId && interesesUsuario.id !== usuarioId);
     const errorVisible = errorConsulta || errorInteres;
@@ -416,7 +417,7 @@ export function ModalActualizaciones({ onLoginClick }) {
           </div>
 
           <h3 className="text-sm font-bold leading-snug text-white">{n.titulo}</h3>
-          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {fechaEventoCorta(n.fecha_evento)}</p>}
+          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {periodoEvento(n)}</p>}
           <EtiquetaTendencia publicacion={n} totalInteresados={conteos[n.id_noticia]} className="mt-2" />
 
           {secundario && (
@@ -472,7 +473,7 @@ export function ModalActualizaciones({ onLoginClick }) {
             )}
           </div>
           <h3 className="mt-2 text-lg font-black leading-snug text-white">{n.titulo}</h3>
-          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {fechaEventoCorta(n.fecha_evento)}</p>}
+          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {periodoEvento(n)}</p>}
           <EtiquetaTendencia publicacion={n} totalInteresados={conteos[n.id_noticia]} className="mt-2" />
           {secundario && (
             <p className="mt-1 line-clamp-2 text-sm text-slate-300">{secundario}</p>
@@ -510,7 +511,7 @@ export function ModalActualizaciones({ onLoginClick }) {
           <h3 className="mt-1.5 line-clamp-2 text-sm font-bold leading-snug text-white">
             {n.titulo}
           </h3>
-          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {fechaEventoCorta(n.fecha_evento)}</p>}
+          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {periodoEvento(n)}</p>}
           <EtiquetaTendencia publicacion={n} totalInteresados={conteos[n.id_noticia]} className="mt-2" />
           {secundario && (
             <p className="mt-0.5 line-clamp-1 text-xs text-slate-400">{secundario}</p>
@@ -710,7 +711,7 @@ export function ModalActualizaciones({ onLoginClick }) {
 
               {noticia.categoria === 'evento' && noticia.fecha_evento && (
                 <p className="mt-4 text-sm font-semibold text-amber-300">
-                  📅 {fechaEventoCorta(noticia.fecha_evento)}
+                  📅 {periodoEvento(noticia)}
                   {noticia.hora_evento && ` · 🕒 ${String(noticia.hora_evento).slice(0, 5)}`}
                   {noticia.lugar_evento && ` · 📍 ${noticia.lugar_evento}`}
                 </p>
@@ -789,7 +790,7 @@ export function ModalActualizaciones({ onLoginClick }) {
           )}
           {noticiaMobile.categoria === 'evento' && noticiaMobile.fecha_evento && (
             <p className="mt-3 text-sm font-semibold text-amber-300">
-              📅 {fechaEventoCorta(noticiaMobile.fecha_evento)}
+              📅 {periodoEvento(noticiaMobile)}
               {noticiaMobile.hora_evento && ` · 🕒 ${String(noticiaMobile.hora_evento).slice(0, 5)}`}
               {noticiaMobile.lugar_evento && ` · 📍 ${noticiaMobile.lugar_evento}`}
             </p>

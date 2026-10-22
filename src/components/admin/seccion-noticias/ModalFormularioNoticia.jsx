@@ -5,6 +5,7 @@ import { BotonAccion } from '../../ui/BotonAccion';
 import { Spinner } from '../../ui/Spinner';
 import { SubirImagen } from '../../ui/SubirImagen';
 import { CATEGORIAS_EVENTO } from '../../../constants/categoriasEvento';
+import { OpcionMural } from '../../noticias/OpcionMural';
 import { fechaHoyCampus } from '../../../utils/fechas';
 
 const CATEGORIAS_NOTICIA = [
@@ -12,18 +13,18 @@ const CATEGORIAS_NOTICIA = [
   { value: 'informativo', label: 'Informativo' },
 ];
 
-export function ModalFormularioNoticia({ show, editando, form, enviando, errorModal, modoOscuro, tema, labelCls, onClose, onGuardar, onFormChange, onSubirImagen, tipoSeccion = 'noticia' }) {
+export function ModalFormularioNoticia({ show, editando, form, enviando, subiendoImagen, errorModal, modoOscuro, tema, labelCls, onClose, onGuardar, onFormChange, onSubirImagen, tipoSeccion = 'noticia' }) {
   const hoy = fechaHoyCampus();
   const fechaAnterior = editando?.fecha_evento ? String(editando.fecha_evento).slice(0, 10) : '';
   const fechaMinima = fechaAnterior && fechaAnterior < hoy ? fechaAnterior : hoy;
 
   return (
-    <ModalBase show={show} onClose={onClose} maxWidth="max-w-lg">
+    <ModalBase show={show} onClose={onClose} closeOnBackdrop={!enviando && !subiendoImagen} maxWidth="max-w-lg">
       <div className="flex items-center justify-between mb-6">
         <h2 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
           {editando ? (tipoSeccion === 'evento' ? 'Editar Evento' : 'Editar Noticia') : (tipoSeccion === 'evento' ? 'Nuevo Evento' : 'Nueva Noticia')}
         </h2>
-        <button onClick={onClose}
+        <button onClick={onClose} disabled={enviando || subiendoImagen} aria-label="Cerrar formulario de publicación"
           className={`transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
         >
           <Icono nombre="close" strokeWidth={2} className="h-6 w-6" />
@@ -40,6 +41,7 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
         {tipoSeccion === 'evento' && (
           <div className="space-y-4">
             <CampoTexto label="Fecha del evento" name="fecha_evento" type="date" value={form.fecha_evento || ''} onChange={onFormChange} min={fechaMinima} required />
+            <CampoTexto label="Fecha de fin (opcional)" name="fecha_fin_evento" type="date" value={form.fecha_fin_evento || ''} onChange={onFormChange} min={form.fecha_evento || fechaMinima} />
             <p className={`-mt-2 text-[11px] ${tema.subtitle}`}>
               {fechaAnterior && fechaAnterior < hoy
                 ? 'Puedes conservar la fecha original. Si la cambias, elige hoy o una fecha futura.'
@@ -50,22 +52,10 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
               <CampoTexto label="Lugar" name="lugar_evento" value={form.lugar_evento || ''} onChange={onFormChange} maxLength={200} placeholder="Ej: Auditorio del campus" />
             </div>
             <div>
-              <span className={labelCls}>Categoría del evento</span>
-              <div className="grid grid-cols-3 gap-2">
-                {CATEGORIAS_EVENTO.map((cat) => {
-                  const activa = form.categoria_evento === cat.value;
-                  return (
-                    <button key={cat.value} type="button" name="categoria_evento" value={cat.value} onClick={onFormChange}
-                      aria-pressed={activa}
-                      className={`rounded-xl border px-2 py-2 text-[11px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-95 ${
-                        activa ? 'border-amber-400 bg-amber-400/15 text-amber-400 shadow-sm'
-                          : modoOscuro ? 'border-slate-700 bg-[#18223f] text-slate-400 hover:text-slate-200'
-                            : 'border-slate-300 bg-slate-100 text-slate-500 hover:text-slate-800'
-                      }`}
-                    >{cat.label}</button>
-                  );
-                })}
-              </div>
+              <label htmlFor="categoria-evento-noticia" className={labelCls}>Categoría del evento</label>
+              <select id="categoria-evento-noticia" name="categoria_evento" value={form.categoria_evento} onChange={onFormChange} className={`w-full rounded-xl border px-3 py-2.5 text-sm ${modoOscuro ? 'bg-[#18223f] border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-300 text-slate-700'}`}>
+                {CATEGORIAS_EVENTO.map((cat) => <option key={cat.value} value={cat.value}>{cat.emoji} {cat.label}</option>)}
+              </select>
             </div>
           </div>
         )}
@@ -107,19 +97,20 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, errorMo
             Destacada
           </label>
         </div>
+        <OpcionMural checked={!!form.mostrar_en_mural} onChange={onFormChange} disabled={enviando} />
 
         {errorModal && <p className="text-red-400 text-xs font-medium">{errorModal}</p>}
 
         <div className="flex gap-3 pt-2">
-          <BotonAccion onClick={onClose} variant="outline" size="md" className="flex-1">Cancelar</BotonAccion>
-          <BotonAccion type="submit" disabled={enviando} variant="primary" size="md" className="flex-1">
+          <BotonAccion onClick={onClose} disabled={enviando || subiendoImagen} variant="outline" size="md" className="flex-1">Cancelar</BotonAccion>
+          <BotonAccion type="submit" disabled={enviando || subiendoImagen} variant="primary" size="md" className="flex-1">
             {enviando ? (
               <>
                 <Spinner size="sm" color="border-[#0e162c]" className="!py-0" />
                 {editando ? 'Guardando...' : 'Publicando...'}
               </>
             ) : (
-              editando ? 'Guardar Cambios' : (tipoSeccion === 'evento' ? 'Guardar Evento' : 'Publicar Noticia')
+              subiendoImagen ? 'Subiendo imagen…' : editando ? 'Guardar Cambios' : (tipoSeccion === 'evento' ? 'Guardar Evento' : 'Publicar Noticia')
             )}
           </BotonAccion>
         </div>

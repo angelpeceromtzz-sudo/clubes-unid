@@ -5,6 +5,7 @@ export const noticiaService = {
     request(limite ? `/noticias?limite=${limite}` : '/noticias'),
 
   getEventos: () => request('/noticias/eventos'),
+  getMural: () => request('/noticias/mural'),
 
   getMisInteresesEventos: () => request('/noticias/eventos/intereses/mios'),
 

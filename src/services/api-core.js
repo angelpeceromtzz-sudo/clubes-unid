@@ -1,7 +1,4 @@
-export const API_BASE = 'https://clubes-unid.onrender.com/api';
-// export const API_BASE = 'https://clubes-unid.onrender.com/api'; (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
-// EL DE RENDER ES LA QUE ESTA DESPLEGADA, usen  (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, ''); o 'http://localhost:4000/api'; 
-// para que utilicen la base de datos local 
+export const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/+$/, '');
 
 export function getToken() {
   try {

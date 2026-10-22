@@ -5,7 +5,10 @@ import { authenticate, requireRole, requireClubLeader } from '../middleware/auth
 import { registrarHistorial } from '../lib/audit.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
 
+import convocatoriasInscripcion from './convocatoriasInscripcion.js';
+
 const router = Router();
+router.use('/:id/convocatoria', convocatoriasInscripcion);
 
 // Lista todos los clubes con su cupo actual calculado (público)
 router.get('/', async (req, res) => {
@@ -353,124 +356,14 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
   }
 });
 
-// Obtiene configuración de convocatoria del club (presidente)
-router.get('/:id/convocatoria', authenticate, requireClubLeader, async (req, res) => {
+// Admin puede cerrar una convocatoria publicada.
+router.post('/:id/cerrar-convocatoria', authenticate, requireRole(3), async (req, res) => {
   try {
     const { id } = req.params;
-    const club = await pool.query(
-      `SELECT c.estado_calculado, c.max_postulaciones, c.postulaciones_actuales,
-              c.fecha_apertura_programada, c.fecha_limite_cierre,
-              c.formularios_recibidos
-       FROM clubes_con_estado c
-       WHERE c.id_club = $1 AND (c.id_presidente = $2 OR c.id_vicepresidente = $2)`,
-      [id, req.user.id],
-    );
-    if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado o no eres presidente/vicepresidente' });
-    res.json(club.rows[0]);
-  } catch (err) {
-    console.error('Error al obtener convocatoria:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
-// Actualiza configuración de convocatoria (presidente)
-// body: { fecha_apertura_programada, fecha_limite_cierre, max_postulaciones }
-// Si se envía una nueva fecha de apertura diferente a la actual,
-// resetea cerrada_manualmente = FALSE para reabrir la convocatoria.
-router.put('/:id/convocatoria', authenticate, requireClubLeader, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { fecha_apertura_programada, fecha_limite_cierre, max_postulaciones } = req.body;
 
     const club = await pool.query(
-      'SELECT nombre_club, fecha_apertura_programada, cerrada_manualmente FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
-      [id, req.user.id],
-    );
-    if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
-
-    const curApertura = club.rows[0].fecha_apertura_programada;
-    const curCerrada = club.rows[0].cerrada_manualmente;
-
-    if (fecha_apertura_programada != null && fecha_limite_cierre != null) {
-      if (new Date(fecha_limite_cierre) <= new Date(fecha_apertura_programada)) {
-        return res.status(400).json({ error: 'La fecha de cierre debe ser posterior a la fecha de apertura' });
-      }
-    }
-
-    const updates = [];
-    const params = [];
-    let idx = 1;
-
-    if (fecha_apertura_programada !== undefined) {
-      const nuevaAperturaTs = fecha_apertura_programada ? new Date(fecha_apertura_programada).getTime() : null;
-      const curAperturaTs = curApertura ? new Date(curApertura).getTime() : null;
-
-      updates.push(`fecha_apertura_programada = $${idx}`);
-      params.push(fecha_apertura_programada || null);
-      idx++;
-
-      if (nuevaAperturaTs !== curAperturaTs && curCerrada === true) {
-        updates.push(`cerrada_manualmente = $${idx}`);
-        params.push(false);
-        idx++;
-      }
-    }
-
-    if (fecha_limite_cierre !== undefined) {
-      updates.push(`fecha_limite_cierre = $${idx}`);
-      params.push(fecha_limite_cierre || null);
-      idx++;
-    }
-
-    if (max_postulaciones !== undefined) {
-      updates.push(`max_postulaciones = $${idx}`);
-      params.push(max_postulaciones || null);
-      idx++;
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No se enviaron campos para actualizar' });
-    }
-
-    params.push(id);
-    await pool.query(
-      `UPDATE clubes SET ${updates.join(', ')} WHERE id_club = $${idx}`,
-      params,
-    );
-
-    const nombreClub = club.rows[0].nombre_club;
-    registrarActividadClub({
-      tipo_evento: 'convocatoria_configurada',
-      id_club: Number(id),
-      id_actor: req.user.id,
-      descripcion: `${nombreClub} actualizó la configuración de convocatoria`,
-      detalles: { fecha_apertura_programada, fecha_limite_cierre, max_postulaciones: max_postulaciones || null, cerrada_manualmente_reseteada: curCerrada === true },
-    });
-
-    const result = await pool.query(
-      `SELECT c.estado_calculado, c.max_postulaciones, c.postulaciones_actuales,
-              c.fecha_apertura_programada, c.fecha_limite_cierre,
-              c.formularios_recibidos
-       FROM clubes_con_estado c
-       WHERE c.id_club = $1`,
+      'SELECT nombre_club FROM clubes WHERE id_club = $1',
       [id],
-    );
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Error al actualizar convocatoria:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
-// Cierra convocatoria manualmente (presidente)
-router.post('/:id/cerrar-convocatoria', authenticate, requireClubLeader, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const club = await pool.query(
-      'SELECT nombre_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
-      [id, req.user.id],
     );
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
 

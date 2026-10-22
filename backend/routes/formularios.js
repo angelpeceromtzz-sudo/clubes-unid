@@ -364,6 +364,9 @@ router.put('/:id/estatus', authenticate, requireRole(2, 5), async (req, res) => 
     const { id } = req.params;
     const { status } = req.body;
 
+    // Convocar es consecuencia de la aprobación de admin, no una transición manual.
+    if (status === 'Convocado') return res.status(409).json({ error: 'El alumno será convocado cuando admin apruebe y publique su convocatoria' });
+
     if (!ESTATUS_VALIDOS.includes(status)) {
       return res.status(400).json({ error: `Estatus inválido. Debe ser uno de: ${ESTATUS_VALIDOS.join(', ')}` });
     }

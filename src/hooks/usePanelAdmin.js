@@ -8,10 +8,12 @@ import { useAdminUsuarios } from './useAdminUsuarios';
 import { useAdminHistorial } from './useAdminHistorial';
 import { useAdminHeroDiapositivas } from './useAdminHeroDiapositivas';
 import { useAdminNoticias } from './useAdminNoticias';
+import { useVistaPanel } from './useVistaPanel';
+import { ELEMENTOS_NAV_ADMIN } from '../constants/navegacion';
 
 export function usePanelAdmin(usuario) {
   const { esOscuro, cardCls, tableBg, thCls, tdCls, tdTitle, sbBg, sbItemBase, sbItemActive, sbItemInactive, selectCls, inputCls, labelCls, tema } = useTheme();
-  const [vistaActiva, setVistaActiva] = useState('resumen');
+  const [vistaActiva, setVistaActiva] = useVistaPanel(ELEMENTOS_NAV_ADMIN);
   const [dashboardData, setDashboardData] = useState(null);
   const [cargandoDashboard, setCargandoDashboard] = useState(true);
 

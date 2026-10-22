@@ -4,6 +4,8 @@ import { api } from '../services/api';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useFeedback } from './useFeedback';
 import { useAdminNoticias } from './useAdminNoticias';
+import { useVistaPanel } from './useVistaPanel';
+import { ELEMENTOS_NAV_RECTORIA } from '../constants/navegacion';
 
 export function usePanelRectoria() {
   // El usuario va al hook (y no se lee dentro de cada sección) porque
@@ -14,7 +16,7 @@ export function usePanelRectoria() {
   const { usuario } = useAutenticacion();
   const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
   const noticias = useAdminNoticias(setFeedback, setErrorFeedback);
-  const [vistaActiva, setVistaActiva] = useState('resumen');
+  const [vistaActiva, setVistaActiva] = useVistaPanel(ELEMENTOS_NAV_RECTORIA);
   const [stats, setStats] = useState(null);
   const [ocupacionClubes, setOcupacionClubes] = useState([]);
   const [topClubes, setTopClubes] = useState([]);

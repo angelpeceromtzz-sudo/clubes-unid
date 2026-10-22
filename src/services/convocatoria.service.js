@@ -28,6 +28,10 @@ export const convocatoriaService = {
       method: 'POST',
     }),
 
+  solicitarRevision: (id) => request('/convocatorias/' + id + '/solicitar-revision', { method: 'POST' }),
+  rechazarConvocatoria: (id, observaciones) => request('/convocatorias/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ observaciones }) }),
+  revisarInscripcion: (clubId, id_solicitud, accion, observaciones) => request('/clubes/' + clubId + '/convocatoria/revision', { method: 'POST', body: JSON.stringify({ id_solicitud, accion, observaciones }) }),
+
   deleteConvocatoria: (id) =>
     request(`/convocatorias/${id}`, { method: 'DELETE' }),
 

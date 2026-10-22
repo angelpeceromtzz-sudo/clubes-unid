@@ -150,7 +150,7 @@ function App() {
         onScrollChange={handleScrollChange}
       />
 
-      <ModalNoticias />
+      {!(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
       <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />
 
       <ModalConfirmacion

@@ -5,8 +5,10 @@ import { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
 import { obtenerUrlImagen } from '../../utils/imagen';
-import { contarPalabras, fechaCorta, fechaEventoCorta, fechaRelativa, recortarPalabras } from '../../utils/formato';
-import { nombreCategoriaEvento } from '../../constants/categoriasEvento';
+import { contarPalabras, fechaCorta, fechaRelativa, recortarPalabras } from '../../utils/formato';
+import { periodoEvento } from '../../utils/calendario';
+import { nombreCategoriaEvento, estiloCategoriaEvento } from '../../constants/categoriasEvento';
+import { estiloPublicacion } from '../../constants/publicaciones';
 import { fechaHoyCampus } from '../../utils/fechas';
 
 const LIMITE_PALABRAS = 50;
@@ -20,15 +22,16 @@ export function TarjetaNoticia({ noticia, interesado = false, interesReciente = 
     ? recortarPalabras(noticia.contenido, LIMITE_PALABRAS)
     : noticia.contenido;
   const esEvento = noticia.categoria === 'evento';
-  const finalizado = esEvento && noticia.fecha_evento && String(noticia.fecha_evento).slice(0, 10) < fechaHoyCampus();
+  const finalizado = esEvento && noticia.fecha_evento && String(noticia.fecha_fin_evento || noticia.fecha_evento).slice(0, 10) < fechaHoyCampus();
   const cantidadInteresados = Number(totalInteresados) || 0;
+  const color = estiloPublicacion(noticia.categoria, modoOscuro);
 
   return (
     <article
-      className={`rounded-2xl border overflow-hidden transition-colors duration-300 ${
+      className={`rounded-2xl border border-t-[3px] overflow-hidden transition-colors duration-300 ${color.borde} ${
         modoOscuro
-          ? 'bg-[#0e162c] border-slate-700/50'
-          : 'bg-white border-slate-200 shadow-sm'
+          ? 'bg-[#0e162c]'
+          : 'bg-white shadow-sm'
       }`}
     >
       {noticia.url_imagen && (
@@ -43,10 +46,9 @@ export function TarjetaNoticia({ noticia, interesado = false, interesReciente = 
 
       <div className="p-6">
         <div className="flex flex-wrap items-center gap-2 mb-2">
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold ${color.badge}`}><Icono nombre={color.icono} className="h-3 w-3" />{color.label}</span>
           {esEvento && (
-            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${modoOscuro
-              ? 'border-indigo-400/30 bg-indigo-400/10 text-indigo-300'
-              : 'border-indigo-200 bg-indigo-50 text-indigo-700'}`}>
+            <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${estiloCategoriaEvento(noticia.categoria_evento, modoOscuro).badge}`}>
               {nombreCategoriaEvento(noticia.categoria_evento)}
             </span>
           )}
@@ -66,8 +68,8 @@ export function TarjetaNoticia({ noticia, interesado = false, interesReciente = 
         </h2>
 
         {esEvento && (
-          <div className={`mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold ${modoOscuro ? 'text-indigo-300' : 'text-indigo-600'}`}>
-            {noticia.fecha_evento && <span>📅 {fechaEventoCorta(noticia.fecha_evento)}</span>}
+          <div className={`mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold ${color.texto}`}>
+            {noticia.fecha_evento && <span>📅 {periodoEvento(noticia)}</span>}
             {noticia.hora_evento && <span>🕒 {String(noticia.hora_evento).slice(0, 5)}</span>}
             {noticia.lugar_evento && <span>📍 {noticia.lugar_evento}</span>}
           </div>

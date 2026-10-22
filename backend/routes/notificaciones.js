@@ -100,18 +100,26 @@ router.get('/actividad', authenticate, requireRole(3, 4), async (req, res) => {
 });
 
 router.post('/', authenticate, async (req, res) => {
+  let conexion = null;
   try {
-    const { titulo, mensaje, audiencia, id_club, id_destinatario } = req.body;
+    const { titulo, mensaje, audiencia, id_club, id_destinatario, mostrar_en_mural, url_imagen } = req.body;
     const userId = req.user.id;
     const roleId = req.user.id_rol;
 
-    if (!titulo || !mensaje || !audiencia) {
+    if (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 200 || typeof mensaje !== 'string' || !mensaje.trim() || !audiencia) {
       return res.status(400).json({ error: 'titulo, mensaje y audiencia son obligatorios' });
     }
 
     const audienciasValidas = ['global', 'presidentes', 'alumnos', 'club'];
     if (!audienciasValidas.includes(audiencia)) {
       return res.status(400).json({ error: 'Audiencia no válida' });
+    }
+    if (mostrar_en_mural !== undefined && typeof mostrar_en_mural !== 'boolean') return res.status(400).json({ error: 'Opción de mural no válida' });
+    if (mostrar_en_mural && (![3, 4].includes(roleId) || audiencia !== 'global' || id_destinatario)) {
+      return res.status(403).json({ error: 'Solo administración y rectoría pueden agregar avisos para todos al mural público' });
+    }
+    if (mostrar_en_mural && url_imagen != null && (typeof url_imagen !== 'string' || url_imagen.length > 500)) {
+      return res.status(400).json({ error: 'Imagen del mural no válida' });
     }
 
     if (audiencia === 'club' && !id_club) {
@@ -131,12 +139,27 @@ router.post('/', authenticate, async (req, res) => {
       }
     }
 
-    const result = await pool.query(
+    // El aviso y su publicación en el mural se guardan juntos para evitar envíos parciales.
+    if (mostrar_en_mural) {
+      conexion = await pool.connect();
+      await conexion.query('BEGIN');
+    }
+    const result = await (conexion || pool).query(
       `INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [userId, titulo, mensaje, audiencia, audiencia === 'club' ? id_club : null, id_destinatario || null]
+      [userId, titulo.trim(), mensaje.trim(), audiencia, audiencia === 'club' ? id_club : null, id_destinatario || null]
     );
+    let publicacionMural = null;
+    if (conexion) {
+      const publicacion = await conexion.query(
+        `INSERT INTO noticias (titulo, contenido, categoria, publicada, mostrar_en_mural, url_imagen, id_autor)
+         VALUES ($1, $2, 'informativo', TRUE, TRUE, $3, $4) RETURNING *`,
+        [titulo.trim(), mensaje.trim(), url_imagen || null, userId]
+      );
+      publicacionMural = publicacion.rows[0];
+      await conexion.query('COMMIT');
+    }
 
     if (roleId === 3) {
       const audienciaLabel = { global: 'todos', presidentes: 'presidentes', alumnos: 'alumnos', club: 'club específico' };
@@ -151,10 +174,13 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ ...result.rows[0], ...(publicacionMural ? { publicacion_mural: publicacionMural } : {}) });
   } catch (err) {
+    if (conexion) await conexion.query('ROLLBACK').catch(() => {});
     console.error('Error al crear notificacion:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    conexion?.release();
   }
 });
 

@@ -1,5 +1,6 @@
 /* Mapa de iconos SVG basado en Heroicons. Recibe un nombre clave y renderiza el SVG correspondiente. */
 const ICONOS = {
+  qr: 'M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h2v2h-2zM19 13h2v4M13 19h4v2M19 19h2v2M3 12h6M12 3v6M12 12h4',
   check: 'M5 13l4 4L19 7',
   close: 'M6 18L18 6M6 6l12 12',
   'check-circle': 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',

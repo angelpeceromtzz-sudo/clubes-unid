@@ -1,7 +1,8 @@
 import { Badge } from '../../ui/Badge';
 import { Icono } from '../../ui/Icono';
 import { obtenerUrlImagen } from '../../../utils/imagen';
-import { fechaCorta, fechaEventoCorta } from '../../../utils/formato';
+import { fechaCorta } from '../../../utils/formato';
+import { periodoEvento } from '../../../utils/calendario';
 import { nombreCategoriaEvento } from '../../../constants/categoriasEvento';
 
 export function TablaNoticiasDesktop({ noticias, modoOscuro, tableBg, thCls, tdCls, tdTitle, onToggle, onEditar, onEliminar }) {
@@ -36,6 +37,7 @@ export function TablaNoticiasDesktop({ noticias, modoOscuro, tableBg, thCls, tdC
                 </td>
                 <td className="px-5 py-4">
                   <p className={`font-medium ${tdTitle}`}>{n.titulo}</p>
+                  {n.mostrar_en_mural && <span className={`inline-flex items-center gap-1 mt-1 text-[10px] font-semibold ${tdCls}`}><span aria-hidden="true">📌</span>En el mural</span>}
                   {n.categoria === 'evento' && <p className={`mt-1 text-xs ${tdCls}`}>{nombreCategoriaEvento(n.categoria_evento)} · {n.total_interesados ?? 0} interesados</p>}
                   {n.categoria === 'evento' && n.lugar_evento && <p className={`mt-1 text-xs ${tdCls}`}>📍 {n.lugar_evento}</p>}
                   {n.destacada && (
@@ -43,7 +45,7 @@ export function TablaNoticiasDesktop({ noticias, modoOscuro, tableBg, thCls, tdC
                   )}
                 </td>
                 <td className={`px-5 py-4 ${tdCls}`}>
-                  {n.categoria === 'evento' && n.fecha_evento ? fechaEventoCorta(n.fecha_evento) : fechaCorta(n.fecha_publicacion)}
+                  {n.categoria === 'evento' && n.fecha_evento ? periodoEvento(n) : fechaCorta(n.fecha_publicacion)}
                   {n.categoria === 'evento' && n.hora_evento && <span className="block text-xs">{String(n.hora_evento).slice(0, 5)}</span>}
                 </td>
                 <td className="px-5 py-4">

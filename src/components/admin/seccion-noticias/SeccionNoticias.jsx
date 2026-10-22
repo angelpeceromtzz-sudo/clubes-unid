@@ -16,6 +16,7 @@ export function SeccionNoticias({
   editando,
   form,
   enviando,
+  subiendoImagen,
   errorModal,
   abrirModalCrear,
   abrirModalEditar,
@@ -112,6 +113,7 @@ export function SeccionNoticias({
         editando={editando}
         form={form}
         enviando={enviando}
+        subiendoImagen={subiendoImagen}
         errorModal={errorModal}
         modoOscuro={modoOscuro}
         tema={tema}

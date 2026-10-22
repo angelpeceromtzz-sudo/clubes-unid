@@ -358,6 +358,9 @@ CREATE TABLE IF NOT EXISTS noticias (
     categoria VARCHAR(20) NOT NULL DEFAULT 'informativo'
         CONSTRAINT chk_noticia_categoria CHECK (categoria IN ('promocion', 'evento', 'informativo')),
     fecha_evento DATE,
+    fecha_fin_evento DATE,
+    mostrar_en_mural BOOLEAN NOT NULL DEFAULT FALSE,
+    solo_calendario BOOLEAN NOT NULL DEFAULT FALSE,
     hora_evento TIME,
     lugar_evento VARCHAR(200),
     categoria_evento VARCHAR(20) NOT NULL DEFAULT 'social'
@@ -370,11 +373,14 @@ CREATE TABLE IF NOT EXISTS noticias (
 -- Migración idempotente: en bases ya existentes la columna no está.
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria VARCHAR(20) NOT NULL DEFAULT 'informativo';
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS fecha_evento DATE;
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS fecha_fin_evento DATE;
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS mostrar_en_mural BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS solo_calendario BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS hora_evento TIME;
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS lugar_evento VARCHAR(200);
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria_evento VARCHAR(20) NOT NULL DEFAULT 'social';
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS subtitulo VARCHAR(300);
-UPDATE noticias SET categoria_evento = 'social' WHERE categoria_evento NOT IN ('social', 'deportivo', 'cultural');
+UPDATE noticias SET categoria_evento = 'social' WHERE categoria_evento NOT IN ('social', 'deportivo', 'cultural', 'examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite');
 ALTER TABLE noticias ALTER COLUMN categoria_evento SET DEFAULT 'social';
 
 DO $$
@@ -387,18 +393,69 @@ END $$;
 
 DO $$
 BEGIN
-    IF EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'chk_noticia_categoria_evento'
-          AND pg_get_constraintdef(oid) LIKE '%general%'
-    ) THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_periodo_evento') THEN
+        ALTER TABLE noticias ADD CONSTRAINT chk_noticia_periodo_evento
+            CHECK (fecha_fin_evento IS NULL OR (fecha_evento IS NOT NULL AND fecha_fin_evento >= fecha_evento));
+    END IF;
+END $$;
+
+-- Las fechas académicas son registros independientes de las noticias y eventos.
+CREATE TABLE IF NOT EXISTS fechas_calendario (
+    id_fecha SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    tipo_fecha VARCHAR(20) NOT NULL CHECK (tipo_fecha IN ('examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite')),
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE,
+    nota TEXT,
+    url_imagen VARCHAR(500),
+    publicada BOOLEAN NOT NULL DEFAULT TRUE,
+    mostrar_en_mural BOOLEAN NOT NULL DEFAULT FALSE,
+    id_autor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    id_noticia_origen INT UNIQUE,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_fecha_calendario_periodo CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio)
+);
+
+ALTER TABLE fechas_calendario
+    ADD COLUMN IF NOT EXISTS mostrar_en_mural BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Copia y retirada del origen en una sola sentencia: si falla la copia, se
+-- conservan los originales. La clave de origen evita duplicados al reejecutar.
+WITH trasladadas AS (
+    INSERT INTO fechas_calendario (titulo, tipo_fecha, fecha_inicio, fecha_fin, nota, url_imagen,
+                                  publicada, id_autor, id_noticia_origen, fecha_creacion, fecha_actualizacion)
+    SELECT titulo,
+           CASE WHEN categoria_evento IN ('examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite')
+                THEN categoria_evento ELSE 'academico' END,
+           fecha_evento, fecha_fin_evento,
+           NULLIF(CONCAT_WS(E'\n', CASE WHEN contenido <> titulo THEN contenido END,
+                           CASE WHEN hora_evento IS NOT NULL THEN 'Hora: ' || TO_CHAR(hora_evento, 'HH24:MI') END,
+                           CASE WHEN lugar_evento IS NOT NULL THEN 'Lugar: ' || lugar_evento END), ''),
+           url_imagen, publicada, id_autor, id_noticia, fecha_publicacion, fecha_actualizacion
+    FROM noticias
+    WHERE fecha_evento IS NOT NULL AND
+          (solo_calendario = TRUE OR (categoria = 'evento' AND categoria_evento IN ('examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite')))
+    ON CONFLICT (id_noticia_origen) DO UPDATE SET titulo = EXCLUDED.titulo, tipo_fecha = EXCLUDED.tipo_fecha,
+        fecha_inicio = EXCLUDED.fecha_inicio, fecha_fin = EXCLUDED.fecha_fin, nota = EXCLUDED.nota,
+        url_imagen = EXCLUDED.url_imagen, publicada = EXCLUDED.publicada, id_autor = EXCLUDED.id_autor,
+        fecha_actualizacion = EXCLUDED.fecha_actualizacion
+    RETURNING id_noticia_origen
+)
+DELETE FROM noticias WHERE id_noticia IN (SELECT id_noticia_origen FROM trasladadas);
+
+UPDATE noticias SET categoria_evento = 'social' WHERE categoria_evento NOT IN ('social', 'deportivo', 'cultural');
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_categoria_evento'
+               AND (pg_get_constraintdef(oid) LIKE '%examen%' OR pg_get_constraintdef(oid) LIKE '%general%')) THEN
         ALTER TABLE noticias DROP CONSTRAINT chk_noticia_categoria_evento;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_categoria_evento') THEN
-        ALTER TABLE noticias ADD CONSTRAINT chk_noticia_categoria_evento
-            CHECK (categoria_evento IN ('social', 'deportivo', 'cultural'));
+        ALTER TABLE noticias ADD CONSTRAINT chk_noticia_categoria_evento CHECK (categoria_evento IN ('social', 'deportivo', 'cultural'));
     END IF;
 END $$;
+CREATE INDEX IF NOT EXISTS idx_fechas_calendario_inicio ON fechas_calendario(fecha_inicio);
 
 CREATE TABLE IF NOT EXISTS intereses_eventos (
     id_noticia INT NOT NULL REFERENCES noticias(id_noticia) ON DELETE CASCADE,
@@ -790,3 +847,91 @@ ALTER TABLE preguntas           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE opciones_pregunta   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE respuestas_encuesta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE detalle_respuestas  ENABLE ROW LEVEL SECURITY;
+
+-- Publicaciones propias del mural, independientes del feed de noticias.
+CREATE TABLE IF NOT EXISTS publicaciones_mural (
+    id_publicacion SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    subtitulo VARCHAR(300),
+    contenido TEXT NOT NULL,
+    url_imagen VARCHAR(500),
+    enlace_url VARCHAR(2048),
+    enlace_texto VARCHAR(80),
+    publicada BOOLEAN NOT NULL DEFAULT FALSE,
+    destacada BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_retiro DATE,
+    id_autor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_mural_visibilidad ON publicaciones_mural(publicada, fecha_retiro);
+CREATE TABLE IF NOT EXISTS configuracion_mural (
+    id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    url_publica VARCHAR(2048)
+);
+ALTER TABLE publicaciones_mural ENABLE ROW LEVEL SECURITY;
+ALTER TABLE configuracion_mural ENABLE ROW LEVEL SECURITY;
+
+-- PBI-13: horarios oficiales y propuestas revisadas por Coordinación (admin).
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS version_horario INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS espacios_club (
+    id_espacio SERIAL PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL,
+    nombre_normalizado TEXT GENERATED ALWAYS AS (LOWER(REGEXP_REPLACE(TRIM(nombre), '\s+', ' ', 'g'))) STORED,
+    CONSTRAINT uq_espacio_nombre UNIQUE (nombre_normalizado)
+);
+INSERT INTO espacios_club(nombre)
+SELECT DISTINCT TRIM(lugar) FROM horarios_club WHERE TRIM(lugar) <> ''
+ON CONFLICT (nombre_normalizado) DO NOTHING;
+ALTER TABLE horarios_club ADD COLUMN IF NOT EXISTS id_espacio INT REFERENCES espacios_club(id_espacio);
+ALTER TABLE horarios_club ADD COLUMN IF NOT EXISTS vigencia_inicio DATE;
+ALTER TABLE horarios_club ADD COLUMN IF NOT EXISTS vigencia_fin DATE;
+UPDATE horarios_club h SET id_espacio = e.id_espacio FROM espacios_club e
+WHERE h.id_espacio IS NULL AND e.nombre_normalizado = LOWER(REGEXP_REPLACE(TRIM(h.lugar), '\s+', ' ', 'g'));
+CREATE TABLE IF NOT EXISTS solicitudes_horario (
+    id_solicitud SERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_solicitante INT NOT NULL REFERENCES usuarios(id_usuario),
+    estado VARCHAR(15) NOT NULL DEFAULT 'borrador' CHECK (estado IN ('borrador', 'pendiente', 'aprobado', 'rechazado')),
+    version_base INTEGER NOT NULL,
+    detalle JSONB NOT NULL CHECK (JSONB_TYPEOF(detalle) = 'array'),
+    vigencia_inicio DATE NOT NULL,
+    vigencia_fin DATE,
+    id_revisor INT REFERENCES usuarios(id_usuario),
+    observaciones TEXT,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (vigencia_fin IS NULL OR vigencia_fin >= vigencia_inicio)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_solicitud_horario_activa ON solicitudes_horario(id_club) WHERE estado IN ('borrador', 'pendiente');
+CREATE TABLE IF NOT EXISTS historial_solicitudes_horario (
+    id_historial SERIAL PRIMARY KEY,
+    id_solicitud INT NOT NULL REFERENCES solicitudes_horario(id_solicitud) ON DELETE CASCADE,
+    id_actor INT NOT NULL REFERENCES usuarios(id_usuario),
+    accion VARCHAR(30) NOT NULL,
+    observaciones TEXT,
+    fecha TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE espacios_club ENABLE ROW LEVEL SECURITY;
+ALTER TABLE solicitudes_horario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE historial_solicitudes_horario ENABLE ROW LEVEL SECURITY;
+
+-- PBI-12: el presidente propone; únicamente admin revisa y publica.
+CREATE TABLE IF NOT EXISTS solicitudes_convocatoria (
+    id_solicitud SERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_solicitante INT NOT NULL REFERENCES usuarios(id_usuario),
+    configuracion JSONB NOT NULL,
+    estado VARCHAR(15) NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente','aprobado','rechazado')),
+    id_revisor INT REFERENCES usuarios(id_usuario),
+    observaciones TEXT,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_revision TIMESTAMPTZ
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_convocatoria_pendiente ON solicitudes_convocatoria(id_club) WHERE estado = 'pendiente';
+ALTER TABLE solicitudes_convocatoria ENABLE ROW LEVEL SECURITY;
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS estado_revision VARCHAR(15) NOT NULL DEFAULT 'preparacion' CHECK (estado_revision IN ('preparacion','pendiente','aprobado','rechazado'));
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS id_revisor INT REFERENCES usuarios(id_usuario);
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS observaciones TEXT;
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS fecha_revision TIMESTAMPTZ;
+UPDATE convocatorias SET estado_revision = 'aprobado' WHERE enviada = TRUE AND estado_revision <> 'aprobado';

@@ -8,6 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test:calendario": "node --test tests/calendario.test.js backend/tests/calendario.test.js backend/tests/fechasCalendario.test.js",
+    "test:mural": "node --test tests/mural.test.js backend/tests/mural.test.js",
+    "test:permisos-horarios": "node --test backend/tests/pbi12-13.integration.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

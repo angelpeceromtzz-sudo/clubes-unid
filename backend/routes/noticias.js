@@ -4,6 +4,7 @@ import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { v2 as cloudinary } from 'cloudinary';
+import { fechaEventoValida, errorPeriodoEvento } from '../lib/fechasEvento.js';
 
 const ROLES_EDITOR = [3, 4];
 
@@ -11,7 +12,8 @@ const CATEGORIAS_PERMITIDAS = ['promocion', 'evento', 'informativo'];
 const CATEGORIAS_EVENTO = ['social', 'deportivo', 'cultural'];
 
 const CAMPOS = `id_noticia, titulo, subtitulo, contenido, url_imagen, destacada,
-                publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento,
+                publicada, categoria, fecha_evento::text AS fecha_evento, fecha_fin_evento::text AS fecha_fin_evento,
+                mostrar_en_mural, hora_evento, lugar_evento, categoria_evento,
                 id_autor, fecha_publicacion, fecha_actualizacion`;
 
 function hoyEnCampus() {
@@ -20,12 +22,6 @@ function hoyEnCampus() {
   }).formatToParts(new Date());
   const fecha = Object.fromEntries(partes.map(({ type, value }) => [type, value]));
   return `${fecha.year}-${fecha.month}-${fecha.day}`;
-}
-
-function fechaEventoValida(fecha) {
-  if (typeof fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return false;
-  const valor = new Date(`${fecha}T12:00:00Z`);
-  return !Number.isNaN(valor.getTime()) && valor.toISOString().slice(0, 10) === fecha;
 }
 
 function errorDatosEvento(fecha, hora, lugar) {
@@ -60,7 +56,7 @@ router.get('/', async (req, res) => {
     const result = await pool.query(
       `SELECT ${CAMPOS}
        FROM noticias
-       WHERE publicada = TRUE
+       WHERE publicada = TRUE AND solo_calendario = FALSE
        ORDER BY fecha_publicacion DESC, id_noticia DESC
        LIMIT $1`,
       [limite]
@@ -79,7 +75,7 @@ router.get('/eventos', async (req, res) => {
       `SELECT ${CAMPOS},
               (SELECT COUNT(*)::int FROM intereses_eventos ie WHERE ie.id_noticia = noticias.id_noticia) AS total_interesados
        FROM noticias
-       WHERE publicada = TRUE AND categoria = 'evento'
+       WHERE publicada = TRUE AND categoria = 'evento' AND solo_calendario = FALSE
        ORDER BY fecha_publicacion DESC, id_noticia DESC`
     );
     res.json(result.rows);
@@ -89,12 +85,27 @@ router.get('/eventos', async (req, res) => {
   }
 });
 
+// Avisos del mural sin depender de la paginación del feed de noticias.
+router.get('/mural', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT ${CAMPOS} FROM noticias
+       WHERE publicada = TRUE AND mostrar_en_mural = TRUE AND solo_calendario = FALSE
+       ORDER BY destacada DESC, fecha_publicacion DESC, id_noticia DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al listar el mural:', err);
+    res.status(500).json({ error: 'No se pudo cargar el mural' });
+  }
+});
+
 router.get('/eventos/intereses/mios', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT ie.id_noticia FROM intereses_eventos ie
        JOIN noticias n ON n.id_noticia = ie.id_noticia
-       WHERE ie.id_usuario = $1 AND n.publicada = TRUE AND n.categoria = 'evento'`,
+       WHERE ie.id_usuario = $1 AND n.publicada = TRUE AND n.categoria = 'evento' AND n.solo_calendario = FALSE`,
       [req.user.id]
     );
     res.json(result.rows.map((fila) => fila.id_noticia));
@@ -109,8 +120,8 @@ router.post('/eventos/:id/interes', authenticate, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Evento no válido' });
     const evento = await pool.query(
-      `SELECT fecha_evento::text AS fecha_evento FROM noticias
-       WHERE id_noticia = $1 AND categoria = 'evento' AND publicada = TRUE`,
+      `SELECT COALESCE(fecha_fin_evento, fecha_evento)::text AS fecha_evento FROM noticias
+       WHERE id_noticia = $1 AND categoria = 'evento' AND publicada = TRUE AND solo_calendario = FALSE`,
       [id]
     );
     if (evento.rows.length === 0) return res.status(404).json({ error: 'Evento no encontrado' });
@@ -138,6 +149,7 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
               (SELECT COUNT(*)::int FROM intereses_eventos ie WHERE ie.id_noticia = noticias.id_noticia) AS total_interesados
        FROM noticias
        LEFT JOIN usuarios u ON u.id_usuario = noticias.id_autor
+       WHERE solo_calendario = FALSE
        ORDER BY fecha_publicacion DESC, id_noticia DESC`
     );
     res.json(result.rows);
@@ -150,12 +162,15 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
 // Crea una noticia — admin / rectoría
 router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
-    const { titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento } = req.body;
+    const { titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, fecha_fin_evento, mostrar_en_mural, solo_calendario, hora_evento, lugar_evento, categoria_evento } = req.body;
 
-    if (!titulo || !titulo.trim()) {
+    if (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 200) {
       return res.status(400).json({ error: 'El título es obligatorio' });
     }
-    if (!contenido || !contenido.trim()) {
+    if (solo_calendario !== undefined && typeof solo_calendario !== 'boolean') return res.status(400).json({ error: 'Opción de calendario no válida' });
+    if (solo_calendario) return res.status(400).json({ error: 'Las fechas académicas se guardan desde Calendario académico, no como eventos' });
+    const contenidoFinal = typeof contenido === 'string' ? contenido.trim() : '';
+    if (!contenidoFinal) {
       return res.status(400).json({ error: 'El contenido es obligatorio' });
     }
     const categoriaFinal = categoria ?? 'informativo';
@@ -168,16 +183,19 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
       if (!fecha_evento) return res.status(400).json({ error: 'La fecha del evento es obligatoria' });
       if (fecha_evento < hoyEnCampus()) return res.status(400).json({ error: 'La fecha del evento no puede ser pasada' });
       if (!CATEGORIAS_EVENTO.includes(categoria_evento ?? 'social')) return res.status(400).json({ error: 'Categoría del evento no válida' });
+      const errorPeriodo = errorPeriodoEvento(fecha_evento, fecha_fin_evento);
+      if (errorPeriodo) return res.status(400).json({ error: errorPeriodo });
     }
+    if (mostrar_en_mural !== undefined && typeof mostrar_en_mural !== 'boolean') return res.status(400).json({ error: 'Opción de mural no válida' });
 
     const result = await pool.query(
-      `INSERT INTO noticias (titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento, id_autor)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO noticias (titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento, id_autor, fecha_fin_evento, mostrar_en_mural)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING ${CAMPOS}`,
       [
         titulo.trim(),
         subtitulo?.trim() || null,
-        contenido.trim(),
+        contenidoFinal,
         url_imagen || null,
         destacada === true,
         publicada !== false,
@@ -187,6 +205,8 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
         categoriaFinal === 'evento' ? lugar_evento?.trim() || null : null,
         categoriaFinal === 'evento' ? categoria_evento ?? 'social' : 'social',
         req.user.id,
+        categoriaFinal === 'evento' ? fecha_fin_evento || null : null,
+        mostrar_en_mural === true,
       ]
     );
 
@@ -213,12 +233,12 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
 router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento } = req.body;
+    const { titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, fecha_fin_evento, mostrar_en_mural, solo_calendario, hora_evento, lugar_evento, categoria_evento } = req.body;
 
-    if (titulo !== undefined && !titulo.trim()) {
+    if (titulo !== undefined && (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 200)) {
       return res.status(400).json({ error: 'El título no puede quedar vacío' });
     }
-    if (contenido !== undefined && !contenido.trim()) {
+    if (contenido !== undefined && (typeof contenido !== 'string' || !contenido.trim())) {
       return res.status(400).json({ error: 'El contenido no puede quedar vacío' });
     }
     if (categoria !== undefined && !CATEGORIAS_PERMITIDAS.includes(categoria)) {
@@ -229,9 +249,12 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     if (categoria_evento !== undefined && !CATEGORIAS_EVENTO.includes(categoria_evento)) {
       return res.status(400).json({ error: 'Categoría del evento no válida' });
     }
+    if (mostrar_en_mural !== undefined && typeof mostrar_en_mural !== 'boolean') return res.status(400).json({ error: 'Opción de mural no válida' });
+    if (solo_calendario !== undefined && typeof solo_calendario !== 'boolean') return res.status(400).json({ error: 'Opción de calendario no válida' });
+    if (solo_calendario) return res.status(400).json({ error: 'Las fechas académicas se guardan desde Calendario académico, no como eventos' });
 
     const actual = await pool.query(
-      'SELECT url_imagen, categoria, fecha_evento::text AS fecha_evento FROM noticias WHERE id_noticia = $1',
+      'SELECT url_imagen, categoria, fecha_evento::text AS fecha_evento, fecha_fin_evento::text AS fecha_fin_evento FROM noticias WHERE id_noticia = $1',
       [id]
     );
 
@@ -240,6 +263,11 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     }
     const categoriaFinal = categoria ?? actual.rows[0].categoria;
     const fechaFinal = fecha_evento === undefined ? actual.rows[0].fecha_evento : fecha_evento;
+    const finFinal = fecha_fin_evento === undefined ? actual.rows[0].fecha_fin_evento : fecha_fin_evento;
+    if (categoriaFinal === 'evento') {
+      const errorPeriodo = errorPeriodoEvento(fechaFinal, finFinal);
+      if (errorPeriodo) return res.status(400).json({ error: errorPeriodo });
+    }
     if ((categoria !== undefined || fecha_evento !== undefined) && categoriaFinal === 'evento' && !fechaFinal) {
       return res.status(400).json({ error: 'La fecha del evento es obligatoria' });
     }
@@ -262,7 +290,9 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
            fecha_evento = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN NULL WHEN $8 THEN $9::date ELSE fecha_evento END,
            hora_evento  = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN NULL WHEN $10 THEN $11::time ELSE hora_evento END,
            lugar_evento = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN NULL WHEN $12 THEN $13 ELSE lugar_evento END,
-           categoria_evento = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN 'social' ELSE COALESCE($14, categoria_evento) END
+           categoria_evento = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN 'social' ELSE COALESCE($14, categoria_evento) END,
+           fecha_fin_evento = CASE WHEN $7 IS NOT NULL AND $7 <> 'evento' THEN NULL WHEN $16 THEN $17::date ELSE fecha_fin_evento END,
+           mostrar_en_mural = COALESCE($18, mostrar_en_mural)
        WHERE id_noticia = $15
        RETURNING ${CAMPOS}`,
       [
@@ -281,6 +311,9 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
         lugar_evento?.trim() || null,
         categoriaFinal === 'evento' ? categoria_evento ?? null : 'social',
         id,
+        fecha_fin_evento !== undefined,
+        fecha_fin_evento || null,
+        mostrar_en_mural ?? null,
       ]
     );
 

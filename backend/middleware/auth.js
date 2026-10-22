@@ -42,7 +42,7 @@ export function requireClubLeader(req, res, next) {
     return res.status(403).json({ error: 'No tienes permisos para esta acción' });
   }
 
-  const clubId = req.params.id || req.params.id_club;
+  const clubId = req.params.idClub || req.params.id_club || req.params.id;
   if (!clubId) {
     return res.status(400).json({ error: 'id_club requerido' });
   }
@@ -63,4 +63,10 @@ export function requireClubLeader(req, res, next) {
     console.error('Error en requireClubLeader:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   });
+}
+
+// Solo para consultas compartidas: no amplía permisos de escritura de los líderes.
+export function requireClubReader(req, res, next) {
+  if (req.user?.id_rol === 3) return next();
+  return requireClubLeader(req, res, next);
 }

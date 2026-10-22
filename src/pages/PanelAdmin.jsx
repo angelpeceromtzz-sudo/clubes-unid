@@ -9,6 +9,10 @@ import { DashboardAdmin } from '../components/admin/DashboardAdmin';
 import { SeccionUsuarios } from '../components/admin/secciones/SeccionUsuarios';
 import { SeccionClubesAdmin } from '../components/admin/secciones/SeccionClubesAdmin';
 import { SeccionAnuncios } from '../components/admin/secciones/SeccionAnuncios';
+import { SeccionCalendarioAdmin } from '../components/admin/secciones/SeccionCalendarioAdmin';
+import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdmin';
+import { SeccionConvocatoriasAdmin } from '../components/admin/secciones/SeccionConvocatoriasAdmin';
+import { SeccionHorariosAdmin } from '../components/admin/secciones/SeccionHorariosAdmin';
 import { ModalFormularioClub } from '../components/admin/modales/ModalFormularioClub';
 import { ModalFormularioUsuario } from '../components/admin/modales/ModalFormularioUsuario';
 import { TablaHistorial } from '../components/admin/tablas/TablaHistorial';
@@ -69,10 +73,14 @@ export function PanelAdmin() {
           {d.vistaActiva === 'clubes' && <SeccionClubesAdmin d={d} />}
 
           {d.vistaActiva === 'anuncios' && (
-            <SeccionAnuncios clubes={d.clubes} onSuccess={() => d.setFeedback('Anuncio publicado correctamente')} />
+            <SeccionAnuncios clubes={d.clubes} onSuccess={(_titulo, _mensaje, publicacion) => { if (publicacion) d.noticias.incorporarPublicacion(publicacion); d.setFeedback('Aviso publicado correctamente'); }} />
           )}
 
           {d.vistaActiva === 'encuestas' && <SeccionEncuestas d={d} />}
+          {d.vistaActiva === 'calendario' && <SeccionCalendarioAdmin />}
+          {d.vistaActiva === 'mural' && <SeccionMuralAdmin />}
+          {d.vistaActiva === 'convocatorias' && <SeccionConvocatoriasAdmin />}
+          {d.vistaActiva === 'horarios' && <SeccionHorariosAdmin />}
 
           {d.vistaActiva === 'noticias' && (
             <SeccionNoticias
@@ -85,6 +93,7 @@ export function PanelAdmin() {
               editando={d.noticias.editando}
               form={d.noticias.form}
               enviando={d.noticias.enviando}
+              subiendoImagen={d.noticias.subiendoImagen}
               errorModal={d.noticias.errorModal}
               abrirModalCrear={d.noticias.abrirModalCrear}
               abrirModalEditar={d.noticias.abrirModalEditar}
@@ -216,7 +225,7 @@ export function PanelAdmin() {
           />
           <ModalConfirmacion
             show={!!d.pendienteConfirmacionNoticia}
-            titulo="Eliminar noticia"
+            titulo="Eliminar publicación"
             mensaje={`¿Eliminar la publicación "${d.pendienteConfirmacionNoticia?.titulo || ''}"? Esta acción no se puede deshacer.`}
             textoConfirmar="Eliminar"
             varianteDanger
