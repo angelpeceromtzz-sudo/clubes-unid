@@ -23,7 +23,8 @@ INSERT INTO cat_roles (id_rol, nombre_rol) VALUES
     (2, 'presidente'),
     (3, 'admin'),
     (4, 'rectoria'),
-    (5, 'vicepresidente')
+    (5, 'vicepresidente'),
+    (6, 'responsable_mural')
 ON CONFLICT (id_rol) DO UPDATE SET nombre_rol = EXCLUDED.nombre_rol;
 
 CREATE TABLE IF NOT EXISTS cat_estatus_clubes (
@@ -399,6 +400,110 @@ BEGIN
             CHECK (categoria_evento IN ('social', 'deportivo', 'cultural'));
     END IF;
 END $$;
+
+-- ============================================================
+-- PBI-17 — Flujo de aprobación previa de publicaciones
+-- ============================================================
+-- `status` es la fuente de verdad del estado editorial:
+--   draft     Borrador                  pendiente  Pendiente de aprobación
+--   published Publicada                 rejected   Rechazada (con motivo)
+--
+-- `publicada` se conserva como columna ESPEJO (`publicada = status='published'`)
+-- para no romper a los lectores actuales: dashboard, `/eventos`,
+-- `intereses_eventos` y cualquier query que todavía compare esa bandera.
+--
+-- Idempotente y seguro de re-ejecutar: el backfill sólo corre la PRIMERA vez,
+-- es decir, cuando la columna se acaba de crear. Reaplicar el script sobre una
+-- base que ya guarda estados no los pisa.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'noticias'
+          AND column_name = 'status'
+    ) THEN
+        ALTER TABLE noticias ADD COLUMN status VARCHAR(20);
+
+        -- Lo que ya estaba publicado sigue publicado; todo lo demás queda como
+        -- borrador y de ahí entra al flujo de revisión.
+        UPDATE noticias SET status = CASE WHEN publicada THEN 'published' ELSE 'draft' END;
+
+        ALTER TABLE noticias ALTER COLUMN status SET DEFAULT 'draft';
+        ALTER TABLE noticias ALTER COLUMN status SET NOT NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'noticias'
+          AND column_name = 'motivo_rechazo'
+    ) THEN
+        ALTER TABLE noticias ADD COLUMN motivo_rechazo TEXT;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'noticias'
+          AND column_name = 'fecha_revision'
+    ) THEN
+        ALTER TABLE noticias ADD COLUMN fecha_revision TIMESTAMPTZ;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_status') THEN
+        ALTER TABLE noticias
+            ADD CONSTRAINT chk_noticia_status
+            CHECK (status IN ('draft', 'pending', 'published', 'rejected'));
+    END IF;
+END $$;
+
+-- Alinea la bandera espejo con el estado que ya traía cada fila (sólo toca las
+-- que difieren, así una re-ejecución no escribe de más).
+UPDATE noticias
+SET publicada = (status = 'published')
+WHERE publicada IS DISTINCT FROM (status = 'published');
+
+-- Invariante en la base: nadie puede dejar `publicada` desincronizada de
+-- `status`, ni publicar sin pasar por `published`. Protege también contra un
+-- backend desplegado con código viejo que sólo escriba la bandera.
+CREATE OR REPLACE FUNCTION fn_noticias_espejo_publicada() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        -- Alta con la bandera encendida y sin estado explícito: era el
+        -- comportamiento de "publicar directo" anterior al flujo.
+        IF NEW.publicada AND NEW.status = 'draft' THEN
+            NEW.status := 'published';
+        END IF;
+    ELSIF NEW.status IS NOT DISTINCT FROM OLD.status
+          AND NEW.publicada IS DISTINCT FROM OLD.publicada THEN
+        -- Sólo movieron la bandera (cliente viejo): el estado la sigue.
+        NEW.status := CASE WHEN NEW.publicada THEN 'published' ELSE 'draft' END;
+        IF NEW.status <> 'rejected' THEN
+            NEW.motivo_rechazo := NULL;
+        END IF;
+    END IF;
+
+    NEW.publicada := (NEW.status = 'published');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_noticias_espejo_publicada ON noticias;
+CREATE TRIGGER trg_noticias_espejo_publicada
+    BEFORE INSERT OR UPDATE ON noticias
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_noticias_espejo_publicada();
+
+CREATE INDEX IF NOT EXISTS idx_noticias_status ON noticias(status);
+-- Filtra el feed público por estado y fecha; parcial porque sólo le interesan
+-- las publicadas.
+CREATE INDEX IF NOT EXISTS idx_noticias_publicadas_fecha
+    ON noticias(fecha_publicacion DESC)
+    WHERE status = 'published';
 
 CREATE TABLE IF NOT EXISTS intereses_eventos (
     id_noticia INT NOT NULL REFERENCES noticias(id_noticia) ON DELETE CASCADE,
