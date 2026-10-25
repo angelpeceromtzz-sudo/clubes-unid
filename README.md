@@ -35,7 +35,7 @@ Sistema de gestión de clubes universitarios para UNID Campeche. Permite a alumn
 
 ## Requisitos
 
-- Node.js 18+
+- Node.js 20+
 - PostgreSQL 14+
 - Cuenta de Azure AD con aplicación registrada (MSAL)
 - Cuenta de Cloudinary (opcional, para imágenes)
@@ -94,11 +94,20 @@ DB_SSL_CA_FILE=
 # En producción (Render) debe existir NODE_ENV=production (H8).
 ```
 
-Ejecutar migraciones:
+Migraciones manuales (el backend ya **no** las ejecuta al arrancar):
 
 ```bash
+cd backend
+# Revisar antes de aplicar. No usar schema.sql completo contra una BD
+# compartida sin autorización: contiene DDL legacy.
 node migrate.js
+
+# Migración aditiva de OTP (fuente de verdad de otp_codigos):
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/migrate-otp-codigos.sql
 ```
+
+`otp_codigos` no se crea desde `schema.sql`; se aplica solo con la migración
+manual, con respaldo previo. No se ejecuta automáticamente al desplegar.
 
 (Opcional, solo desarrollo local) Sembrar datos de prueba. Úsalo **únicamente
 con una base de datos local desechable**: nunca contra Render, Supabase ni
@@ -126,6 +135,9 @@ VITE_API_URL=http://localhost:4000
 VITE_AZURE_CLIENT_ID=tu_client_id_de_azure
 VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/tu_tenant_id
 VITE_AZURE_REDIRECT_URI=http://localhost:5173
+# Tercera opción de acceso; ponla en true solo si el backend tiene
+# AUTH_OTP_ENABLED=true y la migración OTP ya fue aplicada.
+VITE_AUTH_OTP_ENABLED=false
 ```
 
 ---
@@ -208,8 +220,10 @@ clubes-unid/
    una terminal, fuera del servicio) contra la BD **antes** de arrancar el
    backend: la cadena no debe llevar `sslmode` y la validación debe
    completarse sin errores. No imprimir la URL ni credenciales.
-2. El proceso en Render ejecuta `node migrate.js` (aplica `schema.sql`,
-   idempotente) **al arrancar**: solo debe hacerlo tras superar el paso 1.
+2. El proceso en Render **no ejecuta** `schema.sql` al arrancar. Las
+   migraciones se aplican manualmente, con respaldo previo, desde una terminal
+   autorizada. `migrate.js` queda como comando manual y no debe usarse con
+   `schema.sql` completo contra una BD compartida sin revisión.
 3. **Migración aditiva del hero**: aplicar
    `backend/migrations/migrate-diapositivas-hero-movil.sql` (o asegurar que
    `schema.sql` versionado ya contenga `url_imagen_movil`) **antes** de
@@ -225,12 +239,15 @@ clubes-unid/
    en vuelo.
 3. Incluir la migración aditiva del hero antes de utilizar la nueva
    columna `url_imagen_movil`.
-4. Comprobar TLS mediante una conexión aislada antes de arrancar el backend
-   con migraciones automáticas.
-5. Desplegar en este orden, cuando se autorice: backend en Render →
+4. **OTP**: aplicar `backend/migrations/migrate-otp-codigos.sql` antes de
+   habilitar `AUTH_OTP_ENABLED=true`. Es la fuente de verdad de
+   `otp_codigos`; no está en `schema.sql` ni se ejecuta al desplegar.
+5. Comprobar TLS mediante una conexión aislada antes de arrancar el backend
+   con migraciones manuales.
+6. Desplegar en este orden, cuando se autorice: backend en Render →
    frontend en Vercel (con los merges y arreglos registrados en
    `SEGURIDAD-PROGRESO.md`).
-6. Verificación posterior: cabeceras H5b (`curl -I`), 404 global, rate
+7. Verificación posterior: cabeceras H5b (`curl -I`), 404 global, rate
    limits, login real y hero móvil con dato real.
 
 > Las comprobaciones que dependen del entorno desplegado (rotación H3, H4,

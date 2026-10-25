@@ -8,8 +8,9 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import { migrate } from './migrate.js';
-await migrate();
+// Las migraciones son manuales y controladas. index.js no ejecuta schema.sql:
+// un despliegue no debe modificar una base compartida por el solo hecho de
+// arrancar. Ver backend/migrate.js y backend/migrations/.
 
 import authRoutes from './routes/auth.js';
 import usuariosRoutes from './routes/usuarios.js';
@@ -58,7 +59,10 @@ app.use(cors({
     } else {
       callback(new Error('No permitido por CORS'));
     }
-  }
+  },
+  // El frontend (otro origen) necesita leer estos encabezados para respetar
+  // el cooldown real que impone express-rate-limit en un 429.
+  exposedHeaders: ['Retry-After', 'RateLimit', 'RateLimit-Reset', 'X-RateLimit-Reset'],
 }));
 
 // Cobertura general de API por IP (H5a): red de seguridad única para todas

@@ -42,6 +42,8 @@ export const api = {
 
   login: autenticacionService.login,
   loginMicrosoft: autenticacionService.loginMicrosoft,
+  solicitarOtp: autenticacionService.solicitarOtp,
+  verificarOtp: autenticacionService.verificarOtp,
   getMe: autenticacionService.getMe,
 
   getClubes: clubService.getClubes,

@@ -132,6 +132,18 @@ CREATE TABLE IF NOT EXISTS usuarios (
 CREATE INDEX IF NOT EXISTS idx_usuarios_institutional_id ON usuarios(institutional_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_deleted_at ON usuarios(deleted_at);
 
+-- ============================================================
+-- ACCESO MEDIANTE CÓDIGO OTP (Fase 1.5)
+-- ============================================================
+-- La tabla otp_codigos NO se crea desde schema.sql. Su fuente de verdad es
+-- migrations/migrate-otp-codigos.sql y se aplica de forma manual y controlada:
+--
+--   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+--     -f backend/migrations/migrate-otp-codigos.sql
+--
+-- Así, desplegar el backend no crea ni modifica esta tabla en una base
+-- compartida. migrate.js ya no se ejecuta al arrancar.
+
 CREATE TABLE IF NOT EXISTS clubes (
     id_club SERIAL PRIMARY KEY,
     nombre_club VARCHAR(100) NOT NULL,

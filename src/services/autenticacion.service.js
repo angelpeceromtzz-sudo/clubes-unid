@@ -13,5 +13,17 @@ export const autenticacionService = {
       body: JSON.stringify({ accessToken }),
     }),
 
+  solicitarOtp: (correo) =>
+    request('/auth/otp/solicitar', {
+      method: 'POST',
+      body: JSON.stringify({ correo }),
+    }),
+
+  verificarOtp: (correo, codigo) =>
+    request('/auth/otp/verificar', {
+      method: 'POST',
+      body: JSON.stringify({ correo, codigo }),
+    }),
+
   getMe: () => request('/auth/me'),
 };

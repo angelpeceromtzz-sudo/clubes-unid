@@ -1,3 +1,5 @@
+import { leerSegundosReintento } from '../utils/reintentosHttp';
+
 // La URL por defecto es el backend de Render; VITE_API_URL permite apuntar a
 // otro entorno (p. ej. http://localhost:4000/api en desarrollo local) sin
 // cambiar código. Sin la variable, el comportamiento desplegado no cambia.
@@ -59,6 +61,7 @@ export async function request(endpoint, options = {}) {
 
   let data;
   const contentType = res.headers.get('content-type') || '';
+  const reintentarEnSegundos = leerSegundosReintento(res);
 
   if (contentType.includes('application/json')) {
     data = await res.json();
@@ -69,6 +72,7 @@ export async function request(endpoint, options = {}) {
     const error = new Error('El servidor no respondió correctamente. Intenta de nuevo en unos momentos.');
     error.status = res.status;
     error.mensajeServidor = `status ${res.status} con contenido no-JSON`;
+    error.reintentarEnSegundos = reintentarEnSegundos;
     throw error;
   }
 
@@ -89,6 +93,7 @@ export async function request(endpoint, options = {}) {
     const error = new Error(mensaje);
     error.status = res.status;
     error.mensajeServidor = servidor;
+    error.reintentarEnSegundos = reintentarEnSegundos;
     throw error;
   }
 

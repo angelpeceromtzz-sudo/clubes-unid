@@ -1,41 +1,22 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { generarToken } from '../lib/jwt.js';
 import {
   limitadorLoginLocalIp,
   limitadorLoginLocalCuenta,
   limitadorLoginMicrosoft,
   limitadorRegistro,
 } from '../lib/rateLimits.js';
+import otpRouter from './otp.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET no está definido en las variables de entorno');
-  process.exit(1);
-}
 
-// Meto institutional_id en el JWT para que el frontend lo tenga disponible
-// sin necesidad de llamar a /me en cada render. La key "id" la dejé como
-// está porque cambiarla a "id_usuario" implicaría modificar todas las
-// rutas que usan req.user.id y prefiero no arriesgarme a romper algo.
-function generarToken(user) {
-  return jwt.sign(
-    {
-      id: user.id_usuario,
-      nombre_completo: user.nombre_completo,
-      correo_institucional: user.correo_institucional,
-      institutional_id: user.institutional_id,
-      id_rol: user.id_rol,
-      rol: user.rol,
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' },
-  );
-}
+// Acceso alternativo por código OTP. No reemplaza ni modifica los flujos
+// existentes de Microsoft ni de correo/contraseña.
+router.use('/otp', otpRouter);
 
 // Doble límite (H5a): por IP (protege contra fuerza bruta distribuida desde
 // una máquina) y por cuenta (correo del body, normalizado; evita el ataque a

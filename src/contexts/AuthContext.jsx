@@ -81,6 +81,21 @@ export function ProveedorAutenticacion({ children: hijos }) {
     }
   }, [despuesDeLogin]);
 
+  const iniciarSesionOtp = useCallback(async (correo, codigo) => {
+    try {
+      const data = await api.verificarOtp(correo, codigo);
+      await despuesDeLogin(data);
+      return { ok: true, user: data.user };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err.message,
+        status: err.status,
+        reintentarEnSegundos: err.reintentarEnSegundos,
+      };
+    }
+  }, [despuesDeLogin]);
+
   const cerrarSesion = useCallback(() => {
     setUsuario(null);
     setTieneInscripcionActiva(false);
@@ -124,7 +139,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
     <ContextoAutenticacion.Provider
       value={{
         usuario, authReady,
-        iniciarSesion, iniciarSesionMicrosoft, cerrarSesion,
+        iniciarSesion, iniciarSesionMicrosoft, iniciarSesionOtp, cerrarSesion,
         estaAutenticado, esAdmin, esPresidente, esRectoria,
         tieneInscripcionActiva, clubesPostulados,
         actualizarClubesPostulados: setClubesPostulados,
