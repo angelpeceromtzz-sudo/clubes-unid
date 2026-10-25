@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole, requireClubReader } from '../middleware/auth.js';
+import { vencerInscripciones, MENSAJE_VENCIMIENTO } from '../lib/vencimientoConvocatorias.js';
 
 const router = Router({ mergeParams: true });
 const fallo = (status, message) => Object.assign(new Error(message), { status });
 
 async function configuracion(client, id) {
+  await vencerInscripciones(client, id);
   const actual = await client.query('SELECT estado_calculado, max_postulaciones, postulaciones_actuales, fecha_apertura_programada, fecha_limite_cierre, formularios_recibidos FROM clubes_con_estado WHERE id_club = $1', [id]);
   if (!actual.rows.length) throw fallo(404, 'Club no encontrado');
   const solicitud = await client.query('SELECT * FROM solicitudes_convocatoria WHERE id_club = $1 ORDER BY id_solicitud DESC LIMIT 1', [id]);
@@ -16,7 +18,7 @@ function transaccion(handler) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const result = await handler(req, client);
+      const result = await handler(req, client, res);
       await client.query('COMMIT');
       res.json(result);
     } catch (err) {
@@ -44,6 +46,7 @@ router.put('/', authenticate, requireRole(2), transaccion(async (req, client) =>
   const club = (await client.query('SELECT * FROM clubes WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
   if (!club) throw fallo(404, 'Club no encontrado');
   if (club.id_presidente !== req.user.id) throw fallo(403, 'Solo el presidente de este club puede proponer la convocatoria');
+  await vencerInscripciones(client, req.params.id);
   const pendiente = await client.query("SELECT id_solicitud FROM solicitudes_convocatoria WHERE id_club = $1 AND estado = 'pendiente'", [req.params.id]);
   if (pendiente.rows.length) throw fallo(409, 'Ya hay una convocatoria pendiente de revisión');
   const campos = ['fecha_apertura_programada', 'fecha_limite_cierre', 'max_postulaciones'];
@@ -53,6 +56,7 @@ router.put('/', authenticate, requireRole(2), transaccion(async (req, client) =>
     if (datos[campo] != null && (datos[campo] === '' || Number.isNaN(new Date(datos[campo]).getTime()) || (typeof datos[campo] !== 'string' && !(datos[campo] instanceof Date)))) throw fallo(400, 'Las fechas de convocatoria no son válidas');
   }
   if (datos.fecha_apertura_programada && datos.fecha_limite_cierre && new Date(datos.fecha_limite_cierre) <= new Date(datos.fecha_apertura_programada)) throw fallo(400, 'El cierre debe ser posterior a la apertura');
+  if (datos.fecha_limite_cierre && new Date(datos.fecha_limite_cierre) <= new Date()) throw fallo(400, 'La fecha de cierre debe ser futura para enviar la propuesta a revisión');
   if (datos.max_postulaciones != null && (!Number.isInteger(datos.max_postulaciones) || datos.max_postulaciones < 1 || datos.max_postulaciones > 2147483647)) throw fallo(400, 'El límite de postulaciones debe ser un entero positivo');
   const s = (await client.query('INSERT INTO solicitudes_convocatoria(id_club,id_solicitante,configuracion) VALUES ($1,$2,$3) RETURNING *',
     [req.params.id, req.user.id, JSON.stringify(datos)])).rows[0];
@@ -62,15 +66,20 @@ router.put('/', authenticate, requireRole(2), transaccion(async (req, client) =>
   return configuracion(client, req.params.id);
 }));
 
-router.post('/revision', authenticate, requireRole(3), transaccion(async (req, client) => {
+router.post('/revision', authenticate, requireRole(3), transaccion(async (req, client, res) => {
   const { accion, id_solicitud } = req.body;
   const observaciones = typeof req.body.observaciones === 'string' ? req.body.observaciones.trim() : '';
   if (!['aprobar', 'rechazar'].includes(accion) || !Number.isInteger(id_solicitud)) throw fallo(400, 'Selecciona la solicitud y una decisión válida');
   if (observaciones.length > 2000 || (accion === 'rechazar' && !observaciones)) throw fallo(400, 'Explica las correcciones necesarias, en hasta 2000 caracteres');
   const club = (await client.query('SELECT * FROM clubes WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
   if (!club) throw fallo(404, 'Club no encontrado');
+  await vencerInscripciones(client, req.params.id);
   const s = (await client.query('SELECT * FROM solicitudes_convocatoria WHERE id_club = $1 AND id_solicitud = $2 FOR UPDATE', [req.params.id, id_solicitud])).rows[0];
   if (!s) throw fallo(404, 'Solicitud no encontrada');
+  if (s.estado === 'vencido') {
+    res.status(409);
+    return { error: MENSAJE_VENCIMIENTO, ...await configuracion(client, req.params.id) };
+  }
   if (s.estado !== 'pendiente') throw fallo(409, 'Esta solicitud ya fue revisada');
   if (accion === 'aprobar' && club.id_presidente !== s.id_solicitante) throw fallo(409, 'Cambió la presidencia. El presidente actual debe presentar una nueva convocatoria');
   if (accion === 'aprobar') {

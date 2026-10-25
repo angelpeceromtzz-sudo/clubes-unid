@@ -8,8 +8,9 @@ import { toDatetimeLocal, fromDatetimeLocal } from '../../../utils/fechas';
 import { Spinner } from '../../ui/Spinner';
 import { BadgeEstado } from '../convocatoria/BadgeEstado';
 import { ConvocatoriaConfirmCerrarBox } from '../convocatoria/ConvocatoriaAcciones';
+import { useFechaVencida } from '../../../hooks/useFechaVencida';
 
-const ESTADOS = { pendiente: 'Pendiente de revisión', aprobado: 'Aprobada y publicada', rechazado: 'Requiere correcciones' };
+const ESTADOS = { pendiente: 'Pendiente de revisión', aprobado: 'Aprobada y publicada', rechazado: 'Requiere correcciones', vencido: 'Vencida · requiere nuevas fechas' };
 export function ModalConfiguracionConvocatoria({ club }) {
   const { esAdmin, usuario } = useAutenticacion();
   const { tema, cardCls, inputCls } = useTheme();
@@ -21,9 +22,10 @@ export function ModalConfiguracionConvocatoria({ club }) {
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const plazoVencido = useFechaVencida(config?.solicitud?.estado === 'pendiente' ? config.solicitud.configuracion.fecha_limite_cierre : null);
   function incorporar(data) {
     setConfig(data);
-    setForm(['pendiente', 'rechazado'].includes(data.solicitud?.estado) ? data.solicitud.configuracion : data);
+    setForm(['pendiente', 'rechazado', 'vencido'].includes(data.solicitud?.estado) ? data.solicitud.configuracion : data);
   }
   useEffect(() => {
     let activo = true;
@@ -31,14 +33,23 @@ export function ModalConfiguracionConvocatoria({ club }) {
       .catch((err) => { if (activo) setError(err.message); });
     return () => { activo = false; };
   }, [club.id_club]);
-  async function ejecutar(operacion, texto) {
+  async function ejecutar(operacion, texto, recargarEnError = false) {
     setOcupado(true); setError(''); setMensaje('');
     try { incorporar(await operacion()); setObservaciones(''); setMensaje(texto); }
-    catch (err) { setError(err.message); }
+    catch (err) {
+      setError(err.message);
+      if (recargarEnError) {
+        try { incorporar(await api.getConvocatoriaClub(club.id_club)); } catch { /* Conserva el error original. */ }
+      }
+    }
     finally { setOcupado(false); }
   }
   function enviar(e) {
     e.preventDefault();
+    if (form.fecha_limite_cierre && new Date(form.fecha_limite_cierre) <= new Date()) {
+      setError('La fecha de cierre debe ser futura para enviar la propuesta a revisión.');
+      return;
+    }
     ejecutar(() => api.actualizarConfiguracionConvocatoria(club.id_club, {
       fecha_apertura_programada: form.fecha_apertura_programada || null,
       fecha_limite_cierre: form.fecha_limite_cierre || null,
@@ -47,11 +58,12 @@ export function ModalConfiguracionConvocatoria({ club }) {
   }
   function revisar(accion) {
     ejecutar(() => convocatoriaService.revisarInscripcion(club.id_club, config.solicitud.id_solicitud, accion, observaciones),
-      accion === 'aprobar' ? 'Convocatoria aprobada. Las inscripciones ya usan la configuración autorizada.' : 'Se enviaron las observaciones al presidente.');
+      accion === 'aprobar' ? 'Convocatoria aprobada. Las inscripciones ya usan la configuración autorizada.' : 'Se enviaron las observaciones al presidente.', true);
   }
   if (!config) return error ? <p role="alert" className="text-sm text-red-500">{error}</p> : <Spinner />;
   const s = config.solicitud;
-  const pendiente = s?.estado === 'pendiente';
+  const vencida = s?.estado === 'vencido' || plazoVencido;
+  const pendiente = s?.estado === 'pendiente' && !vencida;
   const fecha = (valor) => valor ? new Date(valor).toLocaleString('es-MX') : 'Sin fecha definida';
   return <section className="space-y-4">
     <header><h3 className={tema.title + ' text-lg font-bold'}>Convocatoria de inscripción</h3><p className={tema.subtitle + ' mt-1 text-sm'}>El presidente prepara la convocatoria; admin la revisa y aprueba antes de publicarla.</p></header>
@@ -63,13 +75,14 @@ export function ModalConfiguracionConvocatoria({ club }) {
     </div>
     <form onSubmit={enviar} className={cardCls + ' rounded-xl border p-4 sm:p-5'}>
       <h4 className={tema.title + ' mb-2 text-sm font-bold'}>{pendiente ? 'Convocatoria por revisar' : esAdmin ? 'Última configuración del club' : 'Preparar convocatoria'}</h4>
-      {s && <p className={tema.subtitle + ' mb-3 text-xs'}>{ESTADOS[s.estado]}{s.observaciones ? ' · ' + s.observaciones : ''}</p>}
+      {s && <p className={tema.subtitle + ' mb-3 text-xs'}>{ESTADOS[vencida ? 'vencido' : s.estado]}{s.observaciones ? ' · ' + s.observaciones : ''}</p>}
+      {vencida && <p role="status" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-600">El plazo de cierre venció antes de la aprobación. El presidente puede actualizar las fechas y reenviar la propuesta; Coordinación deberá revisarla de nuevo.</p>}
       <fieldset disabled={ocupado || !presidente || pendiente} className="grid gap-4 sm:grid-cols-2">
         <label className={tema.title + ' text-xs font-semibold'}>Apertura<input type="datetime-local" value={toDatetimeLocal(form.fecha_apertura_programada)} onChange={(e) => setForm((p) => ({ ...p, fecha_apertura_programada: fromDatetimeLocal(e.target.value) }))} className={inputCls + ' mt-2'} /></label>
         <label className={tema.title + ' text-xs font-semibold'}>Cierre (opcional)<input type="datetime-local" min={toDatetimeLocal(form.fecha_apertura_programada)} value={toDatetimeLocal(form.fecha_limite_cierre)} onChange={(e) => setForm((p) => ({ ...p, fecha_limite_cierre: fromDatetimeLocal(e.target.value) }))} className={inputCls + ' mt-2'} /></label>
         <label className={tema.title + ' text-xs font-semibold'}>Límite de postulaciones<input type="number" min="1" max={MAX_POSTULACIONES} value={form.max_postulaciones ?? ''} placeholder={String(MAX_POSTULACIONES)} onChange={(e) => setForm((p) => ({ ...p, max_postulaciones: e.target.value ? Number(e.target.value) : null }))} className={inputCls + ' mt-2'} /></label>
       </fieldset>
-      {presidente && !pendiente && <button disabled={ocupado} className="mt-4 rounded-lg bg-amber-400 px-4 py-2 text-xs font-bold text-slate-950 cursor-pointer disabled:opacity-40">{ocupado ? 'Enviando…' : 'Enviar a revisión de admin'}</button>}
+      {presidente && !pendiente && <button disabled={ocupado} className="mt-4 rounded-lg bg-amber-400 px-4 py-2 text-xs font-bold text-slate-950 cursor-pointer disabled:opacity-40">{ocupado ? 'Enviando…' : vencida ? 'Reenviar con nuevas fechas' : 'Enviar a revisión de admin'}</button>}
       {pendiente && !esAdmin && <p className={tema.subtitle + ' mt-4 text-xs'}>Admin está revisando esta propuesta. La versión publicada no cambia mientras tanto.</p>}
     </form>
     {esAdmin && pendiente && <div className={cardCls + ' rounded-xl border p-4'}>

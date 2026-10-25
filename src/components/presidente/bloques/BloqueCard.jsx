@@ -6,13 +6,15 @@ import { BloqueHeader } from './BloqueHeader';
 import { BloqueInfoGrid } from './BloqueInfoGrid';
 import { BloqueActions } from './BloqueActions';
 import { BloqueAlumnosList } from './BloqueAlumnosList';
+import { useFechaVencida } from '../../../hooks/useFechaVencida';
 
 export function BloqueCard({ convocatoria, onActualizar, onEnviar, onImprimir, onRechazar }) {
   const { modoOscuro, inputCls, tema } = useTheme();
   const { esAdmin } = useAutenticacion();
   const [observaciones, setObservaciones] = useState('');
-  const estado = convocatoria.enviada ? 'aprobado' : convocatoria.estado_revision || 'preparacion';
-  const estados = { preparacion: 'En preparación', pendiente: 'Pendiente de revisión de admin', aprobado: 'Aprobada y publicada', rechazado: 'Requiere correcciones' };
+  const plazoVencido = useFechaVencida(convocatoria.estado_revision === 'pendiente' ? convocatoria.fecha_evaluacion : null);
+  const estado = convocatoria.enviada ? 'aprobado' : plazoVencido ? 'vencido' : convocatoria.estado_revision || 'preparacion';
+  const estados = { preparacion: 'En preparación', pendiente: 'Pendiente de revisión de admin', aprobado: 'Aprobada y publicada', rechazado: 'Requiere correcciones', vencido: 'Vencida · requiere nuevas fechas' };
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState({
     fecha: convocatoria.fecha ? convocatoria.fecha.split('T')[0] : '',
@@ -72,6 +74,7 @@ export function BloqueCard({ convocatoria, onActualizar, onEnviar, onImprimir, o
           <BloqueInfoGrid fecha={convocatoria.fecha} hora={convocatoria.hora} lugar={convocatoria.lugar} />
         )}
         <p className={tema.subtitle + ' my-3 text-xs'}>{estados[estado]}</p>
+        {estado === 'vencido' && <p role="status" className="mb-3 rounded-lg bg-amber-400/10 p-3 text-xs text-amber-600">La evaluación venció antes de la aprobación. El presidente debe actualizar fecha y hora y enviarla de nuevo a revisión. Los alumnos aún no han sido convocados.</p>}
         {convocatoria.observaciones && <p className="mb-3 text-xs text-amber-600">Observaciones: {convocatoria.observaciones}</p>}
         {esAdmin && estado === 'pendiente' && <label className={tema.title + ' mb-3 block text-xs'}>Observaciones para el presidente<textarea value={observaciones} maxLength={2000} disabled={enviando} onChange={(e) => setObservaciones(e.target.value)} className={inputCls + ' mt-2'} placeholder="Obligatorias para devolver con correcciones" /></label>}
         <BloqueActions

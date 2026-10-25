@@ -1027,15 +1027,19 @@ CREATE TABLE IF NOT EXISTS solicitudes_convocatoria (
     id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
     id_solicitante INT NOT NULL REFERENCES usuarios(id_usuario),
     configuracion JSONB NOT NULL,
-    estado VARCHAR(15) NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente','aprobado','rechazado')),
+    estado VARCHAR(15) NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente','aprobado','rechazado','vencido')),
     id_revisor INT REFERENCES usuarios(id_usuario),
     observaciones TEXT,
     fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_revision TIMESTAMPTZ
 );
+ALTER TABLE solicitudes_convocatoria DROP CONSTRAINT IF EXISTS solicitudes_convocatoria_estado_check;
+ALTER TABLE solicitudes_convocatoria ADD CONSTRAINT solicitudes_convocatoria_estado_check CHECK (estado IN ('pendiente','aprobado','rechazado','vencido'));
 CREATE UNIQUE INDEX IF NOT EXISTS uq_convocatoria_pendiente ON solicitudes_convocatoria(id_club) WHERE estado = 'pendiente';
 ALTER TABLE solicitudes_convocatoria ENABLE ROW LEVEL SECURITY;
-ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS estado_revision VARCHAR(15) NOT NULL DEFAULT 'preparacion' CHECK (estado_revision IN ('preparacion','pendiente','aprobado','rechazado'));
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS estado_revision VARCHAR(15) NOT NULL DEFAULT 'preparacion' CHECK (estado_revision IN ('preparacion','pendiente','aprobado','rechazado','vencido'));
+ALTER TABLE convocatorias DROP CONSTRAINT IF EXISTS convocatorias_estado_revision_check;
+ALTER TABLE convocatorias ADD CONSTRAINT convocatorias_estado_revision_check CHECK (estado_revision IN ('preparacion','pendiente','aprobado','rechazado','vencido'));
 ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS id_revisor INT REFERENCES usuarios(id_usuario);
 ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS observaciones TEXT;
 ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS fecha_revision TIMESTAMPTZ;

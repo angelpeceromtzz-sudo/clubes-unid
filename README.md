@@ -22,6 +22,8 @@ Los espacios se eligen de un catálogo administrado por Coordinación. Se compru
 
 Verificación: `npm run test:permisos-horarios` ejecuta pruebas de integración de PostgreSQL en un esquema temporal exclusivo, que se elimina al finalizar. No utiliza las tablas de datos del sistema. Requiere las credenciales del archivo `backend/.env`.
 
+Las propuestas de convocatoria pendientes pasan a **Vencida · requiere nuevas fechas** si llega su cierre de inscripciones o la fecha y hora de evaluación antes de aprobarse. La comprobación se realiza al consultar y al intentar aprobar, usando la zona `America/Mexico_City` para los bloques. El presidente puede corregir y reenviar; Coordinación debe revisar otra vez. No se cambia la convocatoria publicada ni se convoca a alumnos al vencer. Las propuestas de inscripción anteriores se conservan en su tabla. Sin fecha de cierre, la propuesta de inscripción no vence; una apertura que ya pasó puede aprobarse mientras el cierre siga vigente. No se aceptan nuevos envíos a revisión con un cierre o una evaluación en el pasado. El estado nuevo se incorpora automáticamente al reiniciar el backend con `schema.sql`.
+
 ## Tech Stack
 
 | Capa | Tecnologías |

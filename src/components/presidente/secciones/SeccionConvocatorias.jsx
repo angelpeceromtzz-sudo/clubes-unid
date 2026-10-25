@@ -40,8 +40,13 @@ export function SeccionConvocatorias({ club }) {
   }
 
   async function manejarEnviar(id) {
-    if (esAdmin) await api.enviarConvocatoria(id);
-    else await convocatoriaService.solicitarRevision(id);
+    try {
+      if (esAdmin) await api.enviarConvocatoria(id);
+      else await convocatoriaService.solicitarRevision(id);
+    } catch (err) {
+      try { setConvocatorias(await api.getConvocatorias(club.id_club)); } catch { /* Conserva el error de revisión. */ }
+      throw err;
+    }
     setConvocatorias(await api.getConvocatorias(club.id_club));
   }
 

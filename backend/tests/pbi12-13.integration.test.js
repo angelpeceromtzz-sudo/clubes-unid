@@ -136,6 +136,135 @@ test('PBI-12: admin devuelve con motivo; el presidente corrige y solicita otra r
   assert.equal(Number((await testPool.query('SELECT COUNT(*) FROM solicitudes_convocatoria')).rows[0].count),2);
 });
 
+test('PBI-12: no se puede proponer una inscripción cuyo cierre ya venció', async () => {
+  const cierre = new Date(Date.now() - 60000).toISOString();
+  const res = await enviar('PUT', '/clubes/1/convocatoria', { fecha_limite_cierre: cierre, max_postulaciones: 20 }, 2);
+  assert.equal(res.status, 400);
+  assert.match(res.datos.error, /cierre debe ser futura/);
+  assert.equal(Number((await testPool.query('SELECT COUNT(*) FROM solicitudes_convocatoria')).rows[0].count), 0);
+});
+
+async function vencerInscripcion(id) {
+  await testPool.query(`UPDATE solicitudes_convocatoria SET configuracion = configuracion || jsonb_build_object(
+    'fecha_apertura_programada', clock_timestamp() - interval '2 hours',
+    'fecha_limite_cierre', clock_timestamp() - interval '1 minute') WHERE id_solicitud = $1`, [id]);
+}
+
+test('PBI-12: una inscripción vence antes de aprobar; se conserva y admite una nueva revisión', async () => {
+  const s = (await enviar('PUT', '/clubes/1/convocatoria', configConv, 2)).datos.solicitud;
+  await vencerInscripcion(s.id_solicitud);
+  const tardia = await enviar('POST', '/clubes/1/convocatoria/revision', { accion: 'aprobar', id_solicitud: s.id_solicitud });
+  assert.equal(tardia.status, 409);
+  assert.equal(tardia.datos.solicitud.estado, 'vencido');
+  assert.match(tardia.datos.error, /Actualiza las fechas/);
+  assert.equal(tardia.datos.fecha_limite_cierre, null);
+  assert.equal(tardia.datos.max_postulaciones, null);
+  const anterior = (await testPool.query('SELECT * FROM solicitudes_convocatoria WHERE id_solicitud=$1', [s.id_solicitud])).rows[0];
+  assert.equal(anterior.estado, 'vencido');
+  assert.equal(anterior.id_revisor, null);
+  assert.equal(Number((await testPool.query("SELECT COUNT(*) FROM notificaciones WHERE titulo='Convocatoria aprobada'")).rows[0].count), 0);
+  const respuestas = await Promise.all([
+    enviar('PUT', '/clubes/1/convocatoria', configConv, 2),
+    enviar('PUT', '/clubes/1/convocatoria', configConv, 2),
+  ]);
+  assert.deepEqual(respuestas.map((r) => r.status).sort(), [200, 409]);
+  const nueva = respuestas.find((r) => r.status === 200).datos.solicitud;
+  assert.notEqual(nueva.id_solicitud, s.id_solicitud);
+  assert.equal(nueva.estado, 'pendiente');
+  assert.equal((await enviar('POST', '/clubes/1/convocatoria/revision', { accion: 'aprobar', id_solicitud: s.id_solicitud })).status, 409);
+  const aprobada = await enviar('POST', '/clubes/1/convocatoria/revision', { accion: 'aprobar', id_solicitud: nueva.id_solicitud });
+  assert.equal(aprobada.status, 200);
+  assert.equal(aprobada.datos.solicitud.estado, 'aprobado');
+  assert.equal(Number((await testPool.query('SELECT COUNT(*) FROM solicitudes_convocatoria')).rows[0].count), 2);
+});
+
+test('PBI-12: consultar detecta vencimiento y reenviar sin consulta previa también lo resuelve', async () => {
+  const s = (await enviar('PUT', '/clubes/1/convocatoria', configConv, 2)).datos.solicitud;
+  await vencerInscripcion(s.id_solicitud);
+  const estado = await enviar('GET', '/clubes/1/convocatoria', null, 2);
+  assert.equal(estado.datos.solicitud.estado, 'vencido');
+  const nueva = (await enviar('PUT', '/clubes/1/convocatoria', configConv, 2)).datos.solicitud;
+  await vencerInscripcion(nueva.id_solicitud);
+  const reenvio = await enviar('PUT', '/clubes/1/convocatoria', configConv, 2);
+  assert.equal(reenvio.status, 200);
+  assert.notEqual(reenvio.datos.solicitud.id_solicitud, nueva.id_solicitud);
+  assert.equal((await testPool.query('SELECT estado FROM solicitudes_convocatoria WHERE id_solicitud=$1', [nueva.id_solicitud])).rows[0].estado, 'vencido');
+});
+
+test('PBI-12: una apertura pasada sin cierre no vence; una aprobada conserva su estado al cerrar', async () => {
+  const apertura = new Date(Date.now() - 3600000).toISOString();
+  const propuesta = await enviar('PUT', '/clubes/1/convocatoria', { fecha_apertura_programada: apertura, fecha_limite_cierre: null }, 2);
+  assert.equal(propuesta.status, 200);
+  const s = propuesta.datos.solicitud;
+  assert.equal((await enviar('GET', '/clubes/1/convocatoria', null, 2)).datos.solicitud.estado, 'pendiente');
+  assert.equal((await enviar('POST', '/clubes/1/convocatoria/revision', { accion: 'aprobar', id_solicitud: s.id_solicitud })).status, 200);
+  await vencerInscripcion(s.id_solicitud);
+  assert.equal((await enviar('GET', '/clubes/1/convocatoria', null, 2)).datos.solicitud.estado, 'aprobado');
+});
+
+async function prepararBloquePendiente() {
+  await testPool.query("INSERT INTO formularios(id_club,id_alumno,nombre_completo,status) VALUES (1,4,'Alumno','Preseleccionado')");
+  assert.equal((await enviar('POST', '/convocatorias/generar', { id_club: 1 }, 2)).status, 200);
+  const id = (await testPool.query('SELECT id_convocatoria FROM convocatorias')).rows[0].id_convocatoria;
+  assert.equal((await enviar('PUT', '/convocatorias/' + id, { fecha: '2099-01-20', hora: '10:00', lugar: 'Cancha' }, 2)).status, 200);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/solicitar-revision`, {}, 2)).status, 200);
+  return id;
+}
+
+async function vencerBloque(id) {
+  await testPool.query(`UPDATE convocatorias SET
+    fecha = ((clock_timestamp() AT TIME ZONE 'America/Mexico_City') - interval '1 minute')::date,
+    hora = ((clock_timestamp() AT TIME ZONE 'America/Mexico_City') - interval '1 minute')::time
+    WHERE id_convocatoria=$1`, [id]);
+}
+
+test('PBI-12: un bloque vencido no se publica ni convoca alumnos; puede reprogramarse y reenviarse', async () => {
+  const id = await prepararBloquePendiente();
+  await vencerBloque(id);
+  const tardia = await enviar('POST', `/convocatorias/${id}/enviar`, {});
+  assert.equal(tardia.status, 409);
+  assert.match(tardia.datos.error, /venció/);
+  let c = (await testPool.query('SELECT * FROM convocatorias WHERE id_convocatoria=$1', [id])).rows[0];
+  assert.equal(c.estado_revision, 'vencido');
+  assert.equal(c.enviada, false);
+  assert.equal((await testPool.query('SELECT status FROM formularios')).rows[0].status, 'Preseleccionado');
+  assert.equal(Number((await testPool.query("SELECT COUNT(*) FROM notificaciones WHERE audiencia='alumnos'")).rows[0].count), 0);
+  assert.equal((await enviar('PUT', `/convocatorias/${id}`, { fecha: '2099-01-20', hora: '11:00' }, 2)).status, 200);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/enviar`, {})).status, 409);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/solicitar-revision`, {}, 2)).status, 200);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/enviar`, {})).status, 200);
+  await vencerBloque(id);
+  c = (await enviar('GET', '/convocatorias/1', null, 2)).datos[0];
+  assert.equal(c.estado_revision, 'aprobado');
+  assert.equal(c.enviada, true);
+});
+
+test('PBI-12: un bloque vence al consultar o editar; fecha y hora pasadas no permiten solicitar revisión', async () => {
+  const id = await prepararBloquePendiente();
+  await vencerBloque(id);
+  const listado = await enviar('GET', '/convocatorias/1', null, 2);
+  assert.equal(listado.datos[0].estado_revision, 'vencido');
+  assert.ok(new Date(listado.datos[0].fecha_evaluacion) < new Date());
+  assert.equal((await enviar('PUT', `/convocatorias/${id}`, { lugar: 'Salón' }, 2)).status, 200);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/solicitar-revision`, {}, 2)).status, 400);
+  await testPool.query("UPDATE convocatorias SET estado_revision='pendiente' WHERE id_convocatoria=$1", [id]);
+  assert.equal((await enviar('PUT', `/convocatorias/${id}`, { fecha: '2099-01-20', hora: '12:00' }, 2)).status, 200);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/solicitar-revision`, {}, 2)).status, 200);
+});
+
+test('PBI-12: un bloque que aún no empieza en hora de México sigue pendiente', async () => {
+  const id = await prepararBloquePendiente();
+  const futuro = (await testPool.query(`UPDATE convocatorias SET
+    fecha = ((clock_timestamp() AT TIME ZONE 'America/Mexico_City') + interval '1 hour')::date,
+    hora = ((clock_timestamp() AT TIME ZONE 'America/Mexico_City') + interval '1 hour')::time
+    WHERE id_convocatoria=$1 RETURNING ((fecha + hora) AT TIME ZONE 'America/Mexico_City') AS instante`, [id])).rows[0].instante;
+  const listado = await enviar('GET', '/convocatorias/1', null, 2);
+  assert.equal(listado.datos[0].estado_revision, 'pendiente');
+  assert.equal(new Date(listado.datos[0].fecha_evaluacion).getTime(), futuro.getTime());
+  assert.ok(futuro > new Date());
+  assert.equal((await enviar('POST', `/convocatorias/${id}/enviar`, {})).status, 200);
+});
+
 test('PBI-12: el presidente prepara bloques sin convocar alumnos y admin publica después de revisión', async () => {
   await testPool.query("INSERT INTO formularios(id_club,id_alumno,nombre_completo,status) VALUES (1,4,'Alumno','Preseleccionado')");
   assert.equal((await enviar('POST','/convocatorias/generar',{id_club:1},2)).status,200);
