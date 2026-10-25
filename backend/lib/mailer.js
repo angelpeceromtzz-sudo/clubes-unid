@@ -1,3 +1,4 @@
+import { crearMailerResend } from './resendMailer.js';
 import { crearMailerSmtp } from './smtpMailer.js';
 
 const OUTBOX_MOCK = [];
@@ -65,6 +66,14 @@ export function crearMailer(
 
   if (normalizado === 'mock') {
     return crearMailerMock();
+  }
+
+  if (normalizado === 'resend') {
+    return crearMailerResend({
+      env: opciones.env || process.env,
+      fetchImpl: opciones.fetchImpl,
+      timeoutMs: opciones.timeoutMs,
+    });
   }
 
   if (normalizado === 'smtp') {

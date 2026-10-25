@@ -1,4 +1,5 @@
 import { esCorreoInstitucionalValido } from './institutionalEmail.js';
+import { crearContenidoOtp } from './otpMailContent.js';
 
 const TIEMPO_CONEXION_MS = 10000;
 const TIEMPO_SALUDO_MS = 10000;
@@ -99,42 +100,14 @@ async function crearTransporteNodemailer(config) {
   return nodemailer.createTransport(crearOpcionesNodemailer(config));
 }
 
-function minutosDeVigencia(minutos, expiracion) {
-  const valor = Number(minutos);
-
-  if (Number.isInteger(valor) && valor > 0) {
-    return valor;
-  }
-
-  if (expiracion) {
-    const fecha = expiracion instanceof Date ? expiracion : new Date(expiracion);
-    const diferencia = Math.ceil((fecha.getTime() - Date.now()) / 60000);
-
-    if (Number.isFinite(diferencia) && diferencia > 0) {
-      return diferencia;
-    }
-  }
-
-  return 10;
-}
-
 export function crearMensajeOtp({ correo, codigo, expiracion, minutos, from }) {
-  const vigencia = minutosDeVigencia(minutos, expiracion);
+  const { subject, text } = crearContenidoOtp({ codigo, expiracion, minutos });
 
   return {
     from,
     to: correo,
-    subject: 'Tu código de acceso a Clubs UNID',
-    text: [
-      'Hola,',
-      '',
-      `Tu código de acceso a Clubs UNID es: ${codigo}`,
-      '',
-      `El código es válido durante ${vigencia} minutos.`,
-      'Si no solicitaste este código, puedes ignorar este correo. No compartas el código con nadie.',
-      '',
-      'Clubs UNID',
-    ].join('\n'),
+    subject,
+    text,
     disableFileAccess: true,
     disableUrlAccess: true,
   };

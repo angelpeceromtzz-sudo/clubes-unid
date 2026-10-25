@@ -230,6 +230,26 @@ clubes-unid/
    usar la nueva columna en API/UI. `migrate.js` solo ejecuta `schema.sql`;
    el archivo de migración del hero no corre solo.
 
+### Correo OTP en Render Free (Resend)
+
+Render Free bloquea las conexiones SMTP salientes en los puertos 25, 465 y 587.
+Para producción usa Resend por HTTPS; SMTP queda solo como compatibilidad.
+
+En Render configura explícitamente:
+
+```env
+OTP_MAIL_PROVIDER=resend
+RESEND_API_KEY=tu_api_key_de_resend
+RESEND_FROM=Clubs UNID <no-reply@tu-dominio-verificado>
+```
+
+`RESEND_FROM` debe usar un remitente de un dominio verificado en Resend. Si
+faltan estas variables, el backend falla cerrado y responde 503 sin generar
+código.
+
+`backend/.env.example` conserva `OTP_MAIL_PROVIDER=mock` como valor seguro por
+defecto para desarrollo y pruebas.
+
 ### Orden operativo
 
 1. Revisar H17 y planificar la remediación de las cuentas demo (seed) antes

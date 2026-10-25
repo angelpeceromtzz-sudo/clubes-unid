@@ -74,6 +74,8 @@ test('.env.example deja OTP desactivado, sin secretos y con mock por defecto', (
   assert.match(envExample, /^AUTH_OTP_ENABLED=false$/m);
   assert.match(envExample, /^OTP_PEPPER=$/m);
   assert.match(envExample, /^OTP_MAIL_PROVIDER=mock$/m);
+  assert.match(envExample, /^RESEND_API_KEY=$/m);
+  assert.match(envExample, /^RESEND_FROM=$/m);
   assert.match(envExample, /^SMTP_PASSWORD=$/m);
 });
 
