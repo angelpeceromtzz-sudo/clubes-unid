@@ -403,12 +403,12 @@ export function ModalInicioSesion({ onClose }) {
     <ModalBase
       show={true}
       onClose={cerrarModal}
-      maxWidth="max-w-sm"
+      maxWidth="max-w-md"
       panelClassName={`${
         esOscuro ? 'bg-[#0e162c] border border-slate-700/30' : 'bg-white border border-slate-200/70 shadow-sm'
       }`}
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-5">
         {vista !== VISTA.OPCIONES ? (
           <BotonVolver onClick={volverAtras} esOscuro={esOscuro} />
         ) : (
@@ -417,11 +417,61 @@ export function ModalInicioSesion({ onClose }) {
         <BotonCerrar onClick={cerrarModal} />
       </div>
 
-      <h2 className={`text-2xl font-black mb-6 ${esOscuro ? 'text-white' : 'text-slate-900'}`}>{titulo}</h2>
+      <div className="mb-6">
+        <h2 className={`text-2xl font-black ${esOscuro ? 'text-white' : 'text-slate-900'}`}>{titulo}</h2>
+        {vista === VISTA.OPCIONES && (
+          <p className={`mt-1.5 text-sm ${esOscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+            Elige una opción para continuar
+          </p>
+        )}
+      </div>
 
       {vista === VISTA.OPCIONES && (
-        <div className="space-y-5">
-          <BotonMicrosoft />
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <BotonMicrosoft />
+
+            {OTP_HABILITADO && (
+              <button
+                type="button"
+                onClick={irAOtpCorreo}
+                className={`group flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 ${
+                  esOscuro
+                    ? 'border-amber-400/40 bg-amber-400/[0.04] hover:border-amber-400/70 hover:bg-amber-400/[0.08] focus-visible:ring-offset-[#0e162c]'
+                    : 'border-amber-500/40 bg-amber-50/50 hover:border-amber-500/70 hover:bg-amber-50 focus-visible:ring-offset-white'
+                }`}
+              >
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                  esOscuro ? 'bg-amber-400/10 text-amber-400' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  <Icono nombre="login" strokeWidth={2} className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-sm font-bold leading-snug ${esOscuro ? 'text-white' : 'text-slate-900'}`}>
+                    Entrar con código por correo
+                  </span>
+                  <span className={`mt-1 block text-xs leading-relaxed sm:text-sm ${esOscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Recibe un código de 6 dígitos en tu correo institucional.
+                  </span>
+                </span>
+                <Icono
+                  nombre="chevron-right"
+                  strokeWidth={2.5}
+                  className={`h-5 w-5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 ${
+                    esOscuro ? 'text-amber-400/80' : 'text-amber-600'
+                  }`}
+                />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <span className={`h-px flex-1 ${esOscuro ? 'bg-slate-700/70' : 'bg-slate-200'}`} />
+            <span className={`shrink-0 text-[11px] font-semibold ${esOscuro ? 'text-slate-500' : 'text-slate-500'}`}>
+              o también puedes
+            </span>
+            <span className={`h-px flex-1 ${esOscuro ? 'bg-slate-700/70' : 'bg-slate-200'}`} />
+          </div>
 
           <button
             type="button"
@@ -429,25 +479,24 @@ export function ModalInicioSesion({ onClose }) {
               setVista(VISTA.LOCAL);
               setError('');
             }}
-            className={`w-full border ${esOscuro ? 'border-slate-700/50 text-slate-400 hover:border-slate-600 hover:text-white' : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'} font-medium text-sm rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98]`}
+            className={`group flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 ${
+              esOscuro
+                ? 'border-slate-700/60 text-slate-400 hover:border-slate-600 hover:bg-slate-800/40 hover:text-slate-200 focus-visible:ring-offset-[#0e162c]'
+                : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-offset-white'
+            }`}
           >
-            Iniciar sesión con cuenta local
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+              esOscuro ? 'bg-slate-800 text-slate-400 group-hover:text-slate-200' : 'bg-slate-100 text-slate-500 group-hover:text-slate-700'
+            }`}>
+              <Icono nombre="lock" strokeWidth={2} className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold leading-snug">Iniciar sesión con cuenta local</span>
+              <span className={`mt-0.5 block text-[11px] font-medium ${esOscuro ? 'text-slate-500' : 'text-slate-500'}`}>
+                Para cuentas de prueba
+              </span>
+            </span>
           </button>
-
-          {OTP_HABILITADO && (
-            <button
-              type="button"
-              onClick={irAOtpCorreo}
-              className={`w-full flex items-center justify-center gap-2 border font-bold text-sm rounded-xl px-4 py-3 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                esOscuro
-                  ? 'border-amber-400/40 text-amber-400 hover:bg-amber-400/10'
-                  : 'border-amber-500/40 text-amber-700 hover:bg-amber-50'
-              }`}
-            >
-              <Icono nombre="login" strokeWidth={2} className="h-4 w-4" />
-              Acceder con código institucional
-            </button>
-          )}
         </div>
       )}
 
@@ -473,13 +522,26 @@ export function ModalInicioSesion({ onClose }) {
             autoComplete="current-password"
           />
 
-          {error && <p className="text-red-400 text-sm font-medium">{error}</p>}
+          {error && (
+            <div aria-live="polite">
+              <Alerta tipo="error" mensaje={error} />
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={cargando}
-            className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+            aria-busy={cargando}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 py-3.5 text-sm font-black uppercase tracking-widest text-[#0e162c] transition-all duration-200 cursor-pointer hover:bg-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${
+              esOscuro ? 'focus-visible:ring-offset-[#0e162c]' : 'focus-visible:ring-offset-white'
+            }`}
           >
+            {cargando && (
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+              />
+            )}
             {cargando ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
@@ -522,8 +584,17 @@ export function ModalInicioSesion({ onClose }) {
           <button
             type="submit"
             disabled={cargandoOtp || cooldownReenvio > 0}
-            className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+            aria-busy={cargandoOtp}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 py-3.5 text-sm font-black uppercase tracking-widest text-[#0e162c] transition-all duration-200 cursor-pointer hover:bg-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${
+              esOscuro ? 'focus-visible:ring-offset-[#0e162c]' : 'focus-visible:ring-offset-white'
+            }`}
           >
+            {cargandoOtp && (
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+              />
+            )}
             {cargandoOtp ? 'Enviando...' : 'Enviar código'}
           </button>
         </form>
@@ -570,8 +641,17 @@ export function ModalInicioSesion({ onClose }) {
           <button
             type="submit"
             disabled={cargandoOtp || cooldownVerificacion > 0}
-            className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+            aria-busy={cargandoOtp}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 py-3.5 text-sm font-black uppercase tracking-widest text-[#0e162c] transition-all duration-200 cursor-pointer hover:bg-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${
+              esOscuro ? 'focus-visible:ring-offset-[#0e162c]' : 'focus-visible:ring-offset-white'
+            }`}
           >
+            {cargandoOtp && (
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+              />
+            )}
             {cargandoOtp ? 'Verificando...' : 'Verificar código'}
           </button>
 
@@ -580,7 +660,9 @@ export function ModalInicioSesion({ onClose }) {
               type="button"
               onClick={irAOtpCorreo}
               disabled={cargandoOtp}
-              className={`text-xs font-bold underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+              className={`rounded-md text-xs font-bold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                esOscuro ? 'focus-visible:ring-offset-[#0e162c]' : 'focus-visible:ring-offset-white'
+              } ${
                 esOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -591,7 +673,9 @@ export function ModalInicioSesion({ onClose }) {
               type="button"
               onClick={manejarReenviar}
               disabled={cargandoOtp || cooldownReenvio > 0}
-              className={`text-xs font-bold underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+              className={`rounded-md text-xs font-bold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                esOscuro ? 'focus-visible:ring-offset-[#0e162c]' : 'focus-visible:ring-offset-white'
+              } ${
                 esOscuro ? 'text-amber-400 hover:text-amber-300' : 'text-amber-700 hover:text-amber-800'
               }`}
             >
@@ -639,8 +723,17 @@ export function ModalInicioSesion({ onClose }) {
           <button
             type="submit"
             disabled={cargandoOtp || cooldownVerificacion > 0}
-            className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+            aria-busy={cargandoOtp}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 py-3.5 text-sm font-black uppercase tracking-widest text-[#0e162c] transition-all duration-200 cursor-pointer hover:bg-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${
+              esOscuro ? 'focus-visible:ring-offset-[#0e162c]' : 'focus-visible:ring-offset-white'
+            }`}
           >
+            {cargandoOtp && (
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+              />
+            )}
             {cargandoOtp ? 'Guardando...' : 'Crear cuenta e ingresar'}
           </button>
 
@@ -649,7 +742,9 @@ export function ModalInicioSesion({ onClose }) {
               type="button"
               onClick={irAOtpCorreo}
               disabled={cargandoOtp}
-              className={`text-xs font-bold underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+              className={`rounded-md text-xs font-bold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                esOscuro ? 'focus-visible:ring-offset-[#0e162c]' : 'focus-visible:ring-offset-white'
+              } ${
                 esOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -660,7 +755,9 @@ export function ModalInicioSesion({ onClose }) {
               type="button"
               onClick={manejarReenviar}
               disabled={cargandoOtp || cooldownReenvio > 0}
-              className={`text-xs font-bold underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+              className={`rounded-md text-xs font-bold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                esOscuro ? 'focus-visible:ring-offset-[#0e162c]' : 'focus-visible:ring-offset-white'
+              } ${
                 esOscuro ? 'text-amber-400 hover:text-amber-300' : 'text-amber-700 hover:text-amber-800'
               }`}
             >

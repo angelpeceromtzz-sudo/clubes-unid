@@ -1,5 +1,5 @@
 import { esCorreoInstitucionalValido } from './institutionalEmail.js';
-import { crearContenidoOtp } from './otpMailContent.js';
+import { crearContenidoOtp, esLogoOtpUrlValida } from './otpMailContent.js';
 
 const URL_RESEND = 'https://api.resend.com/emails';
 const TIEMPO_ESPERA_MS = 10000;
@@ -22,6 +22,7 @@ export function leerConfiguracionResend(env = process.env) {
   const errores = [];
   const apiKey = texto(env.RESEND_API_KEY);
   const from = texto(env.RESEND_FROM);
+  const logoUrl = texto(env.OTP_LOGO_URL);
 
   if (!apiKey) {
     agregarError(errores, 'falta RESEND_API_KEY');
@@ -35,8 +36,12 @@ export function leerConfiguracionResend(env = process.env) {
     agregarError(errores, 'RESEND_FROM inválido');
   }
 
+  if (logoUrl && !esLogoOtpUrlValida(logoUrl)) {
+    agregarError(errores, 'OTP_LOGO_URL inválida');
+  }
+
   return {
-    config: { apiKey, from },
+    config: { apiKey, from, logoUrl },
     errores,
   };
 }
@@ -86,7 +91,12 @@ export function crearMailerResend({
         throw noDisponible('Destinatario OTP inválido', 'OTP_RESEND_DESTINATARIO');
       }
 
-      const contenido = crearContenidoOtp({ codigo, expiracion, minutos });
+      const contenido = crearContenidoOtp({
+        codigo,
+        expiracion,
+        minutos,
+        logoUrl: config.logoUrl,
+      });
       const opciones = {
         method: 'POST',
         headers: {

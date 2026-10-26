@@ -14,6 +14,13 @@ const ENV_RESEND = Object.freeze({
   RESEND_FROM: FROM,
 });
 
+const LOGO = 'https://res.cloudinary.com/o7ozc3zt/image/upload/v1792979538/lobounid_jw1mjq.png';
+
+const ENV_RESEND_CON_LOGO = Object.freeze({
+  ...ENV_RESEND,
+  OTP_LOGO_URL: LOGO,
+});
+
 function crearFetchFicticio({ status = 200, error = null, abortar = false } = {}) {
   const llamadas = [];
 
@@ -100,11 +107,34 @@ test('envía el código por la API HTTPS de Resend', async () => {
   assert.equal(cuerpo.subject, ASUNTO);
   assert.match(cuerpo.text, new RegExp(CODIGO));
   assert.match(cuerpo.text, /10 minutos/);
-  assert.match(cuerpo.text, /No compartas el código/i);
+  assert.match(cuerpo.text, /No compartas este código/i);
   assert.match(cuerpo.html, new RegExp(CODIGO));
   assert.match(cuerpo.html, /10 minutos/);
-  assert.match(cuerpo.html, /No compartas el código/i);
+  assert.match(cuerpo.html, /No compartas este código/i);
+  assert.equal(cuerpo.html.includes('<img'), false);
   assert.equal(JSON.stringify(cuerpo).includes(API_KEY), false);
+});
+
+test('envía el código incluyendo el logo configurado en OTP_LOGO_URL', async () => {
+  const fake = crearFetchFicticio({ status: 200 });
+  const mailer = crearMailer('resend', {
+    env: ENV_RESEND_CON_LOGO,
+    fetchImpl: fake.fetch,
+  });
+
+  assert.equal(mailer.configurado, true);
+  assert.equal(mailer.estaDisponible(), true);
+
+  await mailer.enviarCodigoOtp({
+    correo: CORREO,
+    codigo: CODIGO,
+    minutos: 10,
+  });
+
+  assert.equal(fake.llamadas.length, 1);
+  const cuerpo = JSON.parse(fake.llamadas[0].opciones.body);
+  assert.match(cuerpo.html, /<img src="https:\/\/res\.cloudinary\.com\/o7ozc3zt\/image\/upload\/v1\/clubs-unid\/logo\.png"/);
+  assert.match(cuerpo.html, /alt="Clubs UNID"/);
 });
 
 test('acepta cualquier respuesta HTTP 2xx como éxito', async () => {
@@ -156,9 +186,14 @@ test('rechaza API key con espacios y remitente con CRLF', () => {
     ...ENV_RESEND,
     RESEND_FROM: 'Clubs UNID <no-reply@unid.mx>\r\nBcc: atacante@ejemplo.test',
   });
+  const logo = leerConfiguracionResend({
+    ...ENV_RESEND,
+    OTP_LOGO_URL: 'http://res.cloudinary.com/o7ozc3zt/image/upload/v1/clubs-unid/logo.png',
+  });
 
   assert.ok(key.errores.includes('RESEND_API_KEY inválida'));
   assert.ok(from.errores.includes('RESEND_FROM inválido'));
+  assert.ok(logo.errores.includes('OTP_LOGO_URL inválida'));
 });
 
 test('rechaza código o destinatario inválidos sin llamar a fetch', async () => {
