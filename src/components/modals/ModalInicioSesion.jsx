@@ -444,7 +444,21 @@ export function ModalInicioSesion({ onClose }) {
                 <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
                   esOscuro ? 'bg-amber-400/10 text-amber-400' : 'bg-amber-100 text-amber-700'
                 }`}>
-                  <Icono nombre="login" strokeWidth={2} className="h-5 w-5" />
+                  <svg
+                    viewBox="0 0 32 32"
+                    className="h-7 w-7"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <path d="M15 8h14a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H15z" fill="#0078d4" />
+                    <path d="M15 8h14a1 1 0 0 1 1 1v2l-8 6-8-6V9a1 1 0 0 1 1-1z" fill="#28a8ea" />
+                    <path d="m15 11 8 6 8-6v13a1 1 0 0 1-1 1H15z" fill="#0078d4" />
+                    <path d="M3 11.5 14 9v19L3 25.5z" fill="#005a9e" />
+                    <path
+                      d="M8.5 14c-2 0-3.4 1.6-3.4 4s1.4 4 3.4 4 3.4-1.6 3.4-4-1.4-4-3.4-4zm0 1.8c.9 0 1.5.8 1.5 2.2s-.6 2.2-1.5 2.2S7 19.4 7 18s.6-2.2 1.5-2.2z"
+                      fill="#fff"
+                    />
+                  </svg>
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className={`block text-sm font-bold leading-snug ${esOscuro ? 'text-white' : 'text-slate-900'}`}>

@@ -174,7 +174,7 @@ export default function PaginaAcercaProyecto() {
   const textoParrafos = `text-sm sm:text-base leading-relaxed ${tema.subtitle}`;
   const estiloVolver = `inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] rounded-full bg-amber-400 text-[#0e162c] font-black text-sm transition duration-200 hover:bg-amber-300 active:scale-[0.98] ${FOCO_PRIMARIO}`;
   // El retorno de la barra superior usa el botón secundario compartido
-  // (BotonBarraPublica), el mismo que el chip «Conocenos» de la landing:
+  // (BotonBarraPublica), el mismo que el chip Conócenos de la landing:
   // así ambos miden lo mismo (~38px en móvil, 44px desde sm; mismo
   // padding, tipografía, radio y estados) sin que el ancho deje de
   // ajustarse al contenido.
