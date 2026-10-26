@@ -239,7 +239,8 @@ async function pedir(ruta, cuerpo) {
 }
 
 const solicitar = (correo) => pedir('solicitar', { correo });
-const verificar = (correo, codigo) => pedir('verificar', { correo, codigo });
+const verificar = (correo, codigo, nombre) =>
+  pedir('verificar', nombre === undefined ? { correo, codigo } : { correo, codigo, nombre });
 
 before(async () => {
   const app = express();
@@ -382,19 +383,79 @@ test('verifica el código correcto para vicepresidente y conserva su rol', async
   assert.equal(respuesta.cuerpo.user.rol, 'vicepresidente');
 });
 
-test('crea como alumno un usuario inexistente solo después de verificar', async () => {
+test('un usuario nuevo exige nombre válido y se crea como alumno', async () => {
   const correo = 'nuevo.alumno@red.unid.mx';
 
   await solicitar(correo);
+  const codigo = ultimoCodigoEnviado();
   assert.equal(estado.usuarios.has(correo), false, 'no debe crear la cuenta al solicitar');
 
-  const respuesta = await verificar(correo, ultimoCodigoEnviado());
+  const sinNombre = await verificar(correo, codigo);
+
+  assert.equal(sinNombre.status, 422);
+  assert.equal(sinNombre.cuerpo.requiere_nombre, true);
+  assert.equal(sinNombre.cuerpo.token, undefined);
+  assert.equal(estado.usuarios.has(correo), false);
+  assert.equal(estado.codigos[0].consumido_en, null);
+
+  const respuesta = await verificar(correo, codigo, '  Ana   López  Pérez ');
 
   assert.equal(respuesta.status, 200);
   assert.equal(estado.usuarios.get(correo).id_rol, 1);
   assert.equal(estado.usuarios.get(correo).rol, 'alumno');
+  assert.equal(estado.usuarios.get(correo).nombre_completo, 'Ana López Pérez');
+  assert.equal(estado.usuarios.get(correo).correo_institucional, correo);
+  assert.equal(estado.usuarios.get(correo).institutional_id, null);
   assert.equal(respuesta.cuerpo.user.id_rol, 1);
   assert.equal(respuesta.cuerpo.user.rol, 'alumno');
+  assert.equal(respuesta.cuerpo.user.nombre_completo, 'Ana López Pérez');
+});
+
+test('rechaza nombre vacío, numérico o igual a la matrícula sin consumir el código', async () => {
+  const correo = '00879418@red.unid.mx';
+
+  await solicitar(correo);
+  const codigo = ultimoCodigoEnviado();
+  const invalidos = ['', '   ', '00879418', '00879418@red.unid.mx', '12 34'];
+
+  for (const nombre of invalidos) {
+    const respuesta = await verificar(correo, codigo, nombre);
+
+    assert.equal(respuesta.status, 422, `debe rechazar ${JSON.stringify(nombre)}`);
+    assert.equal(respuesta.cuerpo.requiere_nombre, true);
+    assert.equal(respuesta.cuerpo.token, undefined);
+    assert.equal(estado.usuarios.has(correo), false);
+    assert.equal(estado.codigos[0].consumido_en, null);
+  }
+
+  const respuesta = await verificar(correo, codigo, 'Alumno Nuevo');
+
+  assert.equal(respuesta.status, 200);
+  assert.equal(estado.usuarios.get(correo).nombre_completo, 'Alumno Nuevo');
+  assert.equal(estado.usuarios.get(correo).institutional_id, null);
+});
+
+test('un usuario existente conserva su nombre aunque envíe otro', async () => {
+  const correo = 'existente@red.unid.mx';
+  agregarUsuario({ correo, nombre: 'Nombre Actual' });
+
+  await solicitar(correo);
+  const sinNombre = await verificar(correo, ultimoCodigoEnviado());
+
+  assert.equal(sinNombre.status, 200);
+  assert.equal(sinNombre.cuerpo.user.nombre_completo, 'Nombre Actual');
+  assert.equal(estado.usuarios.get(correo).nombre_completo, 'Nombre Actual');
+
+  await solicitar(correo);
+  const conOtroNombre = await verificar(
+    correo,
+    ultimoCodigoEnviado(),
+    '00879418 Nombre Distinto',
+  );
+
+  assert.equal(conOtroNombre.status, 200);
+  assert.equal(conOtroNombre.cuerpo.user.nombre_completo, 'Nombre Actual');
+  assert.equal(estado.usuarios.get(correo).nombre_completo, 'Nombre Actual');
 });
 
 test('rechaza un código incorrecto con mensaje genérico y suma un intento', async () => {

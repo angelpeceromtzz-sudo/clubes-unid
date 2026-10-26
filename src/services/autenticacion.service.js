@@ -19,10 +19,10 @@ export const autenticacionService = {
       body: JSON.stringify({ correo }),
     }),
 
-  verificarOtp: (correo, codigo) =>
+  verificarOtp: (correo, codigo, nombre) =>
     request('/auth/otp/verificar', {
       method: 'POST',
-      body: JSON.stringify({ correo, codigo }),
+      body: JSON.stringify({ correo, codigo, ...(nombre ? { nombre } : {}) }),
     }),
 
   getMe: () => request('/auth/me'),

@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test src/utils/otpAcceso.test.js src/utils/reintentosHttp.test.js",
+    "test": "node --test src/utils/otpAcceso.test.js src/utils/nombreOtp.test.js src/utils/reintentosHttp.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

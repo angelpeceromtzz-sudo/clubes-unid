@@ -7,6 +7,7 @@ import {
   normalizarCorreoInstitucional,
   esCorreoInstitucionalValido,
 } from '../lib/institutionalEmail.js';
+import { validarNombreCompleto } from '../lib/nombreUsuario.js';
 import {
   MAX_INTENTOS_OTP,
   calcularExpiracionOtp,
@@ -227,6 +228,22 @@ router.post(
         return responderVerificacionGenerica(res);
       }
 
+      const usuarioExistente = await otpStore.buscarUsuario({ correo });
+      let nombreValidado = null;
+
+      if (!usuarioExistente) {
+        const validacionNombre = validarNombreCompleto(req.body?.nombre, correo);
+
+        if (!validacionNombre.valido) {
+          return res.status(422).json({
+            error: validacionNombre.error,
+            requiere_nombre: true,
+          });
+        }
+
+        nombreValidado = validacionNombre.nombre;
+      }
+
       // Consumo atómico: solo una petición puede pasar de aquí con el mismo
       // código, incluso si llegan dos verificaciones concurrentes o si una
       // solicitud nueva reemplaza el código entre la lectura y el consumo.
@@ -246,8 +263,14 @@ router.post(
       }
 
       if (!usuario) {
-        const nombre = correo.split('@')[0];
-        const creado = await otpStore.crearUsuarioOtp({ correo, nombre });
+        if (!nombreValidado) {
+          return responderVerificacionGenerica(res);
+        }
+
+        const creado = await otpStore.crearUsuarioOtp({
+          correo,
+          nombre: nombreValidado,
+        });
 
         if (creado) {
           usuario = { ...creado, deleted_at: null };

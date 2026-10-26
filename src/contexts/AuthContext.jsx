@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { api, getSession, setSession, clearSession } from '../services/api';
 import { useInicializacionMsal } from '../hooks/useInicializacionMsal';
+import { errorRequiereNombreOtp } from '../utils/nombreOtp';
 
 const ContextoAutenticacion = createContext(null);
 
@@ -81,12 +82,21 @@ export function ProveedorAutenticacion({ children: hijos }) {
     }
   }, [despuesDeLogin]);
 
-  const iniciarSesionOtp = useCallback(async (correo, codigo) => {
+  const iniciarSesionOtp = useCallback(async (correo, codigo, nombre) => {
     try {
-      const data = await api.verificarOtp(correo, codigo);
+      const data = await api.verificarOtp(correo, codigo, nombre);
       await despuesDeLogin(data);
       return { ok: true, user: data.user };
     } catch (err) {
+      if (errorRequiereNombreOtp(err)) {
+        return {
+          ok: false,
+          requiereNombre: true,
+          error: err.message,
+          status: err.status,
+        };
+      }
+
       return {
         ok: false,
         error: err.message,

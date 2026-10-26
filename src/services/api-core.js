@@ -35,6 +35,24 @@ export function getSession() {
   }
 }
 
+function cuerpoErrorControlado(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return null;
+  }
+
+  const cuerpo = {};
+
+  if (typeof data.error === 'string') {
+    cuerpo.error = data.error;
+  }
+
+  if (data.requiere_nombre === true) {
+    cuerpo.requiere_nombre = true;
+  }
+
+  return Object.keys(cuerpo).length > 0 ? cuerpo : null;
+}
+
 export async function request(endpoint, options = {}) {
   const token = getToken();
   const headers = { 'Content-Type': 'application/json', ...options.headers };
@@ -93,6 +111,7 @@ export async function request(endpoint, options = {}) {
     const error = new Error(mensaje);
     error.status = res.status;
     error.mensajeServidor = servidor;
+    error.cuerpo = cuerpoErrorControlado(data);
     error.reintentarEnSegundos = reintentarEnSegundos;
     throw error;
   }

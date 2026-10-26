@@ -20,6 +20,11 @@ import {
   normalizarCorreoOtp,
   segundosDeEsperaOtp,
 } from '../../utils/otpAcceso';
+import {
+  LARGO_MAXIMO_NOMBRE_OTP,
+  normalizarNombreOtp,
+  validarNombreOtp,
+} from '../../utils/nombreOtp';
 
 const OTP_HABILITADO = esOtpHabilitado(import.meta.env.VITE_AUTH_OTP_ENABLED);
 
@@ -28,6 +33,7 @@ const VISTA = Object.freeze({
   LOCAL: 'local',
   OTP_CORREO: 'otp-correo',
   OTP_CODIGO: 'otp-codigo',
+  OTP_NOMBRE: 'otp-nombre',
 });
 
 const MENSAJE_CODIGO_ENVIADO =
@@ -88,11 +94,14 @@ export function ModalInicioSesion({ onClose }) {
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [codigo, setCodigo] = useState('');
+  const [nombre, setNombre] = useState('');
   const [error, setError] = useState('');
   const [errorCorreo, setErrorCorreo] = useState('');
   const [errorCodigo, setErrorCodigo] = useState('');
+  const [errorNombre, setErrorNombre] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [correoTocado, setCorreoTocado] = useState(false);
+  const [nombreTocado, setNombreTocado] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [cargandoOtp, setCargandoOtp] = useState(false);
   const [cooldownReenvio, setCooldownReenvio] = useState(0);
@@ -119,11 +128,14 @@ export function ModalInicioSesion({ onClose }) {
     setCorreo('');
     setPassword('');
     setCodigo('');
+    setNombre('');
     setError('');
     setErrorCorreo('');
     setErrorCodigo('');
+    setErrorNombre('');
     setMensaje('');
     setCorreoTocado(false);
+    setNombreTocado(false);
     setCargando(false);
     setCargandoOtp(false);
     setCooldownReenvio(0);
@@ -134,23 +146,37 @@ export function ModalInicioSesion({ onClose }) {
   function irAOpciones() {
     setVista(VISTA.OPCIONES);
     setPassword('');
+    setNombre('');
     setError('');
     setErrorCorreo('');
     setErrorCodigo('');
+    setErrorNombre('');
     setMensaje('');
+    setNombreTocado(false);
   }
 
   function irAOtpCorreo() {
     setVista(VISTA.OTP_CORREO);
     setCodigo('');
+    setNombre('');
     setError('');
     setErrorCorreo('');
     setErrorCodigo('');
+    setErrorNombre('');
     setMensaje('');
     setCorreoTocado(false);
+    setNombreTocado(false);
   }
 
   function volverAtras() {
+    if (vista === VISTA.OTP_NOMBRE) {
+      setVista(VISTA.OTP_CODIGO);
+      setError('');
+      setErrorNombre('');
+      setNombreTocado(false);
+      return;
+    }
+
     if (vista === VISTA.OTP_CODIGO) {
       irAOtpCorreo();
       return;
@@ -257,6 +283,22 @@ export function ModalInicioSesion({ onClose }) {
     setErrorCodigo('');
   }
 
+  function manejarCambioNombre(e) {
+    const valor = e.target.value;
+    setNombre(valor);
+    setError('');
+    setErrorNombre('');
+
+    if (nombreTocado) {
+      setErrorNombre(validarNombreOtp(valor, correo));
+    }
+  }
+
+  function manejarBlurNombre() {
+    setNombreTocado(true);
+    setErrorNombre(validarNombreOtp(nombre, correo));
+  }
+
   async function manejarVerificar(e) {
     e.preventDefault();
 
@@ -285,6 +327,63 @@ export function ModalInicioSesion({ onClose }) {
       return;
     }
 
+    if (result.requiereNombre) {
+      setVista(VISTA.OTP_NOMBRE);
+      setNombre('');
+      setError('');
+      setErrorNombre('');
+      setNombreTocado(false);
+      setMensaje('');
+      return;
+    }
+
+    setError(mensajeErrorOtp(result, 'verificar'));
+
+    if (Number(result.status) === 429) {
+      setCooldownVerificacion(segundosDeEsperaOtp(result) || SEGUNDOS_REENVIO_OTP);
+    }
+  }
+
+  async function manejarRegistrarNombre(e) {
+    e.preventDefault();
+
+    if (peticionOtpRef.current || cargandoOtp || cooldownVerificacion > 0) {
+      return;
+    }
+
+    const nombreNormalizado = normalizarNombreOtp(nombre);
+    const errorValidacion = validarNombreOtp(nombreNormalizado, correo);
+
+    setError('');
+    setNombreTocado(true);
+    setErrorNombre(errorValidacion);
+
+    if (errorValidacion) {
+      return;
+    }
+
+    peticionOtpRef.current = true;
+    setCargandoOtp(true);
+    const result = await iniciarSesionOtp(
+      normalizarCorreoOtp(correo),
+      codigo,
+      nombreNormalizado,
+    );
+    peticionOtpRef.current = false;
+    setCargandoOtp(false);
+
+    if (result.ok) {
+      setNombre('');
+      setCodigo('');
+      cerrarModal();
+      return;
+    }
+
+    if (result.requiereNombre) {
+      setErrorNombre(result.error || 'Escribe tu nombre completo.');
+      return;
+    }
+
     setError(mensajeErrorOtp(result, 'verificar'));
 
     if (Number(result.status) === 429) {
@@ -296,7 +395,9 @@ export function ModalInicioSesion({ onClose }) {
     ? 'Acceso con código'
     : vista === VISTA.OTP_CODIGO
       ? 'Revisa tu correo'
-      : 'Iniciar Sesión';
+      : vista === VISTA.OTP_NOMBRE
+        ? 'Completa tu registro'
+        : 'Iniciar Sesión';
 
   return (
     <ModalBase
@@ -472,6 +573,75 @@ export function ModalInicioSesion({ onClose }) {
             className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98]"
           >
             {cargandoOtp ? 'Verificando...' : 'Verificar código'}
+          </button>
+
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <button
+              type="button"
+              onClick={irAOtpCorreo}
+              disabled={cargandoOtp}
+              className={`text-xs font-bold underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                esOscuro ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Cambiar correo
+            </button>
+
+            <button
+              type="button"
+              onClick={manejarReenviar}
+              disabled={cargandoOtp || cooldownReenvio > 0}
+              className={`text-xs font-bold underline-offset-4 hover:underline disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                esOscuro ? 'text-amber-400 hover:text-amber-300' : 'text-amber-700 hover:text-amber-800'
+              }`}
+            >
+              Solicitar otro código
+            </button>
+          </div>
+
+          <IndicadorEspera segundos={cooldownReenvio} />
+        </form>
+      )}
+
+      {vista === VISTA.OTP_NOMBRE && (
+        <form onSubmit={manejarRegistrarNombre} noValidate className="space-y-4">
+          <p className={`text-sm ${esOscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+            Es tu primer acceso con <span className="font-semibold break-all">{correo}</span>.
+            Escribe tu nombre completo para crear tu cuenta.
+          </p>
+
+          <CampoTexto
+            label="Nombre completo"
+            name="otp-nombre"
+            type="text"
+            value={nombre}
+            onChange={manejarCambioNombre}
+            onBlur={manejarBlurNombre}
+            placeholder="Nombre(s) y apellidos"
+            autoComplete="name"
+            maxLength={LARGO_MAXIMO_NOMBRE_OTP}
+            autoFocus
+            required
+            error={errorNombre}
+          />
+
+          {error && (
+            <div aria-live="polite">
+              <Alerta tipo="error" mensaje={error} />
+            </div>
+          )}
+
+          <IndicadorEspera
+            segundos={cooldownVerificacion}
+            prefijo="Podrás intentarlo de nuevo en"
+          />
+
+          <button
+            type="submit"
+            disabled={cargandoOtp || cooldownVerificacion > 0}
+            className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+          >
+            {cargandoOtp ? 'Guardando...' : 'Crear cuenta e ingresar'}
           </button>
 
           <div className="flex items-center justify-between gap-3 pt-1">
