@@ -20,9 +20,12 @@ function agregarError(errores, mensaje) {
 
 export function leerConfiguracionResend(env = process.env) {
   const errores = [];
-  const apiKey = texto(env.RESEND_API_KEY);
-  const from = texto(env.RESEND_FROM);
-  const logoUrl = texto(env.OTP_LOGO_URL);
+  const fuente = env || process.env;
+  const apiKey = texto(fuente.RESEND_API_KEY);
+  const from = texto(fuente.RESEND_FROM);
+  const logoUrl = texto(
+    fuente.OTP_LOGO_URL !== undefined ? fuente.OTP_LOGO_URL : process.env?.OTP_LOGO_URL,
+  );
 
   if (!apiKey) {
     agregarError(errores, 'falta RESEND_API_KEY');
@@ -96,6 +99,7 @@ export function crearMailerResend({
         expiracion,
         minutos,
         logoUrl: config.logoUrl,
+        env,
       });
       const opciones = {
         method: 'POST',

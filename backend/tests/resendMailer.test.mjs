@@ -12,9 +12,10 @@ const ASUNTO = 'Tu código de acceso a Clubs UNID';
 const ENV_RESEND = Object.freeze({
   RESEND_API_KEY: API_KEY,
   RESEND_FROM: FROM,
+  OTP_LOGO_URL: '',
 });
 
-const LOGO = 'https://res.cloudinary.com/o7ozc3zt/image/upload/v1792979538/lobounid_jw1mjq.png';
+const LOGO = 'https://ejemplo.test/logo.png';
 
 const ENV_RESEND_CON_LOGO = Object.freeze({
   ...ENV_RESEND,
@@ -133,7 +134,7 @@ test('envía el código incluyendo el logo configurado en OTP_LOGO_URL', async (
 
   assert.equal(fake.llamadas.length, 1);
   const cuerpo = JSON.parse(fake.llamadas[0].opciones.body);
-  assert.match(cuerpo.html, /<img src="https:\/\/res\.cloudinary\.com\/o7ozc3zt\/image\/upload\/v1\/clubs-unid\/logo\.png"/);
+  assert.match(cuerpo.html, /<img src="https:\/\/ejemplo\.test\/logo\.png"/);
   assert.match(cuerpo.html, /alt="Clubs UNID"/);
 });
 
@@ -188,12 +189,41 @@ test('rechaza API key con espacios y remitente con CRLF', () => {
   });
   const logo = leerConfiguracionResend({
     ...ENV_RESEND,
-    OTP_LOGO_URL: 'http://res.cloudinary.com/o7ozc3zt/image/upload/v1/clubs-unid/logo.png',
+    OTP_LOGO_URL: 'http://inseguro.test/logo.png',
   });
 
   assert.ok(key.errores.includes('RESEND_API_KEY inválida'));
   assert.ok(from.errores.includes('RESEND_FROM inválido'));
   assert.ok(logo.errores.includes('OTP_LOGO_URL inválida'));
+});
+
+test('lee OTP_LOGO_URL desde process.env cuando el objeto env no lo especifica', async () => {
+  const fake = crearFetchFicticio({ status: 200 });
+  const original = process.env.OTP_LOGO_URL;
+  process.env.OTP_LOGO_URL = 'https://desde-process-env.test/logo.png';
+
+  try {
+    const mailer = crearMailer('resend', {
+      env: { RESEND_API_KEY: API_KEY, RESEND_FROM: FROM },
+      fetchImpl: fake.fetch,
+    });
+
+    await mailer.enviarCodigoOtp({
+      correo: CORREO,
+      codigo: CODIGO,
+      minutos: 10,
+    });
+
+    assert.equal(fake.llamadas.length, 1);
+    const cuerpo = JSON.parse(fake.llamadas[0].opciones.body);
+    assert.match(cuerpo.html, /<img src="https:\/\/desde-process-env\.test\/logo\.png"/);
+  } finally {
+    if (original === undefined) {
+      delete process.env.OTP_LOGO_URL;
+    } else {
+      process.env.OTP_LOGO_URL = original;
+    }
+  }
 });
 
 test('rechaza código o destinatario inválidos sin llamar a fetch', async () => {

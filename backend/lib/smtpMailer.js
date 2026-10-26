@@ -1,5 +1,5 @@
 import { esCorreoInstitucionalValido } from './institutionalEmail.js';
-import { crearContenidoOtp } from './otpMailContent.js';
+import { crearContenidoOtp, esLogoOtpUrlValida } from './otpMailContent.js';
 
 const TIEMPO_CONEXION_MS = 10000;
 const TIEMPO_SALUDO_MS = 10000;
@@ -58,12 +58,22 @@ export function leerConfiguracionSmtp(env = process.env) {
     agregarError(errores, 'falta SMTP_USER');
   }
 
+  const fuente = env || process.env;
+  const logoUrl = texto(
+    fuente.OTP_LOGO_URL !== undefined ? fuente.OTP_LOGO_URL : process.env?.OTP_LOGO_URL,
+  );
+
+  if (logoUrl && !esLogoOtpUrlValida(logoUrl)) {
+    agregarError(errores, 'OTP_LOGO_URL inválida');
+  }
+
   return {
     config: {
       host,
       port: puerto,
       secure,
       from,
+      logoUrl,
       auth: usuario && password ? { user: usuario, pass: password } : null,
     },
     errores,
@@ -100,14 +110,15 @@ async function crearTransporteNodemailer(config) {
   return nodemailer.createTransport(crearOpcionesNodemailer(config));
 }
 
-export function crearMensajeOtp({ correo, codigo, expiracion, minutos, from }) {
-  const { subject, text } = crearContenidoOtp({ codigo, expiracion, minutos });
+export function crearMensajeOtp({ correo, codigo, expiracion, minutos, from, logoUrl, env }) {
+  const { subject, text, html } = crearContenidoOtp({ codigo, expiracion, minutos, logoUrl, env });
 
   return {
     from,
     to: correo,
     subject,
     text,
+    html,
     disableFileAccess: true,
     disableUrlAccess: true,
   };
@@ -154,6 +165,8 @@ export function crearMailerSmtp({
         expiracion,
         minutos,
         from: config.from,
+        logoUrl: config.logoUrl,
+        env,
       });
 
       try {

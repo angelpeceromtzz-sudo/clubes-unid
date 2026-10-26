@@ -53,12 +53,25 @@ export function esLogoOtpUrlValida(valor) {
   }
 }
 
-export function crearContenidoOtp({ codigo, expiracion, minutos, logoUrl = '' }) {
+export function resolverLogoOtpUrl({ logoUrl, env = process.env } = {}) {
+  const candidato =
+    typeof logoUrl === 'string'
+      ? logoUrl
+      : typeof env?.OTP_LOGO_URL === 'string'
+        ? env.OTP_LOGO_URL
+        : typeof process.env?.OTP_LOGO_URL === 'string'
+          ? process.env.OTP_LOGO_URL
+          : '';
+
+  const limpio = candidato.trim();
+  return esLogoOtpUrlValida(limpio) ? limpio : '';
+}
+
+export function crearContenidoOtp({ codigo, expiracion, minutos, logoUrl, env = process.env } = {}) {
   const vigencia = minutosDeVigencia(minutos, expiracion);
   const codigoSeguro = escaparHtml(codigo);
-  const logo = typeof logoUrl === 'string' ? logoUrl.trim() : '';
-  const logoValido = esLogoOtpUrlValida(logo);
-  const logoHtml = logoValido
+  const logo = resolverLogoOtpUrl({ logoUrl, env });
+  const logoHtml = logo
     ? `<img src="${escaparHtml(logo)}" alt="Clubs UNID" width="56" style="display:block;width:56px;max-width:56px;height:auto;border:0;outline:none;text-decoration:none;" />`
     : '';
   const celdaLogo = logoHtml
