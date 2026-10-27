@@ -104,7 +104,7 @@ export function FormularioInscripcion({ club, onClose }) {
         </div>
 
         {limiteAlcanzado && <Alerta tipo="error" mensaje="Has alcanzado el límite de 3 postulaciones. No puedes enviar más formularios." />}
-        {yaPostulado && !limiteAlcanzado && <Alerta tipo="warning" mensaje="Ya te has postulado a este club anteriormente." />}
+        {yaPostulado && !limiteAlcanzado && <Alerta tipo="warning" mensaje="Ya te has postulado a este club en esta convocatoria." />}
 
         {confirmando ? (
           <PasoConfirmacionInscripcion

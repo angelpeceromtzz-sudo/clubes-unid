@@ -648,26 +648,8 @@ CREATE INDEX IF NOT EXISTS idx_clubes_niveles_nivel ON clubes_niveles(id_nivel);
 -- VISTAS
 -- ============================================================
 
-DROP VIEW IF EXISTS clubes_con_estado;
-
-CREATE OR REPLACE VIEW clubes_con_estado AS
-SELECT
-  cl.*,
-  COUNT(f.id_formulario) AS formularios_recibidos,
-  CASE
-    WHEN cl.cerrada_manualmente = TRUE                           THEN 'cerrado'
-    WHEN cl.fecha_apertura_programada IS NOT NULL
-     AND NOW() < cl.fecha_apertura_programada                    THEN 'proximo'
-    WHEN cl.max_postulaciones IS NOT NULL
-     AND COUNT(f.id_formulario) >= cl.max_postulaciones           THEN 'lleno'
-    WHEN cl.fecha_limite_cierre IS NOT NULL
-     AND NOW() > cl.fecha_limite_cierre                           THEN 'cerrado'
-    WHEN cl.fecha_apertura_programada IS NULL                     THEN 'cerrado'
-    ELSE 'abierto'
-  END AS estado_calculado
-FROM clubes cl
-LEFT JOIN formularios f ON f.id_club = cl.id_club
-GROUP BY cl.id_club;
+-- La vista clubes_con_estado se define al final del archivo (BUG-01) para
+-- contar únicamente las postulaciones del ciclo de inscripción vigente.
 
 -- ============================================================
 -- FUNCIONES Y TRIGGERS
@@ -1359,3 +1341,118 @@ ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS id_revisor INT REFERENCES usu
 ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS observaciones TEXT;
 ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS fecha_revision TIMESTAMPTZ;
 UPDATE convocatorias SET estado_revision = 'aprobado' WHERE enviada = TRUE AND estado_revision <> 'aprobado';
+
+-- ============================================================
+-- BUG-01: cada convocatoria de inscripción tiene su propio conteo.
+-- Los formularios históricos se conservan, pero sólo cuentan para
+-- el ciclo de inscripción al que pertenecen.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS convocatorias_inscripcion (
+    id_convocatoria_inscripcion SERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_solicitud INT REFERENCES solicitudes_convocatoria(id_solicitud) ON DELETE SET NULL,
+    fecha_apertura_programada TIMESTAMPTZ,
+    fecha_limite_cierre TIMESTAMPTZ,
+    max_postulaciones INT,
+    fecha_publicacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_convocatoria_inscripcion_club
+    ON convocatorias_inscripcion(id_club, fecha_publicacion DESC);
+ALTER TABLE convocatorias_inscripcion ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS id_convocatoria_inscripcion_actual INT;
+ALTER TABLE formularios ADD COLUMN IF NOT EXISTS id_convocatoria_inscripcion INT;
+CREATE INDEX IF NOT EXISTS idx_formularios_convocatoria_inscripcion
+    ON formularios(id_convocatoria_inscripcion);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_club_convocatoria_inscripcion_actual'
+    ) THEN
+        ALTER TABLE clubes
+            ADD CONSTRAINT fk_club_convocatoria_inscripcion_actual
+            FOREIGN KEY (id_convocatoria_inscripcion_actual)
+            REFERENCES convocatorias_inscripcion(id_convocatoria_inscripcion)
+            ON DELETE SET NULL;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_formulario_convocatoria_inscripcion'
+    ) THEN
+        ALTER TABLE formularios
+            ADD CONSTRAINT fk_formulario_convocatoria_inscripcion
+            FOREIGN KEY (id_convocatoria_inscripcion)
+            REFERENCES convocatorias_inscripcion(id_convocatoria_inscripcion)
+            ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- Backfill: representa la convocatoria publicada actual de cada club.
+-- La fecha de publicación es la última aprobación conocida (o la apertura).
+WITH aprobada AS (
+    SELECT DISTINCT ON (id_club) id_club, id_solicitud, fecha_revision
+    FROM solicitudes_convocatoria
+    WHERE estado = 'aprobado'
+    ORDER BY id_club, fecha_revision DESC NULLS LAST, id_solicitud DESC
+), nuevos AS (
+    INSERT INTO convocatorias_inscripcion
+        (id_club, id_solicitud, fecha_apertura_programada, fecha_limite_cierre,
+         max_postulaciones, fecha_publicacion)
+    SELECT cl.id_club, a.id_solicitud, cl.fecha_apertura_programada,
+           cl.fecha_limite_cierre, cl.max_postulaciones,
+           GREATEST(
+               COALESCE(a.fecha_revision, cl.fecha_apertura_programada),
+               cl.fecha_apertura_programada
+           )
+    FROM clubes cl
+    LEFT JOIN aprobada a ON a.id_club = cl.id_club
+    WHERE cl.id_convocatoria_inscripcion_actual IS NULL
+      AND cl.fecha_apertura_programada IS NOT NULL
+    RETURNING id_convocatoria_inscripcion, id_club
+)
+UPDATE clubes cl
+SET id_convocatoria_inscripcion_actual = n.id_convocatoria_inscripcion
+FROM nuevos n
+WHERE cl.id_club = n.id_club;
+
+-- Los formularios enviados desde la apertura del ciclo actual se enlazan a él,
+-- aunque hayan llegado antes de la última aprobación del mismo periodo. Los
+-- anteriores quedan sin ciclo y no cuentan para el cupo nuevo.
+UPDATE formularios f
+SET id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
+FROM clubes cl
+JOIN convocatorias_inscripcion ci
+  ON ci.id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
+WHERE f.id_club = cl.id_club
+  AND f.id_convocatoria_inscripcion IS NULL
+  AND f.fecha_envio >= ci.fecha_apertura_programada;
+
+UPDATE clubes cl
+SET postulaciones_actuales = (
+    SELECT COUNT(*)::int
+    FROM formularios f
+    WHERE f.id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
+);
+
+DROP VIEW IF EXISTS clubes_con_estado;
+
+CREATE VIEW clubes_con_estado AS
+SELECT
+  cl.*,
+  COUNT(f.id_formulario)::int AS formularios_recibidos,
+  CASE
+    WHEN cl.cerrada_manualmente = TRUE                           THEN 'cerrado'
+    WHEN cl.fecha_apertura_programada IS NOT NULL
+     AND NOW() < cl.fecha_apertura_programada                    THEN 'proximo'
+    WHEN cl.max_postulaciones IS NOT NULL
+     AND COUNT(f.id_formulario) >= cl.max_postulaciones           THEN 'lleno'
+    WHEN cl.fecha_limite_cierre IS NOT NULL
+     AND NOW() > cl.fecha_limite_cierre                           THEN 'cerrado'
+    WHEN cl.fecha_apertura_programada IS NULL                     THEN 'cerrado'
+    ELSE 'abierto'
+  END AS estado_calculado
+FROM clubes cl
+LEFT JOIN formularios f
+  ON f.id_club = cl.id_club
+ AND f.id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
+GROUP BY cl.id_club;

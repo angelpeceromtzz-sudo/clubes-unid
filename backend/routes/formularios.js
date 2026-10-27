@@ -57,7 +57,11 @@ router.get('/debug-postulaciones', authenticate, requireRole(3), async (req, res
 router.get('/', authenticate, requireRole(1), async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id_club FROM formularios WHERE id_alumno = $1',
+      `SELECT DISTINCT f.id_club
+       FROM formularios f
+       JOIN clubes c ON c.id_club = f.id_club
+       WHERE f.id_alumno = $1
+         AND f.id_convocatoria_inscripcion = c.id_convocatoria_inscripcion_actual`,
       [req.user.id],
     );
     res.json(result.rows.map((r) => r.id_club));
@@ -185,14 +189,20 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       const clubRow = await client.query(
         `SELECT fecha_apertura_programada, fecha_limite_cierre,
                 max_postulaciones, postulaciones_actuales,
-                cerrada_manualmente
+                cerrada_manualmente, id_convocatoria_inscripcion_actual
          FROM clubes WHERE id_club = $1 FOR UPDATE`,
         [id_club],
       );
       const club = clubRow.rows[0];
 
+      const cicloActual = club.id_convocatoria_inscripcion_actual;
       const maxPost = club.max_postulaciones;
-      const actuales = club.postulaciones_actuales;
+      const conteoActual = await client.query(
+        `SELECT COUNT(*)::int AS total FROM formularios
+         WHERE id_club = $1 AND id_convocatoria_inscripcion = $2`,
+        [id_club, cicloActual],
+      );
+      const actuales = conteoActual.rows[0].total;
 
       const estadoCalculado = calcularEstadoClub({
         cerradaManualmente: club.cerrada_manualmente,
@@ -202,7 +212,7 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
         postulacionesActuales: actuales,
       });
 
-      if (estadoCalculado !== 'abierto') {
+      if (estadoCalculado !== 'abierto' || !cicloActual) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'La convocatoria de este club no está abierta. No se aceptan nuevas postulaciones.' });
       }
@@ -220,8 +230,8 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
 
       const duplicado = await client.query(
         `SELECT id_formulario FROM formularios
-         WHERE id_alumno = $1 AND id_club = $2`,
-        [req.user.id, id_club],
+         WHERE id_alumno = $1 AND id_club = $2 AND id_convocatoria_inscripcion = $3`,
+        [req.user.id, id_club, cicloActual],
       );
       if (duplicado.rows.length > 0) {
         await client.query('ROLLBACK');
@@ -250,14 +260,15 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       }
 
       const result = await client.query(
-        `INSERT INTO formularios (id_alumno, id_club, bloque_asignado,
+        `INSERT INTO formularios (id_alumno, id_club, id_convocatoria_inscripcion, bloque_asignado,
           nombre_completo, matricula, id_licenciatura, cuatrimestre,
           telefono_contacto, motivo_ingreso, experiencia_previa)
-         VALUES ($1, $2, DEFAULT, $3, $4, $5, $6, $7, $8, $9)
+         VALUES ($1, $2, $3, DEFAULT, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
           req.user.id,
           id_club,
+          cicloActual,
           nombre_completo,
           matricula,
           id_licenciatura,
@@ -316,10 +327,12 @@ f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
                  'fecha_cambio', hp.fecha_cambio
                ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
        FROM formularios f
+       JOIN clubes c ON c.id_club = f.id_club
        LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
        WHERE f.id_club = $1
+         AND f.id_convocatoria_inscripcion = c.id_convocatoria_inscripcion_actual
          AND f.status NOT IN ('Miembro oficial', 'Rechazado')
-      ORDER BY f.fecha_envio DESC`,
+       ORDER BY f.fecha_envio DESC`,
       [id_club],
     );
 
@@ -528,7 +541,8 @@ router.post('/seleccionar', authenticate, requireRole(2, 5), async (req, res) =>
     }
 
     const club = await pool.query(
-      'SELECT id_club, nombre_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
+      `SELECT id_club, nombre_club, id_convocatoria_inscripcion_actual
+       FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)`,
       [id_club, req.user.id],
     );
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
@@ -540,8 +554,9 @@ router.post('/seleccionar', authenticate, requireRole(2, 5), async (req, res) =>
       const convocados = await client.query(
         `SELECT id_formulario, id_alumno, nombre_completo
          FROM formularios
-         WHERE id_club = $1 AND status = 'Convocado'`,
-        [id_club],
+         WHERE id_club = $1 AND status = 'Convocado'
+           AND id_convocatoria_inscripcion = $2`,
+        [id_club, club.rows[0].id_convocatoria_inscripcion_actual],
       );
 
       let seleccionados = 0;

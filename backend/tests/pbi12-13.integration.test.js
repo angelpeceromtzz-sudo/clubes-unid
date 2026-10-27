@@ -16,6 +16,7 @@ const queryOriginal = pool.query.bind(pool);
 const connectOriginal = pool.connect.bind(pool);
 let testPool, servidor, base, creado = false;
 process.env.JWT_SECRET = 'pbi12-13-clave-exclusiva-pruebas';
+process.env.RATE_LIMIT_FORMULARIOS_HORA = '1000';
 
 before(async () => {
   await queryOriginal(`CREATE SCHEMA "${esquema}"`); creado = true;
@@ -27,6 +28,7 @@ before(async () => {
       fecha_apertura_programada TIMESTAMPTZ, fecha_limite_cierre TIMESTAMPTZ, max_postulaciones INT,
       cerrada_manualmente BOOLEAN DEFAULT FALSE, postulaciones_actuales INT DEFAULT 0, id_estatus_club INT NOT NULL DEFAULT 1);
     CREATE TABLE cat_licenciaturas (id_licenciatura INT PRIMARY KEY, nombre TEXT NOT NULL);
+    CREATE TABLE inscripciones (id_inscripcion SERIAL PRIMARY KEY, id_usuario INT NOT NULL, id_club INT NOT NULL, id_estatus_inscripcion INT DEFAULT 1);
     CREATE VIEW clubes_con_estado AS SELECT c.*, 'cerrado'::text AS estado_calculado, 0 AS formularios_recibidos FROM clubes c;
     CREATE TABLE horarios_club (id_horario SERIAL PRIMARY KEY, id_club INT NOT NULL, dia_semana INT NOT NULL,
       hora_inicio TIME NOT NULL, hora_fin TIME NOT NULL, lugar VARCHAR(255) NOT NULL,
@@ -34,11 +36,14 @@ before(async () => {
     CREATE TABLE convocatorias (id_convocatoria SERIAL PRIMARY KEY, id_club INT, id_presidente INT,
       fecha DATE, hora TIME, lugar TEXT, bloque TEXT, periodo TEXT, enviada BOOLEAN DEFAULT FALSE);
     CREATE TABLE formularios (id_formulario SERIAL PRIMARY KEY, id_club INT, id_alumno INT, nombre_completo TEXT,
-      matricula TEXT, status TEXT, fecha_envio TIMESTAMPTZ DEFAULT NOW(), id_convocatoria INT);
+      matricula TEXT, id_licenciatura INT, cuatrimestre INT, telefono_contacto TEXT, motivo_ingreso TEXT,
+      experiencia_previa TEXT, status TEXT, fecha_envio TIMESTAMPTZ DEFAULT NOW(), id_convocatoria INT,
+      bloque_asignado CHAR(1) DEFAULT 'E', fecha_oferta TIMESTAMPTZ, fecha_expiracion TIMESTAMPTZ,
+      fecha_respuesta TIMESTAMPTZ, motivo_rechazo TEXT);
     CREATE TABLE notificaciones (id_notificacion SERIAL PRIMARY KEY, id_emisor INT, titulo TEXT, mensaje TEXT, audiencia TEXT, id_club INT, id_destinatario INT, CHECK (audiencia IN ('global','presidentes','alumnos','club')));
     CREATE TABLE actividad_clubes (id SERIAL PRIMARY KEY, tipo_evento TEXT, id_club INT, id_actor INT, descripcion TEXT, detalles JSONB);
     CREATE TABLE historial_admin (id SERIAL PRIMARY KEY, id_admin INT, admin_nombre TEXT, accion TEXT, descripcion TEXT, entidad_tipo TEXT, entidad_id INT, detalles JSONB);
-    INSERT INTO usuarios(id_usuario,id_rol,nombre_completo) VALUES (1,3,'Coordinación'),(2,2,'Presidente A'),(3,2,'Presidente B'),(4,1,'Alumno'),(5,4,'Rectoría'),(6,5,'Vicepresidente'),(7,3,'Coordinación B');
+    INSERT INTO usuarios(id_usuario,id_rol,nombre_completo) VALUES (1,3,'Coordinación'),(2,2,'Presidente A'),(3,2,'Presidente B'),(4,1,'Alumno'),(5,4,'Rectoría'),(6,5,'Vicepresidente'),(7,3,'Coordinación B'),(8,1,'Alumno 8'),(9,1,'Alumno 9'),(10,1,'Alumno 10');
     INSERT INTO clubes(id_club,nombre_club,id_presidente,id_vicepresidente) VALUES (1,'Club A',2,6),(2,'Club B',3,NULL);
     INSERT INTO cat_licenciaturas(id_licenciatura,nombre) VALUES (1,'Licenciatura de prueba');
   `);
@@ -68,8 +73,11 @@ after(async () => {
 });
 beforeEach(async () => {
   await testPool.query(`TRUNCATE horarios_club, solicitudes_horario, historial_solicitudes_horario, notificaciones,
-    formularios, convocatorias, solicitudes_convocatoria, actividad_clubes, historial_admin RESTART IDENTITY CASCADE;
-    UPDATE clubes SET version_horario = 0, fecha_apertura_programada = NULL, fecha_limite_cierre = NULL, cerrada_manualmente = FALSE, max_postulaciones = NULL, id_estatus_club = 1`);
+    formularios, convocatorias, inscripciones, actividad_clubes, historial_admin RESTART IDENTITY CASCADE;
+    UPDATE clubes SET version_horario = 0, fecha_apertura_programada = NULL, fecha_limite_cierre = NULL, cerrada_manualmente = FALSE,
+      max_postulaciones = NULL, postulaciones_actuales = 0, id_convocatoria_inscripcion_actual = NULL, id_estatus_club = 1;
+    DELETE FROM convocatorias_inscripcion;
+    DELETE FROM solicitudes_convocatoria`);
 });
 async function enviar(method, ruta, datos, rol = 3, usuario) {
   const ids = { 1: 4, 2: 2, 3: 1, 4: 5, 5: 6 };
@@ -152,6 +160,52 @@ async function vencerInscripcion(id) {
     'fecha_limite_cierre', clock_timestamp() - interval '1 minute') WHERE id_solicitud = $1`, [id]);
 }
 
+async function asegurarCiclo(club = 1) {
+  const actual = await testPool.query('SELECT id_convocatoria_inscripcion_actual FROM clubes WHERE id_club = $1', [club]);
+  if (actual.rows[0]?.id_convocatoria_inscripcion_actual) return actual.rows[0].id_convocatoria_inscripcion_actual;
+  const ciclo = await testPool.query(
+    `INSERT INTO convocatorias_inscripcion
+       (id_club, fecha_apertura_programada, fecha_limite_cierre, max_postulaciones)
+     VALUES ($1, NOW() - interval '1 hour', NOW() + interval '1 hour', NULL)
+     RETURNING id_convocatoria_inscripcion`,
+    [club],
+  );
+  const id = ciclo.rows[0].id_convocatoria_inscripcion;
+  await testPool.query('UPDATE clubes SET id_convocatoria_inscripcion_actual = $1 WHERE id_club = $2', [id, club]);
+  return id;
+}
+
+async function insertarPreseleccionado(alumno = 4, club = 1) {
+  const ciclo = await asegurarCiclo(club);
+  await testPool.query(
+    `INSERT INTO formularios (id_club, id_alumno, nombre_completo, status, id_convocatoria_inscripcion)
+     VALUES ($1, $2, 'Alumno', 'Preseleccionado', $3)`,
+    [club, alumno, ciclo],
+  );
+}
+
+async function proponerYAprobar(config, club = 1) {
+  const propuesta = await enviar('PUT', `/clubes/${club}/convocatoria`, config, 2, 2);
+  assert.equal(propuesta.status, 200, JSON.stringify(propuesta.datos));
+  const aprobada = await enviar('POST', `/clubes/${club}/convocatoria/revision`, {
+    accion: 'aprobar', id_solicitud: propuesta.datos.solicitud.id_solicitud,
+  });
+  assert.equal(aprobada.status, 200, JSON.stringify(aprobada.datos));
+  return aprobada.datos;
+}
+
+async function postular(alumno = 4, club = 1) {
+  return enviar('POST', '/formularios', {
+    id_club: club,
+    nombre_completo: `Alumno ${alumno}`,
+    matricula: String(alumno),
+    id_licenciatura: 1,
+    cuatrimestre: 1,
+    telefono_contacto: '5555555555',
+    motivo_ingreso: 'Prueba BUG-01',
+  }, 1, alumno);
+}
+
 test('PBI-12: una inscripción vence antes de aprobar; se conserva y admite una nueva revisión', async () => {
   const s = (await enviar('PUT', '/clubes/1/convocatoria', configConv, 2)).datos.solicitud;
   await vencerInscripcion(s.id_solicitud);
@@ -205,7 +259,7 @@ test('PBI-12: una apertura pasada sin cierre no vence; una aprobada conserva su 
 });
 
 async function prepararBloquePendiente() {
-  await testPool.query("INSERT INTO formularios(id_club,id_alumno,nombre_completo,status) VALUES (1,4,'Alumno','Preseleccionado')");
+  await insertarPreseleccionado();
   assert.equal((await enviar('POST', '/convocatorias/generar', { id_club: 1 }, 2)).status, 200);
   const id = (await testPool.query('SELECT id_convocatoria FROM convocatorias')).rows[0].id_convocatoria;
   assert.equal((await enviar('PUT', '/convocatorias/' + id, { fecha: '2099-01-20', hora: '10:00', lugar: 'Cancha' }, 2)).status, 200);
@@ -268,7 +322,7 @@ test('PBI-12: un bloque que aún no empieza en hora de México sigue pendiente',
 });
 
 test('PBI-12: el presidente prepara bloques sin convocar alumnos y admin publica después de revisión', async () => {
-  await testPool.query("INSERT INTO formularios(id_club,id_alumno,nombre_completo,status) VALUES (1,4,'Alumno','Preseleccionado')");
+  await insertarPreseleccionado();
   assert.equal((await enviar('POST','/convocatorias/generar',{id_club:1},2)).status,200);
   assert.equal((await enviar('POST','/convocatorias/generar',{id_club:1},2)).status,409);
   const id = (await testPool.query('SELECT id_convocatoria FROM convocatorias')).rows[0].id_convocatoria;
@@ -353,7 +407,7 @@ test('BUG-03: admin no aprueba una solicitud de un club inactivo, pero sí puede
 });
 
 test('BUG-03: bloques existentes se ocultan y bloquean hasta reactivar el club', async () => {
-  await testPool.query("INSERT INTO formularios(id_club,id_alumno,nombre_completo,status) VALUES (1,4,'Alumno','Preseleccionado')");
+  await insertarPreseleccionado();
   assert.equal((await enviar('POST', '/convocatorias/generar', { id_club: 1 }, 2)).status, 200);
   const id = (await testPool.query('SELECT id_convocatoria FROM convocatorias')).rows[0].id_convocatoria;
   assert.equal((await enviar('PUT', `/convocatorias/${id}`, { fecha: '2099-01-20', hora: '10:00', lugar: 'Cancha' }, 2)).status, 200);
@@ -372,6 +426,86 @@ test('BUG-03: bloques existentes se ocultan y bloquean hasta reactivar el club',
   assert.equal((await enviar('PUT', `/convocatorias/${id}`, { lugar: 'Cancha' }, 2)).status, 200);
   assert.equal((await enviar('POST', `/convocatorias/${id}/solicitar-revision`, {}, 2)).status, 200);
   assert.equal((await enviar('POST', `/convocatorias/${id}/enviar`, {})).status, 200);
+});
+
+test('BUG-01: una convocatoria nueva inicia en cero y conserva los formularios históricos', async () => {
+  const aperturaA = new Date(Date.now() - 2 * 3600000).toISOString();
+  const cierreA = new Date(Date.now() + 2 * 3600000).toISOString();
+  await proponerYAprobar({ fecha_apertura_programada: aperturaA, fecha_limite_cierre: cierreA, max_postulaciones: 2 });
+  assert.equal((await postular(4)).status, 201);
+  assert.equal((await postular(8)).status, 201);
+
+  let actual = (await enviar('GET', '/clubes/1/convocatoria')).datos;
+  assert.equal(Number(actual.formularios_recibidos), 2);
+  assert.equal(actual.estado_calculado, 'lleno');
+  const cicloA = actual.id_convocatoria_inscripcion_actual;
+  assert.ok(cicloA);
+
+  const aperturaB = new Date(Date.now() - 3600000).toISOString();
+  const cierreB = new Date(Date.now() + 3600000).toISOString();
+  await proponerYAprobar({ fecha_apertura_programada: aperturaB, fecha_limite_cierre: cierreB, max_postulaciones: 1 });
+
+  actual = (await enviar('GET', '/clubes/1/convocatoria')).datos;
+  assert.notEqual(actual.id_convocatoria_inscripcion_actual, cicloA);
+  assert.equal(Number(actual.formularios_recibidos), 0);
+  assert.equal(actual.estado_calculado, 'abierto');
+  const cicloB = actual.id_convocatoria_inscripcion_actual;
+
+  assert.equal((await postular(9)).status, 201);
+  assert.equal((await postular(10)).status, 400);
+  actual = (await enviar('GET', '/clubes/1/convocatoria')).datos;
+  assert.equal(Number(actual.formularios_recibidos), 1);
+  assert.equal(actual.estado_calculado, 'lleno');
+
+  const historico = (await testPool.query(
+    'SELECT id_convocatoria_inscripcion FROM formularios WHERE id_alumno = 4',
+  )).rows[0];
+  assert.equal(historico.id_convocatoria_inscripcion, cicloA);
+  const actuales = (await testPool.query(
+    'SELECT COUNT(*)::int AS total FROM formularios WHERE id_convocatoria_inscripcion = $1',
+    [cicloB],
+  )).rows[0].total;
+  assert.equal(actuales, 1);
+  assert.equal(Number((await testPool.query('SELECT COUNT(*)::int AS total FROM formularios')).rows[0].total), 3);
+});
+
+test('BUG-01: el mismo alumno puede postularse otra vez en una convocatoria nueva', async () => {
+  const aperturaA = new Date(Date.now() - 2 * 3600000).toISOString();
+  const cierreA = new Date(Date.now() + 2 * 3600000).toISOString();
+  await proponerYAprobar({ fecha_apertura_programada: aperturaA, fecha_limite_cierre: cierreA, max_postulaciones: 3 });
+  assert.equal((await postular(4)).status, 201);
+
+  const aperturaB = new Date(Date.now() - 3600000).toISOString();
+  const cierreB = new Date(Date.now() + 3600000).toISOString();
+  await proponerYAprobar({ fecha_apertura_programada: aperturaB, fecha_limite_cierre: cierreB, max_postulaciones: 3 });
+  assert.equal((await postular(4)).status, 201);
+
+  const repetida = await postular(4);
+  assert.equal(repetida.status, 400);
+  assert.match(repetida.datos.error, /Ya enviaste/);
+  const formularios = (await testPool.query(
+    'SELECT id_convocatoria_inscripcion FROM formularios WHERE id_alumno = 4 ORDER BY id_formulario',
+  )).rows;
+  assert.equal(formularios.length, 2);
+  assert.notEqual(formularios[0].id_convocatoria_inscripcion, formularios[1].id_convocatoria_inscripcion);
+  assert.deepEqual((await enviar('GET', '/formularios', null, 1, 4)).datos, [1]);
+});
+
+test('BUG-01: cambiar solo el límite dentro del mismo periodo no reinicia el conteo', async () => {
+  const apertura = new Date(Date.now() - 3600000).toISOString();
+  const cierre = new Date(Date.now() + 3600000).toISOString();
+  await proponerYAprobar({ fecha_apertura_programada: apertura, fecha_limite_cierre: cierre, max_postulaciones: 2 });
+  assert.equal((await postular(4)).status, 201);
+  const ciclo = (await enviar('GET', '/clubes/1/convocatoria')).datos.id_convocatoria_inscripcion_actual;
+
+  await proponerYAprobar({ fecha_apertura_programada: apertura, fecha_limite_cierre: cierre, max_postulaciones: 1 });
+  const actual = (await enviar('GET', '/clubes/1/convocatoria')).datos;
+  assert.equal(actual.id_convocatoria_inscripcion_actual, ciclo);
+  assert.equal(Number(actual.formularios_recibidos), 1);
+  assert.equal(actual.estado_calculado, 'lleno');
+  assert.equal(Number((await testPool.query(
+    'SELECT COUNT(*)::int AS total FROM convocatorias_inscripcion WHERE id_club = 1',
+  )).rows[0].total), 1);
 });
 
 test('PBI-13: la propuesta solo puede crearla el presidente de su club y solo admin puede revisar', async () => {

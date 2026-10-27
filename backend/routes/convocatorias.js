@@ -59,17 +59,21 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
     if (!id_club) return res.status(400).json({ error: 'id_club es obligatorio' });
 
     const club = await pool.query(
-      'SELECT id_club, nombre_club, id_presidente, id_estatus_club FROM clubes WHERE id_club = $1 AND id_presidente = $2',
+      `SELECT id_club, nombre_club, id_presidente, id_estatus_club,
+              id_convocatoria_inscripcion_actual
+       FROM clubes WHERE id_club = $1 AND id_presidente = $2`,
       [id_club, req.user.id],
     );
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
     if (!clubEstaActivo(club.rows[0])) return res.status(409).json({ error: MENSAJE_CLUB_NO_ACTIVO });
 
+    const idCiclo = club.rows[0].id_convocatoria_inscripcion_actual;
     const preseleccionados = await pool.query(
       `SELECT id_formulario, id_alumno, nombre_completo FROM formularios
        WHERE id_club = $1 AND status = 'Preseleccionado'
+         AND id_convocatoria_inscripcion = $2
        ORDER BY fecha_envio ASC`,
-      [id_club],
+      [id_club, idCiclo],
     );
 
     if (preseleccionados.rows.length === 0) {
@@ -78,8 +82,9 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
 
     const pendientes = await pool.query(
       `SELECT COUNT(*) as total FROM formularios
-       WHERE id_club = $1 AND status = 'En revisión'`,
-      [id_club],
+       WHERE id_club = $1 AND status = 'En revisión'
+         AND id_convocatoria_inscripcion = $2`,
+      [id_club, idCiclo],
     );
     if (parseInt(pendientes.rows[0].total, 10) > 0) {
       return res.status(400).json({
@@ -93,9 +98,21 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
 
     try {
       await client.query('BEGIN');
-      const clubBloqueado = (await client.query('SELECT id_estatus_club FROM clubes WHERE id_club = $1 FOR UPDATE', [id_club])).rows[0];
+      const clubBloqueado = (await client.query(
+        'SELECT id_estatus_club, id_convocatoria_inscripcion_actual FROM clubes WHERE id_club = $1 FOR UPDATE',
+        [id_club],
+      )).rows[0];
       if (!clubEstaActivo(clubBloqueado)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MENSAJE_CLUB_NO_ACTIVO }); }
-      const asignadas = await client.query("SELECT id_formulario FROM formularios WHERE id_club = $1 AND status = 'Preseleccionado' AND id_convocatoria IS NOT NULL", [id_club]);
+      if (clubBloqueado.id_convocatoria_inscripcion_actual !== idCiclo) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'La convocatoria cambió mientras se generaban los bloques. Intenta de nuevo.' });
+      }
+      const asignadas = await client.query(
+        `SELECT id_formulario FROM formularios
+         WHERE id_club = $1 AND status = 'Preseleccionado'
+           AND id_convocatoria_inscripcion = $2 AND id_convocatoria IS NOT NULL`,
+        [id_club, idCiclo],
+      );
       if (asignadas.rows.length) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'Los alumnos preseleccionados ya tienen bloques de convocatoria asignados' }); }
 
       let idx = 0;

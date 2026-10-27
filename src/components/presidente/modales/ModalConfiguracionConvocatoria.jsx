@@ -73,7 +73,7 @@ export function ModalConfiguracionConvocatoria({ club }) {
     {mensaje && <p role="status" className="text-sm text-emerald-600">{mensaje}</p>}
     <div className={cardCls + ' rounded-xl border p-4'}>
       <div className="flex flex-wrap items-center justify-between gap-2"><h4 className={tema.title + ' text-sm font-semibold'}>Versión publicada</h4><BadgeEstado estado={config.estado_calculado} /></div>
-      <div className={tema.subtitle + ' mt-3 space-y-1 text-xs'}><p>Apertura: {fecha(config.fecha_apertura_programada)}</p><p>Cierre: {fecha(config.fecha_limite_cierre)}</p><p>Postulaciones: {config.postulaciones_actuales || 0} / {config.max_postulaciones || MAX_POSTULACIONES}</p></div>
+      <div className={tema.subtitle + ' mt-3 space-y-1 text-xs'}><p>Apertura: {fecha(config.fecha_apertura_programada)}</p><p>Cierre: {fecha(config.fecha_limite_cierre)}</p><p>Postulaciones de esta convocatoria: {config.formularios_recibidos ?? config.postulaciones_actuales ?? 0} / {config.max_postulaciones || MAX_POSTULACIONES}</p></div>
     </div>
     <form onSubmit={enviar} className={cardCls + ' rounded-xl border p-4 sm:p-5'}>
       <h4 className={tema.title + ' mb-2 text-sm font-bold'}>{pendiente ? 'Convocatoria por revisar' : esAdmin ? 'Última configuración del club' : 'Preparar convocatoria'}</h4>

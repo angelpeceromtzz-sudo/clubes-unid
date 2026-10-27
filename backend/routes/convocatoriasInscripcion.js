@@ -9,7 +9,13 @@ const fallo = (status, message) => Object.assign(new Error(message), { status })
 
 async function configuracion(client, id) {
   await vencerInscripciones(client, id);
-  const actual = await client.query('SELECT id_estatus_club, estado_calculado, max_postulaciones, postulaciones_actuales, fecha_apertura_programada, fecha_limite_cierre, formularios_recibidos FROM clubes_con_estado WHERE id_club = $1', [id]);
+  const actual = await client.query(
+    `SELECT id_estatus_club, estado_calculado, max_postulaciones, postulaciones_actuales,
+            fecha_apertura_programada, fecha_limite_cierre, formularios_recibidos,
+            id_convocatoria_inscripcion_actual
+     FROM clubes_con_estado WHERE id_club = $1`,
+    [id],
+  );
   if (!actual.rows.length) throw fallo(404, 'Club no encontrado');
   const solicitud = await client.query('SELECT * FROM solicitudes_convocatoria WHERE id_club = $1 ORDER BY id_solicitud DESC LIMIT 1', [id]);
   return { ...actual.rows[0], solicitud: solicitud.rows[0] || null };
@@ -87,8 +93,48 @@ router.post('/revision', authenticate, requireRole(3), transaccion(async (req, c
   if (accion === 'aprobar' && club.id_presidente !== s.id_solicitante) throw fallo(409, 'Cambió la presidencia. El presidente actual debe presentar una nueva convocatoria');
   if (accion === 'aprobar') {
     const c = s.configuracion;
-    await client.query('UPDATE clubes SET fecha_apertura_programada=$1, fecha_limite_cierre=$2, max_postulaciones=$3, cerrada_manualmente=CASE WHEN fecha_apertura_programada IS DISTINCT FROM $1::timestamptz THEN FALSE ELSE cerrada_manualmente END WHERE id_club=$4',
-      [c.fecha_apertura_programada, c.fecha_limite_cierre, c.max_postulaciones, req.params.id]);
+    const normalizarFecha = (valor) => valor == null ? null : new Date(valor).toISOString();
+    const cambioApertura = normalizarFecha(c.fecha_apertura_programada) !== normalizarFecha(club.fecha_apertura_programada);
+    const crearCiclo = !club.id_convocatoria_inscripcion_actual || cambioApertura;
+    let idCiclo = club.id_convocatoria_inscripcion_actual;
+
+    if (crearCiclo) {
+      const fechaPublicacion = !club.id_convocatoria_inscripcion_actual && !cambioApertura
+        ? (club.fecha_apertura_programada || new Date())
+        : new Date();
+      const ciclo = await client.query(
+        `INSERT INTO convocatorias_inscripcion
+           (id_club, id_solicitud, fecha_apertura_programada, fecha_limite_cierre,
+            max_postulaciones, fecha_publicacion)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id_convocatoria_inscripcion`,
+        [club.id_club, s.id_solicitud, c.fecha_apertura_programada, c.fecha_limite_cierre,
+          c.max_postulaciones, fechaPublicacion],
+      );
+      idCiclo = ciclo.rows[0].id_convocatoria_inscripcion;
+      await client.query(
+        `UPDATE formularios SET id_convocatoria_inscripcion = $1
+         WHERE id_club = $2 AND id_convocatoria_inscripcion IS NULL AND fecha_envio >= $3`,
+        [idCiclo, club.id_club, fechaPublicacion],
+      );
+    } else {
+      await client.query(
+        `UPDATE convocatorias_inscripcion
+         SET fecha_apertura_programada = $1, fecha_limite_cierre = $2, max_postulaciones = $3
+         WHERE id_convocatoria_inscripcion = $4`,
+        [c.fecha_apertura_programada, c.fecha_limite_cierre, c.max_postulaciones, idCiclo],
+      );
+    }
+
+    await client.query(
+      `UPDATE clubes
+       SET fecha_apertura_programada = $1, fecha_limite_cierre = $2, max_postulaciones = $3,
+           id_convocatoria_inscripcion_actual = $4,
+           postulaciones_actuales = (SELECT COUNT(*)::int FROM formularios WHERE id_convocatoria_inscripcion = $4),
+           cerrada_manualmente = CASE WHEN fecha_apertura_programada IS DISTINCT FROM $1::timestamptz THEN FALSE ELSE cerrada_manualmente END
+       WHERE id_club = $5`,
+      [c.fecha_apertura_programada, c.fecha_limite_cierre, c.max_postulaciones, idCiclo, req.params.id],
+    );
   }
   await client.query('UPDATE solicitudes_convocatoria SET estado=$1,id_revisor=$2,observaciones=$3,fecha_revision=NOW() WHERE id_solicitud=$4',
     [accion === 'aprobar' ? 'aprobado' : 'rechazado', req.user.id, observaciones || null, id_solicitud]);
