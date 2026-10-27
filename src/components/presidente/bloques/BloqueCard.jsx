@@ -8,7 +8,7 @@ import { BloqueActions } from './BloqueActions';
 import { BloqueAlumnosList } from './BloqueAlumnosList';
 import { useFechaVencida } from '../../../hooks/useFechaVencida';
 
-export function BloqueCard({ convocatoria, onActualizar, onEnviar, onImprimir, onRechazar }) {
+export function BloqueCard({ convocatoria, clubActivo = true, onActualizar, onEnviar, onImprimir, onRechazar }) {
   const { modoOscuro, inputCls, tema } = useTheme();
   const { esAdmin } = useAutenticacion();
   const [observaciones, setObservaciones] = useState('');
@@ -78,6 +78,7 @@ export function BloqueCard({ convocatoria, onActualizar, onEnviar, onImprimir, o
         {convocatoria.observaciones && <p className="mb-3 text-xs text-amber-600">Observaciones: {convocatoria.observaciones}</p>}
         {esAdmin && estado === 'pendiente' && <label className={tema.title + ' mb-3 block text-xs'}>Observaciones para el presidente<textarea value={observaciones} maxLength={2000} disabled={enviando} onChange={(e) => setObservaciones(e.target.value)} className={inputCls + ' mt-2'} placeholder="Obligatorias para devolver con correcciones" /></label>}
         <BloqueActions
+          clubActivo={clubActivo}
           estado={estado}
           onRechazar={rechazar}
           puedeRechazar={Boolean(observaciones.trim())}

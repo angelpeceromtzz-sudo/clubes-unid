@@ -15,6 +15,7 @@ export function ModalConfiguracionConvocatoria({ club }) {
   const { esAdmin, usuario } = useAutenticacion();
   const { tema, cardCls, inputCls } = useTheme();
   const presidente = usuario?.id_rol === 2;
+  const clubActivo = Number(club?.id_estatus_club) === 1;
   const [config, setConfig] = useState(null);
   const [form, setForm] = useState({});
   const [observaciones, setObservaciones] = useState('');
@@ -67,6 +68,7 @@ export function ModalConfiguracionConvocatoria({ club }) {
   const fecha = (valor) => valor ? new Date(valor).toLocaleString('es-MX') : 'Sin fecha definida';
   return <section className="space-y-4">
     <header><h3 className={tema.title + ' text-lg font-bold'}>Convocatoria de inscripción</h3><p className={tema.subtitle + ' mt-1 text-sm'}>El presidente prepara la convocatoria; admin la revisa y aprueba antes de publicarla.</p></header>
+    {!clubActivo && <p role="status" className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-600">El club no está activo. No se pueden crear, aprobar ni publicar convocatorias mientras permanezca en ese estatus.</p>}
     {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
     {mensaje && <p role="status" className="text-sm text-emerald-600">{mensaje}</p>}
     <div className={cardCls + ' rounded-xl border p-4'}>
@@ -77,19 +79,19 @@ export function ModalConfiguracionConvocatoria({ club }) {
       <h4 className={tema.title + ' mb-2 text-sm font-bold'}>{pendiente ? 'Convocatoria por revisar' : esAdmin ? 'Última configuración del club' : 'Preparar convocatoria'}</h4>
       {s && <p className={tema.subtitle + ' mb-3 text-xs'}>{ESTADOS[vencida ? 'vencido' : s.estado]}{s.observaciones ? ' · ' + s.observaciones : ''}</p>}
       {vencida && <p role="status" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-600">El plazo de cierre venció antes de la aprobación. El presidente puede actualizar las fechas y reenviar la propuesta; Coordinación deberá revisarla de nuevo.</p>}
-      <fieldset disabled={ocupado || !presidente || pendiente} className="grid gap-4 sm:grid-cols-2">
+      <fieldset disabled={ocupado || !presidente || pendiente || !clubActivo} className="grid gap-4 sm:grid-cols-2">
         <label className={tema.title + ' text-xs font-semibold'}>Apertura<input type="datetime-local" value={toDatetimeLocal(form.fecha_apertura_programada)} onChange={(e) => setForm((p) => ({ ...p, fecha_apertura_programada: fromDatetimeLocal(e.target.value) }))} className={inputCls + ' mt-2'} /></label>
         <label className={tema.title + ' text-xs font-semibold'}>Cierre (opcional)<input type="datetime-local" min={toDatetimeLocal(form.fecha_apertura_programada)} value={toDatetimeLocal(form.fecha_limite_cierre)} onChange={(e) => setForm((p) => ({ ...p, fecha_limite_cierre: fromDatetimeLocal(e.target.value) }))} className={inputCls + ' mt-2'} /></label>
         <label className={tema.title + ' text-xs font-semibold'}>Límite de postulaciones<input type="number" min="1" max={MAX_POSTULACIONES} value={form.max_postulaciones ?? ''} placeholder={String(MAX_POSTULACIONES)} onChange={(e) => setForm((p) => ({ ...p, max_postulaciones: e.target.value ? Number(e.target.value) : null }))} className={inputCls + ' mt-2'} /></label>
       </fieldset>
-      {presidente && !pendiente && <button disabled={ocupado} className="mt-4 rounded-lg bg-amber-400 px-4 py-2 text-xs font-bold text-slate-950 cursor-pointer disabled:opacity-40">{ocupado ? 'Enviando…' : vencida ? 'Reenviar con nuevas fechas' : 'Enviar a revisión de admin'}</button>}
+      {presidente && !pendiente && clubActivo && <button disabled={ocupado} className="mt-4 rounded-lg bg-amber-400 px-4 py-2 text-xs font-bold text-slate-950 cursor-pointer disabled:opacity-40">{ocupado ? 'Enviando…' : vencida ? 'Reenviar con nuevas fechas' : 'Enviar a revisión de admin'}</button>}
       {pendiente && !esAdmin && <p className={tema.subtitle + ' mt-4 text-xs'}>Admin está revisando esta propuesta. La versión publicada no cambia mientras tanto.</p>}
     </form>
     {esAdmin && pendiente && <div className={cardCls + ' rounded-xl border p-4'}>
       <label className={tema.title + ' text-xs font-semibold'}>Observaciones para el presidente<textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} maxLength={2000} className={inputCls + ' mt-2'} placeholder="Obligatorias para devolver con correcciones" /></label>
-      <div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={ocupado} onClick={() => revisar('aprobar')} className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white cursor-pointer disabled:opacity-40">Aprobar y publicar</button><button type="button" disabled={ocupado || !observaciones.trim()} onClick={() => revisar('rechazar')} className="rounded-lg border border-red-400 px-4 py-2 text-xs text-red-500 cursor-pointer disabled:opacity-40">Devolver con observaciones</button></div>
+      <div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={ocupado || !clubActivo} onClick={() => revisar('aprobar')} className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white cursor-pointer disabled:opacity-40">Aprobar y publicar</button><button type="button" disabled={ocupado || !observaciones.trim()} onClick={() => revisar('rechazar')} className="rounded-lg border border-red-400 px-4 py-2 text-xs text-red-500 cursor-pointer disabled:opacity-40">Devolver con observaciones</button></div>
     </div>}
-    {esAdmin && config.estado_calculado === 'abierto' && !confirmarCierre && <button type="button" disabled={ocupado} onClick={() => setConfirmarCierre(true)} className="text-xs font-semibold text-red-500 cursor-pointer">Cerrar inscripciones publicadas</button>}
+    {esAdmin && config.estado_calculado === 'abierto' && !confirmarCierre && <button type="button" disabled={ocupado || !clubActivo} onClick={() => setConfirmarCierre(true)} className="text-xs font-semibold text-red-500 cursor-pointer disabled:opacity-40">Cerrar inscripciones publicadas</button>}
     {confirmarCierre && <ConvocatoriaConfirmCerrarBox guardando={ocupado} tema={tema} onCancelar={() => setConfirmarCierre(false)} onConfirmar={() => { setConfirmarCierre(false); ejecutar(async () => { await api.cerrarConvocatoria(club.id_club); return api.getConvocatoriaClub(club.id_club); }, 'Inscripciones cerradas.'); }} />}
   </section>;
 }

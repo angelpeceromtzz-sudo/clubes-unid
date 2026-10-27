@@ -86,10 +86,11 @@ router.get('/mis-postulaciones', authenticate, requireRole(1), async (req, res) 
               f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
                f.fecha_envio, f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta,
                c.nombre_club, c.categoria,
-               c.imagen_portada,
+               c.imagen_portada, c.id_estatus_club,
                (SELECT row_to_json(datos) FROM (
                  SELECT cv.id_convocatoria, cv.bloque, cv.fecha, cv.hora, cv.lugar
-                 FROM convocatorias cv WHERE cv.id_convocatoria = f.id_convocatoria
+                 FROM convocatorias cv
+                 WHERE cv.id_convocatoria = f.id_convocatoria AND c.id_estatus_club = 1
                ) AS datos) AS convocatoria,
                (SELECT json_agg(json_build_object(
                  'status_anterior', hp.status_anterior,

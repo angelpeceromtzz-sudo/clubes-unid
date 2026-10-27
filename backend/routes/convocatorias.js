@@ -5,6 +5,7 @@ import { generarListaAsistencia } from '../lib/asistenciaTemplate.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
 import { vencerBloques, FECHA_EVALUACION_SQL, MENSAJE_VENCIMIENTO } from '../lib/vencimientoConvocatorias.js';
+import { clubEstaActivo, MENSAJE_CLUB_NO_ACTIVO } from '../lib/estadoClub.js';
 
 const router = Router();
 
@@ -58,10 +59,11 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
     if (!id_club) return res.status(400).json({ error: 'id_club es obligatorio' });
 
     const club = await pool.query(
-      'SELECT id_club, nombre_club, id_presidente FROM clubes WHERE id_club = $1 AND id_presidente = $2',
+      'SELECT id_club, nombre_club, id_presidente, id_estatus_club FROM clubes WHERE id_club = $1 AND id_presidente = $2',
       [id_club, req.user.id],
     );
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
+    if (!clubEstaActivo(club.rows[0])) return res.status(409).json({ error: MENSAJE_CLUB_NO_ACTIVO });
 
     const preseleccionados = await pool.query(
       `SELECT id_formulario, id_alumno, nombre_completo FROM formularios
@@ -91,7 +93,8 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
 
     try {
       await client.query('BEGIN');
-      await client.query('SELECT id_club FROM clubes WHERE id_club = $1 FOR UPDATE', [id_club]);
+      const clubBloqueado = (await client.query('SELECT id_estatus_club FROM clubes WHERE id_club = $1 FOR UPDATE', [id_club])).rows[0];
+      if (!clubEstaActivo(clubBloqueado)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MENSAJE_CLUB_NO_ACTIVO }); }
       const asignadas = await client.query("SELECT id_formulario FROM formularios WHERE id_club = $1 AND status = 'Preseleccionado' AND id_convocatoria IS NOT NULL", [id_club]);
       if (asignadas.rows.length) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'Los alumnos preseleccionados ya tienen bloques de convocatoria asignados' }); }
 
@@ -160,8 +163,9 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
 router.get('/:id_club', authenticate, requireClubReader, async (req, res) => {
   try {
     const { id_club } = req.params;
-    const club = await pool.query('SELECT id_club FROM clubes WHERE id_club = $1', [id_club]);
+    const club = await pool.query('SELECT id_club, id_estatus_club FROM clubes WHERE id_club = $1', [id_club]);
     if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado' });
+    if (!clubEstaActivo(club.rows[0])) return res.json([]);
     await vencerBloques(pool, id_club);
 
     const convocatorias = await pool.query(
@@ -195,12 +199,13 @@ router.put('/:id', authenticate, requireRole(2), async (req, res) => {
     const { fecha, hora, lugar } = req.body;
 
     const conv = await pool.query(
-      `SELECT c.* FROM convocatorias c
+      `SELECT c.*, cl.id_estatus_club FROM convocatorias c
        JOIN clubes cl ON cl.id_club = c.id_club
        WHERE c.id_convocatoria = $1 AND cl.id_presidente = $2`,
       [id, req.user.id],
     );
     if (conv.rows.length === 0) return res.status(404).json({ error: 'Convocatoria no encontrada' });
+    if (!clubEstaActivo(conv.rows[0])) return res.status(409).json({ error: MENSAJE_CLUB_NO_ACTIVO });
     await vencerBloques(pool, conv.rows[0].id_club);
     if (conv.rows[0].estado_revision === 'pendiente') {
       conv.rows[0] = (await pool.query('SELECT * FROM convocatorias WHERE id_convocatoria = $1', [id])).rows[0];
@@ -243,8 +248,9 @@ router.post('/:id/solicitar-revision', authenticate, requireRole(2), async (req,
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const c = (await client.query(`SELECT c.*, ${FECHA_EVALUACION_SQL} <= clock_timestamp() AS vencida, cl.id_presidente AS presidente_actual FROM convocatorias c JOIN clubes cl ON cl.id_club=c.id_club WHERE c.id_convocatoria=$1 FOR UPDATE OF c`, [req.params.id])).rows[0];
+    const c = (await client.query(`SELECT c.*, ${FECHA_EVALUACION_SQL} <= clock_timestamp() AS vencida, cl.id_presidente AS presidente_actual, cl.id_estatus_club FROM convocatorias c JOIN clubes cl ON cl.id_club=c.id_club WHERE c.id_convocatoria=$1 FOR UPDATE OF c, cl`, [req.params.id])).rows[0];
     if (!c || c.presidente_actual !== req.user.id) { await client.query('ROLLBACK'); return res.status(403).json({ error: 'Solo el presidente del club puede solicitar revisión' }); }
+    if (!clubEstaActivo(c)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MENSAJE_CLUB_NO_ACTIVO }); }
     if (c.enviada || !['preparacion','rechazado'].includes(c.estado_revision)) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'La convocatoria ya está en revisión o publicada' }); }
     if (!c.fecha || !c.hora || !c.lugar) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Completa fecha, hora y lugar antes de solicitar revisión' }); }
     if (c.vencida) { await client.query('ROLLBACK'); return res.status(400).json({ error: 'La fecha y hora de evaluación deben ser futuras para enviar a revisión' }); }
@@ -281,14 +287,15 @@ router.post('/:id/enviar', authenticate, requireRole(3), async (req, res) => {
     const { id } = req.params;
 
     const conv = await client.query(
-      `SELECT c.*, ${FECHA_EVALUACION_SQL} <= clock_timestamp() AS vencida, cl.nombre_club, cl.id_club
+      `SELECT c.*, ${FECHA_EVALUACION_SQL} <= clock_timestamp() AS vencida, cl.nombre_club, cl.id_club, cl.id_estatus_club
        FROM convocatorias c
        JOIN clubes cl ON cl.id_club = c.id_club
-       WHERE c.id_convocatoria = $1 FOR UPDATE OF c`,
+       WHERE c.id_convocatoria = $1 FOR UPDATE OF c, cl`,
       [id],
     );
     if (conv.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Convocatoria no encontrada' }); }
     const c = conv.rows[0];
+    if (!clubEstaActivo(c)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MENSAJE_CLUB_NO_ACTIVO }); }
     if (c.estado_revision === 'vencido' || (!c.enviada && c.estado_revision === 'pendiente' && c.vencida)) {
       await vencerBloques(client, c.id_club, c.id_convocatoria);
       await client.query('COMMIT');

@@ -11,6 +11,7 @@ import { Alerta } from '../../ui/Alerta';
 
 export function SeccionConvocatorias({ club }) {
   const { esAdmin } = useAutenticacion();
+  const clubActivo = Number(club?.id_estatus_club) === 1;
   const [convocatorias, setConvocatorias] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -104,6 +105,7 @@ export function SeccionConvocatorias({ club }) {
             <BloqueCard
               key={c.id_convocatoria}
               convocatoria={c}
+              clubActivo={clubActivo}
               onActualizar={manejarActualizar}
               onEnviar={manejarEnviar}
               onRechazar={manejarRechazar}

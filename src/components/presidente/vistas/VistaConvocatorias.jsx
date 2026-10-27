@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { Alerta } from '../../ui/Alerta';
 import { ModalConfiguracionConvocatoria } from '../modales/ModalConfiguracionConvocatoria';
 import { SolicitudesPresidente } from '../solicitudes/SolicitudesPresidente';
 import { SeccionConvocatorias } from '../secciones/SeccionConvocatorias';
@@ -47,6 +48,7 @@ function Timeline({ etapas, activa, onChange }) {
 export function VistaConvocatorias({ club }) {
   const { tema, modoOscuro } = useTheme();
   const [subVista, setSubVista] = useState('estado');
+  const clubActivo = Number(club?.id_estatus_club) === 1;
 
   return (
     <div className="space-y-6">
@@ -54,6 +56,13 @@ export function VistaConvocatorias({ club }) {
         <h2 className={`text-xl font-black uppercase tracking-wider ${tema.title}`}>Convocatorias</h2>
         <p className={`text-sm mt-0.5 ${tema.subtitle}`}>Gestiona todo el proceso de reclutamiento de tu club.</p>
       </div>
+
+      {!clubActivo && (
+        <Alerta
+          tipo="warning"
+          mensaje="El club no está activo. No se pueden crear, enviar ni publicar convocatorias mientras permanezca en ese estatus."
+        />
+      )}
 
       <div className={`rounded-2xl border p-3 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'}`}>
         <Timeline etapas={ETAPAS} activa={subVista} onChange={setSubVista} />

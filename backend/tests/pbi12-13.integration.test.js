@@ -22,10 +22,11 @@ before(async () => {
   testPool = new pg.Pool({ ...pool.options, password: pool.options.password, connectionString: pool.options.connectionString,
     options: `-c search_path=${esquema}`, max: 5, connectionTimeoutMillis: 5000 });
   await testPool.query(`
-    CREATE TABLE usuarios (id_usuario INT PRIMARY KEY, id_rol INT NOT NULL, nombre_completo TEXT NOT NULL, deleted_at TIMESTAMPTZ);
+    CREATE TABLE usuarios (id_usuario INT PRIMARY KEY, id_rol INT NOT NULL, nombre_completo TEXT NOT NULL, deleted_at TIMESTAMPTZ, institutional_id TEXT);
     CREATE TABLE clubes (id_club INT PRIMARY KEY, nombre_club TEXT NOT NULL, id_presidente INT, id_vicepresidente INT,
       fecha_apertura_programada TIMESTAMPTZ, fecha_limite_cierre TIMESTAMPTZ, max_postulaciones INT,
-      cerrada_manualmente BOOLEAN DEFAULT FALSE, postulaciones_actuales INT DEFAULT 0);
+      cerrada_manualmente BOOLEAN DEFAULT FALSE, postulaciones_actuales INT DEFAULT 0, id_estatus_club INT NOT NULL DEFAULT 1);
+    CREATE TABLE cat_licenciaturas (id_licenciatura INT PRIMARY KEY, nombre TEXT NOT NULL);
     CREATE VIEW clubes_con_estado AS SELECT c.*, 'cerrado'::text AS estado_calculado, 0 AS formularios_recibidos FROM clubes c;
     CREATE TABLE horarios_club (id_horario SERIAL PRIMARY KEY, id_club INT NOT NULL, dia_semana INT NOT NULL,
       hora_inicio TIME NOT NULL, hora_fin TIME NOT NULL, lugar VARCHAR(255) NOT NULL,
@@ -37,8 +38,9 @@ before(async () => {
     CREATE TABLE notificaciones (id_notificacion SERIAL PRIMARY KEY, id_emisor INT, titulo TEXT, mensaje TEXT, audiencia TEXT, id_club INT, id_destinatario INT, CHECK (audiencia IN ('global','presidentes','alumnos','club')));
     CREATE TABLE actividad_clubes (id SERIAL PRIMARY KEY, tipo_evento TEXT, id_club INT, id_actor INT, descripcion TEXT, detalles JSONB);
     CREATE TABLE historial_admin (id SERIAL PRIMARY KEY, id_admin INT, admin_nombre TEXT, accion TEXT, descripcion TEXT, entidad_tipo TEXT, entidad_id INT, detalles JSONB);
-    INSERT INTO usuarios VALUES (1,3,'Coordinación'),(2,2,'Presidente A'),(3,2,'Presidente B'),(4,1,'Alumno'),(5,4,'Rectoría'),(6,5,'Vicepresidente'),(7,3,'Coordinación B');
+    INSERT INTO usuarios(id_usuario,id_rol,nombre_completo) VALUES (1,3,'Coordinación'),(2,2,'Presidente A'),(3,2,'Presidente B'),(4,1,'Alumno'),(5,4,'Rectoría'),(6,5,'Vicepresidente'),(7,3,'Coordinación B');
     INSERT INTO clubes(id_club,nombre_club,id_presidente,id_vicepresidente) VALUES (1,'Club A',2,6),(2,'Club B',3,NULL);
+    INSERT INTO cat_licenciaturas(id_licenciatura,nombre) VALUES (1,'Licenciatura de prueba');
   `);
   const sql = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
   const marcador = '-- PBI-13: horarios oficiales y propuestas revisadas por Coordinación (admin).';
@@ -67,7 +69,7 @@ after(async () => {
 beforeEach(async () => {
   await testPool.query(`TRUNCATE horarios_club, solicitudes_horario, historial_solicitudes_horario, notificaciones,
     formularios, convocatorias, solicitudes_convocatoria, actividad_clubes, historial_admin RESTART IDENTITY CASCADE;
-    UPDATE clubes SET version_horario = 0, fecha_apertura_programada = NULL, fecha_limite_cierre = NULL, cerrada_manualmente = FALSE, max_postulaciones = NULL`);
+    UPDATE clubes SET version_horario = 0, fecha_apertura_programada = NULL, fecha_limite_cierre = NULL, cerrada_manualmente = FALSE, max_postulaciones = NULL, id_estatus_club = 1`);
 });
 async function enviar(method, ruta, datos, rol = 3, usuario) {
   const ids = { 1: 4, 2: 2, 3: 1, 4: 5, 5: 6 };
@@ -304,6 +306,72 @@ test('PBI-12: la ruta antigua de estatus no permite convocar sin aprobación', a
   for (const rol of [2,5]) assert.equal((await enviar('PUT','/formularios/1/estatus',{status:'Convocado'},rol)).status,409);
   for (const rol of [null,1,3,4]) assert.equal((await enviar('PUT','/formularios/1/estatus',{status:'Convocado'},rol)).status,rol ? 403 : 401);
   assert.equal((await testPool.query('SELECT status FROM formularios')).rows[0].status,'Preseleccionado');
+});
+
+test('BUG-03: un club no activo no crea convocatorias ni acepta postulaciones', async () => {
+  for (const estatus of [2, 3]) {
+    await testPool.query('UPDATE clubes SET id_estatus_club=$1 WHERE id_club=1', [estatus]);
+    const propuesta = await enviar('PUT', '/clubes/1/convocatoria', configConv, 2);
+    assert.equal(propuesta.status, 409);
+    assert.match(propuesta.datos.error, /no está activo/);
+    assert.equal(Number((await testPool.query('SELECT COUNT(*) FROM solicitudes_convocatoria')).rows[0].count), 0);
+
+    const generacion = await enviar('POST', '/convocatorias/generar', { id_club: 1 }, 2);
+    assert.equal(generacion.status, 409);
+    assert.match(generacion.datos.error, /no está activo/);
+    assert.equal(Number((await testPool.query('SELECT COUNT(*) FROM convocatorias')).rows[0].count), 0);
+
+    const listado = await enviar('GET', '/convocatorias/1', null, 2);
+    assert.equal(listado.status, 200);
+    assert.deepEqual(listado.datos, []);
+
+    const postulacion = await enviar('POST', '/formularios', {
+      id_club: 1, nombre_completo: 'Alumno', matricula: '1', id_licenciatura: 1,
+      cuatrimestre: 1, telefono_contacto: '5555555555', motivo_ingreso: 'Prueba',
+    }, 1);
+    assert.equal(postulacion.status, 400);
+    assert.match(postulacion.datos.error, /no está disponible/);
+    assert.equal(Number((await testPool.query('SELECT COUNT(*) FROM formularios')).rows[0].count), 0);
+  }
+});
+
+test('BUG-03: admin no aprueba una solicitud de un club inactivo, pero sí puede devolverla', async () => {
+  const s = (await enviar('PUT', '/clubes/1/convocatoria', configConv, 2)).datos.solicitud;
+  await testPool.query('UPDATE clubes SET id_estatus_club=3 WHERE id_club=1');
+
+  const aprobacion = await enviar('POST', '/clubes/1/convocatoria/revision', { accion: 'aprobar', id_solicitud: s.id_solicitud });
+  assert.equal(aprobacion.status, 409);
+  assert.match(aprobacion.datos.error, /no está activo/);
+  const pendiente = (await testPool.query('SELECT estado FROM solicitudes_convocatoria WHERE id_solicitud=$1', [s.id_solicitud])).rows[0];
+  assert.equal(pendiente.estado, 'pendiente');
+  assert.equal((await testPool.query('SELECT max_postulaciones FROM clubes WHERE id_club=1')).rows[0].max_postulaciones, null);
+  assert.equal(Number((await testPool.query("SELECT COUNT(*) FROM notificaciones WHERE titulo='Convocatoria aprobada'")).rows[0].count), 0);
+
+  const rechazo = await enviar('POST', '/clubes/1/convocatoria/revision', { accion: 'rechazar', id_solicitud: s.id_solicitud, observaciones: 'Corregir' });
+  assert.equal(rechazo.status, 200);
+  assert.equal(rechazo.datos.solicitud.estado, 'rechazado');
+});
+
+test('BUG-03: bloques existentes se ocultan y bloquean hasta reactivar el club', async () => {
+  await testPool.query("INSERT INTO formularios(id_club,id_alumno,nombre_completo,status) VALUES (1,4,'Alumno','Preseleccionado')");
+  assert.equal((await enviar('POST', '/convocatorias/generar', { id_club: 1 }, 2)).status, 200);
+  const id = (await testPool.query('SELECT id_convocatoria FROM convocatorias')).rows[0].id_convocatoria;
+  assert.equal((await enviar('PUT', `/convocatorias/${id}`, { fecha: '2099-01-20', hora: '10:00', lugar: 'Cancha' }, 2)).status, 200);
+
+  await testPool.query('UPDATE clubes SET id_estatus_club=3 WHERE id_club=1');
+  assert.deepEqual((await enviar('GET', '/convocatorias/1', null, 2)).datos, []);
+  assert.equal((await enviar('PUT', `/convocatorias/${id}`, { lugar: 'Otro' }, 2)).status, 409);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/solicitar-revision`, {}, 2)).status, 409);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/enviar`, {})).status, 409);
+  const bloque = (await testPool.query('SELECT enviada, estado_revision FROM convocatorias WHERE id_convocatoria=$1', [id])).rows[0];
+  assert.equal(bloque.enviada, false);
+  assert.equal(bloque.estado_revision, 'preparacion');
+  assert.equal(Number((await testPool.query("SELECT COUNT(*) FROM notificaciones WHERE audiencia='alumnos'")).rows[0].count), 0);
+
+  await testPool.query('UPDATE clubes SET id_estatus_club=1 WHERE id_club=1');
+  assert.equal((await enviar('PUT', `/convocatorias/${id}`, { lugar: 'Cancha' }, 2)).status, 200);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/solicitar-revision`, {}, 2)).status, 200);
+  assert.equal((await enviar('POST', `/convocatorias/${id}/enviar`, {})).status, 200);
 });
 
 test('PBI-13: la propuesta solo puede crearla el presidente de su club y solo admin puede revisar', async () => {

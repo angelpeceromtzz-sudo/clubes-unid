@@ -2,13 +2,14 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole, requireClubReader } from '../middleware/auth.js';
 import { vencerInscripciones, MENSAJE_VENCIMIENTO } from '../lib/vencimientoConvocatorias.js';
+import { clubEstaActivo, MENSAJE_CLUB_NO_ACTIVO } from '../lib/estadoClub.js';
 
 const router = Router({ mergeParams: true });
 const fallo = (status, message) => Object.assign(new Error(message), { status });
 
 async function configuracion(client, id) {
   await vencerInscripciones(client, id);
-  const actual = await client.query('SELECT estado_calculado, max_postulaciones, postulaciones_actuales, fecha_apertura_programada, fecha_limite_cierre, formularios_recibidos FROM clubes_con_estado WHERE id_club = $1', [id]);
+  const actual = await client.query('SELECT id_estatus_club, estado_calculado, max_postulaciones, postulaciones_actuales, fecha_apertura_programada, fecha_limite_cierre, formularios_recibidos FROM clubes_con_estado WHERE id_club = $1', [id]);
   if (!actual.rows.length) throw fallo(404, 'Club no encontrado');
   const solicitud = await client.query('SELECT * FROM solicitudes_convocatoria WHERE id_club = $1 ORDER BY id_solicitud DESC LIMIT 1', [id]);
   return { ...actual.rows[0], solicitud: solicitud.rows[0] || null };
@@ -45,6 +46,7 @@ router.get('/', authenticate, requireClubReader, async (req, res) => {
 router.put('/', authenticate, requireRole(2), transaccion(async (req, client) => {
   const club = (await client.query('SELECT * FROM clubes WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
   if (!club) throw fallo(404, 'Club no encontrado');
+  if (!clubEstaActivo(club)) throw fallo(409, MENSAJE_CLUB_NO_ACTIVO);
   if (club.id_presidente !== req.user.id) throw fallo(403, 'Solo el presidente de este club puede proponer la convocatoria');
   await vencerInscripciones(client, req.params.id);
   const pendiente = await client.query("SELECT id_solicitud FROM solicitudes_convocatoria WHERE id_club = $1 AND estado = 'pendiente'", [req.params.id]);
@@ -73,6 +75,7 @@ router.post('/revision', authenticate, requireRole(3), transaccion(async (req, c
   if (observaciones.length > 2000 || (accion === 'rechazar' && !observaciones)) throw fallo(400, 'Explica las correcciones necesarias, en hasta 2000 caracteres');
   const club = (await client.query('SELECT * FROM clubes WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
   if (!club) throw fallo(404, 'Club no encontrado');
+  if (accion === 'aprobar' && !clubEstaActivo(club)) throw fallo(409, MENSAJE_CLUB_NO_ACTIVO);
   await vencerInscripciones(client, req.params.id);
   const s = (await client.query('SELECT * FROM solicitudes_convocatoria WHERE id_club = $1 AND id_solicitud = $2 FOR UPDATE', [req.params.id, id_solicitud])).rows[0];
   if (!s) throw fallo(404, 'Solicitud no encontrada');
