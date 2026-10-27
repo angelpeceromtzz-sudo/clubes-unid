@@ -4,6 +4,26 @@ Sistema de gestión de clubes universitarios para UNID Campeche. Permite a alumn
 
 ---
 
+## Mural digital
+
+Administración, Rectoría y el rol **responsable del mural** tienen la sección **Mural digital** para crear, editar, publicar, destacar, ocultar y eliminar publicaciones con imagen, resumen, mensaje, enlace y último día visible. También pueden configurar la dirección del QR. Se pueden editar desde el panel o desde las tarjetas públicas al iniciar sesión como editor. El responsable accede desde `/mural/dashboard`; sus noticias y eventos siguen el flujo de aprobación de Rectoría. Las fechas académicas se administran desde Coordinación y Rectoría.
+
+En el panel, **Dirección pública del sitio** guarda en la base de datos el destino del QR. También se utiliza `VITE_PUBLIC_URL` o el origen actual si no hay una dirección guardada. El QR abre `/calendario?vista=mural`, sin sesión, y se descarga en PNG o SVG. Una dirección localhost solo sirve en el equipo de desarrollo; usa el dominio publicado para compartirlo con teléfonos.
+
+Al reiniciar el backend, `schema.sql` crea `publicaciones_mural` y `configuracion_mural` de forma aditiva. No hay que ejecutar el seed. Las publicaciones vencidas permanecen en administración y se excluyen de la consulta pública usando la fecha de America/Mexico_City. Validación: `npm run test:mural` y `npm run test:calendario`.
+
+## PBI-12 y PBI-13: Coordinación VIVE
+
+Coordinación VIVE corresponde al rol existente `admin` (id 3). En el panel dispone de **Convocatorias VIVE** y **Aprobación de horarios**. El presidente crea las convocatorias de su propio club (inscripción y bloques de evaluación), completa sus datos y las envía a revisión. Admin aprueba y publica/envía, o devuelve con observaciones obligatorias. Una propuesta de inscripción no altera la configuración pública antes de ser aprobada; generar o enviar un bloque a revisión tampoco convoca alumnos. Los vicepresidentes conservan la consulta; la preselección y selección mantienen su flujo existente. Las escrituras comprueban rol, club y estado en el backend.
+
+El presidente elige días y horas recurrentes desde **Horario** y pulsa **Enviar horario a aprobación**, sin un paso visible de guardar borrador. El horario se repite cada semana sin límite de semanas y, por defecto, no vence. Se puede delimitar un periodo opcional de inicio y término. Puede retirar una propuesta pendiente para corregirla. Coordinación aprueba o rechaza con observaciones; el sistema notifica a los interesados y registra la decisión. Los horarios oficiales solo cambian con una aprobación. Un reemplazo futuro conserva el horario anterior hasta su inicio de vigencia. Las sesiones previas al cambio se conservan como horarios oficiales existentes.
+
+Los espacios se eligen de un catálogo administrado por Coordinación. Se comprueban cruces dentro del club y ocupación de espacios entre clubes, incluyendo vigencias y horas consecutivas. Al aprobar se repite la validación dentro de una transacción con bloqueo para evitar reservas simultáneas. Las antiguas escrituras directas de horarios devuelven 409 y no permiten eludir la revisión. La migración aditiva se ejecuta al iniciar el backend; no se necesita el seed.
+
+Verificación: `npm run test:permisos-horarios` ejecuta pruebas de integración de PostgreSQL en un esquema temporal exclusivo, que se elimina al finalizar. No utiliza las tablas de datos del sistema. Requiere las credenciales del archivo `backend/.env`.
+
+Las propuestas de convocatoria pendientes pasan a **Vencida · requiere nuevas fechas** si llega su cierre de inscripciones o la fecha y hora de evaluación antes de aprobarse. La comprobación se realiza al consultar y al intentar aprobar, usando la zona `America/Mexico_City` para los bloques. El presidente puede corregir y reenviar; Coordinación debe revisar otra vez. No se cambia la convocatoria publicada ni se convoca a alumnos al vencer. Las propuestas de inscripción anteriores se conservan en su tabla. Sin fecha de cierre, la propuesta de inscripción no vence; una apertura que ya pasó puede aprobarse mientras el cierre siga vigente. No se aceptan nuevos envíos a revisión con un cierre o una evaluación en el pasado. El estado nuevo se incorpora automáticamente al reiniciar el backend con `schema.sql`.
+
 ## Tech Stack
 
 | Capa | Tecnologías |
@@ -30,6 +50,8 @@ Sistema de gestión de clubes universitarios para UNID Campeche. Permite a alumn
 - Notificaciones en app + notificaciones nativas del navegador
 - Autenticación con cuenta institucional Microsoft
 - Modo oscuro / claro
+- Calendario académico con captura en administración mediante concepto, símbolo y fecha o periodo; incluye sugerencias para parciales, calificaciones, pagos y vacaciones
+- Vista pública con emojis y pestañas de calendario y mural; las noticias y los avisos globales se agregan al mural mediante una opción al publicar
 
 ---
 
@@ -131,7 +153,7 @@ npm install
 Crear archivo `.env` en la raíz:
 
 ```env
-VITE_API_URL=http://localhost:4000
+VITE_API_URL=http://localhost:4000/api
 VITE_AZURE_CLIENT_ID=tu_client_id_de_azure
 VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/tu_tenant_id
 VITE_AZURE_REDIRECT_URI=http://localhost:5173
@@ -285,8 +307,11 @@ npm run dev      # Servidor de desarrollo
 npm run build    # Build producción
 npm run lint     # ESLint
 npm run preview  # Vista previa del build
+npm run test:calendario  # Pruebas de periodos, mural y permisos (sin conexión a la base de datos)
 
 # Backend
 cd backend && npm run dev     # Desarrollo con hot-reload
 cd backend && npm start       # Producción
 ```
+
+Los cambios del calendario requieren actualizar frontend y backend. Al iniciar el backend, `migrate()` ejecuta `schema.sql`: crea la tabla independiente `fechas_calendario` y traslada las fechas académicas del formato anterior, conservando concepto, periodo, nota, imagen, autor y visibilidad. La copia y retirada del origen se ejecutan juntas para evitar pérdida o duplicación al reintentar. Las fechas se consultan y administran mediante `/api/calendario` y `/api/calendario/admin`; no son noticias ni eventos y no se agregan al mural. Los eventos conservan sus categorías social, deportiva y cultural. Noticias y eventos tienen la opción «También en el mural»; en «Avisos y anuncios» está disponible para la audiencia global. El aviso y su publicación en el mural se guardan en una sola transacción. El mural es público y solo incluye las publicaciones seleccionadas; los eventos vencidos dejan de mostrarse.

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAutenticacion } from '../../../contexts/AuthContext';
 import { api } from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Spinner } from '../../ui/Spinner';
@@ -9,12 +10,14 @@ import { Alerta } from '../../ui/Alerta';
 import { VistaPreviaConvocatorias } from '../vistas/VistaPreviaConvocatorias';
 
 export function SolicitudesPresidente({ club }) {
+  const { usuario } = useAutenticacion();
   const { tema } = useTheme();
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [vistaPrevia, setVistaPrevia] = useState(null);
   const [generando, setGenerando] = useState(false);
+  const [bloquesGenerados, setBloquesGenerados] = useState(false);
   const [seleccionados, setSeleccionados] = useState([]);
   const [accionBatch, setAccionBatch] = useState(null);
 
@@ -100,9 +103,7 @@ export function SolicitudesPresidente({ club }) {
     try {
       await api.generarConvocatorias(club.id_club);
       setVistaPrevia(null);
-      setSolicitudes((prev) =>
-        prev.map((s) => s.status === 'Preseleccionado' ? { ...s, status: 'Convocado' } : s)
-      );
+      setBloquesGenerados(true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -111,7 +112,7 @@ export function SolicitudesPresidente({ club }) {
   }
 
   const todosSeleccionados = seleccionados.length === enRevision.length && enRevision.length > 0;
-  const puedeGenerar = preseleccionados.length > 0 && enRevision.length === 0 && !vistaPrevia;
+  const puedeGenerar = usuario?.id_rol === 2 && !bloquesGenerados && preseleccionados.length > 0 && enRevision.length === 0 && !vistaPrevia;
 
   if (cargando) {
     return <Spinner />;
@@ -120,6 +121,7 @@ export function SolicitudesPresidente({ club }) {
   return (
     <div className="space-y-8">
       {error && <Alerta tipo="error" mensaje={error} />}
+      {bloquesGenerados && <Alerta tipo="success" mensaje="Bloques creados. Completa fecha, hora y lugar en Convocatorias y envíalos a revisión de admin. Los alumnos aún no han sido convocados." />}
 
       <EncabezadoPagina
         titulo="Formularios"
@@ -197,6 +199,7 @@ export function SolicitudesPresidente({ club }) {
       )}
 
       {vistaPrevia && (
+        usuario?.id_rol === 2 &&
         <VistaPreviaConvocatorias
           vistaPrevia={vistaPrevia}
           generando={generando}
@@ -220,6 +223,7 @@ export function SolicitudesPresidente({ club }) {
 
       <ListaSolicitudes
         titulo="Preseleccionados"
+
         solicitudes={preseleccionados}
         color="purple"
         seleccionados={seleccionados}

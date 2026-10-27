@@ -12,6 +12,7 @@ import { ofertaService } from './oferta.service';
 import { horarioService } from './horario.service';
 import { diapositivaService } from './diapositiva.service';
 import { noticiaService } from './noticia.service';
+import { calendarioService } from './calendario.service';
 import { uploadService } from './upload.service';
 import { dashboardService } from './dashboard.service';
 import { encuestaService, catalogoService } from './encuesta.service';
@@ -32,12 +33,14 @@ export { ofertaService } from './oferta.service';
 export { horarioService } from './horario.service';
 export { diapositivaService } from './diapositiva.service';
 export { noticiaService } from './noticia.service';
+export { calendarioService } from './calendario.service';
 export { uploadService } from './upload.service';
 export { dashboardService } from './dashboard.service';
 export { encuestaService, catalogoService } from './encuesta.service';
 export { asistenciaService } from './asistencia.service';
 
 export const api = {
+  ...calendarioService,
   get: (endpoint) => request(endpoint),
 
   login: autenticacionService.login,
@@ -123,12 +126,17 @@ export const api = {
 
   getNoticias: noticiaService.getNoticias,
   getEventos: noticiaService.getEventos,
+  getMural: noticiaService.getMural,
   getMisInteresesEventos: noticiaService.getMisInteresesEventos,
   marcarInteresEvento: noticiaService.marcarInteresEvento,
   getNoticiasAdmin: noticiaService.getNoticiasAdmin,
   createNoticia: noticiaService.createNoticia,
   updateNoticia: noticiaService.updateNoticia,
   deleteNoticia: noticiaService.deleteNoticia,
+  enviarRevisionNoticia: noticiaService.enviarRevisionNoticia,
+  aprobarNoticia: noticiaService.aprobarNoticia,
+  rechazarNoticia: noticiaService.rechazarNoticia,
+  ocultarNoticia: noticiaService.ocultarNoticia,
 
   uploadImagen: uploadService.uploadImagen,
 

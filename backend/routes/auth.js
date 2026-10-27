@@ -265,7 +265,7 @@ router.post('/register', limitadorRegistro, authenticate, requireRole(3), async 
     // El correo se normaliza para no duplicar cuentas por mayúsculas/minúsculas.
     const correoLimpio = correo_institucional.toLowerCase().trim();
 
-    if (id_rol != null && ![1, 2, 4].includes(id_rol)) {
+    if (id_rol != null && ![1, 2, 4, 6].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
 

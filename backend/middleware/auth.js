@@ -245,3 +245,9 @@ export function requireCoordinacion(req, res, next) {
   }
   next();
 }
+
+// Solo para consultas compartidas: no amplía permisos de escritura de los líderes.
+export function requireClubReader(req, res, next) {
+  if (req.user?.id_rol === 3) return next();
+  return requireClubLeader(req, res, next);
+}

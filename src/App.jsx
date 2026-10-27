@@ -16,6 +16,7 @@ import { PanelAlumno } from './pages/PanelAlumno';
 import { PanelPresidente } from './pages/PanelPresidente';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
+import { PanelMural } from './pages/PanelMural';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { PaginaCalendario } from './pages/PaginaCalendario';
 import PaginaConoceClubs from './pages/PaginaConoceClubs';
@@ -55,7 +56,7 @@ function ScrollAlInicio() {
 }
 
 function App() {
-  const { estaAutenticado, authReady, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { estaAutenticado, authReady, esAdmin, esPresidente, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
   const { actualizacionesAbiertas } = useNoticias();
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
@@ -101,7 +102,7 @@ function App() {
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
   // coincide con NAVBAR_HEIGHT y no con la del logotipo de NAVBAR_HEIGHT_LOGO.
-  const esRutaPanel = ['/dashboard', '/presidente/dashboard', '/admin/dashboard', '/rectoria/dashboard'].includes(location.pathname);
+  const esRutaPanel = ['/dashboard', '/presidente/dashboard', '/admin/dashboard', '/rectoria/dashboard', '/mural/dashboard'].includes(location.pathname);
   const alturaNavbar = esRutaPanel ? NAVBAR_HEIGHT_LOGO : NAVBAR_HEIGHT;
 
   // La encuesta pública se monta FUERA del layout de abajo, a propósito: es la
@@ -161,6 +162,8 @@ function App() {
       navigate('/presidente/dashboard');
     } else if (esRectoria) {
       navigate('/rectoria/dashboard');
+    } else if (esResponsableMural) {
+      navigate('/mural/dashboard');
     } else {
       navigate('/dashboard');
     }
@@ -196,7 +199,7 @@ function App() {
         onScrollChange={handleScrollChange}
       />
 
-      <ModalNoticias />
+      {!(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
       <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />
 
       <ModalConfirmacion
@@ -255,6 +258,11 @@ function App() {
         <Route path="/rectoria/dashboard" element={
           <RutaProtegida requiereRectoria>
             <PanelRectoria />
+          </RutaProtegida>
+        } />
+        <Route path="/mural/dashboard" element={
+          <RutaProtegida requiereResponsableMural>
+            <PanelMural />
           </RutaProtegida>
         } />
         {/* Catch-all: cualquier ruta desconocida (incluida la versión mal

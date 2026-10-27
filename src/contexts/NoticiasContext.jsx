@@ -3,6 +3,7 @@
    de modo que cada noticia mantiene su propio estado "no leída" de forma independiente. */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
+import { esPublicable, filtrarPublicadas } from '../constants/noticias';
 
 const ContextoNoticias = createContext(null);
 
@@ -40,6 +41,9 @@ function leerVistoHastaLegacy() {
 export function ProveedorNoticias({ children: hijos }) {
   const [noticias, setNoticias] = useState([]);
   const [eventos, setEventos] = useState([]);
+  const [avisosMural, setAvisosMural] = useState([]);
+  const [errorEventos, setErrorEventos] = useState('');
+  const [errorMural, setErrorMural] = useState('');
   const [cargando, setCargando] = useState(true);
   const [leidas, setLeidas] = useState(leerLeidas);
   const [modal, setModal] = useState(null);
@@ -52,13 +56,26 @@ export function ProveedorNoticias({ children: hijos }) {
 
   const cargar = useCallback(async () => {
     try {
-      const [respuestaNoticias, respuestaEventos] = await Promise.allSettled([
+      const [respuestaNoticias, respuestaEventos, respuestaMural] = await Promise.allSettled([
         api.getNoticias(),
         api.getEventos(),
+        api.getMural(),
       ]);
-      const lista = respuestaNoticias.status === 'fulfilled' && Array.isArray(respuestaNoticias.value) ? respuestaNoticias.value : [];
+      // El backend ya sólo devuelve `published`, pero el filtro se repite aquí
+      // (red de seguridad y semántica del contexto): fuera de los paneles no
+      // puede colarse un borrador, un pendiente ni uno rechazado.
+      const lista = filtrarPublicadas(
+        respuestaNoticias.status === 'fulfilled' && Array.isArray(respuestaNoticias.value) ? respuestaNoticias.value : []
+      );
       setNoticias(lista);
-      setEventos(respuestaEventos.status === 'fulfilled' && Array.isArray(respuestaEventos.value) ? respuestaEventos.value : []);
+      if (respuestaEventos.status === 'fulfilled' && Array.isArray(respuestaEventos.value)) {
+        setEventos(filtrarPublicadas(respuestaEventos.value));
+        setErrorEventos('');
+      } else setErrorEventos('No se pudieron cargar los eventos del campus.');
+      if (respuestaMural.status === 'fulfilled' && Array.isArray(respuestaMural.value)) {
+        setAvisosMural(filtrarPublicadas(respuestaMural.value));
+        setErrorMural('');
+      } else setErrorMural('No se pudieron cargar los avisos del mural.');
       // Migración del esquema antiguo (umbral "visto hasta") al conjunto de ids.
       const legacy = leerVistoHastaLegacy();
       if (legacy > 0) {
@@ -82,6 +99,16 @@ export function ProveedorNoticias({ children: hijos }) {
     } finally {
       setCargando(false);
     }
+  }, []);
+
+  const actualizarPublicacion = useCallback((publicacion) => {
+    const actualizarLista = (lista, incluir) => {
+      const otras = lista.filter((item) => item.id_noticia !== publicacion.id_noticia);
+      return incluir && esPublicable(publicacion) ? [publicacion, ...otras] : otras;
+    };
+    setNoticias((lista) => actualizarLista(lista, true));
+    setEventos((lista) => actualizarLista(lista, publicacion.categoria === 'evento'));
+    setAvisosMural((lista) => actualizarLista(lista, publicacion.mostrar_en_mural));
   }, []);
 
   useEffect(() => {
@@ -163,6 +190,10 @@ export function ProveedorNoticias({ children: hijos }) {
       value={{
         noticias,
         eventos,
+        avisosMural,
+        errorEventos,
+        errorMural,
+        actualizarPublicacion,
         cargando,
         noLeidas,
         modal,

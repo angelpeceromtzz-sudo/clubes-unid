@@ -58,7 +58,7 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
     const { id } = req.params;
     const { id_rol } = req.body;
 
-    if (![1, 2, 4].includes(id_rol)) {
+    if (![1, 2, 4, 6].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
 
@@ -111,7 +111,7 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
       [id_rol]
     );
 
-    const roles = { 1: 'Alumno', 2: 'Presidente', 3: 'Admin', 4: 'Rectoría' };
+    const roles = { 1: 'Alumno', 2: 'Presidente', 3: 'Admin', 4: 'Rectoría', 5: 'Vicepresidente', 6: 'Responsable de Mural' };
     registrarHistorial({
       idAdmin: req.user.id,
       adminNombre: req.user.nombre_completo,

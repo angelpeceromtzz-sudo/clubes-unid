@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { useNotificaciones } from '../../contexts/NotificationContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAutenticacion } from '../../contexts/AuthContext';
+import { useNoticias } from '../../contexts/NoticiasContext';
+import { api } from '../../services/api';
+import { SubirImagen } from '../ui/SubirImagen';
+import { OpcionMural } from '../noticias/OpcionMural';
 import { Alerta } from '../ui/Alerta';
 import { CampoTexto } from '../ui/CampoTexto';
 import { SelectorClubNotificacion } from './notificacion/SelectorClubNotificacion';
@@ -12,8 +17,10 @@ const AUDIENCIAS = [
   { value: 'club', label: 'Club en Específico' },
 ];
 
-export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess }) {
-  const { modoOscuro } = useTheme();
+export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess, permitirMural = false }) {
+  const { modoOscuro, labelCls } = useTheme();
+  const { esAdmin, esRectoria } = useAutenticacion();
+  const { actualizarPublicacion } = useNoticias();
   const { crearNotificacion } = useNotificaciones();
   const [titulo, setTitulo] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -22,9 +29,22 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
   const [enviando, setEnviando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState('');
   const [mensajeError, setMensajeError] = useState('');
+  const [mostrarEnMural, setMostrarEnMural] = useState(false);
+  const [imagen, setImagen] = useState('');
+  const [subiendo, setSubiendo] = useState(false);
+  const puedePublicarEnMural = permitirMural && (esAdmin || esRectoria) && (audienciaFija || audiencia) === 'global';
+
+  async function subirImagen(archivo) {
+    setSubiendo(true);
+    setMensajeError('');
+    try { const resultado = await api.uploadImagen(archivo); setImagen(resultado.url); }
+    catch (err) { setMensajeError(err.message); }
+    finally { setSubiendo(false); }
+  }
 
   async function manejarEnvio(e) {
     e.preventDefault();
+    if (enviando || subiendo) return;
     if (!titulo.trim() || !mensaje.trim()) return;
     if (audiencia === 'club' && !audienciaFija && !clubSeleccionado) return;
     setEnviando(true);
@@ -35,13 +55,23 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
       const clubIdFinal = audienciaFinal === 'club'
         ? (audienciaFija ? clubId : Number(clubSeleccionado))
         : undefined;
-      await crearNotificacion(titulo.trim(), mensaje.trim(), audienciaFinal, clubIdFinal);
+      const resultado = await crearNotificacion(titulo.trim(), mensaje.trim(), audienciaFinal, clubIdFinal, undefined, {
+        mostrar_en_mural: puedePublicarEnMural && mostrarEnMural,
+        url_imagen: puedePublicarEnMural && mostrarEnMural ? imagen || null : null,
+      });
+      if (resultado.publicacion_mural) actualizarPublicacion(resultado.publicacion_mural);
       const tituloEnviado = titulo.trim();
       const mensajeEnviado = mensaje.trim();
-      setMensajeExito('Anuncio publicado correctamente');
-      if (onSuccess) onSuccess(tituloEnviado, mensajeEnviado);
+      setMensajeExito(resultado.publicacion_mural
+        ? resultado.publicacion_mural.status === 'published'
+          ? 'Aviso publicado y agregado al mural.'
+          : 'Aviso enviado. La publicación del mural se guardó como borrador en Noticias; envíala a revisión.'
+        : 'Anuncio publicado correctamente');
+      if (onSuccess) onSuccess(tituloEnviado, mensajeEnviado, resultado.publicacion_mural);
       setTitulo('');
       setMensaje('');
+      setMostrarEnMural(false);
+      setImagen('');
     } catch (err) {
       setMensajeError(err?.message || 'Error al publicar el anuncio');
     } finally {
@@ -54,13 +84,13 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
 
   return (
     <form onSubmit={manejarEnvio} className="space-y-4">
-      <CampoTexto label="Título del anuncio" name="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Horario de entrenamiento" required />
-      <CampoTexto label="Mensaje" name="mensaje" value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Escribe el contenido del anuncio..." type="textarea" required />
+      <CampoTexto label="Título del anuncio" name="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Horario de entrenamiento" maxLength={200} disabled={enviando || subiendo} required />
+      <CampoTexto label="Mensaje" name="mensaje" value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Escribe el contenido del anuncio..." type="textarea" disabled={enviando || subiendo} required />
 
       {!audienciaFija && (
         <div>
           <label className={labelClass}>Audiencia destino</label>
-          <select value={audiencia} onChange={(e) => { setAudiencia(e.target.value); setClubSeleccionado(''); }} className={inputClass}>
+          <select aria-label="Audiencia destino" value={audiencia} onChange={(e) => { setAudiencia(e.target.value); setClubSeleccionado(''); setMostrarEnMural(false); setImagen(''); }} disabled={enviando || subiendo} className={inputClass}>
             {AUDIENCIAS.map((a) => (
               <option key={a.value} value={a.value}>{a.label}</option>
             ))}
@@ -81,14 +111,20 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
         </div>
       )}
 
+      {puedePublicarEnMural && <div className="space-y-3">
+        <OpcionMural checked={mostrarEnMural} onChange={(evento) => setMostrarEnMural(evento.target.checked)} disabled={enviando || subiendo} />
+        {mostrarEnMural && <SubirImagen label="Cartel o imagen (opcional)" urlImagen={imagen} onUpload={subirImagen} modoOscuro={modoOscuro} labelCls={labelCls} inputId="imagen-aviso-mural" />}
+        {mostrarEnMural && !esRectoria && <p className={`text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>La publicación del mural se guardará como borrador en Noticias. Envíala a revisión para que rectoría la apruebe.</p>}
+      </div>}
+
       {mensajeError && <Alerta tipo="error" mensaje={mensajeError} />}
       {mensajeExito && <Alerta tipo="success" mensaje={mensajeExito} />}
 
       <button type="submit"
-        disabled={enviando || !titulo.trim() || !mensaje.trim() || (audiencia === 'club' && !audienciaFija && !clubSeleccionado)}
+        disabled={enviando || subiendo || !titulo.trim() || !mensaje.trim() || (audiencia === 'club' && !audienciaFija && !clubSeleccionado)}
         className="w-full bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl px-8 py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {enviando ? 'Enviando...' : 'Publicar Anuncio'}
+        {subiendo ? 'Subiendo imagen…' : enviando ? 'Publicando…' : mostrarEnMural && puedePublicarEnMural ? esRectoria ? 'Publicar aviso y agregar al mural' : 'Enviar aviso y guardar borrador del mural' : 'Publicar Anuncio'}
       </button>
     </form>
   );

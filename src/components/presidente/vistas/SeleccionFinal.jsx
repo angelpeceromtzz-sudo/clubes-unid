@@ -106,7 +106,7 @@ export function SeleccionFinal({ club }) {
             Selección final bloqueada
           </h3>
           <p className={`text-sm max-w-md mx-auto ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-            La selección final estará habilitada después de que generes las convocatorias y los alumnos sean evaluados presencialmente. Ve a la sección <strong>Convocatorias</strong> para continuar.
+            La selección final estará habilitada después de que admin apruebe y publique las convocatorias y los alumnos sean evaluados presencialmente. Ve a la sección <strong>Convocatorias</strong> para continuar.
           </p>
         </div>
       ) : noHayConvocados ? (

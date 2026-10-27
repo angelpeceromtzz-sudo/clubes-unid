@@ -37,7 +37,7 @@ const router = Router();
 
 // 30/min por usuario (H5a): cada archivo tiene costo real de Cloudinary.
 // El límite va antes de multer para no procesar el multipart si ya se agotó.
-router.post('/imagen', authenticate, requireRole(3, 4), limitadorUpload, upload.single('imagen'), (req, res) => {
+router.post('/imagen', authenticate, requireRole(3, 4, 6), limitadorUpload, upload.single('imagen'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No se envió ninguna imagen o el formato no es válido' });
