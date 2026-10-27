@@ -9,7 +9,7 @@
    (LANDING.actividades; banners con foto o fallback) e invitación a
    /acerca-del-proyecto (el detalle del equipo y las colaboraciones vive
    en esa página, sin duplicarlo aquí). Accesos internos: barra propia con
-   enlace «Conocenos» y sección final con encuesta (acción principal),
+   enlace Conócenos y sección final con encuesta (acción principal),
    «Explorar» y «Conoce el proyecto». Aparición suave de secciones
    secundarias (IntersectionObserver + .landing-reveal, con
    prefers-reduced-motion). No requiere sesión; los CTAs de encuesta solo

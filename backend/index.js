@@ -35,6 +35,8 @@ import { limitadorGlobal } from './lib/rateLimits.js';
 import { cabecerasSeguridad } from './lib/securityHeaders.js';
 import { manejadorErroresGlobal } from './lib/errorHandler.js';
 import asistenciaRoutes from './routes/asistencia.js';
+import calendarioRoutes from './routes/calendario.js';
+import muralRoutes from './routes/mural.js';
 
 const app = express();
 // Render termina TLS y reenvía con X-Forwarded-For (un solo proxy).
@@ -97,6 +99,8 @@ app.use('/api/catalogos', catalogosRoutes);
 app.use('/api/encuestas', encuestasRoutes);
 app.use('/api/noticias', noticiasRoutes);
 app.use('/api/asistencia', asistenciaRoutes);
+app.use('/api/calendario', calendarioRoutes);
+app.use('/api/mural', muralRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

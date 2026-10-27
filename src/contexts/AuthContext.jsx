@@ -144,6 +144,12 @@ export function ProveedorAutenticacion({ children: hijos }) {
   const esAdmin = usuario?.id_rol === 3;
   const esPresidente = usuario?.id_rol === 2;
   const esRectoria = usuario?.id_rol === 4;
+  // El responsable administra el mural digital y redacta noticias;
+  // la aprobación editorial de noticias corresponde a rectoría.
+  const esResponsableMural = usuario?.id_rol === 6;
+  const puedeGestionarMural = esAdmin || esRectoria || esResponsableMural;
+  const puedeGestionarNoticias = esAdmin || esRectoria || esResponsableMural;
+  const puedeAprobarNoticias = esRectoria;
 
   return (
     <ContextoAutenticacion.Provider
@@ -151,6 +157,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
         usuario, authReady,
         iniciarSesion, iniciarSesionMicrosoft, iniciarSesionOtp, cerrarSesion,
         estaAutenticado, esAdmin, esPresidente, esRectoria,
+        esResponsableMural, puedeGestionarMural, puedeGestionarNoticias, puedeAprobarNoticias,
         tieneInscripcionActiva, clubesPostulados,
         actualizarClubesPostulados: setClubesPostulados,
         refrescarInscripcionActiva,

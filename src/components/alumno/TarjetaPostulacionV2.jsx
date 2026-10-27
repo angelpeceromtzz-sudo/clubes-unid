@@ -9,6 +9,7 @@ import { BienvenidoCard } from './BienvenidoCard';
 
 export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo }) {
   const { tema } = useTheme();
+  const clubActivo = Number(postulacion.id_estatus_club) === 1;
   const conf = CONFIG_ESTATUS[postulacion.status] || CONFIG_ESTATUS['Postulado'];
   const esOferta = postulacion.status === 'Oferta enviada';
   const esFinal = ['Miembro oficial', 'Rechazado'].includes(postulacion.status);
@@ -61,7 +62,13 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
               </div>
             </div>
 
-            <InfoConvocatoria convocatoria={postulacion.convocatoria} tema={tema} />
+            {clubActivo ? (
+              <InfoConvocatoria convocatoria={postulacion.convocatoria} tema={tema} />
+            ) : postulacion.status === 'Convocado' ? (
+              <p className={`text-xs ${tema.isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                La convocatoria no está disponible porque el club no está activo.
+              </p>
+            ) : null}
 
             {esOferta && (
               <OfertaCard

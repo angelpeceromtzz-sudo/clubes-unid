@@ -6,12 +6,14 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useNoticias } from '../../contexts/NoticiasContext';
 import { obtenerUrlImagen } from '../../utils/imagen';
 import { fechaCorta, fechaRelativa } from '../../utils/formato';
+import { estiloPublicacion } from '../../constants/publicaciones';
 
 export function ModalNoticias() {
   const { tema, modoOscuro } = useTheme();
   const { modal, destacada, cerrarModal } = useNoticias();
 
   if (modal !== 'destacada' || !destacada) return null;
+  const color = estiloPublicacion(destacada.categoria, modoOscuro);
 
   return (
     <ModalBase show onClose={cerrarModal} maxWidth="max-w-xl">
@@ -28,10 +30,10 @@ export function ModalNoticias() {
       </button>
 
       <div className="pr-8">
-        <div className="flex items-center gap-2">
-          <Icono nombre="zap" className="h-4 w-4 text-amber-400" strokeWidth={2} />
-          <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-            Novedad reciente
+        <div className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 ${color.badge}`}>
+          <Icono nombre={color.icono} className="h-3.5 w-3.5" strokeWidth={2} />
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            {color.label}
           </span>
         </div>
         <h2 className={`mt-1 text-lg font-black leading-snug ${tema.title}`}>

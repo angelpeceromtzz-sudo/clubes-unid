@@ -20,7 +20,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 
 export function PanelAlumno() {
   const navigate = useNavigate();
-  const { usuario, esPresidente, esAdmin, esRectoria } = useAutenticacion();
+  const { usuario, esPresidente, esAdmin, esRectoria, esResponsableMural } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();
   const d = usePanelAlumno();
   const [dismissMiembroBanner, setDismissMiembroBanner] = useState(() => {
@@ -46,15 +46,18 @@ export function PanelAlumno() {
     } else if (esRectoria) {
       redirigir.current = true;
       navigate('/rectoria/dashboard', { replace: true });
+    } else if (esResponsableMural) {
+      redirigir.current = true;
+      navigate('/mural/dashboard', { replace: true });
     }
-  }, [esPresidente, esAdmin, esRectoria, navigate]);
+  }, [esPresidente, esAdmin, esRectoria, esResponsableMural, navigate]);
 
   const recargarPostulaciones = useCallback(() => {
     d.recargar();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d.recargar]);
 
-  if (esPresidente || esAdmin || esRectoria) {
+  if (esPresidente || esAdmin || esRectoria || esResponsableMural) {
     return <Spinner className="py-32" />;
   }
 
