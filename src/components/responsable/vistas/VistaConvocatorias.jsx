@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Alerta } from '../../ui/Alerta';
 import { ModalConfiguracionConvocatoria } from '../modales/ModalConfiguracionConvocatoria';
-import { SolicitudesPresidente } from '../solicitudes/SolicitudesPresidente';
+import { SolicitudesResponsable } from '../solicitudes/SolicitudesResponsable';
 import { SeccionConvocatorias } from '../secciones/SeccionConvocatorias';
 import { SeleccionFinal } from './SeleccionFinal';
 import { SeccionSeguimientoOfertas } from '../secciones/SeccionSeguimientoOfertas';
@@ -70,7 +70,7 @@ export function VistaConvocatorias({ club }) {
 
       <div className="mt-6">
         {subVista === 'estado' && <ModalConfiguracionConvocatoria club={club} />}
-        {subVista === 'forms' && <SolicitudesPresidente club={club} />}
+        {subVista === 'forms' && <SolicitudesResponsable club={club} />}
         {subVista === 'eval' && <SeccionConvocatorias club={club} />}
         {subVista === 'seleccion' && <SeleccionFinal club={club} />}
         {subVista === 'ofertas' && <SeccionSeguimientoOfertas club={club} />}
