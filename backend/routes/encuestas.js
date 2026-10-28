@@ -153,6 +153,40 @@ router.get('/publico/:slug', async (req, res) => {
 });
 
 /**
+ * GET /publico/:slug/resumen - conteo agregado de respuestas para la landing.
+ * No expone datos personales ni respuestas individuales.
+ */
+router.get('/publico/:slug/resumen', limitadorLecturasPesadas, async (req, res) => {
+  const { slug } = req.params;
+
+  try {
+    const encuesta = await pool.query(
+      `SELECT id_encuesta, estado FROM encuestas WHERE slug = $1`,
+      [slug]
+    );
+
+    if (encuesta.rows.length === 0 || encuesta.rows[0].estado === 'borrador') {
+      return res.status(404).json({ error: 'Encuesta no encontrada' });
+    }
+
+    const e = encuesta.rows[0];
+    if (e.estado === 'cerrada') {
+      return res.status(410).json({ error: 'Esta encuesta ya se cerro' });
+    }
+
+    const total = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM respuestas_encuesta WHERE id_encuesta = $1`,
+      [e.id_encuesta]
+    );
+
+    res.json({ total_respuestas: total.rows[0].total });
+  } catch (err) {
+    console.error('Error al obtener resumen publico de encuesta:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+/**
  * POST /publico/:slug — enviar respuestas.
  *
  * El cuerpo acepta sólo `respuestas`. Cualquier otro campo se ignora en vez de

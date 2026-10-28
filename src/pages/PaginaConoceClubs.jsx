@@ -30,6 +30,7 @@ import { BotonBarraPublica } from '../components/landing/BotonBarraPublica';
 import {
   LANDING,
   hayEncuesta,
+  ENCUESTA_SLUG,
 } from '../config/landing';
 
 const CONTENEDOR = 'w-full px-6 sm:px-8 lg:px-12 xl:px-16';
@@ -37,6 +38,7 @@ const CATEGORIA_ORDEN = ['Deportes', 'Cultura', 'Tecnología'];
 // Vista previa del grid de escritorio: si hay más propuestas, se ocultan
 // detrás del botón «Mostrar más» (se revelan de seis en seis).
 const PROPUESTAS_VISIBLES = 6;
+const ENCUESTA_META_RESPUESTAS = 180;
 
 // Foco visible compartido: anillo ámbar sobre superficies; en botones ámbar
 // sólidos el anillo va con offset del mismo ámbar para leerse sobre cualquier
@@ -357,6 +359,24 @@ export default function PaginaConoceClubs() {
   }, []);
 
   const encuestaActiva = hayEncuesta();
+  const [respuestasEncuesta, setRespuestasEncuesta] = useState(null);
+  const [errorRespuestasEncuesta, setErrorRespuestasEncuesta] = useState(false);
+
+  useEffect(() => {
+    if (!hayEncuesta()) return;
+    let cancelado = false;
+    api
+      .obtenerResumenPublico(ENCUESTA_SLUG)
+      .then((data) => {
+        if (!cancelado) setRespuestasEncuesta(Number(data?.total_respuestas) || 0);
+      })
+      .catch(() => {
+        if (!cancelado) setErrorRespuestasEncuesta(true);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
 
   // Hero: kicker + imagen vertical + título + intro + cuadro Lobos Rojos.
   // Una sola imagen configurable en landing.js. Sin imagen (o si falla al
@@ -693,6 +713,40 @@ export default function PaginaConoceClubs() {
               <p className="mt-4 text-xs sm:text-sm leading-relaxed max-w-xl font-medium text-amber-300">
                 {LANDING.encuesta.aclaracion}
               </p>
+              {hayEncuesta() && (
+                <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 max-w-xl">
+                  {errorRespuestasEncuesta ? (
+                    <p className="text-xs leading-relaxed text-slate-300">
+                      No se pudo cargar el progreso de respuestas.
+                    </p>
+                  ) : respuestasEncuesta === null ? (
+                    <p className="text-xs leading-relaxed text-slate-300">Cargando progreso…</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-bold text-white">
+                        {respuestasEncuesta} de {ENCUESTA_META_RESPUESTAS} respuestas
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-amber-300">
+                        {respuestasEncuesta >= ENCUESTA_META_RESPUESTAS
+                          ? '¡Meta alcanzada! Gracias por participar'
+                          : `Ya alcanzamos el ${Math.min(100, Math.round((respuestasEncuesta / ENCUESTA_META_RESPUESTAS) * 100))}% de nuestra meta`}
+                      </p>
+                      <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full bg-amber-400 transition-all"
+                          style={{ width: `${Math.min(100, (respuestasEncuesta / ENCUESTA_META_RESPUESTAS) * 100)}%` }}
+                          role="progressbar"
+                          aria-valuenow={Math.min(100, Math.round((respuestasEncuesta / ENCUESTA_META_RESPUESTAS) * 100))}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label="Progreso de respuestas de la encuesta"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
                 <BotonEncuesta grande fondoPanel className="w-full sm:w-auto" />
                 {!encuestaActiva && (

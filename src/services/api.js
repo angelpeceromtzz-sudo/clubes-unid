@@ -133,6 +133,7 @@ export const api = {
   getDashboardData: dashboardService.getDashboardData,
 
   obtenerEncuestaPublica: encuestaService.obtenerPublica,
+  obtenerResumenPublico: encuestaService.obtenerResumenPublico,
   enviarRespuestasEncuesta: encuestaService.enviarRespuestas,
 
   getEncuestas: encuestaService.listar,
