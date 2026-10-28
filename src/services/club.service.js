@@ -38,7 +38,15 @@ export const clubService = {
       body: JSON.stringify({ id_club: clubId }),
     }),
 
-  getActividadClubes: (page = 1) => request(`/clubes/actividad?page=${page}`),
+  getActividadClubes: (page = 1, filtros = {}) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (filtros.desde) params.set('desde', filtros.desde);
+    if (filtros.hasta) params.set('hasta', filtros.hasta);
+    if (filtros.actor) params.set('actor', filtros.actor);
+    if (filtros.tipo) params.set('tipo', filtros.tipo);
+    if (filtros.club) params.set('club', filtros.club);
+    return request(`/clubes/actividad?${params.toString()}`);
+  },
 
   getActividad: (page = 1) => request(`/notificaciones/actividad?page=${page}`),
 };

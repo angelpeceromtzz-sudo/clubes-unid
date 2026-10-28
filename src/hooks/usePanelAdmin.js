@@ -69,6 +69,8 @@ export function usePanelAdmin(usuario) {
     clubesFiltrados: clubes.clubesFiltrados,
     historial: historial.historial,
     historialLoading: historial.historialLoading,
+    historialFiltros: historial.filtros,
+    setHistorialFiltros: historial.setFiltros,
     isDark: esOscuro,
     totalAlumnos: usuarios.totalAlumnos,
     clubesActivos: clubes.clubesActivos,
