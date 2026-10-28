@@ -73,11 +73,8 @@ export function PanelAdmin() {
           {d.vistaActiva === 'clubes' && <SeccionClubesAdmin d={d} />}
 
           {d.vistaActiva === 'anuncios' && (
-            <SeccionAnuncios clubes={d.clubes} onSuccess={(_titulo, _mensaje, publicacion) => {
-              if (publicacion) d.noticias.incorporarPublicacion(publicacion);
-              d.setFeedback(publicacion?.status === 'draft'
-                ? 'Aviso enviado. Revisa el borrador del mural en Noticias y envíalo a aprobación.'
-                : 'Aviso publicado correctamente');
+            <SeccionAnuncios clubes={d.clubes} onSuccess={() => {
+              d.setFeedback('Anuncio publicado correctamente');
             }} />
           )}
 

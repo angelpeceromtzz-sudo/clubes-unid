@@ -26,6 +26,14 @@ export function PanelMural() {
     >
       <h1 className={`text-2xl font-black tracking-tight mb-2 ${tema.title}`}>Periódico Mural</h1>
 
+      {vistaActiva === 'mural' && <div className={`mb-6 flex items-start gap-2 text-xs ${tema.subtitle}`}>
+        <Icono nombre="info" strokeWidth={2} className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
+        <p>
+          Aquí creas las publicaciones del mural digital. Guarda el borrador y envíalo
+          a aprobación para que Coordinación la publique.
+        </p>
+      </div>}
+
       {vistaActiva === 'noticias' && <div className={`mb-6 flex items-start gap-2 text-xs ${tema.subtitle}`}>
         <Icono nombre="info" strokeWidth={2} className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
         <p>

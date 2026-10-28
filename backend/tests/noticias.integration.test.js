@@ -133,16 +133,11 @@ describe('integración de aprobación, eventos y mural', { skip: !databaseUrl },
     await verificarVisible(id, false);
   });
 
-  test('el aviso con tarjeta no omite la aprobación del mural y conserva su imagen', async () => {
-    for (const rol of [3, 4]) {
-      const aviso = await enviar('POST', '/notificaciones', { titulo: 'Aviso con imagen', mensaje: 'Mensaje para todos',
+  test('los anuncios ya no se agregan al mural; cualquier intento es rechazado', async () => {
+    for (const rol of [3, 4, 6]) {
+      const resultado = await enviar('POST', '/notificaciones', { titulo: 'Aviso con imagen', mensaje: 'Mensaje para todos',
         audiencia: 'global', mostrar_en_mural: true, url_imagen: 'https://example.test/cartel.png' }, rol);
-      assert.equal(aviso.status, 201);
-      assert.equal(aviso.datos.publicacion_mural.status, rol === 4 ? 'published' : 'draft');
-      assert.equal(aviso.datos.publicacion_mural.publicada, rol === 4);
-      assert.equal(aviso.datos.publicacion_mural.url_imagen, 'https://example.test/cartel.png');
-      const mural = await enviar('GET', '/noticias/mural', null, null);
-      assert.equal(mural.datos.some((fila) => fila.id_noticia === aviso.datos.publicacion_mural.id_noticia), rol === 4);
+      assert.equal(resultado.status, 403);
     }
   });
 

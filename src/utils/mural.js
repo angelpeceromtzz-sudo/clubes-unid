@@ -14,7 +14,21 @@ export function clavePublicacionMural(item) {
 }
 
 export function estadoPublicacionMural(item, hoy) {
-  if (!item.publicada) return 'Borrador';
-  if (item.fecha_retiro && item.fecha_retiro < hoy) return 'Retirada';
-  return 'Publicada';
+  const status = item.status || (item.publicada ? 'published' : 'draft');
+  if (status === 'pending') return 'Pendiente de aprobación';
+  if (status === 'rejected') return 'Devuelta para correcciones';
+  if (status === 'published') {
+    if (item.fecha_retiro && item.fecha_retiro < hoy) return 'Retirada';
+    return 'Publicada';
+  }
+  return 'Borrador';
 }
+
+export const ESTADOS_MURAL = [
+  { value: 'todos', label: 'Todos los estados' },
+  { value: 'Borrador', label: 'Borrador' },
+  { value: 'Pendiente de aprobación', label: 'Pendiente de aprobación' },
+  { value: 'Publicada', label: 'Publicada' },
+  { value: 'Retirada', label: 'Retirada' },
+  { value: 'Devuelta para correcciones', label: 'Devuelta para correcciones' },
+];

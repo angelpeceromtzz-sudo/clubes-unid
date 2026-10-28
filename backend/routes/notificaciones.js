@@ -121,13 +121,14 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
       return res.status(400).json({ error: 'titulo, mensaje y audiencia son obligatorios' });
     }
 
-    // Publicación opcional en el mural: sólo administración y rectoría pueden
-    // crear avisos globales visibles para toda la comunidad.
+    // Publicación en el mural: se realiza exclusivamente desde la sección
+    // Mural digital por el responsable del mural. Los anuncios ya no se
+    // agregan al mural para evitar publicaciones sin aprobación explícita.
     if (mostrar_en_mural !== undefined && typeof mostrar_en_mural !== 'boolean') {
       return res.status(400).json({ error: 'Opción de mural no válida' });
     }
-    if (mostrar_en_mural && (![3, 4].includes(roleId) || audiencia !== 'global' || idDestinatario)) {
-      return res.status(403).json({ error: 'Solo administración y rectoría pueden agregar avisos para todos al mural público' });
+    if (mostrar_en_mural) {
+      return res.status(403).json({ error: 'La publicación en el mural se realiza desde la sección Mural digital' });
     }
     if (mostrar_en_mural && url_imagen != null && (typeof url_imagen !== 'string' || url_imagen.length > 500)) {
       return res.status(400).json({ error: 'Imagen del mural no válida' });

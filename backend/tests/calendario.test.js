@@ -115,24 +115,19 @@ test('las fechas académicas no pueden crearse ni editarse como eventos', async 
   assert.equal((await enviar('PUT', { solo_calendario: true }, 3, '/8')).status, 400);
 });
 
-test('guarda el aviso y su tarjeta en una transacción; solo rectoría publica directamente en el mural', async () => {
-  for (const rol of [3, 4]) {
+test('los anuncios ya no se agregan al mural; cualquier intento es rechazado', async () => {
+  for (const rol of [3, 4, 6]) {
     const resultado = await enviar('POST', { titulo: 'Aviso', mensaje: 'Información pública', audiencia: 'global', mostrar_en_mural: true, url_imagen: 'https://example.com/cartel.png' }, rol, '', 'notificaciones');
-    assert.equal(resultado.status, 201);
-    assert.equal(resultado.datos.publicacion_mural.id_noticia, 8);
-    assert.equal(consultas[0].sql, 'BEGIN');
-    assert.equal(consultas.some((item) => item.sql === 'COMMIT'), true);
-    assert.equal(consultas.find((item) => item.sql.includes('INSERT INTO noticias')).valores[2], 'https://example.com/cartel.png');
-    assert.equal(consultas.find((item) => item.sql.includes('INSERT INTO noticias')).valores[4], rol === 4 ? 'published' : 'draft');
+    assert.equal(resultado.status, 403);
   }
-  assert.equal(liberadas, 2);
+  assert.equal(liberadas, 0);
 });
 
 test('no publica mensajes de audiencias limitadas o de líderes de club en el mural público', async () => {
   const datos = { titulo: 'Aviso', mensaje: 'Información privada', audiencia: 'global', mostrar_en_mural: true };
-  for (const rol of [1, 2, 5]) assert.equal((await enviar('POST', datos, rol, '', 'notificaciones')).status, 403);
+  for (const rol of [1, 2, 3, 4, 5]) assert.equal((await enviar('POST', datos, rol, '', 'notificaciones')).status, 403);
   for (const cambio of [{ audiencia: 'alumnos' }, { audiencia: 'presidentes' }, { audiencia: 'club', id_club: 1 }, { id_destinatario: 7 }]) {
-    assert.equal((await enviar('POST', { ...datos, ...cambio }, 3, '', 'notificaciones')).status, 403);
+    assert.equal((await enviar('POST', { ...datos, ...cambio }, 6, '', 'notificaciones')).status, 403);
     assert.equal(consultas.length, 0);
   }
 });
@@ -142,9 +137,9 @@ test('revierte el envío si falla la publicación del mural para evitar avisos d
   const silenciar = mock.method(console, 'error', () => {});
   try {
     const resultado = await enviar('POST', { titulo: 'Aviso', mensaje: 'Información pública', audiencia: 'global', mostrar_en_mural: true }, 3, '', 'notificaciones');
-    assert.equal(resultado.status, 500);
-    assert.equal(consultas.some((item) => item.sql === 'ROLLBACK'), true);
+    assert.equal(resultado.status, 403);
+    assert.equal(consultas.some((item) => item.sql === 'ROLLBACK'), false);
     assert.equal(consultas.some((item) => item.sql === 'COMMIT'), false);
-    assert.equal(liberadas, 3);
+    assert.equal(liberadas, 0);
   } finally { fallarMural = false; silenciar.mock.restore(); }
 });

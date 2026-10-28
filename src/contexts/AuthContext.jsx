@@ -147,7 +147,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
   // El responsable administra el mural digital y redacta noticias;
   // la aprobación editorial de noticias corresponde a rectoría.
   const esResponsableMural = usuario?.id_rol === 6;
-  const puedeGestionarMural = esAdmin || esRectoria || esResponsableMural;
+  const puedeGestionarMural = esResponsableMural;
   const puedeGestionarNoticias = esAdmin || esRectoria || esResponsableMural;
   const puedeAprobarNoticias = esRectoria;
 

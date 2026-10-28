@@ -12,9 +12,9 @@ test('noticias, fechas y publicaciones propias mantienen identidades aunque comp
   assert.equal(new Set([{ id_noticia: 1 }, { origen: 'fecha', id_fecha: 1 }, { origen: 'mural', id_publicacion: 1 }].map(clavePublicacionMural)).size, 3);
 });
 test('la mezcla del mural respeta visibilidad, retiro inclusivo y prioridad de destacados', () => {
-  const base = { origen: 'mural', publicada: true, mostrar_en_mural: true };
+  const base = { origen: 'mural', status: 'published', publicada: true, mostrar_en_mural: true };
   const visibles = publicacionesMural([
-    { ...base, id_publicacion: 1, publicada: false },
+    { ...base, id_publicacion: 1, status: 'draft', publicada: false },
     { ...base, id_publicacion: 2, fecha_retiro: '2026-10-20' },
     { ...base, id_publicacion: 3, fecha_retiro: '2026-10-21', fecha_creacion: '2026-10-21' },
     { ...base, id_publicacion: 4, destacada: true, fecha_creacion: '2026-10-01' },
@@ -23,7 +23,9 @@ test('la mezcla del mural respeta visibilidad, retiro inclusivo y prioridad de d
   assert.equal(visibles.length, 3);
   assert.equal(visibles[0].id_publicacion, 4);
   assert.ok(visibles.some((item) => item.origen === 'fecha'));
-  assert.equal(estadoPublicacionMural({ publicada: true, fecha_retiro: '2026-10-21' }, '2026-10-21'), 'Publicada');
-  assert.equal(estadoPublicacionMural({ publicada: true, fecha_retiro: '2026-10-20' }, '2026-10-21'), 'Retirada');
-  assert.equal(estadoPublicacionMural({ publicada: false }, '2026-10-21'), 'Borrador');
+  assert.equal(estadoPublicacionMural({ status: 'published', fecha_retiro: '2026-10-21' }, '2026-10-21'), 'Publicada');
+  assert.equal(estadoPublicacionMural({ status: 'published', fecha_retiro: '2026-10-20' }, '2026-10-21'), 'Retirada');
+  assert.equal(estadoPublicacionMural({ status: 'draft' }, '2026-10-21'), 'Borrador');
+  assert.equal(estadoPublicacionMural({ status: 'pending' }, '2026-10-21'), 'Pendiente de aprobación');
+  assert.equal(estadoPublicacionMural({ status: 'rejected' }, '2026-10-21'), 'Devuelta para correcciones');
 });

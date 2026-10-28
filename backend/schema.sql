@@ -1266,7 +1266,57 @@ CREATE TABLE IF NOT EXISTS publicaciones_mural (
     fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_mural_visibilidad ON publicaciones_mural(publicada, fecha_retiro);
+
+-- Flujo de aprobación previa para publicaciones del mural.
+-- El rol responsable_mural crea y edita; Coordinación (admin) aprueba o devuelve.
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS status VARCHAR(20);
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS motivo_rechazo TEXT;
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS id_revisor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS fecha_revision TIMESTAMPTZ;
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS enviado_revision_at TIMESTAMPTZ;
+
+-- Migración idempotente: publicada heredado -> status.
+UPDATE publicaciones_mural
+SET status = CASE WHEN publicada THEN 'published' ELSE 'draft' END
+WHERE status IS NULL;
+
+ALTER TABLE publicaciones_mural ALTER COLUMN status SET DEFAULT 'draft';
+ALTER TABLE publicaciones_mural ALTER COLUMN status SET NOT NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_mural_status') THEN
+        ALTER TABLE publicaciones_mural ADD CONSTRAINT chk_mural_status
+            CHECK (status IN ('draft', 'pending', 'published', 'rejected'));
+    END IF;
+END $$;
+
+-- Invariante: publicada siempre refleja status (protege código anterior).
+CREATE OR REPLACE FUNCTION fn_mural_espejo_publicada() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.publicada AND NEW.status = 'draft' THEN
+            NEW.status := 'published';
+        END IF;
+    ELSIF NEW.status IS NOT DISTINCT FROM OLD.status
+          AND NEW.publicada IS DISTINCT FROM OLD.publicada THEN
+        NEW.status := CASE WHEN NEW.publicada THEN 'published' ELSE 'draft' END;
+        IF NEW.status <> 'rejected' THEN
+            NEW.motivo_rechazo := NULL;
+        END IF;
+    END IF;
+    NEW.publicada := (NEW.status = 'published');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_mural_espejo_publicada ON publicaciones_mural;
+CREATE TRIGGER trg_mural_espejo_publicada
+    BEFORE INSERT OR UPDATE ON publicaciones_mural
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_mural_espejo_publicada();
+
+CREATE INDEX IF NOT EXISTS idx_mural_status ON publicaciones_mural(status);
+CREATE INDEX IF NOT EXISTS idx_mural_visibilidad ON publicaciones_mural(publicada, status, fecha_retiro);
 CREATE TABLE IF NOT EXISTS configuracion_mural (
     id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     url_publica VARCHAR(2048)
