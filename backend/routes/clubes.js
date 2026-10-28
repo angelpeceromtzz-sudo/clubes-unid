@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole, requireClubLeader } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
 import { eliminarImagenCloudinary } from '../lib/eliminarImagenCloudinary.js';
@@ -73,7 +74,7 @@ router.get('/', async (req, res) => {
 });
 
 // Actividad de clubes — log de eventos operativos (solo admin/rectoría)
-router.get('/actividad', authenticate, requireRole(3, 4), async (req, res) => {
+router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     let page = parseInt(req.query.page, 10);
     if (!Number.isFinite(page) || page < 1) page = 1;
@@ -218,7 +219,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Cambia el estatus de un club (solo admin)
-router.put('/:id/estatus', authenticate, requireRole(3), async (req, res) => {
+router.put('/:id/estatus', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id } = req.params;
     const { id_estatus_club } = req.body;
@@ -285,7 +286,7 @@ router.get('/:id/miembros', authenticate, async (req, res) => {
 });
 
 // Crea un nuevo club (solo admin)
-router.post('/', authenticate, requireRole(3), async (req, res) => {
+router.post('/', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   const client = await pool.connect();
   try {
     const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles } = req.body;
@@ -353,7 +354,7 @@ router.post('/', authenticate, requireRole(3), async (req, res) => {
 });
 
 // Actualiza los datos de un club (solo admin)
-router.put('/:id', authenticate, requireRole(3), async (req, res) => {
+router.put('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
@@ -456,7 +457,7 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
 });
 
 // Admin puede cerrar una convocatoria publicada.
-router.post('/:id/cerrar-convocatoria', authenticate, requireRole(3), async (req, res) => {
+router.post('/:id/cerrar-convocatoria', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id } = req.params;
 

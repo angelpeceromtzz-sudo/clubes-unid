@@ -63,15 +63,15 @@ async function enviar(metodo, datos, rol = 3, ruta = '', usuario = 7) {
 }
 const datos = { titulo: ' Convocatoria cultural ', contenido: 'Participa en las actividades del campus.', enlace_url: 'https://example.org/registro', enlace_texto: 'Inscribirme' };
 
-test('la consulta pública y el QR no requieren sesión; administración, rectoría y responsable editan el mural', async () => {
+test('la consulta pública y el QR no requieren sesión; administración, rectoría, responsable mural y coordinación editan el mural', async () => {
   for (const ruta of ['', '/config']) assert.equal((await enviar('GET', null, null, ruta)).status, 200);
-  for (const rol of [null, 1, 2, 5, 7]) {
+  for (const rol of [null, 1, 2, 5]) {
     for (const [metodo, ruta] of [['GET', '/admin'], ['POST', ''], ['PUT', '/1'], ['DELETE', '/1'], ['PUT', '/config']]) {
       assert.equal((await enviar(metodo, metodo === 'GET' ? null : datos, rol, ruta)).status, rol ? 403 : 401);
       assert.equal(consultas.length, 0);
     }
   }
-  for (const rol of [3, 4, 6]) assert.equal((await enviar('POST', datos, rol)).status, 201);
+  for (const rol of [3, 4, 6, 7]) assert.equal((await enviar('POST', datos, rol)).status, 201);
 });
 
 test('el responsable edita publicaciones existentes, administra visibilidad y QR, y elimina desde su panel', async () => {
@@ -150,4 +150,10 @@ test('guarda el destino compartido del QR y lo normaliza hacia el mural público
     assert.equal((await enviar('PUT', { url_publica: url }, 3, '/config')).status, 400);
   }
   assert.equal((await enviar('PUT', { url_publica: null }, 3, '/config')).datos.url_publica, null);
+});
+
+test('Coordinación (rol 7) puede crear una publicación en el mural', async () => {
+  const creada = await enviar('POST', datos, 7);
+  assert.equal(creada.status, 201);
+  assert.equal(typeof creada.datos.id_publicacion, 'number');
 });

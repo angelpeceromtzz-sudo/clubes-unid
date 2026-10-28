@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { validarCreacionNotificacion } from '../lib/notificacionPermisos.js';
 import { limitadorNotificaciones } from '../lib/rateLimits.js';
@@ -67,7 +68,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // Actividad del sistema — solo admin/rectoría
-router.get('/actividad', authenticate, requireRole(3, 4), async (req, res) => {
+router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     let page = parseInt(req.query.page, 10);
     if (!Number.isFinite(page) || page < 1) page = 1;
@@ -126,7 +127,7 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
     if (mostrar_en_mural !== undefined && typeof mostrar_en_mural !== 'boolean') {
       return res.status(400).json({ error: 'Opción de mural no válida' });
     }
-    if (mostrar_en_mural && (![3, 4].includes(roleId) || audiencia !== 'global' || idDestinatario)) {
+    if (mostrar_en_mural && (![ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION].includes(roleId) || audiencia !== 'global' || idDestinatario)) {
       return res.status(403).json({ error: 'Solo administración y rectoría pueden agregar avisos para todos al mural público' });
     }
     if (mostrar_en_mural && url_imagen != null && (typeof url_imagen !== 'string' || url_imagen.length > 500)) {

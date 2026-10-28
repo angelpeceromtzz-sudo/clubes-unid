@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import axios from 'axios';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ALUMNO, ROL_ADMIN, ROL_COORDINACION, ROL_RESPONSABLE_CLUB, ROL_RECTORIA, ROL_RESPONSABLE_MURAL } from '../constants/roles.js';
 import { generarToken } from '../lib/jwt.js';
 import {
   limitadorLoginLocalIp,
@@ -254,7 +255,7 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
 // Crear usuario (solo admin)
 // El límite por IP va antes de authenticate: también frena inundaciones de
 // peticiones sin sesión válida contra esta ruta.
-router.post('/register', limitadorRegistro, authenticate, requireRole(3), async (req, res) => {
+router.post('/register', limitadorRegistro, authenticate, requireRole(ROL_ADMIN), async (req, res) => {
   try {
     const { nombre_completo, correo_institucional, contrasena, id_rol } = req.body;
 
@@ -265,7 +266,7 @@ router.post('/register', limitadorRegistro, authenticate, requireRole(3), async 
     // El correo se normaliza para no duplicar cuentas por mayúsculas/minúsculas.
     const correoLimpio = correo_institucional.toLowerCase().trim();
 
-    if (id_rol != null && ![1, 2, 4, 6].includes(id_rol)) {
+    if (id_rol != null && ![ROL_ALUMNO, ROL_RESPONSABLE_CLUB, ROL_RECTORIA, ROL_RESPONSABLE_MURAL, ROL_COORDINACION].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
 

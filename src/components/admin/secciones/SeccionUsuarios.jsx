@@ -16,7 +16,7 @@ export function SeccionUsuarios({ d }) {
         >
           <option value="">Todos los roles</option>
           <option value="1">Alumnos</option>
-          <option value="2">Presidentes</option>
+          <option value="2">Responsables del club</option>
           <option value="3">Admins</option>
           <option value="4">Rectoría</option>
         </select>

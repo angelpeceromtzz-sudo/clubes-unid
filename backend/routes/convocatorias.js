@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole, requireClubReader } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { generarListaAsistencia } from '../lib/asistenciaTemplate.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
@@ -279,7 +280,7 @@ router.post('/:id/solicitar-revision', authenticate, requireRole(2), async (req,
   finally { client.release(); }
 });
 
-router.post('/:id/rechazar', authenticate, requireRole(3), async (req, res) => {
+router.post('/:id/rechazar', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   const observaciones = typeof req.body.observaciones === 'string' ? req.body.observaciones.trim() : '';
   if (!observaciones || observaciones.length > 2000) return res.status(400).json({ error: 'Explica las correcciones necesarias, en hasta 2000 caracteres' });
   const client = await pool.connect();
@@ -296,7 +297,7 @@ router.post('/:id/rechazar', authenticate, requireRole(3), async (req, res) => {
 });
 
 // Admin aprueba y envía la convocatoria a todo un bloque
-router.post('/:id/enviar', authenticate, requireRole(3), async (req, res) => {
+router.post('/:id/enviar', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   let client;
   try {
     client = await pool.connect();
@@ -387,7 +388,7 @@ router.get('/:id/asistencia', authenticate, requireRole(2, 3, 5), async (req, re
        FROM convocatorias c
        JOIN clubes cl ON cl.id_club = c.id_club
        WHERE c.id_convocatoria = $1 AND ($3::boolean OR cl.id_presidente = $2 OR cl.id_vicepresidente = $2)`,
-      [id, req.user.id, req.user.id_rol === 3],
+      [id, req.user.id, req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION],
     );
     if (conv.rows.length === 0) return res.status(404).json({ error: 'Convocatoria no encontrada' });
     const c = conv.rows[0];

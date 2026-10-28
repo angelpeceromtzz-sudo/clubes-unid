@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION, ROL_RESPONSABLE_MURAL } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { eliminarImagenCloudinary } from '../lib/eliminarImagenCloudinary.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
@@ -9,8 +10,7 @@ import { fechaEventoValida, errorPeriodoEvento } from '../lib/fechasEvento.js';
 
 // 3 admin · 4 rectoría · 6 responsable_mural. Los tres redactan; sólo
 // rectoría (4) aprueba, rechaza u oculta. Ver `TRANSICIONES`.
-const ROL_RECTORIA = 4;
-const ROLES_EDITOR = [3, 4, 6];
+const ROLES_EDITOR = [ROL_ADMIN, ROL_RECTORIA, ROL_RESPONSABLE_MURAL, ROL_COORDINACION];
 
 // PBI-17: estados del flujo de aprobación previa.
 const ESTADOS_NOTICIA = ['draft', 'pending', 'published', 'rejected'];
@@ -60,7 +60,7 @@ function validarMotivo(valor) {
 // El responsable del mural sólo toca sus propias noticias; admin y rectoría
 // trabajan sobre todo el periódico mural.
 function puedeGestionar(req, noticia) {
-  if (req.user.id_rol === ROL_RECTORIA || req.user.id_rol === 3) return true;
+  if (req.user.id_rol === ROL_RECTORIA || req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION) return true;
   return noticia.id_autor === req.user.id;
 }
 
@@ -199,7 +199,7 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
     const condiciones = ['noticias.solo_calendario = FALSE'];
     const parametros = [];
 
-    if (req.user.id_rol !== 3 && req.user.id_rol !== ROL_RECTORIA) {
+    if (req.user.id_rol !== ROL_ADMIN && req.user.id_rol !== ROL_COORDINACION && req.user.id_rol !== ROL_RECTORIA) {
       parametros.push(req.user.id);
       condiciones.push(`noticias.id_autor = $${parametros.length}`);
     }
@@ -481,7 +481,7 @@ router.delete('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, re
     if (!puedeGestionar(req, noticia)) {
       return res.status(403).json({ error: 'No tienes permisos sobre esta noticia' });
     }
-    if (req.user.id_rol !== 3 && req.user.id_rol !== ROL_RECTORIA && noticia.status === 'published') {
+    if (req.user.id_rol !== ROL_ADMIN && req.user.id_rol !== ROL_COORDINACION && req.user.id_rol !== ROL_RECTORIA && noticia.status === 'published') {
       return res.status(409).json({
         error: 'No puedes eliminar una publicación ya publicada: pídele a rectoría que la oculte primero',
       });

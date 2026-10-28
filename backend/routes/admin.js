@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 
 const router = Router();
 
-router.post('/asignar-alumno', authenticate, requireRole(3), async (req, res) => {
+router.post('/asignar-alumno', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id_usuario, id_club } = req.body;
 

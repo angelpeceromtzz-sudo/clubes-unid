@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ALUMNO, ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION, ROL_RESPONSABLE_CLUB, ROL_RESPONSABLE_MURAL } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { ESTATUS_INSCRIPCION } from '../lib/estatusInscripcion.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
@@ -11,7 +12,7 @@ validarParamsEnteros(router);
 
 // Lista los usuarios activos (admin y rectoría). Los desactivados se ocultan;
 // se consultan por separado en GET /desactivados para su reactivación.
-router.get('/', authenticate, requireRole(3, 4), async (req, res) => {
+router.get('/', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
@@ -34,7 +35,7 @@ router.get('/', authenticate, requireRole(3, 4), async (req, res) => {
 // Lista los usuarios desactivados (soft-deleted) para su reactivación manual.
 // Son los que ya no deben aparecer en GET /usuarios, pero el admin necesita
 // verlos aquí para poder reactivarlos con PATCH /:id/reactivar.
-router.get('/desactivados', authenticate, requireRole(3), async (req, res) => {
+router.get('/desactivados', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
@@ -53,12 +54,12 @@ router.get('/desactivados', authenticate, requireRole(3), async (req, res) => {
 });
 
 // Cambia el rol de un usuario (solo admin, no puede auto-modificarse)
-router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
+router.put('/:id/rol', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
   try {
     const { id } = req.params;
     const { id_rol } = req.body;
 
-    if (![1, 2, 4, 6].includes(id_rol)) {
+    if (![ROL_ALUMNO, ROL_RESPONSABLE_CLUB, ROL_RECTORIA, ROL_RESPONSABLE_MURAL, ROL_COORDINACION].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
 
@@ -79,7 +80,7 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
       return res.status(400).json({ error: 'No puedes modificar el rol de un usuario desactivado' });
     }
 
-    if (targetUser.rows[0].id_rol === 3) {
+    if (targetUser.rows[0].id_rol === ROL_ADMIN) {
       return res.status(403).json({ error: 'No puedes modificar el rol de otro administrador' });
     }
 
@@ -111,7 +112,7 @@ router.put('/:id/rol', authenticate, requireRole(3), async (req, res) => {
       [id_rol]
     );
 
-    const roles = { 1: 'Alumno', 2: 'Presidente', 3: 'Admin', 4: 'Rectoría', 5: 'Vicepresidente', 6: 'Responsable de Mural' };
+    const roles = { 1: 'Alumno', 2: 'Responsable del club', 3: 'Admin', 4: 'Rectoría', 5: 'Vicepresidente', 6: 'Responsable de Mural', 7: 'Coordinación' };
     registrarHistorial({
       idAdmin: req.user.id,
       adminNombre: req.user.nombre_completo,
@@ -277,7 +278,7 @@ router.post('/admin-action', authenticate, requireRole(3), async (req, res) => {
     }
 
     if (action === 'promote') {
-      if (targetUser.rows[0].id_rol === 3) {
+      if (targetUser.rows[0].id_rol === ROL_ADMIN) {
         return res.status(400).json({ error: 'El usuario ya es administrador' });
       }
       const result = await pool.query(
@@ -330,7 +331,7 @@ router.post('/admin-action', authenticate, requireRole(3), async (req, res) => {
 // Soft delete — no borro físicamente porque hay clubes, inscripciones y
 // formularios que referencian al usuario. Si lo borrara de verdad, esas
 // FKs se romperían o habría que cascadear borrados no deseados.
-router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
+router.delete('/:id', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
   const client = await pool.connect();
   let enTransaccion = false;
   try {

@@ -37,7 +37,7 @@ export function AccionesUsuario({ u, currentUser, onRoleChange, onAdminAction, o
         className={selectCls}
       >
         <option value={1}>Alumno</option>
-        <option value={2}>Presidente</option>
+        <option value={2}>Responsable del club</option>
       </select>
       <button
         onClick={() => onAdminAction?.(u, 'promote')}

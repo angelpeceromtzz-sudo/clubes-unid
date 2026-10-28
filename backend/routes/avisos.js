@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
 
@@ -49,7 +50,7 @@ router.post('/', authenticate, async (req, res) => {
     const club = clubResult.rows[0];
     const esPresidente = club.id_presidente === req.user.id;
     const esVicepresidente = club.id_vicepresidente === req.user.id;
-    const esAdmin = req.user.id_rol === 3;
+    const esAdmin = req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION;
 
     if (!esPresidente && !esVicepresidente && !esAdmin) {
       return res.status(403).json({ error: 'Solo el presidente, vicepresidente o admin pueden publicar avisos' });
@@ -97,7 +98,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     const aviso = avisoResult.rows[0];
     const esPresidente = aviso.id_presidente === req.user.id;
     const esVicepresidente = aviso.id_vicepresidente === req.user.id;
-    const esAdmin = req.user.id_rol === 3;
+    const esAdmin = req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION;
 
     if (!esPresidente && !esVicepresidente && !esAdmin) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar este aviso' });

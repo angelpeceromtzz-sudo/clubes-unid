@@ -77,8 +77,16 @@ export function TablaUsuarios({
                   <td className={`px-5 py-4 font-medium ${tdTitle}`}>{u.nombre_completo}</td>
                   <td className={`px-5 py-4 ${tdCls}`}>{u.correo_institucional}</td>
                   <td className="px-5 py-4">
-                    <Badge texto={u.rol} color={
-                      u.id_rol === 3 ? 'red' : u.id_rol === 2 ? 'amber' : 'blue'
+                    <Badge texto={{
+                      1: 'Alumno',
+                      2: 'Responsable del club',
+                      3: 'Administrador',
+                      4: 'Rectoría',
+                      5: 'Vicepresidente',
+                      6: 'Responsable del mural',
+                      7: 'Coordinación',
+                    }[u.id_rol] || (u.rol === 'presidente' ? 'Responsable del club' : u.rol)} color={
+                      u.id_rol === 3 ? 'red' : u.id_rol === 4 ? 'amber' : u.id_rol === 2 ? 'emerald' : u.id_rol === 7 ? 'purple' : 'blue'
                     } size="md" />
                   </td>
                   <td className="px-5 py-4">
@@ -103,7 +111,15 @@ export function TablaUsuarios({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className={`text-[10px] font-mono ${tdCls}`}>#{u.id_usuario}</span>
-                  <Badge texto={u.rol} color={u.id_rol === 3 ? 'red' : u.id_rol === 2 ? 'amber' : 'blue'} size="sm" />
+                  <Badge texto={{
+                    1: 'Alumno',
+                    2: 'Responsable del club',
+                    3: 'Administrador',
+                    4: 'Rectoría',
+                    5: 'Vicepresidente',
+                    6: 'Responsable del mural',
+                    7: 'Coordinación',
+                  }[u.id_rol] || (u.rol === 'presidente' ? 'Responsable del club' : u.rol)} color={u.id_rol === 3 ? 'red' : u.id_rol === 4 ? 'amber' : u.id_rol === 2 ? 'emerald' : u.id_rol === 7 ? 'purple' : 'blue'} size="sm" />
                 </div>
                 <div className="flex items-center gap-1.5">
                   <AccionesUsuario u={u} currentUser={currentUser} onRoleChange={onRoleChange} onAdminAction={onAdminAction} onEliminarUsuario={onEliminarUsuario} modoOscuro={modoOscuro} selectCls={selectCls} />

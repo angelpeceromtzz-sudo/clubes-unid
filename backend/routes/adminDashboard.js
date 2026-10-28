@@ -2,10 +2,11 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 
 const router = Router();
 
-router.get('/dashboard-data', authenticate, requireRole(3), async (req, res) => {
+router.get('/dashboard-data', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const [
       solicitudesPendientes,

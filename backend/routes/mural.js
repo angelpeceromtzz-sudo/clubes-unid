@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION, ROL_RESPONSABLE_MURAL } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { fechaEventoValida } from '../lib/fechasEvento.js';
 
@@ -69,7 +70,7 @@ router.get('/config', async (_req, res) => {
 });
 
 // Toda escritura y la consulta de borradores requieren un editor autorizado.
-router.use(authenticate, requireRole(3, 4, 6));
+router.use(authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION, ROL_RESPONSABLE_MURAL));
 router.get('/admin', async (_req, res) => {
   try {
     const resultado = await pool.query(`SELECT ${CAMPOS} FROM publicaciones_mural ORDER BY fecha_creacion DESC, id_publicacion DESC`);
