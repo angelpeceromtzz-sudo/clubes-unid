@@ -264,7 +264,7 @@ export const ACERCA = {
   cierre: {
     titulo: 'El proyecto sigue creciendo',
     texto:
-      'Esta página se irá actualizando a medida que el proyecto avance. Si te interesa ser parte, la encuesta es el mejor lugar para empezar.',
+      'Esta página se irá actualizando a medida que el proyecto avance.',
     btnVolver: 'Volver',
   },
 };
