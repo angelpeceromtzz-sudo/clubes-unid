@@ -12,6 +12,12 @@ En el panel, **Dirección pública del sitio** guarda en la base de datos el des
 
 Al reiniciar el backend, `schema.sql` crea `publicaciones_mural` y `configuracion_mural` de forma aditiva. No hay que ejecutar el seed. Las publicaciones vencidas permanecen en administración y se excluyen de la consulta pública usando la fecha de America/Mexico_City. Validación: `npm run test:mural` y `npm run test:calendario`.
 
+## PBI-18: contenido público y privado
+
+Sin sesión se mantienen el inicio, el catálogo, el detalle de club, la landing, las encuestas y el **mural público** en `/calendario?vista=mural`, que solo muestra las publicaciones aprobadas de `publicaciones_mural`. Las **noticias, los eventos, los avisos de noticias y el calendario académico** requieren sesión: sus consultas responden `401` sin token y sus respuestas privadas se envían con `Cache-Control: private, no-store`.
+
+En la navegación, **Noticias** y **Calendario** se ocultan para invitados. `/calendario` sin `vista=mural` muestra un candado con la opción de iniciar sesión y un acceso al mural público; `/calendario?vista=mural` conserva el QR público sin sesión. Con sesión se muestran las noticias, los eventos, el mural completo, el calendario, los exámenes y el registro/interés en torneos o eventos.
+
 ## PBI-12 y PBI-13: Coordinación VIVE
 
 Coordinación VIVE corresponde al rol existente `admin` (id 3). En el panel dispone de **Convocatorias VIVE** y **Aprobación de horarios**. El presidente crea las convocatorias de su propio club (inscripción y bloques de evaluación), completa sus datos y las envía a revisión. Admin aprueba y publica/envía, o devuelve con observaciones obligatorias. Una propuesta de inscripción no altera la configuración pública antes de ser aprobada; generar o enviar un bloque a revisión tampoco convoca alumnos. Los vicepresidentes conservan la consulta; la preselección y selección mantienen su flujo existente. Las escrituras comprueban rol, club y estado en el backend.
@@ -51,7 +57,7 @@ Las propuestas de convocatoria pendientes pasan a **Vencida · requiere nuevas f
 - Autenticación con cuenta institucional Microsoft
 - Modo oscuro / claro
 - Calendario académico con captura en administración mediante concepto, símbolo y fecha o periodo; incluye sugerencias para parciales, calificaciones, pagos y vacaciones
-- Vista pública con emojis y pestañas de calendario y mural; las noticias y los avisos globales se agregan al mural mediante una opción al publicar
+- Vista de calendario y mural con emojis y pestañas; el mural público usa solo `publicaciones_mural` y conserva el QR sin sesión. Noticias, eventos y calendario académico se consultan con sesión
 
 ---
 
@@ -314,4 +320,4 @@ cd backend && npm run dev     # Desarrollo con hot-reload
 cd backend && npm start       # Producción
 ```
 
-Los cambios del calendario requieren actualizar frontend y backend. Al iniciar el backend, `migrate()` ejecuta `schema.sql`: crea la tabla independiente `fechas_calendario` y traslada las fechas académicas del formato anterior, conservando concepto, periodo, nota, imagen, autor y visibilidad. La copia y retirada del origen se ejecutan juntas para evitar pérdida o duplicación al reintentar. Las fechas se consultan y administran mediante `/api/calendario` y `/api/calendario/admin`; no son noticias ni eventos y no se agregan al mural. Los eventos conservan sus categorías social, deportiva y cultural. Noticias y eventos tienen la opción «También en el mural»; en «Avisos y anuncios» está disponible para la audiencia global. El aviso y su publicación en el mural se guardan en una sola transacción. El mural es público y solo incluye las publicaciones seleccionadas; los eventos vencidos dejan de mostrarse.
+Los cambios del calendario requieren actualizar frontend y backend. Al iniciar el backend, `migrate()` ejecuta `schema.sql`: crea la tabla independiente `fechas_calendario` y traslada las fechas académicas del formato anterior, conservando concepto, periodo, nota, imagen, autor y visibilidad. La copia y retirada del origen se ejecutan juntas para evitar pérdida o duplicación al reintentar. Las fechas se consultan y administran mediante `/api/calendario` (con sesión) y `/api/calendario/admin`; no son noticias ni eventos y no se agregan al mural. Los eventos conservan sus categorías social, deportiva y cultural. Noticias y eventos tienen la opción «También en el mural», visible para usuarios con sesión. El aviso y su publicación en el mural se guardan en una sola transacción. El **mural público** (`/api/mural` y `/calendario?vista=mural`) solo incluye las publicaciones aprobadas de `publicaciones_mural`; las noticias, los eventos y las fechas marcadas para el mural se muestran únicamente dentro de una sesión. Los eventos vencidos dejan de mostrarse.
