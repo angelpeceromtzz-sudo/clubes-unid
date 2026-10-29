@@ -196,6 +196,20 @@ Estados posibles del enlace, con pantallas distintas:
 | Ya cerró | 410 | "Esta encuesta ya se cerró", sin reintentar |
 | Se alcanzó el límite de envíos | 429 | "Demasiados envíos desde tu red" |
 
+### Mural público y contenido privado (PBI-18)
+
+El visitante puede abrir **`/calendario?vista=mural`** sin sesión: es el destino
+del QR y solo muestra las publicaciones aprobadas de `publicaciones_mural`.
+Las noticias, los eventos, los avisos de noticias y el calendario académico
+(incluidos los exámenes) requieren iniciar sesión. Si un visitante abre
+`/calendario` sin `vista=mural`, ve un candado con el botón de acceso; desde ahí
+puede iniciar sesión o volver al mural público. En la barra superior, las
+opciones **Noticias** y **Calendario** solo aparecen con sesión iniciada.
+
+Con sesión se habilitan las noticias y eventos, el mural completo, el calendario
+académico, los exámenes y el registro de interés en eventos o torneos. Las
+consultas privadas no se almacenan en caché (`Cache-Control: private, no-store`).
+
 ---
 
 ## 7. Panel del Alumno
@@ -519,9 +533,24 @@ clubes-unid/
 | POST | `/api/upload/imagen` | Subir imagen a Cloudinary |
 | GET | `/api/health` | Health check |
 
+### Noticias, calendario y mural (PBI-18)
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| GET | `/api/noticias` | sesión | Feed de noticias publicadas; privado |
+| GET | `/api/noticias/eventos` | sesión | Eventos publicados; privado |
+| GET | `/api/noticias/mural` | sesión | Avisos de noticias para el mural; privado |
+| GET | `/api/calendario` | sesión | Fechas académicas y exámenes publicados; privado |
+| GET | `/api/mural` | público | Publicaciones aprobadas de `publicaciones_mural`; alimenta el QR y `/calendario?vista=mural` |
+| GET | `/api/mural/config` | público | Destino público configurado para el QR |
+
+Las respuestas privadas de noticias, eventos y calendario usan
+`Cache-Control: private, no-store`. Las rutas de escritura conservan sus roles
+actuales (Administración, Rectoría y responsables autorizados).
+
 ### Encuestas
 
-Las públicas **no piden token**: es el único caso en el sistema.
+Las rutas de encuestas públicas **no piden token**. El mural público (`/api/mural`) y el catálogo también se consultan sin sesión; noticias, eventos y calendario requieren sesión.
 
 | Método | Endpoint | Rol | Descripción |
 |--------|----------|-----|-------------|

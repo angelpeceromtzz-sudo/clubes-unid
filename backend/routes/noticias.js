@@ -1,4 +1,4 @@
-// Rutas de noticias — consulta pública y administración (admin / rectoría / responsable del mural)
+// Rutas de noticias — consulta con sesión y administración (admin / rectoría / responsable del mural)
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
@@ -98,8 +98,8 @@ const router = Router();
 
 validarParamsEnteros(router);
 
-// Lista noticias públicas, de la más reciente a la más antigua
-router.get('/', async (req, res) => {
+// Noticias privadas: sólo se muestran dentro de una sesión institucional.
+router.get('/', authenticate, async (req, res) => {
   try {
     const limite = Math.min(parseInt(req.query.limite, 10) || 50, 200);
     const result = await pool.query(
@@ -110,6 +110,7 @@ router.get('/', async (req, res) => {
        LIMIT $1`,
       [limite]
     );
+    res.set('Cache-Control', 'private, no-store');
     res.json(result.rows);
   } catch (err) {
     console.error('Error al listar noticias:', err);
@@ -117,8 +118,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Todos los eventos publicados, sin depender del límite del feed de noticias.
-router.get('/eventos', async (req, res) => {
+// Todos los eventos publicados, también dentro de una sesión institucional.
+router.get('/eventos', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT ${CAMPOS},
@@ -127,6 +128,7 @@ router.get('/eventos', async (req, res) => {
        WHERE status = 'published' AND publicada = TRUE AND categoria = 'evento' AND solo_calendario = FALSE
        ORDER BY fecha_publicacion DESC, id_noticia DESC`
     );
+    res.set('Cache-Control', 'private, no-store');
     res.json(result.rows);
   } catch (err) {
     console.error('Error al listar eventos:', err);
@@ -134,14 +136,15 @@ router.get('/eventos', async (req, res) => {
   }
 });
 
-// Avisos del mural sin depender de la paginación del feed de noticias.
-router.get('/mural', async (req, res) => {
+// Avisos de noticias para el mural: privados. El mural público usa /api/mural.
+router.get('/mural', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT ${CAMPOS} FROM noticias
        WHERE status = 'published' AND publicada = TRUE AND mostrar_en_mural = TRUE AND solo_calendario = FALSE
        ORDER BY destacada DESC, fecha_publicacion DESC, id_noticia DESC`
     );
+    res.set('Cache-Control', 'private, no-store');
     res.json(result.rows);
   } catch (err) {
     console.error('Error al listar el mural:', err);
