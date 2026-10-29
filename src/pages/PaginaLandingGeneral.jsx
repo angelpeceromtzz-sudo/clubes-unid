@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
 
 const EXPERIENCIAS = [
   {
@@ -30,17 +31,7 @@ export default function PaginaLandingGeneral() {
 
   return (
     <main className={oscuro ? 'bg-[#0b111e] text-white' : 'bg-slate-50 text-slate-900'}>
-      <header className={`sticky top-0 z-40 backdrop-blur-md border-b ${oscuro ? 'bg-[#0b111e]/85 border-slate-800' : 'bg-white/85 border-slate-200'}`}>
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 xl:px-16 h-16 flex items-center justify-between">
-          <Link to="/" className="font-black tracking-tight text-lg">
-            Clubs <span className="text-amber-400">UNID</span>
-          </Link>
-          <nav className="flex items-center gap-5 text-sm font-bold">
-            <Link to="/conocenos" className="hover:text-amber-400 transition">Conócenos</Link>
-            <Link to="/campus" className="hover:text-amber-400 transition">Campus</Link>
-          </nav>
-        </div>
-      </header>
+      <BarraGeneral />
 
       <section
         className="relative min-h-[92vh] overflow-hidden flex items-center"

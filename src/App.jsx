@@ -24,6 +24,8 @@ import PaginaAcercaProyecto from './pages/PaginaAcercaProyecto';
 import PaginaLandingGeneral from './pages/PaginaLandingGeneral';
 import PaginaConocenos from './pages/PaginaConocenos';
 import PaginaSelectorCampus from './pages/PaginaSelectorCampus';
+import PaginaOferta from './pages/PaginaOferta';
+import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
@@ -102,9 +104,11 @@ function App() {
   const esLandingGeneral = location.pathname === '/';
   const esConocenos = location.pathname === '/conocenos';
   const esSelectorCampus = location.pathname === '/campus';
+  const esOferta = location.pathname === '/oferta';
+  const esExperienciaEstudiantil = location.pathname === '/experiencia-estudiantil';
   const esLandingCampeche = location.pathname === '/campus/campeche';
   const esAcercaProyecto = location.pathname === '/acerca-del-proyecto';
-  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esLandingCampeche || esAcercaProyecto;
+  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esOferta || esExperienciaEstudiantil || esLandingCampeche || esAcercaProyecto;
 
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
@@ -162,6 +166,8 @@ function App() {
           {esLandingGeneral && <Route path="/" element={<PaginaLandingGeneral />} />}
           {esConocenos && <Route path="/conocenos" element={<PaginaConocenos />} />}
           {esSelectorCampus && <Route path="/campus" element={<PaginaSelectorCampus />} />}
+          {esOferta && <Route path="/oferta" element={<PaginaOferta />} />}
+          {esExperienciaEstudiantil && <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />}
           {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs onLoginClick={() => setShowLogin(true)} />} />}
           {esAcercaProyecto && <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />}
         </Routes>
@@ -251,6 +257,8 @@ function App() {
             /campus/campeche. */}
         <Route path="/conoce-clubs" element={<Navigate to="/campus/campeche" replace />} />
         <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />
+        <Route path="/oferta" element={<PaginaOferta />} />
+        <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />
