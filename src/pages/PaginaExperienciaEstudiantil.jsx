@@ -1,41 +1,97 @@
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
 import { PiePagina } from '../components/layout/PiePagina';
-import { Icono } from '../components/ui/Icono';
-import { LANDING } from '../config/landing';
 
-const CONTENEDOR = 'w-full px-6 sm:px-8 lg:px-12 xl:px-16';
-
-const LOGROS = [
+const SLIDES = [
   {
+    id: 'torneos',
+    imagen: '/campus/campus-campeche.png',
+    objectPosition: 'center 40%',
+    objectPositionMobile: 'center center',
+    displayMode: 'contained',
     titulo: 'Torneos ganados',
-    texto: 'Participacion y triunfos en competencias deportivas y academicas.',
+    texto: 'Participación y triunfos en competencias deportivas y académicas.',
   },
   {
+    id: 'comunidades',
+    imagen: '/actividades/trineo-suenos-1.jpg',
+    objectPosition: 'center center',
+    objectPositionMobile: 'center center',
+    displayMode: 'contained',
     titulo: 'Apoyo a comunidades',
-    texto: 'Proyectos de servicio, vinculacion y impacto social.',
+    texto: 'Proyectos de servicio, vinculación y impacto social.',
   },
   {
-    titulo: 'Innovacion estudiantil',
-    texto: 'Desarrollo de ideas, prototipos y soluciones tecnologicas.',
+    id: 'innovacion',
+    imagen: '/campus/como-nacio.jpeg',
+    objectPosition: 'center center',
+    objectPositionMobile: 'center 65%',
+    displayMode: 'cover',
+    titulo: 'Innovación estudiantil',
+    texto: 'Desarrollo de ideas, prototipos y soluciones tecnológicas.',
   },
   {
+    id: 'comunidad',
+    imagen: '/actividades/experiencia-2.png',
+    objectPosition: 'center center',
+    objectPositionMobile: 'center center',
+    displayMode: 'contained',
     titulo: 'Comunidad UNID',
     texto: 'Experiencias que fortalecen la pertenencia y el crecimiento personal.',
   },
 ];
 
 export default function PaginaExperienciaEstudiantil() {
-  const { tema, modoOscuro } = useTheme();
+  const { modoOscuro } = useTheme();
   const oscuro = modoOscuro;
-  const kickerColor = modoOscuro ? 'text-amber-400' : 'text-amber-600';
-  const panelBase = modoOscuro
-    ? 'bg-[#0e162c] border-slate-700/60'
-    : 'bg-white border-slate-200 shadow-sm';
+
+  const [slideActual, setSlideActual] = useState(0);
+  const [pausado, setPausado] = useState(false);
+  const [touchInicio, setTouchInicio] = useState(null);
+  const [esMovil, setEsMovil] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches);
+  const prefiereMovimientoReducido =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1023px)');
+    const onChange = (event) => setEsMovil(event.matches);
+    mediaQuery.addEventListener('change', onChange);
+    return () => mediaQuery.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    if (prefiereMovimientoReducido || pausado || SLIDES.length < 2) return undefined;
+    const temporizador = window.setInterval(() => {
+      setSlideActual((actual) => (actual + 1) % SLIDES.length);
+    }, 5000);
+    return () => window.clearInterval(temporizador);
+  }, [pausado, prefiereMovimientoReducido]);
+
+  useEffect(() => {
+    if (!pausado) return undefined;
+    const temporizador = window.setTimeout(() => setPausado(false), 8000);
+    return () => window.clearTimeout(temporizador);
+  }, [pausado]);
+
+  function irAnterior() {
+    setSlideActual((actual) => (actual - 1 + SLIDES.length) % SLIDES.length);
+    setPausado(true);
+  }
+
+  function irSiguiente() {
+    setSlideActual((actual) => (actual + 1) % SLIDES.length);
+    setPausado(true);
+  }
+
+  function irA(index) {
+    setSlideActual(index);
+    setPausado(true);
+  }
 
   return (
-    <main className={oscuro ? 'bg-[#0b111e] text-white' : 'bg-slate-50 text-slate-900'}>
+    <main className={oscuro ? 'bg-[#0b111e] text-white overflow-x-hidden' : 'bg-slate-50 text-slate-900 overflow-x-hidden'}>
       <BarraGeneral />
       <section className="px-6 sm:px-8 lg:px-12 xl:px-16 py-16 sm:py-24">
         <div className="max-w-6xl mx-auto">
@@ -46,128 +102,113 @@ export default function PaginaExperienciaEstudiantil() {
             Triunfos y experiencias que dejan huella
           </h1>
           <p className={`mt-5 text-base sm:text-lg leading-relaxed max-w-2xl ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-            UNID ha construido una historia de participacion, logros y servicio a traves de sus estudiantes y comunidades.
+            UNID ha construido una historia de participación, logros y servicio a través de sus estudiantes y comunidades.
           </p>
         </div>
       </section>
 
-      <section className="px-6 sm:px-8 lg:px-12 xl:px-16 pb-16 sm:pb-24">
-        <div className="max-w-6xl mx-auto grid gap-4 sm:grid-cols-2">
-          {LOGROS.map((logro) => (
-            <article
-              key={logro.titulo}
-              className={`rounded-3xl border p-6 sm:p-8 ${oscuro ? 'bg-[#0e162c] border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}
-            >
-              <h2 className="text-2xl font-black">{logro.titulo}</h2>
-              <p className={`mt-3 text-sm sm:text-base leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-                {logro.texto}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="px-6 sm:px-8 lg:px-12 xl:px-16 pb-16">
+      <section
+        className="px-6 sm:px-8 lg:px-12 xl:px-16 py-16 sm:py-24"
+        aria-roledescription="carousel"
+        aria-label="Experiencias estudiantiles"
+      >
         <div className="max-w-6xl mx-auto">
-          <Link
-            to="/campus"
-            className="inline-flex items-center justify-center px-7 py-4 rounded-full bg-amber-400 text-[#0e162c] font-black text-base shadow-2xl shadow-amber-400/20 hover:bg-amber-300 transition"
+          <div
+            className="relative min-h-[420px] sm:min-h-[480px] overflow-hidden rounded-[2rem] bg-[#0b111e]"
+            tabIndex={0}
+            onTouchStart={(e) => setTouchInicio(e.touches[0].clientX)}
+            onTouchEnd={(e) => {
+              if (touchInicio === null) return;
+              const diferencia = e.changedTouches[0].clientX - touchInicio;
+              if (Math.abs(diferencia) > 50) {
+                if (diferencia > 0) irAnterior();
+                else irSiguiente();
+              }
+              setTouchInicio(null);
+            }}
+            onMouseEnter={() => setPausado(true)}
+            onMouseLeave={() => setPausado(false)}
+            onFocus={() => setPausado(true)}
+            onBlur={() => setPausado(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowLeft') irAnterior();
+              if (e.key === 'ArrowRight') irSiguiente();
+            }}
           >
-            Explorar campus
-          </Link>
-        </div>
-      </section>
-
-      {/* E. Modelo de FormaciÃ³n Integral (VIVE): contexto de formaciÃ³n tras
-          el acceso a la encuesta. El panel reutiliza el eco visual del hero
-          para no introducir un lenguaje nuevo. */}
-      <section aria-labelledby="titulo-mfi">
-        <div className={`${CONTENEDOR} py-12 sm:py-16`}>
-          <div className="max-w-6xl mx-auto">
-            <div
-              data-reveal
-              className={`relative rounded-2xl border overflow-hidden p-4 sm:p-8 lg:p-9 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.10),transparent_65%)] ${panelBase}`}
-            >
-              <div className="max-w-2xl">
-                <p className={`text-[11px] sm:text-xs uppercase tracking-[0.25em] font-black ${kickerColor}`}>
-                  {LANDING.mfi.kicker}
-                </p>
-                <h2
-                  id="titulo-mfi"
-                  className={`mt-2 text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-balance ${tema.title}`}
-                >
-                  {LANDING.mfi.titulo}
-                </h2>
-                <p className={`mt-3 text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
-                  {LANDING.mfi.intro}
-                </p>
-              </div>
-
-              <div className="mt-6 sm:mt-5">
-                <p className={`text-xs uppercase tracking-[0.2em] font-bold ${tema.subtitle}`}>
-                  {LANDING.mfi.valoresTitulo}
-                </p>
-                {/* Siempre como en mÃ³vil M: 3 por lÃ­nea (2 filas) desde
-                    375 px; a 320â€“374 px caen a 2 (Â«SolidaridadÂ» no cabe 3
-                    veces). Desde xl (â‰¥1280) los 6 caben en una sola fila a
-                    todo el ancho del panel. Pills con fondo grande (w-full
-                    llenando la celda + py-2/2.5) y acotados a max-w-2xl en
-                    escritorio para que queden equilibrados dentro del panel. */}
-                <ul className="mt-3 grid grid-cols-2 min-[375px]:grid-cols-3 gap-2 sm:gap-2.5 sm:mt-2.5 max-w-2xl xl:grid-cols-6 xl:max-w-none">
-                  {LANDING.mfi.valores.map((valor) => (
-                    <li
-                      key={valor}
-                      className={`inline-flex w-full items-center justify-center gap-1 sm:gap-1.5 rounded-full border px-1 sm:px-3 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold tracking-tight sm:tracking-normal ${
-                        modoOscuro
-                          ? 'border-slate-600/60 text-slate-300'
-                          : 'border-slate-200 text-slate-600'
-                      }`}
-                    >
-                      <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      {valor}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <ul className="mt-8 sm:mt-7 grid gap-x-6 gap-y-7 sm:gap-y-6 sm:grid-cols-3">
-                {LANDING.mfi.dimensiones.map((dim) => (
-                  <li key={dim.titulo} className="flex items-start gap-3 min-w-0">
-                    <span
-                      aria-hidden="true"
-                      className={`shrink-0 w-9 h-9 rounded-full border flex items-center justify-center ${
-                        modoOscuro
-                          ? 'bg-amber-400/10 border-amber-400/20 text-amber-400'
-                          : 'bg-amber-100 border-amber-200 text-amber-700'
-                      }`}
-                    >
-                      <Icono nombre={dim.icono} strokeWidth={2} className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className={`text-sm font-black uppercase tracking-wider ${tema.title}`}>
-                        {dim.titulo}
-                      </h3>
-                      <p className={`mt-1 text-sm leading-relaxed ${tema.subtitle}`}>{dim.texto}</p>
-                      {/* Separador Ã¡mbar (solo mÃ³vil), igual que en Â«QuÃ© es
-                          un clubÂ»: al apilarse, la lÃ­nea fina evita la
-                          lectura de Â«tablaÂ». */}
-                      <span aria-hidden="true" className="mt-3 block h-px bg-amber-400/40 sm:hidden" />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              <p
-                className={`mt-8 sm:mt-7 max-w-xl border-l-2 border-amber-400/70 pl-4 text-sm sm:text-base font-medium leading-relaxed ${tema.subtitle}`}
+            {SLIDES.map((slide, index) => (
+              <div
+                key={slide.id}
+                className={`absolute inset-0 transition-opacity duration-700 ${index === slideActual ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                aria-hidden={index !== slideActual}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`${index + 1} de ${SLIDES.length}`}
               >
-                {LANDING.mfi.puente}
-              </p>
-            </div>
+                {esMovil || slide.displayMode !== 'contained' ? (
+                  <img
+                    src={slide.imagen}
+                    alt={slide.titulo}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{ objectPosition: esMovil ? (slide.objectPositionMobile || slide.objectPosition || 'center center') : (slide.objectPosition || 'center center') }}
+                  />
+                ) : (
+                  <>
+                    <img
+                      src={slide.imagen}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 h-full w-full object-cover brightness-50 blur-sm scale-105"
+                      style={{ objectPosition: slide.objectPosition || 'center center' }}
+                    />
+                    <img
+                      src={slide.imagen}
+                      alt={slide.titulo}
+                      className="absolute inset-0 h-full w-full object-contain"
+                      style={{ objectPosition: slide.objectPosition || 'center center' }}
+                    />
+                  </>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/55 to-transparent" />
+                <div className="relative h-full flex flex-col justify-end p-6 sm:p-10">
+                  <h2 className="text-3xl sm:text-4xl font-black">{slide.titulo}</h2>
+                  <p className="mt-3 text-sm sm:text-base text-slate-200 max-w-xl">
+                    {slide.texto}
+                  </p>
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={irAnterior}
+              aria-label="Diapositiva anterior"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 hidden lg:flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white hover:bg-amber-400 hover:text-[#0e162c] hover:border-amber-400 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition cursor-pointer shadow-lg"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={irSiguiente}
+              aria-label="Diapositiva siguiente"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 hidden lg:flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white hover:bg-amber-400 hover:text-[#0e162c] hover:border-amber-400 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition cursor-pointer shadow-lg"
+            >
+              ›
+            </button>
+          </div>
+
+          <div className="mt-5 flex items-center justify-center gap-3">
+            {SLIDES.map((slide, index) => (
+              <button
+                key={slide.id}
+                type="button"
+                onClick={() => irA(index)}
+                aria-label={`Ir a la diapositiva ${index + 1} de ${SLIDES.length}`}
+                className={`h-2.5 w-2.5 rounded-full transition-colors ${index === slideActual ? 'bg-amber-400' : 'bg-slate-500 hover:bg-slate-300'}`}
+              />
+            ))}
           </div>
         </div>
       </section>
-
-
       <PiePagina />
     </main>
   );
