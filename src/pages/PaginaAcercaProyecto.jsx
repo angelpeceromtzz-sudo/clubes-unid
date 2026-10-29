@@ -185,13 +185,13 @@ export default function PaginaAcercaProyecto() {
       <div className={CONTENEDOR}>
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 py-4">
           <Link
-            to="/conoce-clubs"
+            to="/campus/campeche"
             aria-label="Ir a la landing de Clubs UNID"
             className="flex items-center shrink-0"
           >
             <Logotipo />
           </Link>
-          <BotonBarraPublica to="/conoce-clubs">
+          <BotonBarraPublica to="/campus/campeche">
             <Icono nombre="arrow-left" strokeWidth={2} className="h-3.5 w-3.5 shrink-0" />
             {ACERCA.cierre.btnVolver}
           </BotonBarraPublica>
@@ -444,7 +444,7 @@ export default function PaginaAcercaProyecto() {
               <p className={`mt-3 text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>{ACERCA.cierre.texto}</p>
             </div>
             <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-              <Link to="/conoce-clubs" className={`${estiloVolver} w-full sm:w-auto`}>
+              <Link to="/campus/campeche" className={`${estiloVolver} w-full sm:w-auto`}>
                 <Icono nombre="arrow-left" strokeWidth={2} className="h-4 w-4 shrink-0" />
                 {ACERCA.cierre.btnVolver}
               </Link>
