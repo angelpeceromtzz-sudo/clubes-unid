@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMural } from '../hooks/useMural';
 import { EditorPublicacionMural } from '../components/calendario/EditorPublicacionMural';
@@ -15,25 +15,28 @@ import { ModalDetalleCalendario } from '../components/calendario/ModalDetalleCal
 import { MuralCalendario } from '../components/calendario/MuralCalendario';
 import { SimboloFecha } from '../components/calendario/SimboloFecha';
 import { SelectorVistasCalendario } from '../components/calendario/SelectorVistasCalendario';
+import { AccesoCalendarioPrivado } from '../components/calendario/AccesoCalendarioPrivado';
 import { CATEGORIAS_EVENTO, emojiCategoriaEvento, estiloCategoriaEvento, nombreCategoriaEvento } from '../constants/categoriasEvento';
 import { fechaHoyCampus } from '../utils/fechas';
 import { claveLocal, fechaLegible, capitalizarInicial, elementosCalendario, elementosEnFecha, elementosEnMes, publicacionesMural, periodoElemento } from '../utils/calendario';
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-export function PaginaCalendario() {
+export function PaginaCalendario({ onLoginClick }) {
   const { tema, modoOscuro, cardCls, selectCls } = useTheme();
   const { eventos, avisosMural, cargando, errorEventos, errorMural, refetch } = useNoticias();
-  const calendario = useCalendarioAcademico();
+  const { esAdmin, esRectoria, esResponsableMural, puedeGestionarMural, authReady, estaAutenticado } = useAutenticacion();
+  const datosPrivados = authReady && estaAutenticado;
+  const calendario = useCalendarioAcademico(false, datosPrivados);
   const propios = useMural();
   const navegar = useNavigate();
   const [editorMural, setEditorMural] = useState(null);
   const [compartir, setCompartir] = useState(false);
   const [mensajeMural, setMensajeMural] = useState('');
-  const { esAdmin, esRectoria, esResponsableMural, puedeGestionarMural } = useAutenticacion();
   const basePanel = `${esAdmin ? '/admin' : esResponsableMural ? '/mural' : '/rectoria'}/dashboard`;
   const [parametros, setParametros] = useSearchParams();
   const vista = parametros.get('vista') === 'mural' ? 'mural' : 'calendario';
+  const calendarioBloqueado = authReady && !estaAutenticado;
   const [mesVisible, setMesVisible] = useState(() => {
     const hoy = new Date(`${fechaHoyCampus()}T12:00:00`);
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -42,14 +45,29 @@ export function PaginaCalendario() {
   const [categoria, setCategoria] = useState('todos');
   const [detalle, setDetalle] = useState(null);
   const hoyClave = fechaHoyCampus();
-  const elementos = useMemo(() => elementosCalendario(eventos, calendario.fechas), [eventos, calendario.fechas]);
+  const elementos = useMemo(
+    () => elementosCalendario(datosPrivados ? eventos : [], datosPrivados ? calendario.fechas : []),
+    [datosPrivados, eventos, calendario.fechas]
+  );
   const elementosDelMes = useMemo(() => elementosEnMes(elementos, mesVisible, categoria), [elementos, mesVisible, categoria]);
   const mural = useMemo(() => publicacionesMural([
-    ...avisosMural,
+    ...(datosPrivados ? avisosMural.map((aviso) => ({ ...aviso, origen: 'noticia' })) : []),
     ...propios.publicaciones,
-    ...calendario.fechas.filter((fecha) => fecha.mostrar_en_mural).map((fecha) => ({ ...fecha, origen: 'fecha' })),
-  ], hoyClave), [avisosMural, propios.publicaciones, calendario.fechas, hoyClave]);
-  const erroresMural = [errorMural, calendario.errorCarga, propios.error].filter(Boolean).join(' ');
+    ...(datosPrivados
+      ? calendario.fechas.filter((fecha) => fecha.mostrar_en_mural).map((fecha) => ({ ...fecha, origen: 'fecha' }))
+      : []),
+  ], hoyClave), [datosPrivados, avisosMural, propios.publicaciones, calendario.fechas, hoyClave]);
+  const erroresMural = [datosPrivados ? errorMural : '', datosPrivados ? calendario.errorCarga : '', propios.error].filter(Boolean).join(' ');
+  /* Al cerrar sesión se descarta cualquier detalle o editor privado abierto. */
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (datosPrivados) return;
+    setDetalle(null);
+    setEditorMural(null);
+    setMensajeMural('');
+  }, [datosPrivados]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   function editarDesdeMural(item) {
     if (item.origen === 'mural') { setEditorMural(item); return; }
     if (esResponsableMural) return;
@@ -88,9 +106,9 @@ export function PaginaCalendario() {
           <div><p className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-2 ${modoOscuro ? 'text-amber-300' : 'text-amber-700'}`}>Comunidad UNID</p><h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${tema.title}`}>Tu vida en el campus</h1><p className={`text-sm mt-2 ${tema.subtitle}`}>Las fechas que importan. Las novedades que nos unen.</p></div>
           {(vista === 'mural' ? puedeGestionarMural : esAdmin || esRectoria) && <Link to={`${basePanel}?seccion=${vista === 'mural' ? 'mural' : 'calendario'}`} className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 ${tema.btnInactive}`}><Icono nombre="edit" className="h-3.5 w-3.5" />{vista === 'mural' ? 'Administrar mural' : 'Administrar fechas'}</Link>}
         </header>
-        <SelectorVistasCalendario vista={vista} onChange={cambiarVista} />
+        <SelectorVistasCalendario vista={vista} onChange={cambiarVista} calendarioBloqueado={calendarioBloqueado} />
         {mensajeMural && vista === 'mural' && <p role="status" className="mb-4 text-sm text-emerald-600">{mensajeMural}</p>}
-        {(cargando || calendario.cargando || (vista === 'mural' && propios.cargando)) ? <Spinner className="py-20" /> : vista === 'mural' ? <div id="panel-mural" role="tabpanel" aria-labelledby="pestana-mural"><MuralCalendario publicaciones={mural} onDetalle={(publicacion) => setDetalle({ origen: publicacion.origen === 'fecha' ? 'fecha' : 'publicacion', original: publicacion })} onCrear={puedeGestionarMural ? () => setEditorMural({}) : undefined} onEditar={puedeGestionarMural ? editarDesdeMural : undefined} puedeEditar={(item) => esResponsableMural && item.origen === 'mural'} onCompartir={() => setCompartir(true)} error={erroresMural} onReintentar={() => { refetch(); calendario.cargar(); propios.cargar(); }} /></div> : <div id="panel-calendario" role="tabpanel" aria-labelledby="pestana-calendario">
+        {!authReady ? <Spinner className="py-20" /> : vista === 'calendario' && !estaAutenticado ? <div id="panel-calendario" role="tabpanel" aria-labelledby="pestana-calendario"><AccesoCalendarioPrivado onLoginClick={onLoginClick} onVerMural={() => cambiarVista('mural')} /></div> : ((datosPrivados && (cargando || calendario.cargando)) || (vista === 'mural' && propios.cargando)) ? <Spinner className="py-20" /> : vista === 'mural' ? <div id="panel-mural" role="tabpanel" aria-labelledby="pestana-mural"><MuralCalendario publicaciones={mural} onDetalle={(publicacion) => setDetalle({ origen: publicacion.origen === 'fecha' ? 'fecha' : 'publicacion', publico: publicacion.origen === 'mural', original: publicacion })} onCrear={puedeGestionarMural ? () => setEditorMural({}) : undefined} onEditar={puedeGestionarMural ? editarDesdeMural : undefined} puedeEditar={(item) => esResponsableMural && item.origen === 'mural'} onCompartir={() => setCompartir(true)} error={erroresMural} onReintentar={() => { if (datosPrivados) { refetch(); calendario.cargar(); } propios.cargar(); }} /></div> : <div id="panel-calendario" role="tabpanel" aria-labelledby="pestana-calendario">
           {errorEventos && <p role="alert" className="mb-4 text-sm text-red-500">{errorEventos} <button type="button" onClick={refetch} className="underline cursor-pointer">Reintentar</button></p>}
           {calendario.errorCarga && <p role="alert" className="mb-4 text-sm text-red-500">{calendario.errorCarga} <button type="button" onClick={calendario.cargar} className="underline cursor-pointer">Reintentar</button></p>}
           <div className="grid lg:grid-cols-[minmax(0,1fr)_270px] items-start gap-5">
@@ -136,8 +154,8 @@ export function PaginaCalendario() {
           </div>
         </div>}
       </div>
-      {detalle && (detalle.origen === 'fecha' ? <ModalDetalleFechaAcademica fecha={detalle.original} onClose={() => setDetalle(null)} /> : <ModalDetalleCalendario publicacion={detalle.original} onClose={() => setDetalle(null)} />)}
-      {editorMural && <EditorPublicacionMural publicacion={editorMural} onClose={() => setEditorMural(null)} onGuardado={(item) => { propios.incorporar(item); setMensajeMural(item.publicada ? 'Publicación guardada en el mural.' : 'Borrador guardado. Puedes publicarlo desde Administrar mural.'); }} />}
+      {detalle && (detalle.publico || datosPrivados) && (detalle.origen === 'fecha' ? <ModalDetalleFechaAcademica fecha={detalle.original} onClose={() => setDetalle(null)} /> : <ModalDetalleCalendario publicacion={detalle.original} onClose={() => setDetalle(null)} />)}
+      {datosPrivados && editorMural && <EditorPublicacionMural publicacion={editorMural} onClose={() => setEditorMural(null)} onGuardado={(item) => { propios.incorporar(item); setMensajeMural(item.publicada ? 'Publicación guardada en el mural.' : 'Borrador guardado. Puedes publicarlo desde Administrar mural.'); }} />}
       {compartir && <ModalCompartirMural onClose={() => setCompartir(false)} />}
     </main>
   );
