@@ -6,23 +6,23 @@ export function RutaProtegida({ children, requiereAdmin = false, requierePreside
   const { estaAutenticado, esAdmin, esPresidente, esRectoria, esResponsableMural } = useAutenticacion();
 
   if (!estaAutenticado) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/campus/campeche/portal" replace />;
   }
 
   if (requiereAdmin && !esAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/campus/campeche/portal" replace />;
   }
 
   if (requierePresidente && !esPresidente) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/campus/campeche/portal" replace />;
   }
 
   if (requiereRectoria && !esRectoria) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/campus/campeche/portal" replace />;
   }
 
   if (requiereResponsableMural && !esResponsableMural) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/campus/campeche/portal" replace />;
   }
 
   return children;

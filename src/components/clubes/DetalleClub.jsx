@@ -31,7 +31,7 @@ export function DetalleClub({ onLoginClick }) {
     setLoading(true);
     api.getClub(id)
       .then((data) => setClub(data))
-      .catch(() => navigate('/'))
+      .catch(() => navigate('/campus/campeche/portal'))
       .finally(() => setLoading(false));
   }, [id, navigate]);
 

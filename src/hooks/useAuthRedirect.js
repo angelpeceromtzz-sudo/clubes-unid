@@ -22,7 +22,7 @@ export function useAuthRedirect() {
         else if (id_rol === 1 && tieneInscripcionActiva) navigate('/dashboard', { replace: true });
         // eslint-disable-next-line react-hooks/set-state-in-effect
         else if (id_rol === 1) setRedireccionPendiente(true);
-        else navigate('/', { replace: true });
+        else navigate('/campus/campeche/portal', { replace: true });
       }
     }
     autenticacionAnterior.current = estaAutenticado;
