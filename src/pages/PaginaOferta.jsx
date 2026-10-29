@@ -3,22 +3,16 @@ import { useTheme } from '../contexts/ThemeContext';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
 import { PiePagina } from '../components/layout/PiePagina';
 
-const EXPERIENCIAS = [
+const ACTIVIDADES = [
   {
-    titulo: 'Deportivas',
-    texto: 'Entrenamiento, competencia y trabajo en equipo a través de clubes deportivos.',
+    titulo: 'Trineo de los Sueños',
+    texto: 'Integración con valores de solidaridad y amor al prójimo en comunidad.',
+    imagen: '/trineo-sueños1.jpg',
   },
   {
-    titulo: 'Culturales',
-    texto: 'Arte, música, baile y expresión para enriquecer la vida universitaria.',
-  },
-  {
-    titulo: 'Tecnológicas',
-    texto: 'Proyectos, innovación, programación y creatividad aplicada.',
-  },
-  {
-    titulo: 'Espirituales',
-    texto: 'Formación, servicio, comunidad y crecimiento personal.',
+    titulo: 'InterUNID',
+    texto: 'Experiencia documentada de UNID: deporte, arte y convivencia entre campus.',
+    imagen: '/InterUNID.jpeg',
   },
 ];
 
@@ -35,27 +29,42 @@ export default function PaginaOferta() {
             Oferta
           </p>
           <h1 className="text-5xl sm:text-6xl font-black tracking-tight leading-[0.92] text-balance max-w-4xl">
-            Actividades y experiencias Clubs UNID
+            Actividades Clubs UNID
           </h1>
           <p className={`mt-5 text-base sm:text-lg leading-relaxed max-w-2xl ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-            Clubs UNID reúne experiencias extracurriculares para que cada estudiante encuentre un espacio para participar, aprender y crecer.
+            Descubre actividades y experiencias en las que puedes participar y conectar con la comunidad UNID.
           </p>
         </div>
       </section>
 
       <section className="px-6 sm:px-8 lg:px-12 xl:px-16 pb-16 sm:pb-24">
         <div className="max-w-6xl mx-auto grid gap-4 sm:grid-cols-2">
-          {EXPERIENCIAS.map((experiencia) => (
+          {ACTIVIDADES.map((actividad) => (
             <article
-              key={experiencia.titulo}
-              className={`rounded-3xl border p-6 sm:p-8 ${oscuro ? 'bg-[#0e162c] border-slate-700/60' : 'bg-white border-slate-200 shadow-sm'}`}
+              key={actividad.titulo}
+              className="group relative min-h-[260px] overflow-hidden rounded-[2rem]"
             >
-              <h2 className="text-2xl font-black">{experiencia.titulo}</h2>
-              <p className={`mt-3 text-sm sm:text-base leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-                {experiencia.texto}
-              </p>
+              <img
+                src={actividad.imagen}
+                alt={actividad.titulo}
+                className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/55 to-transparent" />
+              <div className="relative h-full flex flex-col justify-end p-6 sm:p-8">
+                <h2 className="text-2xl font-black">{actividad.titulo}</h2>
+                <p className="mt-2 text-sm sm:text-base text-slate-200 max-w-xs">
+                  {actividad.texto}
+                </p>
+              </div>
             </article>
           ))}
+
+          <div className={`rounded-[2rem] border border-dashed p-6 sm:p-8 flex flex-col justify-center ${oscuro ? 'border-slate-700/60 bg-[#0e162c]/40' : 'border-slate-300 bg-slate-100'}`}>
+            <h3 className="text-xl font-black">Más actividades</h3>
+            <p className={`mt-3 text-sm leading-relaxed ${oscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+              Estructura preparada para integrar nuevas actividades del campus.
+            </p>
+          </div>
         </div>
       </section>
 
