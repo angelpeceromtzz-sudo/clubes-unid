@@ -31,14 +31,20 @@ import { NAVBAR_HEIGHT, NAVBAR_HEIGHT_LOGO } from './constants/limites';
 
 function RedireccionNoticias() {
   const { abrirActualizaciones } = useNoticias();
+  const { authReady, estaAutenticado } = useAutenticacion();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    if (!authReady) return;
+    if (!estaAutenticado) {
+      navigate('/', { replace: true });
+      return;
+    }
     const eventos = location.pathname === '/eventos' || new URLSearchParams(location.search).get('seccion') === 'eventos';
     abrirActualizaciones(eventos ? 'evento' : 'todos');
     navigate('/', { replace: true });
-  }, [abrirActualizaciones, location.pathname, location.search, navigate]);
+  }, [abrirActualizaciones, authReady, estaAutenticado, location.pathname, location.search, navigate]);
 
   return null;
 }
@@ -81,7 +87,7 @@ function App() {
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
-    if (!actualizacionesAbiertas && location.pathname !== '/noticias') redirigirPostLogin();
+    if (!actualizacionesAbiertas && location.pathname !== '/noticias' && location.pathname !== '/calendario') redirigirPostLogin();
   }, [redirigirPostLogin, location.pathname, actualizacionesAbiertas]);
 
   function handleLogout() {
@@ -199,8 +205,8 @@ function App() {
         onScrollChange={handleScrollChange}
       />
 
-      {!(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
-      <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />
+      {estaAutenticado && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
+      {estaAutenticado && <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />}
 
       <ModalConfirmacion
         show={confirmarLogout}
@@ -231,7 +237,7 @@ function App() {
         } />
         <Route path="/noticias" element={<RedireccionNoticias />} />
         <Route path="/eventos" element={<RedireccionNoticias />} />
-        <Route path="/calendario" element={<PaginaCalendario />} />
+        <Route path="/calendario" element={<PaginaCalendario onLoginClick={() => setShowLogin(true)} />} />
         {/* Respaldo del early return de arriba: cubre variantes de pathname
             (p. ej. barra final) para que la landing y la página del proyecto
             nunca caigan en 404. */}

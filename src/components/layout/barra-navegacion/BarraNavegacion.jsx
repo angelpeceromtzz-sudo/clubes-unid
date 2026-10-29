@@ -67,7 +67,7 @@ export function BarraNavegacion({
               </button>
             )}
 
-            {mostrarFiltros && (
+            {mostrarFiltros && user && (
               <div className="hidden md:flex items-center gap-1 shrink-0">
                 <BotonNoticias />
                 <BotonCalendario />
