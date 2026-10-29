@@ -9,16 +9,13 @@
    (tener la foto no significa publicarla). La encuesta vive en la landing;
    esta página solo ofrece el retorno a ella. */
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icono } from '../components/ui/Icono';
-import { Logotipo } from '../components/layout/barra-navegacion/Logotipo';
+import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
+import { PiePagina } from '../components/layout/PiePagina';
 import { ACERCA } from '../config/acerca';
-import { BotonBarraPublica } from '../components/landing/BotonBarraPublica';
 
 const CONTENEDOR = 'w-full px-6 sm:px-8 lg:px-12 xl:px-16';
-const FOCO_PRIMARIO =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e162c] focus-visible:ring-offset-2 focus-visible:ring-offset-amber-400';
 
 // Textos por párrafos: cada entrada de la configuración se pinta en su <p>.
 function Parrafos({ items, clases }) {
@@ -172,7 +169,6 @@ export default function PaginaAcercaProyecto() {
   const tituloSeccion = `text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight ${tema.title}`;
   const bandaSuave = modoOscuro ? 'bg-[#0e162c]' : 'bg-white';
   const textoParrafos = `text-sm sm:text-base leading-relaxed ${tema.subtitle}`;
-  const estiloVolver = `inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] rounded-full bg-amber-400 text-[#0e162c] font-black text-sm transition duration-200 hover:bg-amber-300 active:scale-[0.98] ${FOCO_PRIMARIO}`;
   // El retorno de la barra superior usa el botón secundario compartido
   // (BotonBarraPublica), el mismo que el chip Conócenos de la landing:
   // así ambos miden lo mismo (~38px en móvil, 44px desde sm; mismo
@@ -181,22 +177,7 @@ export default function PaginaAcercaProyecto() {
 
   return (
     <main className={`pb-10 lg:pb-20 ${tema.bg} ${tema.text}`}>
-      {/* Barra propia: identidad (vuelve a la landing) y retorno explícito. */}
-      <div className={CONTENEDOR}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 py-4">
-          <Link
-            to="/campus/campeche"
-            aria-label="Ir a la landing de Clubs UNID"
-            className="flex items-center shrink-0"
-          >
-            <Logotipo />
-          </Link>
-          <BotonBarraPublica to="/campus/campeche">
-            <Icono nombre="arrow-left" strokeWidth={2} className="h-3.5 w-3.5 shrink-0" />
-            {ACERCA.cierre.btnVolver}
-          </BotonBarraPublica>
-        </div>
-      </div>
+      <BarraGeneral />
 
       {/* Presentación: kicker, título e invitación. La encuesta no se ofrece
           aquí; el acceso principal a la encuesta permanece en la landing. */}
@@ -443,15 +424,10 @@ export default function PaginaAcercaProyecto() {
               </h2>
               <p className={`mt-3 text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>{ACERCA.cierre.texto}</p>
             </div>
-            <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-              <Link to="/campus/campeche" className={`${estiloVolver} w-full sm:w-auto`}>
-                <Icono nombre="arrow-left" strokeWidth={2} className="h-4 w-4 shrink-0" />
-                {ACERCA.cierre.btnVolver}
-              </Link>
-            </div>
           </div>
         </div>
       </section>
+      <PiePagina />
     </main>
   );
 }

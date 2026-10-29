@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { PiePagina } from '../components/layout/PiePagina';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
 
 const EXPERIENCIAS = [
@@ -121,27 +122,28 @@ export default function PaginaLandingGeneral() {
       </section>
 
       <section className="px-6 sm:px-8 lg:px-12 xl:px-16 py-12 sm:py-16">
-        <div className="max-w-6xl mx-auto grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div>
+        <div className="max-w-6xl mx-auto">
+          <div className="max-w-3xl mx-auto text-center mb-8">
             <p className="text-xs uppercase tracking-[0.25em] font-black text-amber-400 mb-3">
               Campus
             </p>
             <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-balance">
               Empieza por un campus
             </h2>
-            <p className={`mt-4 text-base sm:text-lg leading-relaxed max-w-xl ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-              Campus Campeche ya está activo dentro de Clubs UNID.
+            <p className={`mt-4 text-base sm:text-lg leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+              Clubs UNID estará funcionando pronto para el Campus Campeche!
             </p>
           </div>
 
-          <Link
-            to="/campus/campeche"
-            className="group relative block overflow-hidden rounded-[2rem] border border-slate-700/60"
-          >
+          <div className="max-w-3xl mx-auto grid gap-4">
+            <Link
+              to="/campus/campeche"
+              className="group relative block overflow-hidden rounded-[2rem] border border-slate-700/60"
+            >
             <img
-              src="/uriel.jpeg"
+              src="/unidcampeche.jpeg"
               alt="Campus Campeche"
-              className="h-64 w-full object-cover transition duration-700 group-hover:scale-105"
+              className="h-80 w-full object-cover transition duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/45 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6">
@@ -157,6 +159,14 @@ export default function PaginaLandingGeneral() {
               </div>
             </div>
           </Link>
+
+            <div className={`rounded-3xl border border-dashed p-6 flex flex-col justify-center ${oscuro ? 'border-slate-700/60 bg-[#0e162c]/40' : 'border-slate-300 bg-slate-100'}`}>
+              <h3 className="text-xl font-black">Más campus</h3>
+              <p className={`mt-2 text-sm ${oscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+                Una visión que puede crecer.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -176,6 +186,7 @@ export default function PaginaLandingGeneral() {
           </Link>
         </div>
       </section>
+      <PiePagina />
     </main>
   );
 }

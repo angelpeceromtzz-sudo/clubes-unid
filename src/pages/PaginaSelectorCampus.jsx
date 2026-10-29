@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
+import { PiePagina } from '../components/layout/PiePagina';
 
 export default function PaginaSelectorCampus() {
   const { modoOscuro } = useTheme();
@@ -73,6 +74,7 @@ export default function PaginaSelectorCampus() {
           </p>
         </div>
       </section>
+      <PiePagina />
     </main>
   );
 }
