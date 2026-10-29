@@ -67,13 +67,19 @@ describe('integración de aprobación, eventos y mural', { skip: !databaseUrl },
     fecha_evento: '2099-12-20', fecha_fin_evento: '2100-01-06', hora_evento: '10:30',
     lugar_evento: 'Auditorio', categoria_evento: 'cultural', mostrar_en_mural: true };
 
-  async function verificarVisible(id, visible) {
+  async function verificarVisible(id, visible, rol = 1) {
     for (const ruta of ['/noticias', '/noticias/eventos', '/noticias/mural']) {
-      const respuesta = await enviar('GET', ruta, null, null);
+      const respuesta = await enviar('GET', ruta, null, rol);
       assert.equal(respuesta.status, 200);
       assert.equal(respuesta.datos.some((fila) => fila.id_noticia === id), visible, ruta);
     }
   }
+
+  test('noticias, eventos y avisos del mural requieren sesión', async () => {
+    for (const ruta of ['/noticias', '/noticias/eventos', '/noticias/mural']) {
+      assert.equal((await enviar('GET', ruta, null, null)).status, 401, ruta);
+    }
+  });
 
   test('la migración conserva publicaciones anteriores y agrega el rol responsable', async () => {
     const anteriores = await cliente.query('SELECT titulo, status, publicada FROM noticias ORDER BY id_noticia');

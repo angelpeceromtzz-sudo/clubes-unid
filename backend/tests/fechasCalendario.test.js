@@ -73,7 +73,7 @@ test('captura fechas pasadas de los siete tipos sin noticia ni evento', async ()
   assert.equal(sencilla.datos.nota, null);
 });
 
-test('solo administración y rectoría administran las fechas; la consulta pública no exige sesión', async () => {
+test('solo administración y rectoría administran las fechas; la consulta exige sesión', async () => {
   for (const rol of [null, 1, 2, 5]) {
     for (const [metodo, ruta] of [['POST', ''], ['PUT', '/1'], ['DELETE', '/1'], ['GET', '/admin']]) {
       assert.equal((await enviar(metodo, metodo === 'GET' ? null : fecha, rol, ruta)).status, rol ? 403 : 401);
@@ -81,7 +81,8 @@ test('solo administración y rectoría administran las fechas; la consulta públ
     }
   }
   for (const rol of [3, 4]) assert.equal((await enviar('POST', fecha, rol)).status, 201);
-  assert.equal((await enviar('GET', null, null)).status, 200);
+  assert.equal((await enviar('GET', null, null)).status, 401);
+  for (const rol of [1, 2, 3, 4, 5]) assert.equal((await enviar('GET', null, rol)).status, 200);
 });
 
 test('valida concepto, tipo, fechas reales, rango y visibilidad antes de guardar', async () => {
@@ -107,7 +108,7 @@ test('edita y oculta una fecha sin modificar noticias; conserva los datos omitid
   assert.equal(cambio.datos.publicada, false);
   assert.equal(cambio.datos.tipo_fecha, 'examen');
   assert.equal(cambio.datos.fecha_fin, '2020-12-17');
-  assert.equal((await enviar('GET', null, null)).datos.some((item) => item.id_fecha === creada.id_fecha), false);
+  assert.equal((await enviar('GET', null, 3)).datos.some((item) => item.id_fecha === creada.id_fecha), false);
   assert.equal((await enviar('GET', null, 3, '/admin')).datos.some((item) => item.id_fecha === creada.id_fecha), true);
   const limpia = await enviar('PUT', { fecha_fin: null, nota: null, publicada: true }, 3, ruta);
   assert.equal(limpia.datos.fecha_fin, null);
