@@ -22,7 +22,6 @@ import { PaginaCalendario } from './pages/PaginaCalendario';
 import PaginaConoceClubs from './pages/PaginaConoceClubs';
 import PaginaAcercaProyecto from './pages/PaginaAcercaProyecto';
 import PaginaLandingGeneral from './pages/PaginaLandingGeneral';
-import PaginaConocenos from './pages/PaginaConocenos';
 import PaginaSelectorCampus from './pages/PaginaSelectorCampus';
 import PaginaOferta from './pages/PaginaOferta';
 import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
@@ -158,18 +157,21 @@ function App() {
     return <Navigate to="/campus/campeche" replace />;
   }
 
+  if (location.pathname === '/acerca-del-proyecto') {
+    return <Navigate to="/conocenos" replace />;
+  }
+
   if (esLandingStandalone) {
     return (
       <>
         <ScrollAlInicio />
         <Routes>
           {esLandingGeneral && <Route path="/" element={<PaginaLandingGeneral />} />}
-          {esConocenos && <Route path="/conocenos" element={<PaginaConocenos />} />}
+          {esConocenos && <Route path="/conocenos" element={<PaginaAcercaProyecto />} />}
           {esSelectorCampus && <Route path="/campus" element={<PaginaSelectorCampus />} />}
           {esOferta && <Route path="/oferta" element={<PaginaOferta />} />}
           {esExperienciaEstudiantil && <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />}
           {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs onLoginClick={() => setShowLogin(true)} />} />}
-          {esAcercaProyecto && <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />}
         </Routes>
         {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} />}
       </>
@@ -256,7 +258,8 @@ function App() {
         {/* Compatibilidad: la landing anterior de Campeche ahora vive en
             /campus/campeche. */}
         <Route path="/conoce-clubs" element={<Navigate to="/campus/campeche" replace />} />
-        <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />
+        <Route path="/acerca-del-proyecto" element={<Navigate to="/conocenos" replace />} />
+        <Route path="/conocenos" element={<PaginaAcercaProyecto />} />
         <Route path="/oferta" element={<PaginaOferta />} />
         <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />
         <Route path="/club/:id" element={
