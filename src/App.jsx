@@ -162,9 +162,10 @@ function App() {
           {esLandingGeneral && <Route path="/" element={<PaginaLandingGeneral />} />}
           {esConocenos && <Route path="/conocenos" element={<PaginaConocenos />} />}
           {esSelectorCampus && <Route path="/campus" element={<PaginaSelectorCampus />} />}
-          {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs />} />}
+          {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs onLoginClick={() => setShowLogin(true)} />} />}
           {esAcercaProyecto && <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />}
         </Routes>
+        {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} />}
       </>
     );
   }

@@ -241,7 +241,7 @@ function OrdenarClubes(clubes) {
   return salida;
 }
 
-export default function PaginaConoceClubs() {
+export default function PaginaConoceClubs({ onLoginClick }) {
   const { tema, modoOscuro } = useTheme();
   const [clubes, setClubes] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -381,9 +381,26 @@ export default function PaginaConoceClubs() {
       <div className={CONTENEDOR}>
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 py-4">
           <Logotipo />
-          <BotonBarraPublica to={LANDING.acercaProyecto.ruta}>
-            {LANDING.acercaProyecto.etiqueta}
-          </BotonBarraPublica>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/campus/campeche/portal"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-amber-400 text-[#0e162c] text-sm font-black hover:bg-amber-300 transition"
+            >
+              Entrar al portal
+            </Link>
+            {onLoginClick && (
+              <button
+                type="button"
+                onClick={onLoginClick}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full border text-sm font-black transition"
+              >
+                Iniciar sesión
+              </button>
+            )}
+            <BotonBarraPublica to={LANDING.acercaProyecto.ruta}>
+              {LANDING.acercaProyecto.etiqueta}
+            </BotonBarraPublica>
+          </div>
         </div>
       </div>
 
