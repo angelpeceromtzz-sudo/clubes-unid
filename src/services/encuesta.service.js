@@ -9,6 +9,7 @@ import { request } from './api-core';
 export const encuestaService = {
   // --- público ---
   obtenerPublica: (slug) => request(`/encuestas/publico/${slug}`),
+  obtenerResumenPublico: (slug) => request(`/encuestas/publico/${slug}/resumen`),
   enviarRespuestas: (slug, payload) =>
     request(`/encuestas/publico/${slug}`, {
       method: 'POST',
