@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useClubes } from '../hooks/useClubes';
 import { TarjetaClub } from '../components/clubes/tarjetas/TarjetaClub';
 import { Heroe } from '../components/clubes/Heroe';
 import { SelectorCategoria } from '../components/clubes/SelectorCategoria';
@@ -14,11 +15,12 @@ import { obtenerUrlImagen } from '../utils/imagen';
 const ORDEN_ESTADO = ['abierto', 'proximo', 'lleno', 'cerrado'];
 const ORDEN_CATEGORIA = ['Deportes', 'Cultura', 'Tecnologia'];
 
-export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCategoriaActiva, estadoActivo, setEstadoActivo }) {
+export function PaginaInicio() {
   const navigate = useNavigate();
   const { estaAutenticado } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();
   const [heroListo, setHeroListo] = useState(false);
+  const { clubes, clubesLoading, categoriaActiva, setCategoriaActiva, estadoActivo, setEstadoActivo } = useClubes();
 
   const clubesOrdenados = useMemo(() => {
     return [...clubes].sort((a, b) => {

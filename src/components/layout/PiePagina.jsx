@@ -1,4 +1,5 @@
 /* Pie de página con información de la universidad, categorías, contacto y redes sociales. */
+import { Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function PiePagina() {
@@ -10,9 +11,7 @@ export function PiePagina() {
 
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-500 flex items-center justify-center text-white font-black text-base">
-                U
-              </div>
+              <img src="/branding/lobounid.png" alt="Lobo UNID" className="h-10 w-auto object-contain" />
               <div>
                 <span className={`text-lg font-black tracking-tight ${tema.logoText}`}>UNID</span>
                 <p className="text-[10px] uppercase tracking-widest text-amber-400 font-bold leading-tight">
@@ -25,31 +24,50 @@ export function PiePagina() {
             </p>
           </div>
 
-          <div>
-            <h3 className={`text-sm font-black uppercase tracking-widest mb-5 ${tema.title}`}>Categorías</h3>
-            <ul className="space-y-3">
-              {["Deportes", "Cultura", "Tecnología"].map((cat) => (
-                <li key={cat}>
-                  <span className={`text-sm font-medium transition-colors duration-200 cursor-pointer hover:text-amber-400 ${tema.subtitle}`}>
-                    {cat}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div className="lg:col-span-2">
+            <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-6">
+              <div>
+                <h3 className={`text-xs sm:text-sm font-black uppercase tracking-widest mb-3 sm:mb-5 ${tema.title}`}>Contacto</h3>
+                <ul className="space-y-2 sm:space-y-3">
+                  <li>
+                    <a href="mailto:00906641@red.unid.mx" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                      00906641@red.unid.mx
+                    </a>
+                  </li>
+                  <li>
+                    <a href="tel:+529812240307" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                      +52 981 224 0307
+                    </a>
+                  </li>
+                  <li className={`text-xs sm:text-sm font-medium ${tema.subtitle}`}>Campeche, Campeche, MX</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className={`text-xs sm:text-sm font-black uppercase tracking-widest mb-3 sm:mb-5 ${tema.title}`}>Legal</h3>
+                <ul className="space-y-2 sm:space-y-3">
+                  <li>
+                    <Link to="/terminos" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                      Términos y Condiciones
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/privacidad" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                      Aviso de Privacidad
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/reportar-problemas" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                      Reportar Problemas
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <h3 className={`text-sm font-black uppercase tracking-widest mb-5 ${tema.title}`}>Contacto</h3>
-            <ul className="space-y-3">
-              <li className={`text-sm font-medium ${tema.subtitle}`}>contacto@red.unid.mx</li>
-              <li className={`text-sm font-medium ${tema.subtitle}`}>+52 981 123 4567</li>
-              <li className={`text-sm font-medium ${tema.subtitle}`}>Campeche, Campeche, MX</li>
-            </ul>
-          </div>
-
-          <div>
+          <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
             <h3 className={`text-sm font-black uppercase tracking-widest mb-5 ${tema.title}`}>Síguenos</h3>
-            <div className="flex gap-4">
+            <div className="flex gap-4 justify-center sm:justify-start">
               <a href="https://www.facebook.com/UNIDCampeche" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-lg border flex items-center justify-center transition-all duration-200 hover:bg-amber-400 hover:text-[#0e162c] hover:border-amber-400 ${tema.subtitle} ${tema.headerBorder}`}>
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.773-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
       </a>

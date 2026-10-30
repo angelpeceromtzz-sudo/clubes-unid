@@ -24,11 +24,13 @@ import PaginaAcercaProyecto from './pages/PaginaAcercaProyecto';
 import PaginaLandingGeneral from './pages/PaginaLandingGeneral';
 import PaginaSelectorCampus from './pages/PaginaSelectorCampus';
 import PaginaOferta from './pages/PaginaOferta';
+import PaginaTerminosCondiciones from './pages/PaginaTerminosCondiciones';
+import PaginaAvisoPrivacidad from './pages/PaginaAvisoPrivacidad';
+import PaginaReportarProblemas from './pages/PaginaReportarProblemas';
 import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
-import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { NAVBAR_HEIGHT, NAVBAR_HEIGHT_LOGO } from './constants/limites';
@@ -71,7 +73,7 @@ function App() {
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { clubesFiltrados, clubesLoading, categoriaActiva, setCategoriaActiva, estadoActivo, setEstadoActivo } = useClubes();
+  const clubesLoading = false;
   const { redirigirPostLogin } = useAuthRedirect();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -111,9 +113,10 @@ function App() {
   const esSelectorCampus = location.pathname === '/campus';
   const esOferta = location.pathname === '/oferta';
   const esExperienciaEstudiantil = location.pathname === '/experiencia-estudiantil';
+  const esLegal = ['/terminos', '/privacidad', '/reportar-problemas'].includes(location.pathname);
   const esLandingCampeche = location.pathname === '/campus/campeche';
   const esAcercaProyecto = location.pathname === '/acerca-del-proyecto';
-  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esOferta || esExperienciaEstudiantil || esLandingCampeche || esAcercaProyecto;
+  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esOferta || esExperienciaEstudiantil || esLandingCampeche || esAcercaProyecto || esLegal;
 
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
@@ -177,6 +180,9 @@ function App() {
           {esSelectorCampus && <Route path="/campus" element={<PaginaSelectorCampus />} />}
           {esOferta && <Route path="/oferta" element={<PaginaOferta />} />}
           {esExperienciaEstudiantil && <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />}
+          {esLegal && <Route path="/terminos" element={<PaginaTerminosCondiciones />} />}
+          {esLegal && <Route path="/privacidad" element={<PaginaAvisoPrivacidad />} />}
+          {esLegal && <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />}
           {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs onLoginClick={() => setShowLogin(true)} />} />}
         </Routes>
         {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} />}
@@ -248,15 +254,7 @@ function App() {
 
       <Routes>
         <Route path="/campus/campeche/portal" element={
-          <PaginaInicio key={catalogoKey}
-            clubes={clubesFiltrados}
-            clubesLoading={clubesLoading}
-            categoriaActiva={categoriaActiva}
-            setCategoriaActiva={setCategoriaActiva}
-            estadoActivo={estadoActivo}
-            setEstadoActivo={setEstadoActivo}
-            onLoginClick={() => setShowLogin(true)}
-          />
+          <PaginaInicio key={catalogoKey} />
         } />
         <Route path="/noticias" element={<RedireccionNoticias />} />
         <Route path="/eventos" element={<RedireccionNoticias />} />
@@ -267,6 +265,9 @@ function App() {
         <Route path="/acerca-del-proyecto" element={<Navigate to="/conocenos" replace />} />
         <Route path="/conocenos" element={<PaginaAcercaProyecto />} />
         <Route path="/oferta" element={<PaginaOferta />} />
+        <Route path="/terminos" element={<PaginaTerminosCondiciones />} />
+        <Route path="/privacidad" element={<PaginaAvisoPrivacidad />} />
+        <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />
         <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />

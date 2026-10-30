@@ -45,7 +45,7 @@ export default function PaginaOferta() {
           <div className={`rounded-[2rem] border border-dashed p-6 sm:p-8 ${oscuro ? 'border-slate-700/60 bg-[#0e162c]/40' : 'border-slate-300 bg-slate-100'}`}>
             <h2 className="text-2xl font-black">Más actividades</h2>
             <p className={`mt-3 text-sm leading-relaxed ${oscuro ? 'text-slate-400' : 'text-slate-600'}`}>
-              Estructura preparada para integrar nuevas actividades del campus.
+               Estructura preparada para integrar nuevas actividades.
             </p>
           </div>
         </div>

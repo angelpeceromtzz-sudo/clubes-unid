@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 
-export function BarraGeneral({ onLoginClick }) {
+export function BarraGeneral({ onLoginClick, splashActivo = false }) {
   const { modoOscuro } = useTheme();
   const oscuro = modoOscuro;
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -12,10 +12,11 @@ export function BarraGeneral({ onLoginClick }) {
   }
 
   return (
-    <header className={`sticky top-0 z-40 backdrop-blur-md border-b ${oscuro ? 'bg-[#0b111e]/85 border-slate-800' : 'bg-white/85 border-slate-200'}`}>
+    <>
+      <header className={`fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b ${oscuro ? 'bg-[#0b111e]/85 border-slate-800' : 'bg-white/85 border-slate-200'}`}>
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 xl:px-16 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center shrink-0" aria-label="Clubs UNID">
-          <img src="/branding/lobounid.png" alt="Lobo UNID" className="h-10 w-auto object-contain self-center" />
+          <img src="/branding/lobounid.png" alt="Lobo UNID" id="navbar-logo" className={`h-10 w-auto object-contain self-center transition-opacity duration-200 ${splashActivo ? 'opacity-0' : 'opacity-100'}`} />
           <img src="/branding/clubs-unid.png" alt="Clubs UNID" className="h-12 w-auto object-contain self-center" />
         </Link>
 
@@ -75,5 +76,7 @@ export function BarraGeneral({ onLoginClick }) {
         </div>
       )}
     </header>
+    <div className="h-16" aria-hidden="true" />
+    </>
   );
 }
