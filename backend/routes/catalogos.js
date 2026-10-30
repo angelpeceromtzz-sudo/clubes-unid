@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 
 const router = Router();
 
@@ -44,7 +45,7 @@ router.get('/licenciaturas', async (req, res) => {
 
 // Se invalida a mano desde el panel cuando alguien da de alta un programa nuevo,
 // para que el <select> no sirva el catálogo viejo hasta que expire el TTL.
-router.post('/licenciaturas/cache', authenticate, requireRole(3), (req, res) => {
+router.post('/licenciaturas/cache', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), (req, res) => {
   cacheLicenciaturas = null;
   res.json({ ok: true });
 });

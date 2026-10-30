@@ -142,6 +142,8 @@ export function ProveedorAutenticacion({ children: hijos }) {
 
   const estaAutenticado = !!usuario;
   const esAdmin = usuario?.id_rol === 3;
+  const esCoordinacion = usuario?.id_rol === 7;
+  const esAdminOCoordinacion = esAdmin || esCoordinacion;
   const esPresidente = usuario?.id_rol === 2;
   const esRectoria = usuario?.id_rol === 4;
   // El responsable administra el mural digital y redacta noticias;
@@ -156,7 +158,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
       value={{
         usuario, authReady,
         iniciarSesion, iniciarSesionMicrosoft, iniciarSesionOtp, cerrarSesion,
-        estaAutenticado, esAdmin, esPresidente, esRectoria,
+        estaAutenticado, esAdmin, esCoordinacion, esAdminOCoordinacion, esPresidente, esRectoria,
         esResponsableMural, puedeGestionarMural, puedeGestionarNoticias, puedeAprobarNoticias,
         tieneInscripcionActiva, clubesPostulados,
         actualizarClubesPostulados: setClubesPostulados,

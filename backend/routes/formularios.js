@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole, requireClubLeader } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { calcularEstadoClub } from '../lib/estadoClub.js';
 import { limitadorFormularios } from '../lib/rateLimits.js';
@@ -28,7 +29,7 @@ const ESTATUS_FLUJO = {
 };
 
 // DEBUG: endpoint de inspección. Restringido a administradores para evitar fugas en producción.
-router.get('/debug-postulaciones', authenticate, requireRole(3), async (req, res) => {
+router.get('/debug-postulaciones', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_club, f.id_alumno, f.bloque_asignado, f.status,

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
 
@@ -44,7 +45,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'ID del club es obligatorio' });
     }
 
-    if (req.user.id_rol === 3) {
+    if (req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION) {
       return res.status(403).json({ error: 'Los administradores no pueden inscribirse a clubes' });
     }
 

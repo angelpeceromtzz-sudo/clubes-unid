@@ -33,13 +33,17 @@ const MENSAJE_VERIFICACION_GENERICO = 'Código inválido o expirado.';
 const MENSAJE_NO_DISPONIBLE = 'El acceso mediante código no está disponible.';
 const MENSAJE_ERROR_INTERNO = 'No se pudo procesar la solicitud.';
 
-const ROLES_SIN_OTP = new Set([3, 4]);
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
+
+const ROLES_SIN_OTP = new Set([ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION]);
 const NOMBRES_ROL = {
   1: 'alumno',
-  2: 'presidente',
+  2: 'responsable_club',
   3: 'admin',
   4: 'rectoria',
   5: 'vicepresidente',
+  6: 'responsable_mural',
+  7: 'coordinacion',
 };
 
 function otpHabilitado() {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { validarPropuesta, limpiarDetalle, conflictosPropuesta } from '../lib/propuestasHorario.js';
 
 const router = Router();
@@ -56,12 +57,12 @@ router.get('/espacios', requireRole(2, 3), async (_req, res) => {
   try { res.json((await pool.query('SELECT id_espacio, nombre FROM espacios_club ORDER BY nombre')).rows); }
   catch { res.status(500).json({ error: 'No se pudieron cargar los espacios' }); }
 });
-router.post('/espacios', requireRole(3), async (req, res) => {
+router.post('/espacios', requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   if (typeof req.body.nombre !== 'string' || !req.body.nombre.trim() || req.body.nombre.length > 200) return res.status(400).json({ error: 'Escribe un nombre de espacio de hasta 200 caracteres' });
   try { const result = await pool.query('INSERT INTO espacios_club(nombre) VALUES ($1) RETURNING id_espacio, nombre', [req.body.nombre.trim()]); res.status(201).json(result.rows[0]); }
   catch (err) { res.status(err.code === '23505' ? 409 : 500).json({ error: err.code === '23505' ? 'Ya existe ese espacio en el catálogo' : 'No se pudo registrar el espacio' }); }
 });
-router.get('/solicitudes', requireRole(3), async (_req, res) => {
+router.get('/solicitudes', requireRole(ROL_ADMIN, ROL_COORDINACION), async (_req, res) => {
   try { res.json((await pool.query(`${SELECTOR} ORDER BY CASE s.estado WHEN 'pendiente' THEN 0 ELSE 1 END, s.fecha_actualizacion DESC`)).rows); }
   catch { res.status(500).json({ error: 'No se pudieron cargar las propuestas' }); }
 });
@@ -122,7 +123,7 @@ router.post('/solicitudes/:id/retirar', requireRole(2), async (req, res) => {
     await historial(client, req, s, 'retirada'); return result.rows[0];
   });
 });
-router.post('/solicitudes/:id/revision', requireRole(3), async (req, res) => {
+router.post('/solicitudes/:id/revision', requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   const { accion, observaciones } = req.body;
   if (!['aprobar', 'rechazar'].includes(accion) || (observaciones != null && (typeof observaciones !== 'string' || observaciones.length > 2000)) || (accion === 'rechazar' && !observaciones?.trim())) return res.status(400).json({ error: 'Selecciona una acción e incluye observaciones para rechazar' });
   await transaccion(res, async (client) => {

@@ -6,6 +6,7 @@
 // contestar no expone datos personales. La IP se lee para el rate limit, pero
 // nunca se escribe en la base.
 import { Router } from 'express';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { generarSlugLibre } from '../lib/slug.js';
@@ -16,8 +17,8 @@ const router = Router();
 
 validarParamsEnteros(router);
 
-const ROLES_ESCRITURA = [3];
-const ROLES_LECTURA = [3, 4];
+const ROLES_ESCRITURA = [ROL_ADMIN, ROL_COORDINACION];
+const ROLES_LECTURA = [ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION];
 
 // Los tipos de la entrega 1, más 'licenciatura'. Los de la entrega 2 (número,
 // ranking, matriz) se validan al añadir la interfaz: meterlos aquí sin frontend

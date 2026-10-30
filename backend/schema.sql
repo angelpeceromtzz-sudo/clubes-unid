@@ -20,11 +20,12 @@ CREATE TABLE IF NOT EXISTS cat_roles (
 
 INSERT INTO cat_roles (id_rol, nombre_rol) VALUES
     (1, 'alumno'),
-    (2, 'presidente'),
+    (2, 'responsable_club'),
     (3, 'admin'),
     (4, 'rectoria'),
     (5, 'vicepresidente'),
-    (6, 'responsable_mural')
+    (6, 'responsable_mural'),
+    (7, 'coordinacion')
 ON CONFLICT (id_rol) DO UPDATE SET nombre_rol = EXCLUDED.nombre_rol;
 
 CREATE TABLE IF NOT EXISTS cat_estatus_clubes (

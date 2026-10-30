@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_RECTORIA } from '../constants/roles.js';
 import { esIdEntero, validarParamsEnteros } from '../lib/validarId.js';
 
 const router = Router();
@@ -8,7 +9,7 @@ const router = Router();
 validarParamsEnteros(router);
 
 // Todas las rutas requieren autenticación y rol 4 (Rectoría)
-router.use(authenticate, requireRole(4));
+router.use(authenticate, requireRole(ROL_RECTORIA));
 
 // Estadísticas generales del ecosistema de clubes
 router.get('/dashboard', async (req, res) => {

@@ -66,7 +66,7 @@ function ScrollAlInicio() {
 }
 
 function App() {
-  const { estaAutenticado, authReady, esAdmin, esPresidente, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { estaAutenticado, authReady, esAdminOCoordinacion, esPresidente, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
   const { actualizacionesAbiertas } = useNoticias();
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
@@ -185,7 +185,7 @@ function App() {
   }
 
   function irADashboard() {
-    if (esAdmin) {
+    if (esAdminOCoordinacion) {
       navigate('/admin/dashboard');
     } else if (esPresidente) {
       navigate('/presidente/dashboard');
@@ -282,7 +282,7 @@ function App() {
           </RutaProtegida>
         } />
         <Route path="/admin/dashboard" element={
-          <RutaProtegida requiereAdmin>
+          <RutaProtegida requiereAdminOCoordinacion>
             <PanelAdmin />
           </RutaProtegida>
         } />

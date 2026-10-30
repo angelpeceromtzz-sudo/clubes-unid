@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 
 const router = Router();
 
-router.get('/', authenticate, requireRole(3), async (req, res) => {
+router.get('/', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id_historial, id_admin, admin_nombre, accion, descripcion,
