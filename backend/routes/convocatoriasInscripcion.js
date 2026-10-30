@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole, requireClubReader } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { vencerInscripciones, MENSAJE_VENCIMIENTO } from '../lib/vencimientoConvocatorias.js';
 import { clubEstaActivo, MENSAJE_CLUB_NO_ACTIVO } from '../lib/estadoClub.js';
 
@@ -74,7 +75,7 @@ router.put('/', authenticate, requireRole(2), transaccion(async (req, client) =>
   return configuracion(client, req.params.id);
 }));
 
-router.post('/revision', authenticate, requireRole(3), transaccion(async (req, client, res) => {
+router.post('/revision', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), transaccion(async (req, client, res) => {
   const { accion, id_solicitud } = req.body;
   const observaciones = typeof req.body.observaciones === 'string' ? req.body.observaciones.trim() : '';
   if (!['aprobar', 'rechazar'].includes(accion) || !Number.isInteger(id_solicitud)) throw fallo(400, 'Selecciona la solicitud y una decisión válida');

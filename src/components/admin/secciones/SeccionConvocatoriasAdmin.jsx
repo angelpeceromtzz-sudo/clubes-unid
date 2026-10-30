@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { api } from '../../../services/api';
-import { ModalConfiguracionConvocatoria } from '../../presidente/modales/ModalConfiguracionConvocatoria';
-import { SeccionConvocatorias } from '../../presidente/secciones/SeccionConvocatorias';
+import { ModalConfiguracionConvocatoria } from '../../responsable/modales/ModalConfiguracionConvocatoria';
+import { SeccionConvocatorias } from '../../responsable/secciones/SeccionConvocatorias';
 
 export function SeccionConvocatoriasAdmin() {
   const { tema, inputCls } = useTheme();

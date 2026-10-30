@@ -1,6 +1,6 @@
 /* Punto de entrada principal. Renderiza la barra de navegación, las rutas (inicio, dashboard por rol) y el modal de inicio de sesión. */
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
 import { useNoticias } from './contexts/NoticiasContext';
 import { useTheme } from './contexts/ThemeContext';
@@ -21,6 +21,10 @@ import { PaginaInicio } from './pages/PaginaInicio';
 import { PaginaCalendario } from './pages/PaginaCalendario';
 import PaginaConoceClubs from './pages/PaginaConoceClubs';
 import PaginaAcercaProyecto from './pages/PaginaAcercaProyecto';
+import PaginaLandingGeneral from './pages/PaginaLandingGeneral';
+import PaginaSelectorCampus from './pages/PaginaSelectorCampus';
+import PaginaOferta from './pages/PaginaOferta';
+import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
@@ -31,14 +35,20 @@ import { NAVBAR_HEIGHT, NAVBAR_HEIGHT_LOGO } from './constants/limites';
 
 function RedireccionNoticias() {
   const { abrirActualizaciones } = useNoticias();
+  const { authReady, estaAutenticado } = useAutenticacion();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    if (!authReady) return;
+    if (!estaAutenticado) {
+      navigate('/campus/campeche/portal', { replace: true });
+      return;
+    }
     const eventos = location.pathname === '/eventos' || new URLSearchParams(location.search).get('seccion') === 'eventos';
     abrirActualizaciones(eventos ? 'evento' : 'todos');
-    navigate('/', { replace: true });
-  }, [abrirActualizaciones, location.pathname, location.search, navigate]);
+    navigate('/campus/campeche/portal', { replace: true });
+  }, [abrirActualizaciones, authReady, estaAutenticado, location.pathname, location.search, navigate]);
 
   return null;
 }
@@ -56,7 +66,7 @@ function ScrollAlInicio() {
 }
 
 function App() {
-  const { estaAutenticado, authReady, esAdmin, esPresidente, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { estaAutenticado, authReady, esAdminOCoordinacion, esPresidente, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
   const { actualizacionesAbiertas } = useNoticias();
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
@@ -81,23 +91,29 @@ function App() {
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
-    if (!actualizacionesAbiertas && location.pathname !== '/noticias') redirigirPostLogin();
+    if (!actualizacionesAbiertas && location.pathname !== '/noticias' && location.pathname !== '/calendario') redirigirPostLogin();
   }, [redirigirPostLogin, location.pathname, actualizacionesAbiertas]);
 
-  function handleLogout() {
+   function handleLogout() {
     cerrarSesion();
-    navigate('/');
+    navigate('/campus/campeche/portal');
     setMenuAbierto(false);
     setConfirmarLogout(false);
   }
 
-  const mostrarFiltros = location.pathname === '/';
+  const mostrarFiltros = location.pathname === '/campus/campeche/portal';
 
   // La landing /conoce-clubs y la página /acerca-del-proyecto se montan
   // fuera del layout del sistema con este return temprano (mismo patrón que
   // la encuesta): informativas, sin navbar del sistema.
-  const esLanding = location.pathname === '/conoce-clubs';
+  const esLandingGeneral = location.pathname === '/';
+  const esConocenos = location.pathname === '/conocenos';
+  const esSelectorCampus = location.pathname === '/campus';
+  const esOferta = location.pathname === '/oferta';
+  const esExperienciaEstudiantil = location.pathname === '/experiencia-estudiantil';
+  const esLandingCampeche = location.pathname === '/campus/campeche';
   const esAcercaProyecto = location.pathname === '/acerca-del-proyecto';
+  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esOferta || esExperienciaEstudiantil || esLandingCampeche || esAcercaProyecto;
 
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
@@ -143,20 +159,33 @@ function App() {
   // pathname es literalmente una de las dos rutas y su <Route> siempre
   // coincide; las variantes (p. ej. la versión mal escrita de acerca) caen
   // en el layout del sistema y su catch-all 404.
-  if (esLanding || esAcercaProyecto) {
+  if (location.pathname === '/conoce-clubs') {
+    return <Navigate to="/campus/campeche" replace />;
+  }
+
+  if (location.pathname === '/acerca-del-proyecto') {
+    return <Navigate to="/conocenos" replace />;
+  }
+
+  if (esLandingStandalone) {
     return (
       <>
         <ScrollAlInicio />
         <Routes>
-          <Route path="/conoce-clubs" element={<PaginaConoceClubs />} />
-          <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />
+          {esLandingGeneral && <Route path="/" element={<PaginaLandingGeneral />} />}
+          {esConocenos && <Route path="/conocenos" element={<PaginaAcercaProyecto />} />}
+          {esSelectorCampus && <Route path="/campus" element={<PaginaSelectorCampus />} />}
+          {esOferta && <Route path="/oferta" element={<PaginaOferta />} />}
+          {esExperienciaEstudiantil && <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />}
+          {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs onLoginClick={() => setShowLogin(true)} />} />}
         </Routes>
+        {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} />}
       </>
     );
   }
 
   function irADashboard() {
-    if (esAdmin) {
+    if (esAdminOCoordinacion) {
       navigate('/admin/dashboard');
     } else if (esPresidente) {
       navigate('/presidente/dashboard');
@@ -170,15 +199,15 @@ function App() {
     setMenuAbierto(false);
   }
 
-  function irACatalogo() {
-    navigate('/');
+   function irACatalogo() {
+    navigate('/campus/campeche/portal');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   return (
     <div
       className={`min-h-screen font-sans transition-colors duration-300 overflow-x-clip pb-16 lg:pb-0 lg:pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
-      style={{ '--navbar-height': modoOscuro && location.pathname !== '/' ? `${alturaNavbar}px` : '0px' }}
+      style={{ '--navbar-height': modoOscuro && location.pathname !== '/campus/campeche/portal' ? `${alturaNavbar}px` : '0px' }}
     >
       <SplashScreen authReady={authReady} clubesLoading={clubesLoading} onFinish={() => setSplashDone(true)} />
 
@@ -199,8 +228,8 @@ function App() {
         onScrollChange={handleScrollChange}
       />
 
-      {!(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
-      <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />
+      {estaAutenticado && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
+      {estaAutenticado && <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />}
 
       <ModalConfirmacion
         show={confirmarLogout}
@@ -218,7 +247,7 @@ function App() {
       )}
 
       <Routes>
-        <Route path="/" element={
+        <Route path="/campus/campeche/portal" element={
           <PaginaInicio key={catalogoKey}
             clubes={clubesFiltrados}
             clubesLoading={clubesLoading}
@@ -231,12 +260,14 @@ function App() {
         } />
         <Route path="/noticias" element={<RedireccionNoticias />} />
         <Route path="/eventos" element={<RedireccionNoticias />} />
-        <Route path="/calendario" element={<PaginaCalendario />} />
-        {/* Respaldo del early return de arriba: cubre variantes de pathname
-            (p. ej. barra final) para que la landing y la página del proyecto
-            nunca caigan en 404. */}
-        <Route path="/conoce-clubs" element={<PaginaConoceClubs />} />
-        <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />
+        <Route path="/calendario" element={<PaginaCalendario onLoginClick={() => setShowLogin(true)} />} />
+        {/* Compatibilidad: la landing anterior de Campeche ahora vive en
+            /campus/campeche. */}
+        <Route path="/conoce-clubs" element={<Navigate to="/campus/campeche" replace />} />
+        <Route path="/acerca-del-proyecto" element={<Navigate to="/conocenos" replace />} />
+        <Route path="/conocenos" element={<PaginaAcercaProyecto />} />
+        <Route path="/oferta" element={<PaginaOferta />} />
+        <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />
         <Route path="/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />
@@ -251,7 +282,7 @@ function App() {
           </RutaProtegida>
         } />
         <Route path="/admin/dashboard" element={
-          <RutaProtegida requiereAdmin>
+          <RutaProtegida requiereAdminOCoordinacion>
             <PanelAdmin />
           </RutaProtegida>
         } />
@@ -277,7 +308,7 @@ function App() {
         onLoginClick={() => setShowLogin(true)}
         onInicioClick={irACatalogo}
       />
-      {location.pathname === '/' && <PiePagina />}
+      {location.pathname === '/campus/campeche/portal' && <PiePagina />}
     </div>
   );
 }

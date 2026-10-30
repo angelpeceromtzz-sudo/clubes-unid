@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import pool from '../db.js';
-import { authenticate, requireClubPresident, requirePresidenteDeLaSesion, requireCoordinacion } from '../middleware/auth.js';
+import { authenticate, requireClubPresident, requirePresidenteDeLaSesion, requireAdminOrRectoria } from '../middleware/auth.js';
 import { esIdEntero } from '../lib/validarId.js';
 import {
   getFechaInstitucional,
@@ -823,7 +823,7 @@ function idPeriodoDeQuery(valor) {
 }
 
 // GET /api/asistencia/coordinacion/clubes/:clubId/historial
-router.get('/coordinacion/clubes/:clubId/historial', authenticate, requireCoordinacion, async (req, res) => {
+router.get('/coordinacion/clubes/:clubId/historial', authenticate, requireAdminOrRectoria, async (req, res) => {
   try {
     const idClub = await exigirClubParametro(req, res);
     if (!idClub) return;
@@ -839,7 +839,7 @@ router.get('/coordinacion/clubes/:clubId/historial', authenticate, requireCoordi
 });
 
 // GET /api/asistencia/coordinacion/clubes/:clubId/sesiones/:id
-router.get('/coordinacion/clubes/:clubId/sesiones/:id', authenticate, requireCoordinacion, async (req, res) => {
+router.get('/coordinacion/clubes/:clubId/sesiones/:id', authenticate, requireAdminOrRectoria, async (req, res) => {
   try {
     const idClub = await exigirClubParametro(req, res);
     if (!idClub) return;
@@ -865,7 +865,7 @@ router.get('/coordinacion/clubes/:clubId/sesiones/:id', authenticate, requireCoo
 });
 
 // GET /api/asistencia/coordinacion/clubes/:clubId/estadisticas
-router.get('/coordinacion/clubes/:clubId/estadisticas', authenticate, requireCoordinacion, async (req, res) => {
+router.get('/coordinacion/clubes/:clubId/estadisticas', authenticate, requireAdminOrRectoria, async (req, res) => {
   try {
     const idClub = await exigirClubParametro(req, res);
     if (!idClub) return;
@@ -887,7 +887,7 @@ router.get('/coordinacion/clubes/:clubId/estadisticas', authenticate, requireCoo
 });
 
 // GET /api/asistencia/coordinacion/clubes/:clubId/estadisticas/integrante/:userId
-router.get('/coordinacion/clubes/:clubId/estadisticas/integrante/:userId', authenticate, requireCoordinacion, async (req, res) => {
+router.get('/coordinacion/clubes/:clubId/estadisticas/integrante/:userId', authenticate, requireAdminOrRectoria, async (req, res) => {
   try {
     const idClub = await exigirClubParametro(req, res);
     if (!idClub) return;

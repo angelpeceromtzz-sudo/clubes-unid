@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import pool from '../db.js';
 import { esIdEntero } from '../lib/validarId.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_RESPONSABLE_CLUB, ROL_VICEPRESIDENTE, ROL_COORDINACION } from '../constants/roles.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -75,7 +76,7 @@ export function requireRole(...roles) {
 }
 
 export function requireClubLeader(req, res, next) {
-  if (!req.user || (req.user.id_rol !== 2 && req.user.id_rol !== 5)) {
+  if (!req.user || (req.user.id_rol !== ROL_RESPONSABLE_CLUB && req.user.id_rol !== ROL_VICEPRESIDENTE)) {
     return res.status(403).json({ error: 'No tienes permisos para esta acción' });
   }
 
@@ -118,7 +119,7 @@ export function requireClubLeader(req, res, next) {
 // del horario y aplica las mismas restricciones: rol líder (2/5), horario
 // existente (404) y liderazgo sobre su club (403).
 export async function requireHorarioLeader(req, res, next) {
-  if (!req.user || (req.user.id_rol !== 2 && req.user.id_rol !== 5)) {
+  if (!req.user || (req.user.id_rol !== ROL_RESPONSABLE_CLUB && req.user.id_rol !== ROL_VICEPRESIDENTE)) {
     return res.status(403).json({ error: 'No tienes permisos para esta acción' });
   }
 
@@ -153,7 +154,7 @@ export async function requireHorarioLeader(req, res, next) {
 // Si no llega id_club en la petición, se resuelve el club donde el usuario es presidente.
 export async function requireClubPresident(req, res, next) {
   try {
-    if (!req.user || req.user.id_rol !== 2) {
+    if (!req.user || req.user.id_rol !== ROL_RESPONSABLE_CLUB) {
       return res.status(403).json({ error: 'Solo el presidente del club puede realizar esta acción' });
     }
 
@@ -200,7 +201,7 @@ export async function requireClubPresident(req, res, next) {
 // id_club enviado por el cliente.
 export async function requirePresidenteDeLaSesion(req, res, next) {
   try {
-    if (!req.user || req.user.id_rol !== 2) {
+    if (!req.user || req.user.id_rol !== ROL_RESPONSABLE_CLUB) {
       return res.status(403).json({ error: 'Solo el presidente del club puede realizar esta acción' });
     }
 
@@ -239,8 +240,8 @@ export async function requirePresidenteDeLaSesion(req, res, next) {
 
 // Coordinación (PBI-05 §27): admin (rol 3) y rectoría (rol 4) en modo lectura.
 // El vicepresidente queda fuera en Asistencia V1.
-export function requireCoordinacion(req, res, next) {
-  if (!req.user || ![3, 4].includes(req.user.id_rol)) {
+export function requireAdminOrRectoria(req, res, next) {
+  if (!req.user || ![ROL_ADMIN, ROL_RECTORIA].includes(req.user.id_rol)) {
     return res.status(403).json({ error: 'Solo Coordinación (rectoría o admin) puede consultar esta información' });
   }
   next();
@@ -248,6 +249,13 @@ export function requireCoordinacion(req, res, next) {
 
 // Solo para consultas compartidas: no amplía permisos de escritura de los líderes.
 export function requireClubReader(req, res, next) {
-  if (req.user?.id_rol === 3) return next();
+  if (req.user?.id_rol === ROL_ADMIN || req.user?.id_rol === ROL_COORDINACION) return next();
   return requireClubLeader(req, res, next);
+}
+
+export function requireAdminOrCoordinacion(req, res, next) {
+  if (!req.user || ![ROL_ADMIN, ROL_COORDINACION].includes(req.user.id_rol)) {
+    return res.status(403).json({ error: 'No tienes permisos para esta acci\u00f3n' });
+  }
+  next();
 }

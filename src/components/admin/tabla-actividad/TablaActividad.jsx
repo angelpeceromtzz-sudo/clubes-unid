@@ -12,11 +12,12 @@ export function TablaActividad() {
   const [cargando, setCargando] = useState(true);
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
+  const [filtros, setFiltros] = useState({ desde: '', hasta: '', actor: '', tipo: '', club: '' });
 
-  const cargar = useCallback(async (page) => {
+  const cargar = useCallback(async (page, filtrosActuales) => {
     setCargando(true);
     try {
-      const data = await api.getActividadClubes(page);
+      const data = await api.getActividadClubes(page, filtrosActuales);
       setEventos(data.eventos);
       setTotalPaginas(data.totalPages);
       setPagina(data.page);
@@ -29,18 +30,31 @@ export function TablaActividad() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    cargar(pagina);
-  }, [pagina, cargar]);
+    cargar(pagina, filtros);
+  }, [pagina, filtros, cargar]);
+
+  const actualizarFiltro = (campo, valor) => {
+    setFiltros((prev) => ({ ...prev, [campo]: valor }));
+    setPagina(1);
+  };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-black uppercase tracking-wider">Historial de Acciones</h2>
-        <button onClick={() => cargar(pagina)}
+        <h2 className="text-lg font-black uppercase tracking-wider">Actividad de clubes</h2>
+        <button onClick={() => cargar(pagina, filtros)}
           className="text-xs font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
         >
           Actualizar
         </button>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <input type="date" value={filtros.desde} onChange={(e) => actualizarFiltro('desde', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
+        <input type="date" value={filtros.hasta} onChange={(e) => actualizarFiltro('hasta', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
+        <input type="text" placeholder="Actor" value={filtros.actor} onChange={(e) => actualizarFiltro('actor', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
+        <input type="text" placeholder="Tipo" value={filtros.tipo} onChange={(e) => actualizarFiltro('tipo', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
+        <input type="text" placeholder="Club" value={filtros.club} onChange={(e) => actualizarFiltro('club', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
       </div>
 
       {cargando ? (

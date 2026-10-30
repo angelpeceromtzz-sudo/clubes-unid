@@ -2,45 +2,26 @@
    izquierdo (Master) y el detalle en el derecho. En móvil (< md) se transforma
    en una vista de una sola columna estilo Google News / Discover: tarjetas
    destacadas en banner, lista horizontal compacta para el resto y un detalle a
-   pantalla completa. Paleta oscura del sitio (noche/azul marino) con acentos
-   dorados. Cada tarjeta hereda el color de su categoría para identificarla de un
-   vistazo y mantiene su propio indicador "No leído". Reutiliza NoticiasContext. */
+   pantalla completa. Se adapta al tema claro/oscuro del sitio y mantiene el
+   indicador "No leído" y el color de categoría. Reutiliza NoticiasContext. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ModalBase } from '../ui/ModalBase';
 import { Icono } from '../ui/Icono';
 import { useNoticias } from '../../contexts/NoticiasContext';
 import { useAutenticacion } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { api } from '../../services/api';
+import { estiloPublicacion } from '../../constants/publicaciones';
 import { fechaHoyCampus } from '../../utils/fechas';
 import { obtenerUrlImagen } from '../../utils/imagen';
 import { fechaCorta, fechaRelativa, recortarPalabras } from '../../utils/formato';
 import { periodoEvento } from '../../utils/calendario';
 
-const CATEGORIAS = {
-  promocion: {
-    label: 'Promoción',
-    badge: 'border-amber-500 bg-amber-500/20 text-amber-400',
-    acento: 'border-amber-500',
-    punto: 'bg-amber-400',
-    glow: 'shadow-amber-500/20',
-  },
-  evento: {
-    label: 'Evento',
-    badge: 'border-red-500 bg-red-600/20 text-red-400',
-    acento: 'border-red-500',
-    punto: 'bg-red-400',
-    glow: 'shadow-red-500/20',
-  },
-  informativo: {
-    label: 'Informativo',
-    badge: 'border-blue-500 bg-blue-600/20 text-blue-400',
-    acento: 'border-blue-500',
-    punto: 'bg-blue-400',
-    glow: 'shadow-blue-500/20',
-  },
+const GLOW_CATEGORIA = {
+  promocion: 'shadow-amber-500/20',
+  evento: 'shadow-red-500/20',
+  informativo: 'shadow-blue-500/20',
 };
-
-const CATEGORIA_POR_DEFECTO = CATEGORIAS.informativo;
 
 const OPCIONES_FILTRO = [
   { value: 'todos', label: 'Todas las publicaciones' },
@@ -50,6 +31,7 @@ const OPCIONES_FILTRO = [
 ];
 
 function SelectorCategorias({ id, valor, alCambiar }) {
+  const { modoOscuro } = useTheme();
   const [abierto, setAbierto] = useState(false);
   const [activo, setActivo] = useState(0);
   const contenedorRef = useRef(null);
@@ -123,7 +105,7 @@ function SelectorCategorias({ id, valor, alCambiar }) {
 
   return (
     <div ref={contenedorRef} className="relative mt-3">
-      <span id={`${id}-label`} className="mb-2 block text-xs font-semibold text-slate-300">Filtrar por categoría</span>
+      <span id={`${id}-label`} className={`mb-2 block text-xs font-semibold ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>Filtrar por categoría</span>
       <button
         ref={botonRef}
         id={id}
@@ -139,13 +121,17 @@ function SelectorCategorias({ id, valor, alCambiar }) {
             abrir();
           }
         }}
-        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border bg-[#172238] px-4 py-3 text-left text-sm font-semibold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300/25 ${
-          abierto ? 'border-amber-300' : 'border-slate-600 hover:border-amber-300/70'
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300/25 ${
+          modoOscuro ? 'bg-[#172238] text-white' : 'bg-white text-slate-900'
+        } ${
+          abierto
+            ? modoOscuro ? 'border-amber-300' : 'border-amber-500'
+            : modoOscuro ? 'border-slate-600 hover:border-amber-300/70' : 'border-slate-300 hover:border-amber-500'
         }`}
       >
-        <Icono nombre="filter" className="h-4 w-4 shrink-0 text-amber-300" strokeWidth={2} />
+        <Icono nombre="filter" className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-amber-300' : 'text-amber-600'}`} strokeWidth={2} />
         <span className="min-w-0 flex-1 truncate">{seleccionada.label}</span>
-        <Icono nombre="chevron-down" className={`h-4 w-4 shrink-0 text-amber-300 transition-transform ${abierto ? 'rotate-180' : ''}`} strokeWidth={2.5} />
+        <Icono nombre="chevron-down" className={`h-4 w-4 shrink-0 transition-transform ${modoOscuro ? 'text-amber-300' : 'text-amber-600'} ${abierto ? 'rotate-180' : ''}`} strokeWidth={2.5} />
       </button>
       {abierto && (
         <div
@@ -153,7 +139,11 @@ function SelectorCategorias({ id, valor, alCambiar }) {
           role="listbox"
           aria-labelledby={`${id}-label`}
           onKeyDown={manejarTeclaLista}
-          className="absolute top-full right-0 left-0 z-50 mt-2 rounded-xl border border-slate-600 bg-[#121d30] p-1.5 shadow-[0_14px_32px_rgba(2,6,23,0.45)]"
+          className={`absolute top-full right-0 left-0 z-50 mt-2 rounded-xl border p-1.5 ${
+            modoOscuro
+              ? 'border-slate-600 bg-[#121d30] shadow-[0_14px_32px_rgba(2,6,23,0.45)]'
+              : 'border-slate-200 bg-white shadow-[0_14px_32px_rgba(15,23,42,0.16)]'
+          }`}
         >
           {OPCIONES_FILTRO.map((opcion, indice) => {
             const elegida = valor === opcion.value;
@@ -167,11 +157,13 @@ function SelectorCategorias({ id, valor, alCambiar }) {
                 aria-selected={elegida}
                 onClick={() => elegir(opcion.value)}
                 className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-300/50 ${
-                  elegida ? 'bg-amber-300/15 font-semibold text-amber-200' : 'text-slate-200 hover:bg-slate-700/70'
+                  elegida
+                    ? modoOscuro ? 'bg-amber-300/15 font-semibold text-amber-200' : 'bg-amber-50 font-semibold text-amber-800'
+                    : modoOscuro ? 'text-slate-200 hover:bg-slate-700/70' : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
                 <span className="flex-1">{opcion.label}</span>
-                {elegida && <Icono nombre="check" className="h-4 w-4 shrink-0 text-amber-300" strokeWidth={2.5} />}
+                {elegida && <Icono nombre="check" className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-amber-300' : 'text-amber-600'}`} strokeWidth={2.5} />}
               </button>
             );
           })}
@@ -181,15 +173,21 @@ function SelectorCategorias({ id, valor, alCambiar }) {
   );
 }
 
-function infoCategoria(categoria) {
-  return CATEGORIAS[categoria] ?? CATEGORIA_POR_DEFECTO;
+function infoCategoria(categoria, modoOscuro) {
+  return {
+    ...estiloPublicacion(categoria, modoOscuro),
+    glow: GLOW_CATEGORIA[categoria] ?? GLOW_CATEGORIA.informativo,
+  };
 }
 
 function EtiquetaTendencia({ publicacion, totalInteresados, className = '' }) {
+  const { modoOscuro } = useTheme();
   const total = Number(totalInteresados ?? publicacion.total_interesados) || 0;
   if (publicacion.categoria !== 'evento' || total <= 10) return null;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full bg-amber-400/10 px-2.5 py-1 text-xs font-bold text-amber-300 ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+      modoOscuro ? 'bg-amber-400/10 text-amber-300' : 'bg-amber-50 text-amber-700'
+    } ${className}`}>
       <Icono nombre="zap" className="h-3.5 w-3.5" strokeWidth={2} />
       En tendencia · {total} interesados
     </span>
@@ -211,6 +209,7 @@ export function ModalActualizaciones({ onLoginClick }) {
     refetch,
   } = useNoticias();
   const { usuario } = useAutenticacion();
+  const { modoOscuro } = useTheme();
   const [seleccionId, setSeleccionId] = useState(null);
   // Detalle a pantalla completa en móvil (null = lista).
   const [activeMobileNews, setActiveMobileNews] = useState(null);
@@ -222,6 +221,67 @@ export function ModalActualizaciones({ onLoginClick }) {
   const [errorConsultaIntereses, setErrorConsultaIntereses] = useState({ id: null, mensaje: '' });
   const usuarioId = usuario?.id_usuario ?? usuario?.id ?? null;
   const intereses = interesesUsuario.id === usuarioId ? interesesUsuario.ids : [];
+
+  // Estilos compartidos por las tres vistas del modal (móvil, lista y detalle).
+  // Evitan repetir condicionales de tema en cada nodo y mantienen el modo oscuro
+  // existente sin cambios visuales.
+  const tm = modoOscuro
+    ? {
+        panel: 'border-slate-800 bg-[#0b0f19]',
+        fondo: 'bg-[#0b0f19]',
+        cabecera: 'border-slate-800 bg-[#0f172a]',
+        superficie: 'bg-[#131b2e]',
+        borde: 'border-slate-800',
+        texto: 'text-white',
+        textoSuave: 'text-slate-300',
+        textoMuted: 'text-slate-400',
+        textoTenue: 'text-slate-500',
+        scrollbar: 'scrollbar-dark',
+        cerrar: 'border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-700 hover:text-white',
+        metadato: 'border-slate-700 bg-slate-800/60 text-slate-300',
+        bordeInteres: 'border-slate-700',
+        fondoComprobando: 'border-slate-700 bg-slate-800/50 text-slate-300',
+        finalizado: 'border-slate-700 text-slate-400',
+        error: 'text-red-400',
+        gradienteBanner: 'bg-gradient-to-br from-[#0b0f19] via-[#18223f] to-[#131b2e]',
+        gradienteOverlay: 'bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/40 to-transparent',
+        fechaBadge: 'border-amber-500/40 bg-[#0b0f19]/80 text-amber-400',
+        subtitulo: 'text-amber-300/90',
+        fechaEvento: 'text-amber-300',
+        fechaPublicacion: 'text-amber-400',
+        badgeNoLeido: 'border-amber-500/60 bg-amber-500/20 text-amber-300',
+        seccion: 'text-amber-400',
+        iconoVacio: 'text-slate-600',
+        fondoVacio: 'bg-slate-800/40',
+      }
+    : {
+        panel: 'border-slate-200 bg-white',
+        fondo: 'bg-slate-50',
+        cabecera: 'border-slate-200 bg-white',
+        superficie: 'bg-white',
+        borde: 'border-slate-200',
+        texto: 'text-slate-900',
+        textoSuave: 'text-slate-700',
+        textoMuted: 'text-slate-600',
+        textoTenue: 'text-slate-500',
+        scrollbar: 'scrollbar-amber',
+        cerrar: 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+        metadato: 'border-slate-200 bg-slate-100 text-slate-700',
+        bordeInteres: 'border-slate-200',
+        fondoComprobando: 'border-slate-200 bg-slate-100 text-slate-600',
+        finalizado: 'border-slate-300 text-slate-500',
+        error: 'text-red-600',
+        gradienteBanner: 'bg-gradient-to-br from-slate-100 via-white to-amber-50',
+        gradienteOverlay: 'bg-gradient-to-t from-white via-white/70 to-transparent',
+        fechaBadge: 'border-amber-300 bg-white/90 text-amber-700',
+        subtitulo: 'text-amber-700',
+        fechaEvento: 'text-amber-700',
+        fechaPublicacion: 'text-amber-700',
+        badgeNoLeido: 'border-amber-300 bg-amber-50 text-amber-700',
+        seccion: 'text-amber-700',
+        iconoVacio: 'text-slate-400',
+        fondoVacio: 'bg-slate-100',
+      };
 
   useEffect(() => {
     if (recienConfirmadoId === null) return;
@@ -286,10 +346,10 @@ export function ModalActualizaciones({ onLoginClick }) {
   if (!actualizacionesAbiertas) return null;
 
   const noticia = ordenMostrado.find((n) => n.id_noticia === seleccionId) ?? ordenMostrado[0] ?? null;
-  const categoriaActual = noticia ? infoCategoria(noticia.categoria) : null;
+  const categoriaActual = noticia ? infoCategoria(noticia.categoria, modoOscuro) : null;
 
   const noticiaMobile = activeMobileNews;
-  const categoriaMobile = noticiaMobile ? infoCategoria(noticiaMobile.categoria) : null;
+  const categoriaMobile = noticiaMobile ? infoCategoria(noticiaMobile.categoria, modoOscuro) : null;
 
   function seleccionar(n) {
     setSeleccionId(n.id_noticia);
@@ -341,12 +401,12 @@ export function ModalActualizaciones({ onLoginClick }) {
     const comprobandoInteres = Boolean(usuarioId && interesesUsuario.id !== usuarioId);
     const errorVisible = errorConsulta || errorInteres;
     return (
-      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-700 pt-4">
+      <div className={`mt-5 flex flex-wrap items-center gap-3 border-t pt-4 ${tm.bordeInteres}`}>
         {interesado ? (
           <button type="button" disabled
             aria-label={`Interés confirmado en ${evento.titulo}`}
             title="Tu interés quedó guardado en tu cuenta"
-            className={`boton-interes-confirmado${recienConfirmadoId === evento.id_noticia ? ' boton-interes-confirmado--reciente' : ''}`}
+            className={`boton-interes-confirmado${modoOscuro ? '' : ' boton-interes-confirmado--claro'}${recienConfirmadoId === evento.id_noticia ? ' boton-interes-confirmado--reciente' : ''}`}
           >
             <span className="interes-confirmado-marca">
               <Icono nombre="check" className="h-4 w-4" strokeWidth={3} />
@@ -354,7 +414,7 @@ export function ModalActualizaciones({ onLoginClick }) {
             Interés confirmado
           </button>
         ) : comprobandoInteres ? (
-          <div role="status" className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-xs font-semibold text-slate-300">
+          <div role="status" className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold ${tm.fondoComprobando}`}>
             <span className={`h-2 w-2 rounded-full ${errorConsulta ? 'bg-red-400' : 'animate-pulse bg-amber-400'}`} aria-hidden="true" />
             {errorConsulta ? 'Estado no disponible' : 'Comprobando tu interés...'}
           </div>
@@ -363,7 +423,7 @@ export function ModalActualizaciones({ onLoginClick }) {
             disabled={procesandoId !== null || finalizado}
             aria-label={`Mostrar interés en ${evento.titulo}`}
             className={finalizado
-              ? 'inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-400'
+              ? `inline-flex cursor-not-allowed items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold ${tm.finalizado}`
               : `boton-interes-cta${procesandoId === evento.id_noticia ? ' boton-interes-cta--procesando' : ''}`}
           >
             {finalizado ? <Icono nombre="clock" className="h-4 w-4" strokeWidth={2.3} /> : (
@@ -375,7 +435,7 @@ export function ModalActualizaciones({ onLoginClick }) {
           </button>
         )}
         <EtiquetaTendencia publicacion={evento} totalInteresados={conteos[evento.id_noticia]} />
-        {errorVisible && <p role="alert" className="w-full text-xs font-medium text-red-400">{errorVisible}</p>}
+        {errorVisible && <p role="alert" className={`w-full text-xs font-medium ${tm.error}`}>{errorVisible}</p>}
       </div>
     );
   }
@@ -383,7 +443,7 @@ export function ModalActualizaciones({ onLoginClick }) {
   function renderTarjeta(n) {
     const activa = noticia?.id_noticia === n.id_noticia;
     const urlImagen = obtenerUrlImagen(n.url_imagen);
-    const cat = infoCategoria(n.categoria);
+    const cat = infoCategoria(n.categoria, modoOscuro);
     const noLeida = !estaLeida(n.id_noticia);
     const secundario = n.subtitulo?.trim() || recortarPalabras(n.contenido, 10);
     return (
@@ -391,9 +451,9 @@ export function ModalActualizaciones({ onLoginClick }) {
         key={n.id_noticia}
         onClick={() => seleccionar(n)}
         aria-current={activa}
-        className={`relative block w-full overflow-hidden rounded-xl border-2 text-left transition-all duration-200 ${cat.acento} ${
+        className={`relative block w-full overflow-hidden rounded-xl border-2 text-left transition-all duration-200 ${cat.borde} ${
           activa
-            ? `scale-[1.02] shadow-lg ${cat.glow}`
+            ? `scale-[1.02] shadow-lg ${modoOscuro ? cat.glow : ''}`
             : 'border-opacity-40 opacity-70 hover:opacity-100'
         }`}
       >
@@ -405,23 +465,27 @@ export function ModalActualizaciones({ onLoginClick }) {
             className="absolute inset-0 h-full w-full object-cover"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0b0f19]/95 via-[#0b0f19]/85 to-[#0b0f19]/60" />
+        <div className={`absolute inset-0 ${
+          modoOscuro
+            ? 'bg-gradient-to-br from-[#0b0f19]/95 via-[#0b0f19]/85 to-[#0b0f19]/60'
+            : 'bg-gradient-to-br from-white/95 via-white/90 to-white/70'
+        }`} />
         <div className="relative p-4">
           <div className="mb-2 flex items-center gap-2">
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${cat.punto}`} />
             {noLeida && (
-              <span className="rounded-full border border-amber-500/60 bg-amber-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-300">
+              <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${tm.badgeNoLeido}`}>
                 No leído
               </span>
             )}
           </div>
 
-          <h3 className="text-sm font-bold leading-snug text-white">{n.titulo}</h3>
-          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {periodoEvento(n)}</p>}
+          <h3 className={`text-sm font-bold leading-snug ${tm.texto}`}>{n.titulo}</h3>
+          {n.categoria === 'evento' && n.fecha_evento && <p className={`mt-1 text-xs font-semibold ${tm.fechaEvento}`}>📅 {periodoEvento(n)}</p>}
           <EtiquetaTendencia publicacion={n} totalInteresados={conteos[n.id_noticia]} className="mt-2" />
 
           {secundario && (
-            <p className="mt-1 line-clamp-1 text-xs text-slate-400">{secundario}</p>
+            <p className={`mt-1 line-clamp-1 text-xs ${tm.textoMuted}`}>{secundario}</p>
           )}
 
           <div className="mt-4 flex items-end justify-between gap-2">
@@ -431,7 +495,7 @@ export function ModalActualizaciones({ onLoginClick }) {
               {cat.label}
               {n.destacada ? ' · Destacada' : ''}
             </span>
-            <span className="text-xs font-black text-amber-400 drop-shadow">
+            <span className={`text-xs font-black ${tm.fechaPublicacion}`}>
               {fechaCorta(n.fecha_publicacion)}
             </span>
           </div>
@@ -442,7 +506,7 @@ export function ModalActualizaciones({ onLoginClick }) {
 
   // Tarjeta destacada móvil: imagen banner completa + título grande.
   function renderDestacadaMobile(n) {
-    const cat = infoCategoria(n.categoria);
+    const cat = infoCategoria(n.categoria, modoOscuro);
     const urlImagen = obtenerUrlImagen(n.url_imagen);
     const noLeida = !estaLeida(n.id_noticia);
     const secundario = n.subtitulo?.trim() || recortarPalabras(n.contenido, 16);
@@ -450,13 +514,13 @@ export function ModalActualizaciones({ onLoginClick }) {
       <button
         key={n.id_noticia}
         onClick={() => abrirDetalleMobile(n)}
-        className={`block w-full overflow-hidden rounded-xl border-2 bg-[#131b2e] text-left transition-transform duration-200 active:scale-[0.99] ${cat.acento}`}
+        className={`block w-full overflow-hidden rounded-xl border-2 text-left transition-transform duration-200 active:scale-[0.99] ${cat.borde} ${tm.superficie}`}
       >
         {urlImagen ? (
           <img src={urlImagen} alt="" aria-hidden="true" className="h-48 w-full object-cover" />
         ) : (
-          <div className="flex h-48 w-full items-center justify-center bg-gradient-to-br from-[#0b0f19] via-[#18223f] to-[#131b2e]">
-            <Icono nombre="newspaper" className="h-10 w-10 text-slate-600" strokeWidth={1.5} />
+          <div className={`flex h-48 w-full items-center justify-center ${tm.gradienteBanner}`}>
+            <Icono nombre="newspaper" className={`h-10 w-10 ${tm.iconoVacio}`} strokeWidth={1.5} />
           </div>
         )}
         <div className="p-4">
@@ -467,22 +531,22 @@ export function ModalActualizaciones({ onLoginClick }) {
               {cat.label}
             </span>
             {noLeida && (
-              <span className="rounded-full border border-amber-500/60 bg-amber-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-300">
+              <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${tm.badgeNoLeido}`}>
                 No leído
               </span>
             )}
           </div>
-          <h3 className="mt-2 text-lg font-black leading-snug text-white">{n.titulo}</h3>
-          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {periodoEvento(n)}</p>}
+          <h3 className={`mt-2 text-lg font-black leading-snug ${tm.texto}`}>{n.titulo}</h3>
+          {n.categoria === 'evento' && n.fecha_evento && <p className={`mt-1 text-xs font-semibold ${tm.fechaEvento}`}>📅 {periodoEvento(n)}</p>}
           <EtiquetaTendencia publicacion={n} totalInteresados={conteos[n.id_noticia]} className="mt-2" />
           {secundario && (
-            <p className="mt-1 line-clamp-2 text-sm text-slate-300">{secundario}</p>
+            <p className={`mt-1 line-clamp-2 text-sm ${tm.textoSuave}`}>{secundario}</p>
           )}
           <div className="mt-3 flex items-center justify-between gap-2">
-            <span className="text-xs font-black text-amber-400">
+            <span className={`text-xs font-black ${tm.fechaPublicacion}`}>
               {fechaCorta(n.fecha_publicacion)}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${tm.textoMuted}`}>
               {fechaRelativa(n.fecha_publicacion)}
             </span>
           </div>
@@ -493,14 +557,14 @@ export function ModalActualizaciones({ onLoginClick }) {
 
   // Otras noticias móvil: fila horizontal compacta con thumbnail cuadrado.
   function renderCompactaMobile(n) {
-    const cat = infoCategoria(n.categoria);
+    const cat = infoCategoria(n.categoria, modoOscuro);
     const urlImagen = obtenerUrlImagen(n.url_imagen);
     const secundario = n.subtitulo?.trim() || recortarPalabras(n.contenido, 12);
     return (
       <button
         key={n.id_noticia}
         onClick={() => abrirDetalleMobile(n)}
-        className={`flex w-full flex-row items-center justify-between gap-3 rounded-xl border bg-[#131b2e] p-3 text-left transition-transform duration-200 active:scale-[0.99] ${cat.acento}`}
+        className={`flex w-full flex-row items-center justify-between gap-3 rounded-xl border p-3 text-left transition-transform duration-200 active:scale-[0.99] ${cat.borde} ${tm.superficie}`}
       >
         <div className="min-w-0 flex-1">
           <span
@@ -508,13 +572,13 @@ export function ModalActualizaciones({ onLoginClick }) {
           >
             {cat.label}
           </span>
-          <h3 className="mt-1.5 line-clamp-2 text-sm font-bold leading-snug text-white">
+          <h3 className={`mt-1.5 line-clamp-2 text-sm font-bold leading-snug ${tm.texto}`}>
             {n.titulo}
           </h3>
-          {n.categoria === 'evento' && n.fecha_evento && <p className="mt-1 text-xs font-semibold text-amber-300">📅 {periodoEvento(n)}</p>}
+          {n.categoria === 'evento' && n.fecha_evento && <p className={`mt-1 text-xs font-semibold ${tm.fechaEvento}`}>📅 {periodoEvento(n)}</p>}
           <EtiquetaTendencia publicacion={n} totalInteresados={conteos[n.id_noticia]} className="mt-2" />
           {secundario && (
-            <p className="mt-0.5 line-clamp-1 text-xs text-slate-400">{secundario}</p>
+            <p className={`mt-0.5 line-clamp-1 text-xs ${tm.textoMuted}`}>{secundario}</p>
           )}
         </div>
         {urlImagen ? (
@@ -525,7 +589,7 @@ export function ModalActualizaciones({ onLoginClick }) {
             className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
           />
         ) : (
-          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-slate-800/40 text-slate-600">
+          <div className={`flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg ${tm.fondoVacio} ${tm.iconoVacio}`}>
             <Icono nombre="image" className="h-6 w-6" strokeWidth={1.5} />
           </div>
         )}
@@ -538,36 +602,36 @@ export function ModalActualizaciones({ onLoginClick }) {
       show
       onClose={cerrarActualizaciones}
       maxWidth="max-w-6xl"
-      panelClassName="p-0 overflow-hidden border border-slate-800 bg-[#0b0f19] max-h-[92vh] md:max-h-[88vh]"
+      panelClassName={`p-0 overflow-hidden border ${tm.panel} max-h-[92vh] md:max-h-[88vh]`}
       innerClassName=""
     >
       {/* Sin borde propio: el marco lo pone el panel de ModalBase (p-0, sin
           wrapper con padding), y `h-full` + `max-h-*` convierten al hijo en la
           única zona con scroll (las listas internas) sin barra exterior. */}
-      <div className="relative flex h-full max-h-[92vh] flex-col overflow-hidden bg-[#0b0f19] md:max-h-[88vh] md:flex-row">
+      <div className={`relative flex h-full max-h-[92vh] flex-col overflow-hidden md:max-h-[88vh] md:flex-row ${tm.fondo}`}>
         {/* Botón cerrar: neutro gris/blanco, sin rojo */}
         <button
           onClick={cerrarActualizaciones}
           aria-label="Cerrar actualizaciones"
-          className="absolute top-3 right-3 z-30 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-700 bg-slate-800/80 text-slate-200 transition-colors hover:bg-slate-700 hover:text-white"
+          className={`absolute top-3 right-3 z-30 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border transition-colors ${tm.cerrar}`}
         >
           <Icono nombre="close" strokeWidth={2.5} className="h-4 w-4" />
         </button>
 
         {/* ══ Vista móvil: una sola columna (estilo Google News) ══ */}
         <div className="flex h-full min-h-0 w-full flex-col md:hidden">
-          <header className="relative z-20 shrink-0 border-b border-slate-800 bg-[#0f172a] px-4 py-4 pr-14">
+          <header className={`relative z-20 shrink-0 border-b px-4 py-4 pr-14 ${tm.cabecera}`}>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-extrabold tracking-tight text-white">Noticias y eventos</h2>
+              <h2 className={`text-lg font-extrabold tracking-tight ${tm.texto}`}>Noticias y eventos</h2>
               {!cargando && filtradas.length > 0 && (
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${tm.seccion}`}>
                   {filtradas.length} {filtradas.length === 1 ? 'publicación' : 'publicaciones'}
                 </span>
               )}
             </div>
 
             {totalNoLeidas > 0 && (
-              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <p className={`mt-1 text-[10px] font-black uppercase tracking-widest ${tm.textoMuted}`}>
                 {totalNoLeidas} sin leer
               </p>
             )}
@@ -575,16 +639,16 @@ export function ModalActualizaciones({ onLoginClick }) {
             <SelectorCategorias id="filtro-categoria-mobile" valor={filtroActualizaciones} alCambiar={cambiarFiltro} />
           </header>
 
-          <div className="scrollbar-dark min-h-0 flex-1 space-y-6 overflow-y-auto bg-[#0b0f19] p-4">
+          <div className={`min-h-0 flex-1 space-y-6 overflow-y-auto p-4 ${tm.scrollbar} ${tm.fondo}`}>
             {cargando ? (
-              <p className="text-sm text-slate-400">Cargando actualizaciones...</p>
+              <p className={`text-sm ${tm.textoMuted}`}>Cargando actualizaciones...</p>
             ) : filtradas.length === 0 ? (
-              <p className="text-sm text-slate-400">No hay publicaciones en esta categoría.</p>
+              <p className={`text-sm ${tm.textoMuted}`}>No hay publicaciones en esta categoría.</p>
             ) : (
               <>
                 {destacadasMobile.length > 0 && (
                   <section className="space-y-4">
-                    <h3 className="px-1 text-[10px] font-black uppercase tracking-widest text-amber-400">
+                    <h3 className={`px-1 text-[10px] font-black uppercase tracking-widest ${tm.seccion}`}>
                       Publicaciones destacadas
                     </h3>
                     {destacadasMobile.map(renderDestacadaMobile)}
@@ -593,7 +657,7 @@ export function ModalActualizaciones({ onLoginClick }) {
 
                 {restoMobile.length > 0 && (
                   <section className="space-y-3">
-                    <h3 className="px-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <h3 className={`px-1 text-[10px] font-black uppercase tracking-widest ${tm.textoTenue}`}>
                       Otras publicaciones
                     </h3>
                     {restoMobile.map(renderCompactaMobile)}
@@ -606,19 +670,19 @@ export function ModalActualizaciones({ onLoginClick }) {
 
         {/* ══ Vista escritorio: Master-Detail de dos columnas ══ */}
         {/* Panel izquierdo: historial de noticias */}
-        <aside className="hidden w-full shrink-0 flex-col border-b border-slate-800 bg-[#0f172a] md:flex md:w-96 md:border-b-0 md:border-r">
-          <div className="relative z-20 border-b border-slate-800 px-5 py-4">
+        <aside className={`hidden w-full shrink-0 flex-col border-b md:flex md:w-96 md:border-b-0 md:border-r ${tm.cabecera}`}>
+          <div className={`relative z-20 border-b px-5 py-4 ${tm.cabecera}`}>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-extrabold tracking-tight text-white">Noticias y eventos</h2>
+              <h2 className={`text-lg font-extrabold tracking-tight ${tm.texto}`}>Noticias y eventos</h2>
               {!cargando && filtradas.length > 0 && (
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${tm.seccion}`}>
                   {filtradas.length} {filtradas.length === 1 ? 'publicación' : 'publicaciones'}
                 </span>
               )}
             </div>
 
             {totalNoLeidas > 0 && (
-              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <p className={`mt-1 text-[10px] font-black uppercase tracking-widest ${tm.textoMuted}`}>
                 {totalNoLeidas} sin leer
               </p>
             )}
@@ -626,23 +690,23 @@ export function ModalActualizaciones({ onLoginClick }) {
             <SelectorCategorias id="filtro-categoria" valor={filtroActualizaciones} alCambiar={cambiarFiltro} />
           </div>
 
-          <div className="scrollbar-dark max-h-[45vh] flex-1 space-y-3 overflow-y-auto p-4 md:max-h-none md:min-h-0">
+          <div className={`max-h-[45vh] flex-1 space-y-3 overflow-y-auto p-4 md:max-h-none md:min-h-0 ${tm.scrollbar}`}>
             {cargando ? (
-              <p className="text-sm text-slate-400">Cargando actualizaciones...</p>
+              <p className={`text-sm ${tm.textoMuted}`}>Cargando actualizaciones...</p>
             ) : filtradas.length === 0 ? (
-              <p className="text-sm text-slate-400">No hay publicaciones en esta categoría.</p>
+              <p className={`text-sm ${tm.textoMuted}`}>No hay publicaciones en esta categoría.</p>
             ) : (
               <>
                 {destacadasLista.length > 0 && (
                   <>
-                    <p className="px-1 text-[10px] font-black uppercase tracking-widest text-amber-400">
+                    <p className={`px-1 text-[10px] font-black uppercase tracking-widest ${tm.seccion}`}>
                       Destacadas sin leer
                     </p>
                     {destacadasLista.map(renderTarjeta)}
                   </>
                 )}
                 {destacadasLista.length > 0 && restoLista.length > 0 && (
-                  <p className="px-1 pt-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  <p className={`px-1 pt-2 text-[10px] font-black uppercase tracking-widest ${tm.textoTenue}`}>
                     Todas las publicaciones
                   </p>
                 )}
@@ -653,16 +717,16 @@ export function ModalActualizaciones({ onLoginClick }) {
         </aside>
 
         {/* Panel derecho: detalle de la actualización */}
-        <section className="scrollbar-dark hidden min-w-0 flex-1 overflow-y-auto bg-[#131b2e] p-5 sm:p-7 md:block">
+        <section className={`hidden min-w-0 flex-1 overflow-y-auto p-5 sm:p-7 md:block ${tm.scrollbar} ${tm.superficie}`}>
           {!noticia ? (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
+            <div className={`flex h-full items-center justify-center text-sm ${tm.textoMuted}`}>
               Selecciona una publicación para ver el detalle.
             </div>
           ) : (
             <>
               {/* Banner superior */}
-              <div className="relative h-52 overflow-hidden rounded-xl border border-slate-800 sm:h-64">
-                <div className="h-full w-full bg-gradient-to-br from-[#0b0f19] via-[#18223f] to-[#131b2e]" />
+              <div className={`relative h-52 overflow-hidden rounded-xl border sm:h-64 ${tm.borde}`}>
+                <div className={`h-full w-full ${tm.gradienteBanner}`} />
                 <div
                   className="absolute inset-0 opacity-40"
                   style={{
@@ -678,12 +742,12 @@ export function ModalActualizaciones({ onLoginClick }) {
                     className="absolute inset-0 h-full w-full object-cover opacity-60"
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/40 to-transparent" />
+                <div className={`absolute inset-0 ${tm.gradienteOverlay}`} />
                 <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
-                  <h3 className="text-lg font-extrabold leading-snug text-white drop-shadow sm:text-xl">
+                  <h3 className={`text-lg font-extrabold leading-snug drop-shadow sm:text-xl ${tm.texto}`}>
                     {noticia.titulo}
                   </h3>
-                  <span className="shrink-0 rounded-full border border-amber-500/40 bg-[#0b0f19]/80 px-3 py-1 text-xs font-black text-amber-400">
+                  <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black ${tm.fechaBadge}`}>
                     {fechaCorta(noticia.fecha_publicacion)}
                   </span>
                 </div>
@@ -691,7 +755,7 @@ export function ModalActualizaciones({ onLoginClick }) {
 
               {/* Subtítulo: justo debajo del título del banner */}
               {noticia.subtitulo?.trim() && (
-                <p className="mt-4 text-base font-semibold leading-snug text-amber-300/90">
+                <p className={`mt-4 text-base font-semibold leading-snug ${tm.subtitulo}`}>
                   {noticia.subtitulo}
                 </p>
               )}
@@ -703,18 +767,22 @@ export function ModalActualizaciones({ onLoginClick }) {
                 >
                   {categoriaActual.label}
                 </span>
-                <span className="rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-300">
+                <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${tm.metadato}`}>
                   {fechaRelativa(noticia.fecha_publicacion)}
                 </span>
                 {noticia.destacada && (
-                  <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-400">
+                  <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
+                    modoOscuro
+                      ? 'border-amber-500/40 bg-amber-500/15 text-amber-400'
+                      : 'border-amber-300 bg-amber-50 text-amber-700'
+                  }`}>
                     Destacada
                   </span>
                 )}
               </div>
 
               {noticia.categoria === 'evento' && noticia.fecha_evento && (
-                <p className="mt-4 text-sm font-semibold text-amber-300">
+                <p className={`mt-4 text-sm font-semibold ${tm.fechaEvento}`}>
                   📅 {periodoEvento(noticia)}
                   {noticia.hora_evento && ` · 🕒 ${String(noticia.hora_evento).slice(0, 5)}`}
                   {noticia.lugar_evento && ` · 📍 ${noticia.lugar_evento}`}
@@ -722,11 +790,11 @@ export function ModalActualizaciones({ onLoginClick }) {
               )}
               {renderInteres(noticia)}
               {/* Cuerpo */}
-              <p className="mt-5 text-sm leading-relaxed whitespace-pre-line break-words text-slate-300">
+              <p className={`mt-5 text-sm leading-relaxed whitespace-pre-line break-words ${tm.textoSuave}`}>
                 {noticia.contenido}
               </p>
 
-              <p className="mt-6 text-[10px] uppercase tracking-wider text-slate-500">
+              <p className={`mt-6 text-[10px] uppercase tracking-wider ${tm.textoTenue}`}>
                 Publicado el {fechaCorta(noticia.fecha_publicacion)}
               </p>
             </>
@@ -736,18 +804,18 @@ export function ModalActualizaciones({ onLoginClick }) {
 
       {/* ══ Detalle móvil: panel a pantalla completa ══ */}
       {noticiaMobile && (
-        <div className="scrollbar-dark fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-[#0b0f19] p-4 md:hidden">
+        <div className={`fixed inset-0 z-[60] flex flex-col overflow-y-auto p-4 md:hidden ${tm.scrollbar} ${tm.fondo}`}>
           <button
             onClick={() => setActiveMobileNews(null)}
-            className="mb-4 inline-flex w-fit shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-bold text-slate-200 transition-colors hover:bg-slate-700 hover:text-white active:scale-95"
+            className={`mb-4 inline-flex w-fit shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition-colors active:scale-95 ${tm.cerrar}`}
           >
             <Icono nombre="arrow-left" className="h-4 w-4" strokeWidth={2.5} />
             Regresar
           </button>
 
           {/* Imagen de cabecera en banner */}
-          <div className="relative h-56 shrink-0 overflow-hidden rounded-xl border border-slate-800">
-            <div className="h-full w-full bg-gradient-to-br from-[#0b0f19] via-[#18223f] to-[#131b2e]" />
+          <div className={`relative h-56 shrink-0 overflow-hidden rounded-xl border ${tm.borde}`}>
+            <div className={`h-full w-full ${tm.gradienteBanner}`} />
             <div
               className="absolute inset-0 opacity-40"
               style={{
@@ -763,7 +831,7 @@ export function ModalActualizaciones({ onLoginClick }) {
                 className="absolute inset-0 h-full w-full object-cover opacity-70"
               />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/30 to-transparent" />
+            <div className={`absolute inset-0 ${tm.gradienteOverlay}`} />
           </div>
 
           {/* Badge de categoría + metadatos */}
@@ -773,37 +841,41 @@ export function ModalActualizaciones({ onLoginClick }) {
             >
               {categoriaMobile.label}
             </span>
-            <span className="rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-300">
+            <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${tm.metadato}`}>
               {fechaRelativa(noticiaMobile.fecha_publicacion)}
             </span>
             {noticiaMobile.destacada && (
-              <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-400">
+              <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
+                modoOscuro
+                  ? 'border-amber-500/40 bg-amber-500/15 text-amber-400'
+                  : 'border-amber-300 bg-amber-50 text-amber-700'
+              }`}>
                 Destacada
               </span>
             )}
           </div>
 
           {/* Título + subtítulo + cuerpo */}
-          <h2 className="mt-3 text-xl font-black leading-snug text-white">
+          <h2 className={`mt-3 text-xl font-black leading-snug ${tm.texto}`}>
             {noticiaMobile.titulo}
           </h2>
           {noticiaMobile.subtitulo?.trim() && (
-            <p className="mt-2 text-base font-semibold leading-snug text-amber-300/90">
+            <p className={`mt-2 text-base font-semibold leading-snug ${tm.subtitulo}`}>
               {noticiaMobile.subtitulo}
             </p>
           )}
           {noticiaMobile.categoria === 'evento' && noticiaMobile.fecha_evento && (
-            <p className="mt-3 text-sm font-semibold text-amber-300">
+            <p className={`mt-3 text-sm font-semibold ${tm.fechaEvento}`}>
               📅 {periodoEvento(noticiaMobile)}
               {noticiaMobile.hora_evento && ` · 🕒 ${String(noticiaMobile.hora_evento).slice(0, 5)}`}
               {noticiaMobile.lugar_evento && ` · 📍 ${noticiaMobile.lugar_evento}`}
             </p>
           )}
           {renderInteres(noticiaMobile)}
-          <p className="mt-4 text-sm leading-relaxed whitespace-pre-line break-words text-slate-300">
+          <p className={`mt-4 text-sm leading-relaxed whitespace-pre-line break-words ${tm.textoSuave}`}>
             {noticiaMobile.contenido}
           </p>
-          <p className="mt-6 shrink-0 pb-4 text-[10px] uppercase tracking-wider text-slate-500">
+          <p className={`mt-6 shrink-0 pb-4 text-[10px] uppercase tracking-wider ${tm.textoTenue}`}>
             Publicado el {fechaCorta(noticiaMobile.fecha_publicacion)}
           </p>
         </div>

@@ -16,13 +16,13 @@ export function useAuthRedirect() {
       if (sesion?.user) {
         const { id_rol } = sesion.user;
         if (id_rol === 4) navigate('/rectoria/dashboard', { replace: true });
-        else if (id_rol === 3) navigate('/admin/dashboard', { replace: true });
+        else if (id_rol === 3 || id_rol === 7) navigate('/admin/dashboard', { replace: true });
         else if (id_rol === 6) navigate('/mural/dashboard', { replace: true });
         else if (id_rol === 2) navigate('/presidente/dashboard', { replace: true });
         else if (id_rol === 1 && tieneInscripcionActiva) navigate('/dashboard', { replace: true });
         // eslint-disable-next-line react-hooks/set-state-in-effect
         else if (id_rol === 1) setRedireccionPendiente(true);
-        else navigate('/', { replace: true });
+        else navigate('/campus/campeche/portal', { replace: true });
       }
     }
     autenticacionAnterior.current = estaAutenticado;

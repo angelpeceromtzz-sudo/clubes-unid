@@ -22,8 +22,10 @@
 
 export const AUDIENCIAS_NOTIFICACION = ['global', 'presidentes', 'alumnos', 'club'];
 
-const ROLES_LIDER = [2, 5];
-const ROLES_INSTITUCIONALES = [3, 4];
+import { ROL_RESPONSABLE_CLUB, ROL_VICEPRESIDENTE, ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
+
+const ROLES_LIDER = [ROL_RESPONSABLE_CLUB, ROL_VICEPRESIDENTE];
+const ROLES_INSTITUCIONALES = [ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION];
 
 function esIdEnteroPositivo(valor) {
   return typeof valor === 'number' && Number.isInteger(valor) && valor > 0;

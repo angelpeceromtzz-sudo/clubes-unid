@@ -1,6 +1,7 @@
 /* Lista de miembros del club con avatar inicial, nombre y rol. */
 import { useTheme } from '../../../contexts/ThemeContext';
 import { AvatarInicial } from '../../ui/AvatarInicial';
+import { etiquetaResponsable } from '../../../utils/club';
 
 export function SeccionMiembros({ miembros, club }) {
   const { tema, modoOscuro } = useTheme();
@@ -25,7 +26,7 @@ export function SeccionMiembros({ miembros, club }) {
                   <p className={`text-sm font-medium ${tema.title}`}>
                     {m.nombre_completo}
                     {esPresidenteDelClub && (
-                      <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-400 font-bold">Presidente</span>
+                      <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-400 font-bold">{etiquetaResponsable(club)}</span>
                     )}
                   </p>
                   <p className="text-xs text-slate-500">{m.correo_institucional}</p>

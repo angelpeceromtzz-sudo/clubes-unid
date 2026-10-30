@@ -6,7 +6,7 @@
 // entrado a la plataforma no vea menús que no puede usar.
 //
 // Las cuatro pantallas (formulario, carga, error y gracias) se pintan dentro
-// de FondoEncuesta, que pone el color de tema y la marca de agua lobounid.png
+// de FondoEncuesta, que pone el color de tema y la marca de agua branding/branding/lobounid.png
 // detrás del contenido. El aspecto (hero, barra de progreso, tarjetas con chip
 // numérico, botón con gradiente) es puro Tailwind en este archivo: la lógica de
 // respuestas, validación y envío no cambió con el rediseño.

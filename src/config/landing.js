@@ -31,7 +31,7 @@ export const LANDING = {
   // y asignar la ruta aquí. `focal` controla el encuadre (object-position)
   // para conservar al sujeto principal en cada recorte.
   hero: {
-    imagen: '/uriel.jpeg',
+    imagen: '/campus/uriel.jpeg',
     alt: 'Clubs UNID Campeche',
     // Retrato vertical 900×1600: prioriza cabeza y torso en el recorte
     // cover (móvil a ancho completo, escritorio a alto de columna).
@@ -186,7 +186,7 @@ export const LANDING = {
         texto:
           'Espacios de servicio y encuentro que fortalecen la vida en comunidad.',
         icono: 'users',
-        imagen: '/misiones3.jpg',
+        imagen: '/actividades/misiones-3.jpg',
         focal: 'center 18%',
       },
       {
@@ -199,7 +199,7 @@ export const LANDING = {
         texto:
           'Integración con valores de solidaridad y amor al prójimo en comunidad.',
         icono: 'star',
-        imagen: '/trineo-sueños1.jpg',
+        imagen: '/actividades/trineo-suenos-1.jpg',
         focal: 'center 30%',
       },
       {
@@ -217,7 +217,7 @@ export const LANDING = {
         texto:
           'Experiencia documentada de UNID: deporte, arte y convivencia entre campus.',
         icono: 'sun',
-        imagen: '/InterUNID.jpeg',
+        imagen: '/actividades/interunid.jpeg',
         focal: 'center',
       },
     ],

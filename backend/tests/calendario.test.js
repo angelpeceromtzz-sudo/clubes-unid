@@ -92,12 +92,14 @@ test('permite quitar el fin de un periodo y conserva los datos omitidos en otras
   assert.equal(cambio.valores[18], null);
 });
 
-test('rectoría publica avisos de mural y la consulta pública exige aprobación y selección explícita', async () => {
+test('rectoría publica avisos de mural y la consulta exige sesión y selección explícita', async () => {
   assert.equal((await enviar('POST', { titulo: 'Aviso', contenido: 'Información', mostrar_en_mural: true }, 4)).status, 201);
   assert.equal(consultas.find((item) => item.sql.includes('INSERT INTO noticias')).valores[14], true);
-  assert.equal((await enviar('GET', null, null, '/mural')).status, 200);
-  assert.match(consultas[0].sql, /publicada = TRUE AND mostrar_en_mural = TRUE AND solo_calendario = FALSE/);
-  assert.match(consultas[0].sql, /status = 'published'/);
+  assert.equal((await enviar('GET', null, null, '/mural')).status, 401);
+  assert.equal((await enviar('GET', null, 1, '/mural')).status, 200);
+  const consultaMural = consultas.find((item) => item.sql.includes('FROM noticias') && item.sql.includes('mostrar_en_mural = TRUE'));
+  assert.match(consultaMural.sql, /publicada = TRUE AND mostrar_en_mural = TRUE AND solo_calendario = FALSE/);
+  assert.match(consultaMural.sql, /status = 'published'/);
   assert.equal((await enviar('POST', { titulo: 'Aviso', contenido: 'Información', mostrar_en_mural: 'true' })).status, 400);
 });
 

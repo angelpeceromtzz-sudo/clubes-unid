@@ -8,18 +8,27 @@ export function TablaHistorial({
   historial,
   historialLoading,
   onRefresh,
+  filtros,
+  onFiltrosChange,
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle } = useTheme();
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-black uppercase tracking-wider">Actividad de Clubes</h2>
+        <h2 className="text-lg font-black uppercase tracking-wider">Historial administrativo</h2>
         <button
           onClick={onRefresh}
           className="text-xs font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
         >
           Actualizar
         </button>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <input type="date" value={filtros?.desde || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, desde: e.target.value })} className="px-3 py-2 rounded-xl border text-sm" />
+        <input type="date" value={filtros?.hasta || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, hasta: e.target.value })} className="px-3 py-2 rounded-xl border text-sm" />
+        <input type="text" placeholder="Actor" value={filtros?.actor || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, actor: e.target.value })} className="px-3 py-2 rounded-xl border text-sm" />
+        <input type="text" placeholder="Acción" value={filtros?.accion || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, accion: e.target.value })} className="px-3 py-2 rounded-xl border text-sm" />
       </div>
 
       {historialLoading ? (
@@ -42,7 +51,7 @@ export function TablaHistorial({
                 <thead>
                   <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
                     <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Fecha</th>
-                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Administrador</th>
+                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Realizado por</th>
                     <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acción</th>
                     <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Descripción</th>
                   </tr>
@@ -60,14 +69,31 @@ export function TablaHistorial({
                       <td className="px-5 py-4">
                         <Badge texto={{
                           cambio_rol: 'Cambio de Rol',
-                          asignar_club: 'Asignar Club',
-                          desasignar_club: 'Desasignar Club',
+                          asignar_responsable: 'Asignar Responsable',
+                          reasignar_responsable: 'Reasignar Responsable',
+                          retirar_responsable: 'Retirar Responsable',
                           crear_club: 'Crear Club',
                           actualizar_club: 'Actualizar Club',
                           cambio_estatus_club: 'Cambio Estatus',
                           enviar_anuncio: 'Enviar Anuncio',
                           baja_usuario: 'Dar de Baja',
-                        }[h.accion] || h.accion} size="md" color={
+                          desactivar_usuario: 'Desactivar Usuario',
+                          reactivar_usuario: 'Reactivar Usuario',
+                          promover_admin: 'Promover Admin',
+                          degradar_admin: 'Degradar Admin',
+                          crear_noticia: 'Noticia Creada',
+                          actualizar_noticia: 'Noticia Actualizada',
+                          eliminar_noticia: 'Noticia Eliminada',
+                          aprobar_noticia: 'Noticia Aprobada',
+                          rechazar_noticia: 'Noticia Rechazada',
+                          ocultar_noticia: 'Noticia Ocultada',
+                          enviar_revision_noticia: 'Noticia Enviada a Revisión',
+                          crear_diapositiva_hero: 'Banner Creado',
+                          actualizar_diapositiva_hero: 'Banner Actualizado',
+                          eliminar_diapositiva_hero: 'Banner Eliminado',
+                          asignar_club: 'Asignar Club',
+                          desasignar_club: 'Desasignar Club',
+                        }[h.accion] || 'Acción registrada'} size="md" color={
                           h.accion === 'cambio_rol' || h.accion === 'cambio_estatus_club'
                             ? 'amber'
                             : h.accion === 'crear_club' || h.accion === 'enviar_anuncio'
@@ -90,14 +116,31 @@ export function TablaHistorial({
             {historial.map((h) => {
               const textoAccion = {
                 cambio_rol: 'Cambio de Rol',
-                asignar_club: 'Asignar Club',
-                desasignar_club: 'Desasignar Club',
+                asignar_responsable: 'Asignar Responsable',
+                reasignar_responsable: 'Reasignar Responsable',
+                retirar_responsable: 'Retirar Responsable',
                 crear_club: 'Crear Club',
                 actualizar_club: 'Actualizar Club',
                 cambio_estatus_club: 'Cambio Estatus',
                 enviar_anuncio: 'Enviar Anuncio',
                 baja_usuario: 'Dar de Baja',
-              }[h.accion] || h.accion;
+                desactivar_usuario: 'Desactivar Usuario',
+                reactivar_usuario: 'Reactivar Usuario',
+                promover_admin: 'Promover Admin',
+                degradar_admin: 'Degradar Admin',
+                crear_noticia: 'Noticia Creada',
+                actualizar_noticia: 'Noticia Actualizada',
+                eliminar_noticia: 'Noticia Eliminada',
+                aprobar_noticia: 'Noticia Aprobada',
+                rechazar_noticia: 'Noticia Rechazada',
+                ocultar_noticia: 'Noticia Ocultada',
+                enviar_revision_noticia: 'Noticia Enviada a Revisión',
+                crear_diapositiva_hero: 'Banner Creado',
+                actualizar_diapositiva_hero: 'Banner Actualizado',
+                eliminar_diapositiva_hero: 'Banner Eliminado',
+                asignar_club: 'Asignar Club',
+                desasignar_club: 'Desasignar Club',
+              }[h.accion] || 'Acción registrada';
               const colorAccion = h.accion === 'cambio_rol' || h.accion === 'cambio_estatus_club'
                 ? 'amber'
                 : h.accion === 'crear_club' || h.accion === 'enviar_anuncio'

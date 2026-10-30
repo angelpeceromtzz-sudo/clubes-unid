@@ -39,7 +39,7 @@ export function ModalNoticias() {
         <h2 className={`mt-1 text-lg font-black leading-snug ${tema.title}`}>
           {destacada.titulo}
         </h2>
-        <p className={`text-[10px] mt-1 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
+        <p className={`text-[10px] mt-1 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
           {fechaRelativa(destacada.fecha_publicacion)}
         </p>
       </div>
@@ -58,7 +58,7 @@ export function ModalNoticias() {
         {destacada.contenido}
       </p>
 
-      <p className={`mt-4 text-[10px] uppercase tracking-wider ${modoOscuro ? 'text-slate-600' : 'text-slate-400'}`}>
+      <p className={`mt-4 text-[10px] uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
         Publicado el {fechaCorta(destacada.fecha_publicacion)}
       </p>
     </ModalBase>

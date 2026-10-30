@@ -1,7 +1,8 @@
-// Rutas de noticias — consulta pública y administración (admin / rectoría / responsable del mural)
+// Rutas de noticias — consulta con sesión y administración (admin / rectoría / responsable del mural)
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION, ROL_RESPONSABLE_MURAL } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { eliminarImagenCloudinary } from '../lib/eliminarImagenCloudinary.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
@@ -9,8 +10,7 @@ import { fechaEventoValida, errorPeriodoEvento } from '../lib/fechasEvento.js';
 
 // 3 admin · 4 rectoría · 6 responsable_mural. Los tres redactan; sólo
 // rectoría (4) aprueba, rechaza u oculta. Ver `TRANSICIONES`.
-const ROL_RECTORIA = 4;
-const ROLES_EDITOR = [3, 4, 6];
+const ROLES_EDITOR = [ROL_ADMIN, ROL_RECTORIA, ROL_RESPONSABLE_MURAL, ROL_COORDINACION];
 
 // PBI-17: estados del flujo de aprobación previa.
 const ESTADOS_NOTICIA = ['draft', 'pending', 'published', 'rejected'];
@@ -60,7 +60,7 @@ function validarMotivo(valor) {
 // El responsable del mural sólo toca sus propias noticias; admin y rectoría
 // trabajan sobre todo el periódico mural.
 function puedeGestionar(req, noticia) {
-  if (req.user.id_rol === ROL_RECTORIA || req.user.id_rol === 3) return true;
+  if (req.user.id_rol === ROL_RECTORIA || req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION) return true;
   return noticia.id_autor === req.user.id;
 }
 
@@ -98,8 +98,8 @@ const router = Router();
 
 validarParamsEnteros(router);
 
-// Lista noticias públicas, de la más reciente a la más antigua
-router.get('/', async (req, res) => {
+// Noticias privadas: sólo se muestran dentro de una sesión institucional.
+router.get('/', authenticate, async (req, res) => {
   try {
     const limite = Math.min(parseInt(req.query.limite, 10) || 50, 200);
     const result = await pool.query(
@@ -110,6 +110,7 @@ router.get('/', async (req, res) => {
        LIMIT $1`,
       [limite]
     );
+    res.set('Cache-Control', 'private, no-store');
     res.json(result.rows);
   } catch (err) {
     console.error('Error al listar noticias:', err);
@@ -117,8 +118,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Todos los eventos publicados, sin depender del límite del feed de noticias.
-router.get('/eventos', async (req, res) => {
+// Todos los eventos publicados, también dentro de una sesión institucional.
+router.get('/eventos', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT ${CAMPOS},
@@ -127,6 +128,7 @@ router.get('/eventos', async (req, res) => {
        WHERE status = 'published' AND publicada = TRUE AND categoria = 'evento' AND solo_calendario = FALSE
        ORDER BY fecha_publicacion DESC, id_noticia DESC`
     );
+    res.set('Cache-Control', 'private, no-store');
     res.json(result.rows);
   } catch (err) {
     console.error('Error al listar eventos:', err);
@@ -134,14 +136,15 @@ router.get('/eventos', async (req, res) => {
   }
 });
 
-// Avisos del mural sin depender de la paginación del feed de noticias.
-router.get('/mural', async (req, res) => {
+// Avisos de noticias para el mural: privados. El mural público usa /api/mural.
+router.get('/mural', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT ${CAMPOS} FROM noticias
        WHERE status = 'published' AND publicada = TRUE AND mostrar_en_mural = TRUE AND solo_calendario = FALSE
        ORDER BY destacada DESC, fecha_publicacion DESC, id_noticia DESC`
     );
+    res.set('Cache-Control', 'private, no-store');
     res.json(result.rows);
   } catch (err) {
     console.error('Error al listar el mural:', err);
@@ -199,7 +202,7 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
     const condiciones = ['noticias.solo_calendario = FALSE'];
     const parametros = [];
 
-    if (req.user.id_rol !== 3 && req.user.id_rol !== ROL_RECTORIA) {
+    if (req.user.id_rol !== ROL_ADMIN && req.user.id_rol !== ROL_COORDINACION && req.user.id_rol !== ROL_RECTORIA) {
       parametros.push(req.user.id);
       condiciones.push(`noticias.id_autor = $${parametros.length}`);
     }
@@ -481,7 +484,7 @@ router.delete('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, re
     if (!puedeGestionar(req, noticia)) {
       return res.status(403).json({ error: 'No tienes permisos sobre esta noticia' });
     }
-    if (req.user.id_rol !== 3 && req.user.id_rol !== ROL_RECTORIA && noticia.status === 'published') {
+    if (req.user.id_rol !== ROL_ADMIN && req.user.id_rol !== ROL_COORDINACION && req.user.id_rol !== ROL_RECTORIA && noticia.status === 'published') {
       return res.status(409).json({
         error: 'No puedes eliminar una publicación ya publicada: pídele a rectoría que la oculte primero',
       });

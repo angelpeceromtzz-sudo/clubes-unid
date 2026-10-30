@@ -9,7 +9,7 @@ import { EncabezadoPagina } from '../../ui/EncabezadoPagina';
 import { Alerta } from '../../ui/Alerta';
 import { VistaPreviaConvocatorias } from '../vistas/VistaPreviaConvocatorias';
 
-export function SolicitudesPresidente({ club }) {
+export function SolicitudesResponsable({ club }) {
   const { usuario } = useAutenticacion();
   const { tema } = useTheme();
   const clubActivo = Number(club?.id_estatus_club) === 1;

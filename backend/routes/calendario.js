@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { fechaEventoValida, errorPeriodoEvento } from '../lib/fechasEvento.js';
 
@@ -38,9 +39,10 @@ function auditar(req, fecha, accion, verbo) {
     entidadTipo: 'fecha_calendario', entidadId: fecha.id_fecha, detalles: { tipo: fecha.tipo_fecha, titulo: fecha.titulo } });
 }
 
-router.get('/', async (_req, res) => {
+router.get('/', authenticate, async (_req, res) => {
   try {
     const resultado = await pool.query(`SELECT ${CAMPOS} FROM fechas_calendario WHERE publicada = TRUE ORDER BY fecha_inicio, id_fecha`);
+    res.set('Cache-Control', 'private, no-store');
     res.json(resultado.rows);
   } catch (err) {
     console.error('Error al consultar fechas académicas:', err);
@@ -48,7 +50,7 @@ router.get('/', async (_req, res) => {
   }
 });
 
-router.get('/admin', authenticate, requireRole(3, 4), async (_req, res) => {
+router.get('/admin', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (_req, res) => {
   try {
     const resultado = await pool.query(`SELECT ${CAMPOS} FROM fechas_calendario ORDER BY fecha_inicio, id_fecha`);
     res.json(resultado.rows);
@@ -58,7 +60,7 @@ router.get('/admin', authenticate, requireRole(3, 4), async (_req, res) => {
   }
 });
 
-router.post('/', authenticate, requireRole(3, 4), async (req, res) => {
+router.post('/', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     const datos = { ...req.body, publicada: req.body.publicada ?? true };
     const error = errorModelo(datos) || errorFecha(datos);
@@ -76,7 +78,7 @@ router.post('/', authenticate, requireRole(3, 4), async (req, res) => {
   }
 });
 
-router.put('/:id', authenticate, requireRole(3, 4), async (req, res) => {
+router.put('/:id', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     if (!idValido(req.params.id)) return res.status(400).json({ error: 'Fecha académica no válida' });
     const modelo = errorModelo(req.body);
@@ -103,7 +105,7 @@ router.put('/:id', authenticate, requireRole(3, 4), async (req, res) => {
   }
 });
 
-router.delete('/:id', authenticate, requireRole(3, 4), async (req, res) => {
+router.delete('/:id', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     if (!idValido(req.params.id)) return res.status(400).json({ error: 'Fecha académica no válida' });
     const resultado = await pool.query(`DELETE FROM fechas_calendario WHERE id_fecha = $1 RETURNING ${CAMPOS}`, [req.params.id]);

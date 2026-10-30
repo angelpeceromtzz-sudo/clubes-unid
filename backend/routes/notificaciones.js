@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { validarCreacionNotificacion } from '../lib/notificacionPermisos.js';
 import { limitadorNotificaciones } from '../lib/rateLimits.js';
@@ -67,7 +68,7 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // Actividad del sistema — solo admin/rectoría
-router.get('/actividad', authenticate, requireRole(3, 4), async (req, res) => {
+router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     let page = parseInt(req.query.page, 10);
     if (!Number.isFinite(page) || page < 1) page = 1;

@@ -9,7 +9,7 @@ import { HeroClub } from './sections/HeroClub';
 import { AprendizajeClub } from './sections/AprendizajeClub';
 import { RequisitosFAQClub } from './sections/RequisitosFAQClub';
 import { HorariosClub } from './sections/HorariosClub';
-import { PresidenteClub } from './sections/PresidenteClub';
+import { ResponsableClub } from './sections/ResponsableClub';
 import { EventosClub } from './sections/EventosClub';
 import { ModalidadClub } from './sections/ModalidadClub';
 import { InfoAdicionalClub } from './sections/InfoAdicionalClub';
@@ -31,7 +31,7 @@ export function DetalleClub({ onLoginClick }) {
     setLoading(true);
     api.getClub(id)
       .then((data) => setClub(data))
-      .catch(() => navigate('/'))
+      .catch(() => navigate('/campus/campeche/portal'))
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
@@ -99,7 +99,7 @@ export function DetalleClub({ onLoginClick }) {
           deshabilitado={deshabilitado}
         />
 
-        <PresidenteClub club={club} modoOscuro={modoOscuro} />
+        <ResponsableClub club={club} modoOscuro={modoOscuro} />
 
         <div className="md:hidden">
           <AprendizajeClub modoOscuro={modoOscuro} />

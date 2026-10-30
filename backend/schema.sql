@@ -20,11 +20,12 @@ CREATE TABLE IF NOT EXISTS cat_roles (
 
 INSERT INTO cat_roles (id_rol, nombre_rol) VALUES
     (1, 'alumno'),
-    (2, 'presidente'),
+    (2, 'responsable_club'),
     (3, 'admin'),
     (4, 'rectoria'),
     (5, 'vicepresidente'),
-    (6, 'responsable_mural')
+    (6, 'responsable_mural'),
+    (7, 'coordinacion')
 ON CONFLICT (id_rol) DO UPDATE SET nombre_rol = EXCLUDED.nombre_rol;
 
 CREATE TABLE IF NOT EXISTS cat_estatus_clubes (
@@ -356,6 +357,8 @@ CREATE TABLE IF NOT EXISTS actividad_clubes (
 
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_fecha ON actividad_clubes(fecha_creacion DESC);
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_club ON actividad_clubes(id_club);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_club_id_presidente ON clubes (id_presidente) WHERE id_presidente IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS diapositivas_hero (
     id_diapositiva SERIAL PRIMARY KEY,

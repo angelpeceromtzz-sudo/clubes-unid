@@ -28,7 +28,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const enPanel = location.pathname !== '/';
+  const enPanel = location.pathname !== '/campus/campeche/portal';
 
   function irPanel() {
     if (esAdmin) navigate('/admin/dashboard');
@@ -44,7 +44,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
     <nav className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom border-t transition-transform duration-300 ${mostrarNav ? 'translate-y-0' : 'translate-y-full'} ${modoOscuro ? 'bg-[#080d18] border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
       <div className="flex items-center justify-around py-2 px-4">
         <button
-          onClick={() => { onInicioClick?.(); navigate('/'); }}
+          onClick={() => { onInicioClick?.(); navigate('/campus/campeche/portal'); }}
           className={`flex flex-col items-center gap-0.5 transition-colors duration-200 cursor-pointer ${!enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
         >
           <Icono nombre="home" strokeWidth={2} className="h-5 w-5" />
