@@ -176,7 +176,7 @@ export default function PaginaAcercaProyecto() {
   // ajustarse al contenido.
 
   return (
-    <main className={`pb-10 lg:pb-20 ${tema.bg} ${tema.text}`}>
+    <main className={`${tema.bg} ${tema.text}`}>
       <BarraGeneral />
 
       {/* Presentación: kicker, título e invitación. La encuesta no se ofrece
@@ -300,7 +300,7 @@ export default function PaginaAcercaProyecto() {
                   {ACERCA.paraQuien.imagen.leyenda}
                 </figcaption>
               </figure>
-              <div className="lg:self-center">
+              <div className="lg:self-start">
                 <h3 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight ${tema.title}`}>
                   <span className="border-b-4 border-amber-400 pb-1">{ACERCA.paraQuien.protagonista}</span>
                 </h3>

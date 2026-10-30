@@ -1,6 +1,6 @@
 // Fondo visual de las pantallas de encuesta: color de tema + marca de agua.
 //
-// lobounid.png (public/) es un PNG transparente con tonos dorados: al medirlo,
+// branding/branding/lobounid.png (public/) es un PNG transparente con tonos dorados: al medirlo,
 // la mitad de sus píxeles opacos son oscuros y otra buena parte es casi blanca
 // (promedio RGB 151,112,32). Por eso el tratamiento cambia según el tema:
 // - oscuro: casi tal cual, con un poco de brillo extra, porque las luces
@@ -19,7 +19,7 @@ export function FondoEncuesta({ children, contenida = false }) {
 
   const marca = (
     <img
-      src="/lobounid.png"
+      src="/branding/lobounid.png"
       alt=""
       aria-hidden="true"
       draggable={false}

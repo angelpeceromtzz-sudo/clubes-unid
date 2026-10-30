@@ -302,7 +302,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
   const slides = [
     {
       id: 'clubes',
-      imagen: '/unidcampeche.jpeg',
+      imagen: '/campus/unid-campeche.jpeg',
       kicker: 'INICIATIVA ESTUDIANTIL',
       titulo: ['Tu universidad.', 'Tus pasiones.', 'Tu comunidad.'],
       linea: 'DESCUBRE · PARTICIPA · CONECTA',
@@ -311,12 +311,21 @@ export default function PaginaConoceClubs({ onLoginClick }) {
     },
     {
       id: 'experiencias',
-      imagen: '/campuscampeche2.jpeg',
+      imagen: '/campus/campus-campeche-2.jpeg',
       kicker: 'EXPERIENCIAS',
       titulo: ['Encuentra lo que te mueve.', 'Participa fuera del aula.'],
       linea: 'DEPORTE · CULTURA · TECNOLOGIA',
       descripcion: 'Campus Campeche ofrece distintas formas de participar y encontrar actividades fuera del aula.',
       cta: { texto: 'Ver actividades', href: '/oferta' },
+    },
+    {
+      id: 'campus-unid',
+      imagen: '/campus/campus-unid.jpg',
+      kicker: 'FORMA PARTE',
+      titulo: ['Tu próxima experiencia', 'puede empezar aquí.'],
+      linea: 'COMUNIDAD · PARTICIPACIÓN · CRECIMIENTO',
+      descripcion: 'Conoce clubes, conecta con compañeros y entra al portal de Campus Campeche.',
+      cta: { texto: 'Entrar al portal', href: '/campus/campeche/portal' },
     },
   ];
 
@@ -341,7 +350,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
   }, [pausado]);
 
   return (
-    <main className={`pb-10 lg:pb-20 ${tema.bg} ${tema.text}`}>
+    <main className={`${tema.bg} ${tema.text} overflow-x-hidden`}>
       <BarraGeneral onLoginClick={onLoginClick} />
 
       {/* A. Presentacion: hero-carrusel de Campus Campeche */}
@@ -359,12 +368,12 @@ export default function PaginaConoceClubs({ onLoginClick }) {
         <div className="lg:hidden relative min-h-[88vh]">
           <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/campuscampeche.png')" }}
+            style={{ backgroundImage: "url('/campus/campus-campeche.png')" }}
             aria-hidden="true"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0b111e] via-[#0b111e]/90 to-[#0b111e]/55" aria-hidden="true" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0b111e] via-[#0b111e]/75 to-[#0b111e]/40" aria-hidden="true" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-transparent to-transparent" aria-hidden="true" />
-          <div className="relative px-6 sm:px-8 py-20 flex items-end min-h-[88vh]">
+          <div className="relative px-6 sm:px-8 py-20 flex items-center min-h-[88vh]">
             <div className="max-w-xl space-y-5">
               <p className="text-xs uppercase tracking-[0.3em] font-black text-amber-400">
                 Iniciativa estudiantil
@@ -413,9 +422,9 @@ export default function PaginaConoceClubs({ onLoginClick }) {
                 style={{ backgroundImage: `url('${slide.imagen}')` }}
                 aria-hidden="true"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0b111e] via-[#0b111e]/88 to-[#0b111e]/35" aria-hidden="true" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0b111e] via-[#0b111e]/70 to-[#0b111e]/20" aria-hidden="true" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-transparent to-transparent" aria-hidden="true" />
-              <div className="relative px-6 sm:px-8 lg:px-12 xl:px-16 py-20 flex items-end min-h-[88vh]">
+              <div className="relative px-6 sm:px-8 lg:px-12 xl:px-16 py-20 flex items-center min-h-[88vh]">
                 <div className="max-w-3xl space-y-5">
                   <p className="text-xs sm:text-sm uppercase tracking-[0.3em] font-black text-amber-400">
                     {slide.kicker}
@@ -460,7 +469,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
               type="button"
               onClick={() => setSlideActual(index)}
               aria-label={`Ir a la diapositiva ${index + 1} de ${slides.length}`}
-              className={`h-2.5 rounded-full transition-all ${index === slideActual ? 'w-8 bg-amber-400' : 'w-2.5 bg-white/40 hover:bg-white/70'}`}
+              className={`h-2.5 w-2.5 rounded-full transition-colors ${index === slideActual ? 'bg-amber-400' : 'bg-white/40 hover:bg-white/70'}`}
             />
           ))}
         </div>
@@ -469,7 +478,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
           type="button"
           onClick={() => setSlideActual((prev) => (prev - 1 + slides.length) % slides.length)}
           aria-label="Diapositiva anterior"
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 hidden xl:flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white hover:bg-black/50 transition"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 hidden xl:flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white hover:bg-amber-400 hover:text-[#0e162c] hover:border-amber-400 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition cursor-pointer shadow-lg"
         >
           ‹
         </button>
@@ -477,7 +486,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
           type="button"
           onClick={() => setSlideActual((prev) => (prev + 1) % slides.length)}
           aria-label="Diapositiva siguiente"
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 hidden xl:flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white hover:bg-black/50 transition"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 hidden xl:flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white hover:bg-amber-400 hover:text-[#0e162c] hover:border-amber-400 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition cursor-pointer shadow-lg"
         >
           ›
         </button>
@@ -494,7 +503,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
               </p>
             </div>
             <div className="overflow-hidden rounded-2xl">
-              <img src="/para-quien.jpeg" alt="Cultura y experiencia UNID Campeche" className="h-64 w-full object-cover" />
+              <img src="/campus/para-quien.jpeg" alt="Cultura y experiencia UNID Campeche" className="h-64 w-full object-cover" />
             </div>
           </div>
         </div>
@@ -503,42 +512,28 @@ export default function PaginaConoceClubs({ onLoginClick }) {
       {/* Acerca de nuestro campus */}
       <section className="scroll-mt-8">
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
-          <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-2 lg:items-center">
-            <div className="overflow-hidden rounded-2xl">
-              <img src="/como-nacio.jpeg" alt="Campus UNID Campeche" className="h-64 w-full object-cover" />
+          <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-2 lg:items-stretch">
+            <div className="overflow-hidden rounded-2xl min-h-[320px]">
+              <iframe
+                title="Ubicacion de UNID Campus Campeche"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d278.956375656593!2d-90.55667553802812!3d19.832561328225736!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85f833fb6a059fcf%3A0x536599468e91ee26!2sUNID%20Campus%20Campeche!5e0!3m2!1ses!2smx!4v1793301096053!5m2!1ses!2smx"
+                className="h-full min-h-[320px] w-full border-0"
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
             </div>
             <div>
+              <p className="text-xs uppercase tracking-[0.25em] font-black text-amber-400 mb-3">
+                Campus Campeche
+              </p>
               <h2 className={tituloSeccion}>Acerca de nuestro campus</h2>
               <p className={`mt-4 text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
-                En la UNID en Campeche, ubicada en la Av. Resurgimiento 611, en la Col. Lazareto, contamos con instalaciones modernas y equipadas para tu aprendizaje. Nuestros espacios estan pensados para que la teoria y la practica se unan, con aulas interactivas, laboratorios de computo y areas de estudio colaborativo. Ademas, la ubicacion de nuestro campus garantiza una accesibilidad sin igual gracias a su proximidad a diversas rutas de transporte publico, facilitando el desplazamiento de nuestros estudiantes.
+                Campus Campeche es actualmente el punto de partida de Clubs UNID. Aqui, los estudiantes pueden descubrir clubes, actividades y experiencias que forman parte de la vida universitaria.
               </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Campus en numeros */}
-      <section className={`scroll-mt-8 ${bandaConcepto}`}>
-        <div className={`${CONTENEDOR} py-12 sm:py-16`}>
-          <div className="max-w-6xl mx-auto">
-            <h2 className={tituloSeccion}>El campus en numeros</h2>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-2xl border p-5">
-                <p className="text-3xl font-black text-amber-400">86</p>
-                <p className={`mt-1 text-sm ${tema.subtitle}`}>Docentes presenciales</p>
-              </div>
-              <div className="rounded-2xl border p-5">
-                <p className="text-3xl font-black text-amber-400">3</p>
-                <p className={`mt-1 text-sm ${tema.subtitle}`}>Areas recreativas dedicadas al deporte</p>
-              </div>
-              <div className="rounded-2xl border p-5">
-                <p className="text-3xl font-black text-amber-400">16</p>
-                <p className={`mt-1 text-sm ${tema.subtitle}`}>Programas con validez oficial (RVOE)</p>
-              </div>
-              <div className="rounded-2xl border p-5">
-                <p className="text-3xl font-black text-amber-400">5</p>
-                <p className={`mt-1 text-sm ${tema.subtitle}`}>Laboratorios totalmente equipados</p>
-              </div>
+              <p className={`mt-3 text-xs sm:text-sm ${tema.subtitle}`}>
+                Av. Resurgimiento 611, Col. Lazareto, Campeche.
+              </p>
             </div>
           </div>
         </div>

@@ -7,22 +7,22 @@ const EXPERIENCIAS = [
   {
     titulo: 'Deporte',
     texto: 'Actividad, competencia y trabajo en equipo.',
-    imagen: '/trineo-sue%C3%B1os1.jpg',
+    imagen: '/actividades/deportes.jpg',
   },
   {
     titulo: 'Cultura',
     texto: 'Arte, expresión y vida universitaria.',
-    imagen: '/como-nacio.jpeg',
+    imagen: '/actividades/cultura.jpg',
   },
   {
     titulo: 'Tecnología',
     texto: 'Proyectos, innovación y creatividad aplicada.',
-    imagen: '/InterUNID.jpeg',
+    imagen: '/actividades/tecnologia.jpg',
   },
   {
     titulo: 'Comunidad',
     texto: 'Encuentro, servicio y crecimiento personal.',
-    imagen: '/misiones3.jpg',
+    imagen: '/actividades/misiones-3.jpg',
   },
 ];
 
@@ -31,7 +31,7 @@ export default function PaginaLandingGeneral() {
   const oscuro = modoOscuro;
 
   return (
-    <main className={oscuro ? 'bg-[#0b111e] text-white' : 'bg-slate-50 text-slate-900'}>
+    <main className={oscuro ? 'bg-[#0b111e] text-white overflow-x-hidden' : 'bg-slate-50 text-slate-900 overflow-x-hidden'}>
       <BarraGeneral />
 
       <section
@@ -40,11 +40,11 @@ export default function PaginaLandingGeneral() {
       >
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/misiones3.jpg')" }}
+          style={{ backgroundImage: "url('/actividades/hero-principal.jpg')" }}
           aria-hidden="true"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-r from-[#0b111e] via-[#0b111e]/90 to-[#0b111e]/70"
+          className="absolute inset-0 bg-gradient-to-r from-[#0b111e] via-[#0b111e]/70 to-[#0b111e]/30"
           aria-hidden="true"
         />
         <div
@@ -59,11 +59,11 @@ export default function PaginaLandingGeneral() {
             </p>
             <h1
               id="hero-general"
-              className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[0.92] text-balance"
+              className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.9] whitespace-nowrap"
             >
               Tu universidad.
-              <span className="block text-amber-400">Tus pasiones.</span>
-              <span className="block">Tu comunidad.</span>
+              <span className="block text-amber-400 whitespace-nowrap">Tus pasiones.</span>
+              <span className="block whitespace-nowrap">Tu comunidad.</span>
             </h1>
             <p className={`text-base sm:text-lg leading-relaxed max-w-xl ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
               Un espacio para vivir experiencias fuera del aula y formar parte de la vida universitaria.
@@ -101,13 +101,14 @@ export default function PaginaLandingGeneral() {
             {EXPERIENCIAS.map((experiencia) => (
               <article
                 key={experiencia.titulo}
-                className="group relative min-h-[260px] overflow-hidden rounded-[2rem]"
+                className="group relative min-h-[420px] overflow-hidden rounded-[2rem] transition duration-300 hover:scale-[1.02]"
               >
                 <img
                   src={experiencia.imagen}
                   alt={experiencia.titulo}
-                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                  className="absolute inset-0 h-full w-full object-cover transition duration-700"
                 />
+                <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/55 to-transparent" />
                 <div className="relative h-full flex flex-col justify-end p-6 sm:p-8">
                   <h3 className="text-2xl font-black">{experiencia.titulo}</h3>
@@ -141,9 +142,9 @@ export default function PaginaLandingGeneral() {
               className="group relative block overflow-hidden rounded-[2rem] border border-slate-700/60"
             >
             <img
-              src="/unidcampeche.jpeg"
+              src="/campus/unid-campeche.jpeg"
               alt="Campus Campeche"
-              className="h-80 w-full object-cover transition duration-700 group-hover:scale-105"
+              className="h-[500px] w-full object-cover transition duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/45 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6">
