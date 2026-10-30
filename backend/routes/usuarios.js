@@ -134,123 +134,150 @@ router.put('/:id/rol', authenticate, requireRole(ROL_ADMIN), async (req, res) =>
 });
 
 // Asigna un presidente a un club (desasigna del club anterior)
-router.put('/:id/asignar-club', authenticate, requireRole(3), async (req, res) => {
+router.put('/:id/asignar-club', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
+  const client = await pool.connect();
+  let enTransaccion = false;
   try {
     const { id } = req.params;
     const { id_club } = req.body;
+    const userId = parseInt(id, 10);
 
-    const usuario = await pool.query(
-      'SELECT id_rol, deleted_at FROM usuarios WHERE id_usuario = $1',
-      [id],
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ error: 'Usuario inválido' });
+    }
+
+    await client.query('BEGIN');
+    enTransaccion = true;
+
+    const usuarioRes = await client.query(
+      'SELECT id_usuario, id_rol, deleted_at, nombre_completo FROM usuarios WHERE id_usuario = $1',
+      [userId],
     );
 
-    if (usuario.rows.length === 0) {
+    if (usuarioRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      enTransaccion = false;
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    if (usuario.rows[0].deleted_at) {
-      return res.status(400).json({ error: 'No puedes asignar un club a un usuario desactivado' });
+    const usuario = usuarioRes.rows[0];
+
+    if (usuario.deleted_at) {
+      await client.query('ROLLBACK');
+      enTransaccion = false;
+      return res.status(400).json({ error: 'No puedes asignar una responsabilidad a un usuario desactivado' });
     }
 
-    if (usuario.rows[0].id_rol !== 2) {
-      return res.status(400).json({ error: 'Solo puedes asignar club a un presidente' });
+    if (usuario.id_rol !== ROL_ALUMNO && usuario.id_rol !== ROL_RESPONSABLE_CLUB) {
+      await client.query('ROLLBACK');
+      enTransaccion = false;
+      return res.status(400).json({ error: 'Solo puedes asignar responsabilidad a un alumno o a un responsable del club' });
     }
 
     if (id_club) {
-      const club = await pool.query(
-        'SELECT id_club, id_presidente FROM clubes WHERE id_club = $1',
+      const clubRes = await client.query(
+        'SELECT id_club, nombre_club, id_presidente FROM clubes WHERE id_club = $1',
         [id_club],
       );
 
-      if (club.rows.length === 0) {
+      if (clubRes.rows.length === 0) {
+        await client.query('ROLLBACK');
+        enTransaccion = false;
         return res.status(404).json({ error: 'El club no existe' });
       }
 
-      const presidenteAnterior = club.rows[0].id_presidente;
+      const club = clubRes.rows[0];
 
-      // Limpia la inscripción del presidente anterior en este club
-      if (presidenteAnterior && Number(presidenteAnterior) !== Number(id)) {
-        await pool.query(
-          `UPDATE inscripciones SET id_estatus_inscripcion = 2, fecha_baja = NOW()
-           WHERE id_usuario = $1 AND id_club = $2 AND id_estatus_inscripcion = 1`,
-          [presidenteAnterior, id_club],
+      if (club.id_presidente && Number(club.id_presidente) !== userId) {
+        await client.query('ROLLBACK');
+        enTransaccion = false;
+        return res.status(400).json({ error: 'El club ya tiene un responsable asignado' });
+      }
+
+      const previosRes = await client.query(
+        'SELECT id_club FROM clubes WHERE id_presidente = $1',
+        [userId],
+      );
+      const teniaOtroClub = previosRes.rows.some((c) => Number(c.id_club) !== Number(id_club));
+
+      await client.query(
+        'UPDATE clubes SET id_presidente = NULL WHERE id_presidente = $1 AND id_club <> $2',
+        [userId, id_club],
+      );
+
+      if (usuario.id_rol === ROL_ALUMNO) {
+        await client.query(
+          'UPDATE usuarios SET id_rol = $1 WHERE id_usuario = $2',
+          [ROL_RESPONSABLE_CLUB, userId],
         );
       }
 
-      await pool.query(
-        'UPDATE clubes SET id_presidente = NULL WHERE id_presidente = $1',
-        [id],
-      );
-
-      await pool.query(
+      await client.query(
         'UPDATE clubes SET id_presidente = $1 WHERE id_club = $2',
-        [id, id_club],
+        [userId, id_club],
       );
 
-      const activa = await pool.query(
-        `SELECT id_inscripcion FROM inscripciones
-         WHERE id_usuario = $1 AND id_estatus_inscripcion = 1
-         LIMIT 1`,
-        [id],
-      );
+      await client.query('COMMIT');
+      enTransaccion = false;
 
-      if (activa.rows.length === 0) {
-        await pool.query(
-          `INSERT INTO inscripciones (id_usuario, id_club, id_estatus_inscripcion)
-           VALUES ($1, $2, 1)`,
-          [id, id_club],
-        );
-      } else {
-        await pool.query(
-          `UPDATE inscripciones SET id_club = $1
-           WHERE id_inscripcion = $2`,
-          [id_club, activa.rows[0].id_inscripcion],
-        );
-      }
-
-      const clubNombre = await pool.query(
-        'SELECT nombre_club FROM clubes WHERE id_club = $1',
-        [id_club],
-      );
+      const accion = teniaOtroClub ? 'reasignar_responsable' : 'asignar_responsable';
+      const descripcion = teniaOtroClub
+        ? `${req.user.nombre_completo} reasignó al responsable ID ${userId} al club "${club.nombre_club}"`
+        : `${req.user.nombre_completo} asignó el club "${club.nombre_club}" al usuario ID ${userId}`;
 
       registrarHistorial({
         idAdmin: req.user.id,
         adminNombre: req.user.nombre_completo,
-        accion: 'asignar_club',
-        descripcion: `${req.user.nombre_completo} asignó el club "${clubNombre.rows[0]?.nombre_club}" al usuario ID ${id}`,
+        accion,
+        descripcion,
         entidadTipo: 'usuario',
-        entidadId: parseInt(id),
+        entidadId: userId,
         detalles: { id_club },
       });
 
-      return res.json({ message: 'Club asignado correctamente', nombre_club: clubNombre.rows[0]?.nombre_club });
+      return res.json({ message: 'Responsabilidad asignada correctamente', nombre_club: club.nombre_club });
     }
 
-    await pool.query('UPDATE clubes SET id_presidente = NULL WHERE id_presidente = $1', [id]);
-    await pool.query(
-      `UPDATE inscripciones SET id_estatus_inscripcion = 2, fecha_baja = NOW()
-       WHERE id_usuario = $1 AND id_estatus_inscripcion = 1`,
-      [id],
-    );
+    await client.query('UPDATE clubes SET id_presidente = NULL WHERE id_presidente = $1', [userId]);
+
+    if (usuario.id_rol === ROL_RESPONSABLE_CLUB) {
+      await client.query(
+        'UPDATE usuarios SET id_rol = $1 WHERE id_usuario = $2',
+        [ROL_ALUMNO, userId],
+      );
+    }
+
+    await client.query('COMMIT');
+    enTransaccion = false;
 
     registrarHistorial({
       idAdmin: req.user.id,
       adminNombre: req.user.nombre_completo,
-      accion: 'desasignar_club',
-      descripcion: `${req.user.nombre_completo} desasignó al presidente ID ${id} de su club`,
+      accion: 'retirar_responsable',
+      descripcion: `${req.user.nombre_completo} retiró la responsabilidad del usuario ID ${userId}`,
       entidadTipo: 'usuario',
-      entidadId: parseInt(id),
+      entidadId: userId,
     });
 
-    res.json({ message: 'Presidente desasignado del club', nombre_club: null });
+    res.json({ message: 'Responsabilidad retirada correctamente', nombre_club: null });
   } catch (err) {
-    console.error('Error al asignar club al presidente:', err);
+    if (enTransaccion) {
+      await client.query('ROLLBACK').catch(() => {});
+    }
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'El usuario o el club ya tiene una responsabilidad asignada' });
+    }
+    console.error('Error al asignar responsabilidad de club:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    client.release();
   }
 });
 
+
+
 // Acción de admin protegida por contraseña: promover o degradar administradores
-router.post('/admin-action', authenticate, requireRole(3), async (req, res) => {
+router.post('/admin-action', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
   try {
     const { targetUserId, action, password } = req.body;
     const ADMIN_SECRET = process.env.ADMIN_SECRET;
@@ -430,7 +457,7 @@ router.delete('/:id', authenticate, requireRole(ROL_ADMIN), async (req, res) => 
 // La reactivación es manual y exclusiva del admin a propósito: si un
 // usuario fue desactivado, no quiero que reactivar dependa de que
 // Microsoft lo autentique. El admin revisa el caso y decide.
-router.patch('/:id/reactivar', authenticate, requireRole(3), async (req, res) => {
+router.patch('/:id/reactivar', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
   try {
     const { id } = req.params;
 

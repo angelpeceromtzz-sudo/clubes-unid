@@ -14,7 +14,7 @@ export function RutaProtegida({ children, requiereAdmin = false, requiereAdminOC
   }
 
   if (requiereAdminOCoordinacion && !(esAdmin || esCoordinacion)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/campus/campeche/portal" replace />;
   }
 
   if (requierePresidente && !esPresidente) {

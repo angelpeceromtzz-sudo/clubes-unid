@@ -358,6 +358,8 @@ CREATE TABLE IF NOT EXISTS actividad_clubes (
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_fecha ON actividad_clubes(fecha_creacion DESC);
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_club ON actividad_clubes(id_club);
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_club_id_presidente ON clubes (id_presidente) WHERE id_presidente IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS diapositivas_hero (
     id_diapositiva SERIAL PRIMARY KEY,
     titulo VARCHAR(200) NOT NULL,
