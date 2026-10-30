@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAutenticacion } from '../contexts/AuthContext';
 import { PiePagina } from '../components/layout/PiePagina';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
+import { SplashScreen } from '../components/ui/SplashScreen';
 
 const EXPERIENCIAS = [
   {
@@ -29,10 +32,13 @@ const EXPERIENCIAS = [
 export default function PaginaLandingGeneral() {
   const { modoOscuro } = useTheme();
   const oscuro = modoOscuro;
+  const { authReady } = useAutenticacion();
+  const [splashDone, setSplashDone] = useState(false);
 
   return (
     <main className={oscuro ? 'bg-[#0b111e] text-white overflow-x-hidden' : 'bg-slate-50 text-slate-900 overflow-x-hidden'}>
-      <BarraGeneral />
+      <SplashScreen authReady={authReady} clubesLoading={false} onFinish={() => setSplashDone(true)} />
+      <BarraGeneral splashActivo={!splashDone} />
 
       <section
         className="relative min-h-[92vh] overflow-hidden flex items-center"

@@ -114,7 +114,7 @@ export default function PaginaExperienciaEstudiantil() {
       >
         <div className="max-w-6xl mx-auto">
           <div
-            className="relative min-h-[420px] sm:min-h-[480px] overflow-hidden rounded-[2rem] bg-[#0b111e]"
+            className="relative min-h-[420px] sm:min-h-[480px] lg:min-h-[800px] overflow-hidden rounded-[2rem] bg-[#0b111e]"
             tabIndex={0}
             onTouchStart={(e) => setTouchInicio(e.touches[0].clientX)}
             onTouchEnd={(e) => {
