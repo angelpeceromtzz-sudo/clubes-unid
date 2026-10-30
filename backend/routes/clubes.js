@@ -81,7 +81,40 @@ router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_
     const limit = 50;
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query('SELECT COUNT(*)::int AS total FROM actividad_clubes');
+    const { desde, hasta, actor, tipo, club } = req.query;
+
+    if (desde && (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || Number.isNaN(Date.parse(desde)))) {
+      return res.status(400).json({ error: 'La fecha "desde" no es válida' });
+    }
+    if (hasta && (!/^\d{4}-\d{2}-\d{2}$/.test(hasta) || Number.isNaN(Date.parse(hasta)))) {
+      return res.status(400).json({ error: 'La fecha "hasta" no es válida' });
+    }
+    if (desde && hasta && desde > hasta) {
+      return res.status(400).json({ error: 'El rango de fechas no es válido' });
+    }
+
+    const clubId = club ? parseInt(club, 10) : null;
+    if (club && (!Number.isFinite(clubId) || clubId <= 0)) {
+      return res.status(400).json({ error: 'El club no es válido' });
+    }
+
+    const filtrosSql = `
+      WHERE ($1::date IS NULL OR a.fecha_creacion >= $1::date)
+        AND ($2::date IS NULL OR a.fecha_creacion < ($2::date + INTERVAL '1 day'))
+        AND ($3::text IS NULL OR u.nombre_completo ILIKE '%' || $3 || '%')
+        AND ($4::text IS NULL OR a.tipo_evento = $4)
+        AND ($5::int IS NULL OR a.id_club = $5)
+    `;
+
+    const params = [desde || null, hasta || null, actor || null, tipo || null, clubId];
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM actividad_clubes a
+       LEFT JOIN usuarios u ON u.id_usuario = a.id_actor
+       ${filtrosSql}`,
+      params
+    );
     const total = countResult.rows[0].total;
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -92,9 +125,10 @@ router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_
        FROM actividad_clubes a
        LEFT JOIN clubes c ON c.id_club = a.id_club
        LEFT JOIN usuarios u ON u.id_usuario = a.id_actor
+       ${filtrosSql}
        ORDER BY a.fecha_creacion DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
+       LIMIT $6 OFFSET $7`,
+      [...params, limit, offset]
     );
 
     res.json({ eventos: result.rows, page, totalPages, total });
@@ -107,7 +141,7 @@ router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_
 // Lista completa para el panel admin (H6): incluye estatus 3 y los campos de
 // presidente que el flujo de reasignación usa; requiere rol 3. El público usa
 // GET / y no ve esos datos.
-router.get('/admin', authenticate, requireRole(3), async (req, res) => {
+router.get('/admin', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,

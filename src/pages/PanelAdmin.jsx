@@ -93,6 +93,8 @@ export function PanelAdmin() {
               historial={d.historial}
               historialLoading={d.historialLoading}
               onRefresh={d.cargarHistorial}
+              filtros={d.historialFiltros}
+              onFiltrosChange={d.setHistorialFiltros}
             />
           )}
 
