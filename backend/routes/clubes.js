@@ -11,6 +11,8 @@ import { validarParamsEnteros } from '../lib/validarId.js';
 
 import convocatoriasInscripcion from './convocatoriasInscripcion.js';
 
+const CUPOS_CLUB_VALIDOS = [10, 15, 20, 25, 30, 40, 50];
+
 const router = Router();
 router.use('/:id/convocatoria', convocatoriasInscripcion);
 
@@ -145,10 +147,11 @@ router.get('/admin', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), asy
   try {
     const result = await pool.query(
       `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
-              c.cupo_maximo, c.id_presidente, c.participacion,
+              c.cupo_maximo, c.id_presidente, c.participacion, c.lugar_actividades,
               p.nombre_completo AS presidente_nombre,
               c.imagen_portada,
               c.id_estatus_club, e.nombre_estatus as estatus,
+              EXISTS (SELECT 1 FROM horarios_club h WHERE h.id_club = c.id_club AND COALESCE(TRIM(h.lugar), '') <> '' AND h.hora_fin > h.hora_inicio) AS tiene_horarios_validos,
               c.estado_calculado,
               c.formularios_recibidos,
               c.max_postulaciones,
@@ -323,10 +326,15 @@ router.get('/:id/miembros', authenticate, async (req, res) => {
 router.post('/', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   const client = await pool.connect();
   try {
-    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles } = req.body;
+    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles, lugar_actividades } = req.body;
 
     if (!nombre_club || !descripcion || !categoria || !cupo_maximo) {
       return res.status(400).json({ error: 'Nombre, descripción, categoría y cupo máximo son obligatorios' });
+    }
+
+    const cupoNumero = Number(cupo_maximo);
+    if (!Number.isInteger(cupoNumero) || !CUPOS_CLUB_VALIDOS.includes(cupoNumero)) {
+      return res.status(400).json({ error: 'Cupo máximo inválido' });
     }
 
     const PARTICIPACION_VALIDA = ['masculina', 'femenina', 'mixta'];
@@ -347,10 +355,10 @@ router.post('/', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (
     await client.query('BEGIN');
 
     const result = await client.query(
-      `INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion)
-       VALUES ($1, $2, $3, $4, 1, $5, $6)
-       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion`,
-      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, participacion],
+      `INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion, lugar_actividades)
+       VALUES ($1, $2, $3, $4, 2, $5, $6, $7)
+       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion, lugar_actividades`,
+      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, participacion, lugar_actividades || null],
     );
 
     for (const idNivel of niveles) {
@@ -392,10 +400,15 @@ router.put('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async
   const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles } = req.body;
+    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles, lugar_actividades } = req.body;
 
     if (!nombre_club || !descripcion || !categoria || !cupo_maximo) {
       return res.status(400).json({ error: 'Nombre, descripción, categoría y cupo máximo son obligatorios' });
+    }
+
+    const cupoNumero = Number(cupo_maximo);
+    if (!Number.isInteger(cupoNumero) || !CUPOS_CLUB_VALIDOS.includes(cupoNumero)) {
+      return res.status(400).json({ error: 'Cupo máximo inválido' });
     }
 
     const PARTICIPACION_VALIDA = ['masculina', 'femenina', 'mixta'];
@@ -426,10 +439,11 @@ router.put('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async
     const result = await client.query(
       `UPDATE clubes
        SET nombre_club = $1, descripcion = $2, categoria = $3, cupo_maximo = $4,
-           imagen_portada = COALESCE($5, imagen_portada), participacion = $6
+           imagen_portada = COALESCE($5, imagen_portada), participacion = $6,
+           lugar_actividades = $8
        WHERE id_club = $7
-       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion`,
-      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, participacion, id],
+       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion, lugar_actividades`,
+      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, participacion, id, lugar_actividades || null],
     );
 
     if (result.rows.length === 0) {

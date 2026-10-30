@@ -20,10 +20,10 @@ export const clubService = {
       body: JSON.stringify(data),
     }),
 
-  updateClubEstatus: (id, id_estatus_club) =>
+  updateClubEstatus: (id, id_estatus_club, password) =>
     request(`/clubes/${id}/estatus`, {
       method: 'PUT',
-      body: JSON.stringify({ id_estatus_club }),
+      body: JSON.stringify({ id_estatus_club, force: Boolean(password), password: password || undefined }),
     }),
 
   updateVicepresidente: (idClub, idUsuario) =>

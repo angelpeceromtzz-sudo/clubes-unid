@@ -37,6 +37,7 @@ export function SeccionClubesAdmin({ d }) {
         onStatusChange={d.handleStatusChange}
         onEditar={d.abrirModalEditar}
         onCrear={d.abrirModalCrear}
+        currentUser={d.user}
       />
     </div>
   );

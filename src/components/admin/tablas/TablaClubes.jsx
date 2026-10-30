@@ -7,6 +7,7 @@ export function TablaClubes({
   clubes,
   onStatusChange,
   onEditar,
+  currentUser,
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls, tema } = useTheme();
   return (
@@ -48,7 +49,9 @@ export function TablaClubes({
                         onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
                         className={selectCls}
                       >
-                        <option value={1}>Activo</option>
+                        <option value={1} disabled={!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3}>
+                          Activo{!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}
+                        </option>
                         <option value={2}>Próximamente</option>
                         <option value={3}>Inactivo</option>
                       </select>
@@ -89,15 +92,17 @@ export function TablaClubes({
               <span className={`text-xs ${tdCls}`}>Cupo: {c.cupo_maximo}</span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <select
-                value={c.id_estatus_club}
-                onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
-                className={selectCls}
-              >
-                <option value={1}>Activo</option>
-                <option value={2}>Próximamente</option>
-                <option value={3}>Inactivo</option>
-              </select>
+               <select
+                 value={c.id_estatus_club}
+                 onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
+                 className={selectCls}
+               >
+                 <option value={1} disabled={!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3}>
+                   Activo{!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}
+                 </option>
+                 <option value={2}>Próximamente</option>
+                 <option value={3}>Inactivo</option>
+               </select>
               <button
                 onClick={() => onEditar(c)}
                 className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1"

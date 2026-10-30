@@ -7,7 +7,7 @@ import { CampoTexto } from '../../ui/CampoTexto';
 import { ModalBase } from '../../ui/ModalBase';
 import { Spinner } from '../../ui/Spinner';
 import { SubirImagen } from '../../ui/SubirImagen';
-import { PARTICIPACION, NIVELES } from '../../../constants/clubes';
+import { PARTICIPACION, NIVELES, CUPOS_CLUB } from '../../../constants/clubes';
 
 export function ModalFormularioClub({
   show,
@@ -85,7 +85,16 @@ export function ModalFormularioClub({
           </div>
         </div>
 
-        <CampoTexto label="Cupo Máximo" name="cupo_maximo" value={formClub.cupo_maximo} onChange={onFormChange} type="number" placeholder="Ej: 30" required />
+        <div>
+          <label className={labelCls}>Cupo Máximo <span className="text-red-400">*</span></label>
+          <select name="cupo_maximo" value={formClub.cupo_maximo} onChange={onFormChange} className={inputClasses} required>
+            {CUPOS_CLUB.map((cupo) => (
+              <option key={cupo} value={cupo}>{cupo} personas</option>
+            ))}
+          </select>
+        </div>
+
+        <CampoTexto label="Lugar de actividades" name="lugar_actividades" value={formClub.lugar_actividades || ''} onChange={onFormChange} placeholder="Ej: Cancha principal" />
 
         <SubirImagen label="Imagen del Club" urlImagen={formClub.imagen_portada} onUpload={onUploadImage} modoOscuro={modoOscuro} labelCls={labelCls} inputId="club-image-upload" obligatorio />
 
