@@ -103,7 +103,7 @@ function TarjetaPropuesta({ club }) {
             </span>
           ) : (
             <span className="text-[10px] uppercase tracking-widest font-bold px-1.5 sm:px-2 py-0.5 rounded-full border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 whitespace-nowrap">
-              En el catÃ¡logo
+              En el catálogo
             </span>
           )}
         </div>
@@ -480,7 +480,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
           ))}
         </div>
 
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 hidden lg:flex items-center gap-3">
           {slides.map((slide, index) => (
             <button
               key={slide.id}
