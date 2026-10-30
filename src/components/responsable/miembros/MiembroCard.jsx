@@ -1,14 +1,21 @@
 import { AvatarInicial } from '../../ui/AvatarInicial';
+import { etiquetaResponsable } from '../../../utils/club';
 
-function RolTag({ tipo }) {
+function RolTag({ tipo, club }) {
   const config = {
     presidente: 'text-amber-400',
     vicepresidente: 'text-blue-400',
     miembro: 'text-slate-400',
   };
+  const texto =
+    tipo === 'presidente'
+      ? etiquetaResponsable(club)
+      : tipo === 'vicepresidente'
+        ? 'Vicepresidente'
+        : 'Miembro';
   return (
     <span className={`ml-2 text-[10px] uppercase tracking-wider font-bold ${config[tipo]}`}>
-      {tipo === 'presidente' ? 'Presidente' : tipo === 'vicepresidente' ? 'Vicepresidente' : 'Miembro'}
+      {texto}
     </span>
   );
 }
@@ -28,7 +35,7 @@ export function MiembroCard({ miembro, club, esPresidente, tieneVP, asignando, o
         <div>
           <p className={`text-sm font-medium ${tema.title}`}>
             {miembro.nombre_completo}
-            <RolTag tipo={rol} />
+            <RolTag tipo={rol} club={club} />
           </p>
           <p className="text-xs text-slate-500">{miembro.correo_institucional}</p>
         </div>
