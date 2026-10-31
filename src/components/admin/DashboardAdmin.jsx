@@ -14,6 +14,7 @@ export function DashboardAdmin({
   cargandoDashboard,
   inscripciones,
   inscripcionesPorMes,
+  postulacionesPorMes,
   clubes,
   historial,
   historialLoading,
@@ -38,6 +39,14 @@ export function DashboardAdmin({
             cargando={cargandoDashboard}
           />
           <GraficaInscripciones
+            titulo="Postulaciones por periodo"
+            etiqueta="postulaciones"
+            datos={postulacionesPorMes}
+            cargando={cargandoDashboard}
+          />
+          <GraficaInscripciones
+            titulo="Inscripciones activas"
+            etiqueta="inscripciones"
             datos={inscripcionesPorMes}
             cargando={cargandoDashboard}
           />

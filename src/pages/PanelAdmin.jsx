@@ -2,6 +2,8 @@
 import { useAutenticacion } from '../contexts/AuthContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { usePanelAdmin } from '../hooks/usePanelAdmin';
+import { useVistaEjecutiva } from '../hooks/useVistaEjecutiva';
+import { VistaEjecutiva } from '../components/ejecutivo/VistaEjecutiva';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
 import { ELEMENTOS_NAV_ADMIN } from '../constants/navegacion';
 import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
@@ -29,6 +31,7 @@ import { formatearNombre } from '../utils/formato';
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
   const d = usePanelAdmin(usuario);
+  const ejecutivo = useVistaEjecutiva();
 
   if (d.loading) {
     return (
@@ -52,20 +55,7 @@ export function PanelAdmin() {
           <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
 
           {d.vistaActiva === 'resumen' && (
-            <DashboardAdmin
-              totalAlumnos={d.totalAlumnos}
-              clubesActivos={d.clubesActivos}
-              totalInscripciones={d.totalInscripciones}
-              solicitudesPendientes={d.dashboardData?.solicitudesPendientes}
-              cargandoDashboard={d.cargandoDashboard}
-              inscripciones={d.dashboardData?.ultimasInscripciones}
-              inscripcionesPorMes={d.dashboardData?.inscripcionesPorMes}
-              clubes={d.clubes}
-              historial={d.historial}
-              historialLoading={d.historialLoading}
-              noticias={d.noticias.noticias}
-              noticiasLoading={d.noticias.cargando}
-            />
+            <VistaEjecutiva d={ejecutivo} />
           )}
 
           {d.vistaActiva === 'usuarios' && <SeccionUsuarios d={d} />}
