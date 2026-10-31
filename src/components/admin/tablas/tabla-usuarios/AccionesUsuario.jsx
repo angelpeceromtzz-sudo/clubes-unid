@@ -38,6 +38,8 @@ export function AccionesUsuario({ u, currentUser, onRoleChange, onAdminAction, o
       >
         <option value={1}>Alumno</option>
         <option value={2}>Responsable del club</option>
+        <option value={6}>Responsable del mural</option>
+        <option value={7}>Coordinación</option>
       </select>
       <button
         onClick={() => onAdminAction?.(u, 'promote')}

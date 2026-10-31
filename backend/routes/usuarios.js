@@ -57,10 +57,15 @@ router.get('/desactivados', authenticate, requireRole(ROL_ADMIN), async (req, re
 router.put('/:id/rol', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
   try {
     const { id } = req.params;
-    const { id_rol } = req.body;
+    const { id_rol, password } = req.body;
 
     if (![ROL_ALUMNO, ROL_RESPONSABLE_CLUB, ROL_RECTORIA, ROL_RESPONSABLE_MURAL, ROL_COORDINACION].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
+    }
+
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+    if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
+      return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
     }
 
     if (parseInt(id) === req.user.id) {
