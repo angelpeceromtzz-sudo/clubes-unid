@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* Hook compartido para la vista ejecutiva de Administración y Rectoría. */
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
@@ -30,22 +31,39 @@ export function useVistaEjecutiva() {
   const cargar = useCallback(async () => {
     setCargando(true);
     setError('');
-    const params = new URLSearchParams();
-    if (filtros.id_club) params.set('id_club', filtros.id_club);
-    if (filtros.id_periodo) params.set('id_periodo', filtros.id_periodo);
-    if (filtros.carrera) params.set('carrera', filtros.carrera);
-    if (filtros.estado) params.set('estado', filtros.estado);
-    const qs = params.toString() ? `?${params.toString()}` : '';
+    const paramsDashboard = new URLSearchParams();
+    if (filtros.id_club) paramsDashboard.set('id_club', filtros.id_club);
+
+    const paramsOcupacion = new URLSearchParams();
+    if (filtros.id_club) paramsOcupacion.set('id_club', filtros.id_club);
+
+    const paramsTop = new URLSearchParams();
+    if (filtros.id_club) paramsTop.set('id_club', filtros.id_club);
+
+    const paramsDashboardData = new URLSearchParams();
+    if (filtros.id_club) paramsDashboardData.set('id_club', filtros.id_club);
+    if (filtros.id_periodo) paramsDashboardData.set('id_periodo', filtros.id_periodo);
+    if (filtros.carrera) paramsDashboardData.set('carrera', filtros.carrera);
+    if (filtros.estado) paramsDashboardData.set('estado', filtros.estado);
+
+    const paramsAsistencia = new URLSearchParams();
+    if (filtros.id_club) paramsAsistencia.set('id_club', filtros.id_club);
+    if (filtros.id_periodo) paramsAsistencia.set('id_periodo', filtros.id_periodo);
+
+    const paramsEncuestas = new URLSearchParams();
+    if (filtros.carrera) paramsEncuestas.set('carrera', filtros.carrera);
+
+    const qs = (p) => p.toString() ? `?${p.toString()}` : '';
 
     try {
       const [datosStats, ocupacion, top, clubes, dashboard, datosAsistencia, datosEncuestas, datosListaEncuestas, datosPeriodos, datosLicenciaturas] = await Promise.all([
-        api.get('/estadisticas/dashboard'),
-        api.get('/estadisticas/ocupacion-clubes'),
-        api.get('/estadisticas/top-clubes'),
+        api.get(`/estadisticas/dashboard${qs(paramsDashboard)}`),
+        api.get(`/estadisticas/ocupacion-clubes${qs(paramsOcupacion)}`),
+        api.get(`/estadisticas/top-clubes${qs(paramsTop)}`),
         api.get('/estadisticas/clubes-detalle'),
-        api.get(`/admin/dashboard-data${qs ? `?${qs}` : ''}`),
-        api.get(`/estadisticas/asistencia-ejecutiva${qs ? `?${qs}` : ''}`),
-        api.get('/estadisticas/encuestas-ejecutivas'),
+        api.get(`/admin/dashboard-data${qs(paramsDashboardData)}`),
+        api.get(`/estadisticas/asistencia-ejecutiva${qs(paramsAsistencia)}`),
+        api.get(`/estadisticas/encuestas-ejecutivas${qs(paramsEncuestas)}`),
         api.get('/encuestas/admin'),
         api.get('/asistencia/periodos'),
         api.get('/catalogos/licenciaturas'),
@@ -72,15 +90,17 @@ export function useVistaEjecutiva() {
     cargar();
   }, [cargar]);
 
-  useEffect(() => {
-    if (!encuestaSeleccionada) {
-      setResultadosEncuesta(null);
-      setPreguntaSeleccionada('');
-      return;
-    }
+  function aplicarFiltros(nuevos) {
+    setFiltros((prev) => ({ ...prev, ...nuevos }));
+  }
+
+  const cargarResultadosEncuesta = useCallback((id) => {
     let cancelado = false;
     setCargandoResultados(true);
-    api.get(`/encuestas/admin/${encuestaSeleccionada}/resultados`)
+    const params = new URLSearchParams();
+    if (filtros.carrera) params.set('carrera', filtros.carrera);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    api.get(`/encuestas/admin/${id}/resultados${qs}`)
       .then((data) => {
         if (!cancelado) {
           setResultadosEncuesta(data);
@@ -98,14 +118,24 @@ export function useVistaEjecutiva() {
         if (!cancelado) setCargandoResultados(false);
       });
     return () => { cancelado = true; };
-  }, [encuestaSeleccionada]);
+  }, [filtros.carrera]);
 
-  function aplicarFiltros(nuevos) {
-    setFiltros((prev) => ({ ...prev, ...nuevos }));
-  }
+  useEffect(() => {
+    if (encuestaSeleccionada) {
+      const cancelar = cargarResultadosEncuesta(encuestaSeleccionada);
+      return cancelar;
+    }
+    return undefined;
+  }, [cargarResultadosEncuesta, encuestaSeleccionada]);
 
   function seleccionarEncuesta(id) {
-    setEncuestaSeleccionada(String(id));
+    const idStr = String(id);
+    setEncuestaSeleccionada(idStr);
+    setResultadosEncuesta(null);
+    setPreguntaSeleccionada('');
+    if (idStr) {
+      cargarResultadosEncuesta(idStr);
+    }
   }
 
   function seleccionarPregunta(id) {

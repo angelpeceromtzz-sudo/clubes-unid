@@ -1,64 +1,50 @@
-/* Gráfica de barras verticales agrupadas para comparar series por mes. */
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { useTheme } from '../../contexts/ThemeContext';
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { MarcoGrafica, EstadoGrafica, TooltipGrafica, LeyendaGrafica, TablaGrafica, FormaBarra } from './MarcoGrafica';
+import { COLORES_GRAFICA, formatoGrafica } from './graficas.utils';
 
-function TooltipPersonalizado({ activo, payload, label }) {
-  if (!activo || !payload?.length) return null;
-  return (
-    <div className="bg-[#0e162c] border border-slate-700/60 rounded-xl px-3 py-2 shadow-xl">
-      <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-0.5">{label}</p>
-      {payload.map((p) => (
-        <p key={p.dataKey} className="text-sm font-black" style={{ color: p.color }}>
-          {p.value} {p.name}
-        </p>
-      ))}
-    </div>
-  );
+function EtiquetaMes({ x, y, payload }) {
+  const texto = String(payload?.value ?? '');
+  const partes = texto.match(/^(.*)\s+(\d{4})$/);
+  return <text x={x} y={y + 8} textAnchor="middle" fill="var(--grafica-texto-secundario)" fontSize={11}>
+    <tspan x={x}>{partes ? partes[1] : texto}</tspan>
+    {partes && <tspan x={x} dy={14} fill="var(--grafica-atenuado)" fontSize={10}>{partes[2]}</tspan>}
+  </text>;
 }
 
-export function GraficaBarrasAgrupadas({ titulo, datos, series, cargando }) {
-  const { cardCls, modoOscuro } = useTheme();
-
+export function GraficaBarrasAgrupadas({ titulo, subtitulo, datos = [], series = [], cargando, vacioMensaje = 'Sin datos disponibles.' }) {
+  const compacto = useMediaQuery('(max-width: 639px)');
+  const reducirMovimiento = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const seriesVisibles = series.map((serie, indice) => ({ ...serie, color: serie.color ?? COLORES_GRAFICA[indice % COLORES_GRAFICA.length] }));
+  const columnas = [
+    { key: 'mes', titulo: 'Mes' },
+    ...seriesVisibles.map((serie) => ({ key: serie.dataKey, titulo: serie.nombre, numero: true, render: (fila) => formatoGrafica(fila[serie.dataKey]) })),
+  ];
+  const rango = datos.length > 1 ? datos[0].mes + ' — ' + datos[datos.length - 1].mes : datos[0]?.mes;
   return (
-    <div className={`${cardCls} border rounded-2xl overflow-hidden`}>
-      <div className="px-5 py-4 border-b" style={{ borderColor: modoOscuro ? 'rgba(51,65,85,0.3)' : 'rgba(226,232,240,1)' }}>
-        <h3 className={`text-sm font-black uppercase tracking-wider ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-          {titulo}
-        </h3>
-      </div>
-      <div className="px-4 py-4" style={{ height: 280 }}>
-        {cargando ? (
-          <p className="text-center text-sm text-slate-400">Cargando...</p>
-        ) : datos.length === 0 ? (
-          <p className={`text-center text-sm ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>Sin datos disponibles.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={datos} barCategoryGap="25%" barGap={4} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-              <XAxis
-                dataKey="mes"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: modoOscuro ? '#64748b' : '#94a3b8', fontSize: 11, fontWeight: 600 }}
-                interval={0}
-                angle={datos.length > 6 ? -30 : 0}
-                textAnchor={datos.length > 6 ? 'end' : 'middle'}
-                height={datos.length > 6 ? 50 : 30}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: modoOscuro ? '#64748b' : '#94a3b8', fontSize: 11 }}
-                allowDecimals={false}
-              />
-              <Tooltip content={<TooltipPersonalizado />} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              {series.map((s) => (
-                <Bar key={s.dataKey} dataKey={s.dataKey} name={s.nombre} fill={s.color} radius={[4, 4, 0, 0]} barSize={18} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-    </div>
+    <MarcoGrafica titulo={titulo} subtitulo={subtitulo || rango} ceja="Evolución" resumen={{ valor: formatoGrafica(datos.length), etiqueta: datos.length === 1 ? 'mes' : 'meses' }}
+      detalle={<TablaGrafica titulo={titulo} columnas={columnas} filas={datos} />}>
+      {cargando || !datos.length ? <EstadoGrafica cargando={cargando} mensaje={vacioMensaje} /> : <>
+        <LeyendaGrafica series={seriesVisibles} />
+        <div className="grafica-unid__desplazable">
+          <div className="grafica-unid__lienzo" style={{ height: 285, minWidth: compacto && datos.length > 6 ? datos.length * 45 : 0 }}>
+            <ResponsiveContainer width="100%" height={285} minWidth={0}>
+              <BarChart data={datos} barCategoryGap="28%" barGap={4} margin={{ top: 24, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
+                <CartesianGrid vertical={false} stroke="var(--grafica-rejilla)" strokeDasharray="3 6" />
+                <XAxis dataKey="mes" axisLine={false} tickLine={false} tickMargin={12} height={compacto ? 46 : 36} interval={0}
+                  tick={compacto ? <EtiquetaMes /> : { fill: 'var(--grafica-texto-secundario)', fontSize: 11 }} />
+                <YAxis width={34} axisLine={false} tickLine={false} allowDecimals={false} tickCount={5}
+                  tick={{ fill: 'var(--grafica-atenuado)', fontSize: 11 }} tickFormatter={(valor) => formatoGrafica(valor)} />
+                <Tooltip content={<TooltipGrafica />} cursor={{ fill: 'var(--grafica-cursor)', radius: 6 }} />
+                {seriesVisibles.map((serie) => <Bar key={serie.dataKey} dataKey={serie.dataKey} name={serie.nombre} fill={serie.color}
+                  radius={[5, 5, 0, 0]} maxBarSize={compacto ? 16 : 24} shape={<FormaBarra />} isAnimationActive={!reducirMovimiento}>
+                  <LabelList dataKey={serie.dataKey} position="top" fill="var(--grafica-texto)" fontSize={11} fontWeight={500} formatter={(valor) => formatoGrafica(valor)} />
+                </Bar>)}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </>}
+    </MarcoGrafica>
   );
 }

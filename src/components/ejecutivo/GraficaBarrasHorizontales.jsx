@@ -1,62 +1,44 @@
-/* Gráfica de barras horizontales para comparar clubes o licenciaturas. */
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useState } from 'react';
+import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { MarcoGrafica, EstadoGrafica, TooltipGrafica, TablaGrafica, EtiquetaEje, EtiquetaValor, ControlFilas, FormaBarra } from './MarcoGrafica';
+import { COLORES_GRAFICA, formatoGrafica, numeroGrafica } from './graficas.utils';
 
-function TooltipPersonalizado({ activo, payload, label }) {
-  if (!activo || !payload?.length) return null;
-  const p = payload[0];
+export function GraficaBarrasHorizontales({ titulo, subtitulo, datos = [], dataKey = 'valor', labelKey = 'nombre', unit = '', color, maxDomain, cargando, vacioMensaje = 'Sin datos disponibles.', acciones, nota }) {
+  const compacto = useMediaQuery('(max-width: 639px)');
+  const reducirMovimiento = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const [expandido, setExpandido] = useState(false);
+  const filas = datos.map((fila) => ({ ...fila, _valor: numeroGrafica(fila[dataKey]) }));
+  const visibles = expandido ? filas : filas.slice(0, 8);
+  const alto = Math.max(240, visibles.length * (compacto ? 66 : 58) + 35);
+  const maximo = maxDomain ?? Math.max(1, ...filas.map((fila) => fila._valor ?? 0));
+  const columnas = [
+    { key: labelKey, titulo: labelKey === 'nombre_club' ? 'Club' : 'Categoría' },
+    { key: '_valor', titulo: unit === '%' ? 'Porcentaje' : 'Cantidad', numero: true, render: (fila) => formatoGrafica(fila._valor, unit) },
+    ...(datos.some((fila) => fila.porcentaje !== undefined) && unit !== '%' ? [{ key: 'porcentaje', titulo: 'Porcentaje', numero: true, render: (fila) => formatoGrafica(fila.porcentaje, '%') }] : []),
+  ];
   return (
-    <div className="bg-[#0e162c] border border-slate-700/60 rounded-xl px-3 py-2 shadow-xl">
-      <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-0.5">{label}</p>
-      <p className="text-sm font-black text-amber-400">{p.value} {p.unit || ''}</p>
-    </div>
-  );
-}
-
-export function GraficaBarrasHorizontales({ titulo, datos, dataKey = 'valor', labelKey = 'nombre', unit = '', color = '#f59e0b', maxDomain, cargando }) {
-  const { cardCls, modoOscuro } = useTheme();
-
-  return (
-    <div className={`${cardCls} border rounded-2xl overflow-hidden`}>
-      <div className="px-5 py-4 border-b" style={{ borderColor: modoOscuro ? 'rgba(51,65,85,0.3)' : 'rgba(226,232,240,1)' }}>
-        <h3 className={`text-sm font-black uppercase tracking-wider ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-          {titulo}
-        </h3>
-      </div>
-      <div className="px-4 py-4" style={{ height: Math.max(280, datos.length * 40) }}>
-        {cargando ? (
-          <p className="text-center text-sm text-slate-400">Cargando...</p>
-        ) : datos.length === 0 ? (
-          <p className={`text-center text-sm ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>Sin datos disponibles.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={datos} layout="vertical" margin={{ top: 8, right: 24, left: 80, bottom: 0 }}>
-              <XAxis
-                type="number"
-                domain={[0, maxDomain || 'auto']}
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: modoOscuro ? '#64748b' : '#94a3b8', fontSize: 11 }}
-              />
-              <YAxis
-                dataKey={labelKey}
-                type="category"
-                width={70}
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: modoOscuro ? '#cbd5e1' : '#475569', fontSize: 10 }}
-                tickFormatter={(v) => (v.length > 18 ? `${v.slice(0, 18)}…` : v)}
-              />
-              <Tooltip content={<TooltipPersonalizado />} />
-              <Bar dataKey={dataKey} unit={unit} radius={[0, 4, 4, 0]}>
-                {datos.map((_, i) => (
-                  <Cell key={`cell-${i}`} fill={color} />
-                ))}
+    <MarcoGrafica titulo={titulo} subtitulo={subtitulo} ceja="Comparativa" acciones={acciones} nota={nota}
+      resumen={{ valor: formatoGrafica(filas.length), etiqueta: labelKey === 'nombre_club' ? 'clubes' : 'categorías' }}
+      detalle={<TablaGrafica titulo={titulo} columnas={columnas} filas={filas} />}>
+      {cargando || !filas.length ? <EstadoGrafica cargando={cargando} mensaje={vacioMensaje} /> : <>
+        <div className="grafica-unid__lienzo" style={{ height: alto }}>
+          <ResponsiveContainer width="100%" height={alto} minWidth={0}>
+            <BarChart data={visibles} layout="vertical" margin={{ top: 8, right: 58, left: 0, bottom: 0 }} accessibilityLayer>
+              <CartesianGrid horizontal={false} stroke="var(--grafica-rejilla)" strokeDasharray="3 6" />
+              <XAxis type="number" domain={[0, maximo]} axisLine={false} tickLine={false} tickCount={compacto ? 3 : 5}
+                allowDecimals={unit === '%'} tick={{ fill: 'var(--grafica-atenuado)', fontSize: 11 }} tickFormatter={(valor) => formatoGrafica(valor, unit === '%' ? '%' : '')} />
+              <YAxis dataKey={labelKey} type="category" width={compacto ? 96 : 154} axisLine={false} tickLine={false} interval={0}
+                tick={<EtiquetaEje compacto={compacto} />} />
+              <Tooltip content={<TooltipGrafica unidad={unit} />} cursor={{ fill: 'var(--grafica-cursor)', radius: 8 }} />
+              <Bar dataKey="_valor" name={titulo} fill={color ?? COLORES_GRAFICA[0]} radius={[0, 5, 5, 0]} barSize={16} shape={<FormaBarra />} isAnimationActive={!reducirMovimiento}>
+                <LabelList dataKey="_valor" content={<EtiquetaValor unidad={unit === '%' ? '%' : ''} />} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        )}
-      </div>
-    </div>
+        </div>
+        <ControlFilas total={filas.length} visibles={8} expandido={expandido} onToggle={() => setExpandido((valor) => !valor)} />
+      </>}
+    </MarcoGrafica>
   );
 }

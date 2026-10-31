@@ -8,27 +8,43 @@ const router = Router();
 
 router.get('/dashboard-data', authenticate, requireCoordinacion, async (req, res) => {
   try {
-    const { id_club, carrera, estado } = req.query;
+    const { id_club, id_periodo, carrera, estado } = req.query;
+
+    const f = {
+      id_club: id_club && esIdEntero(id_club) ? Number(id_club) : null,
+      id_periodo: id_periodo && esIdEntero(id_periodo) ? Number(id_periodo) : null,
+      carrera: carrera && esIdEntero(carrera) ? Number(carrera) : null,
+      estado: estado || null,
+    };
+
+    let periodo = null;
+    if (f.id_periodo) {
+      const r = await pool.query('SELECT fecha_inicio, fecha_fin FROM periodos_actividad WHERE id_periodo = $1', [f.id_periodo]);
+      if (r.rows.length) periodo = r.rows[0];
+    }
 
     const filtrosFormularios = [];
     const paramsFormularios = [];
     let idxForm = 1;
 
-    if (id_club) {
-      if (!esIdEntero(id_club)) return res.status(400).json({ error: 'id_club inválido' });
+    if (f.id_club) {
       filtrosFormularios.push(`f.id_club = $${idxForm++}`);
-      paramsFormularios.push(Number(id_club));
+      paramsFormularios.push(f.id_club);
     }
 
-    if (carrera) {
-      if (!esIdEntero(carrera)) return res.status(400).json({ error: 'carrera inválida' });
+    if (f.carrera) {
       filtrosFormularios.push(`f.id_licenciatura = $${idxForm++}`);
-      paramsFormularios.push(Number(carrera));
+      paramsFormularios.push(f.carrera);
     }
 
-    if (estado) {
+    if (f.estado) {
       filtrosFormularios.push(`f.status = $${idxForm++}`);
-      paramsFormularios.push(estado);
+      paramsFormularios.push(f.estado);
+    }
+
+    if (periodo) {
+      filtrosFormularios.push(`f.fecha_envio >= $${idxForm++} AND f.fecha_envio <= $${idxForm++}`);
+      paramsFormularios.push(periodo.fecha_inicio, periodo.fecha_fin);
     }
 
     const whereFormularios = filtrosFormularios.length ? `AND ${filtrosFormularios.join(' AND ')}` : '';
@@ -37,9 +53,14 @@ router.get('/dashboard-data', authenticate, requireCoordinacion, async (req, res
     const paramsInscripciones = [];
     let idxIns = 1;
 
-    if (id_club) {
+    if (f.id_club) {
       filtrosInscripciones.push(`i.id_club = $${idxIns++}`);
-      paramsInscripciones.push(Number(id_club));
+      paramsInscripciones.push(f.id_club);
+    }
+
+    if (periodo) {
+      filtrosInscripciones.push(`i.fecha_inscripcion >= $${idxIns++} AND i.fecha_inscripcion <= $${idxIns++}`);
+      paramsInscripciones.push(periodo.fecha_inicio, periodo.fecha_fin);
     }
 
     const whereInscripciones = filtrosInscripciones.length ? `AND ${filtrosInscripciones.join(' AND ')}` : '';
