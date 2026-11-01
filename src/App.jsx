@@ -211,28 +211,30 @@ function App() {
   }
 
   return (
-    <div
-      className={`min-h-screen font-sans transition-colors duration-300 overflow-x-clip pb-16 lg:pb-0 lg:pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
-      style={{ '--navbar-height': modoOscuro && location.pathname !== '/campus/campeche/portal' ? `${alturaNavbar}px` : '0px' }}
+      <div
+        className={`min-h-screen font-sans transition-colors duration-300 overflow-x-clip pb-16 lg:pb-0 ${esLandingGeneral ? '' : 'lg:pt-[var(--navbar-height)]'} ${tema.bg} ${tema.text}`}
+      style={{ '--navbar-height': modoOscuro && !esLandingGeneral && !esOferta && location.pathname !== '/campus/campeche/portal' ? `${alturaNavbar}px` : '0px' }}
     >
       <SplashScreen authReady={authReady} clubesLoading={clubesLoading} onFinish={() => setSplashDone(true)} />
 
-      <BarraNavegacion
-        splashActivo={!splashDone}
-        menuAbierto={menuAbierto}
-        setMenuAbierto={setMenuAbierto}
-        onLogoClick={irACatalogo}
-        user={usuario}
-        onLoginClick={() => setShowLogin(true)}
-        onLogout={() => setConfirmarLogout(true)}
-        onDashboardClick={irADashboard}
-        mostrarFiltros={mostrarFiltros}
-        mostrarLogo={esRutaPanel}
-        onVolverCatalogo={irACatalogo}
-        contenidoMax={location.pathname.startsWith('/club/') ? '7xl' : null}
-        heroVisible={heroVisible}
-        onScrollChange={handleScrollChange}
-      />
+      {!esLandingGeneral && !esOferta && (
+        <BarraNavegacion
+          splashActivo={!splashDone}
+          menuAbierto={menuAbierto}
+          setMenuAbierto={setMenuAbierto}
+          onLogoClick={irACatalogo}
+          user={usuario}
+          onLoginClick={() => setShowLogin(true)}
+          onLogout={() => setConfirmarLogout(true)}
+          onDashboardClick={irADashboard}
+          mostrarFiltros={mostrarFiltros}
+          mostrarLogo={esRutaPanel}
+          onVolverCatalogo={irACatalogo}
+          contenidoMax={location.pathname.startsWith('/club/') ? '7xl' : null}
+          heroVisible={heroVisible}
+          onScrollChange={handleScrollChange}
+        />
+      )}
 
       {estaAutenticado && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
       {estaAutenticado && <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />}

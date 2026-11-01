@@ -18,7 +18,7 @@ export function usePanelAdmin(usuario) {
   const [cargandoDashboard, setCargandoDashboard] = useState(true);
 
   const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
-  const clubes = useAdminClubes(setFeedback, setErrorFeedback);
+  const clubes = useAdminClubes(setFeedback, setErrorFeedback, usuario);
   const usuarios = useAdminUsuarios(clubes.refetchClubes, setFeedback, setErrorFeedback);
   const historial = useAdminHistorial(vistaActiva === 'historial');
   const heroDiapositivas = useAdminHeroDiapositivas(setFeedback, setErrorFeedback);

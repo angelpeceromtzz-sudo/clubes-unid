@@ -152,11 +152,12 @@ CREATE TABLE IF NOT EXISTS clubes (
     descripcion TEXT,
     categoria VARCHAR(50),
     participacion VARCHAR(20) NOT NULL DEFAULT 'mixta' CONSTRAINT chk_club_participacion CHECK (participacion IN ('masculina', 'femenina', 'mixta')),
-    cupo_maximo INT NOT NULL CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo > 0),
+    cupo_maximo INT NOT NULL CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo IN (10, 15, 20, 25, 30, 40, 50)),
+    lugar_actividades VARCHAR(255),
     id_presidente INT,
     id_vicepresidente INT,
     imagen_portada VARCHAR(255),
-    id_estatus_club INT NOT NULL DEFAULT 1,
+    id_estatus_club INT NOT NULL DEFAULT 2,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     horario VARCHAR(100) DEFAULT '',
     max_postulaciones INTEGER DEFAULT NULL,
@@ -168,6 +169,16 @@ CREATE TABLE IF NOT EXISTS clubes (
     CONSTRAINT fk_club_vicepresidente FOREIGN KEY (id_vicepresidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_estatus FOREIGN KEY (id_estatus_club) REFERENCES cat_estatus_clubes(id_estatus_club) ON DELETE RESTRICT
 );
+
+DO $$
+BEGIN
+  ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_cupo_positivo;
+  ALTER TABLE clubes ADD CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo IN (10, 15, 20, 25, 30, 40, 50));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS lugar_actividades VARCHAR(255);
+ALTER TABLE clubes ALTER COLUMN id_estatus_club SET DEFAULT 2;
 
 CREATE TABLE IF NOT EXISTS inscripciones (
     id_inscripcion SERIAL PRIMARY KEY,

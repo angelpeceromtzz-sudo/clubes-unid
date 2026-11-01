@@ -8,7 +8,7 @@
    del mismo diámetro que la foto; mostrarFoto es la autorización explícita
    (tener la foto no significa publicarla). La encuesta vive en la landing;
    esta página solo ofrece el retorno a ella. */
-import { useEffect } from 'react';
+import { useEffect, Fragment } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icono } from '../components/ui/Icono';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
@@ -40,7 +40,7 @@ function Parrafos({ items, clases }) {
 // zona compartida de cada pista). Cuando el perfil queda en una fila propia
 // (móvil, o el suelto de una fila de dos), el subgrid no aplica y el
 // contenido toma su altura natural, sin espacio reservado.
-function PerfilPersona({ persona }) {
+function PerfilPersona({ persona, className = '' }) {
   const { tema, modoOscuro } = useTheme();
   if (persona.visible === false) return null;
 
@@ -49,7 +49,7 @@ function PerfilPersona({ persona }) {
   const fraseColor = modoOscuro ? 'text-slate-200' : 'text-slate-700';
 
   return (
-    <li className="grid sm:row-span-6 sm:grid-rows-subgrid w-full lg:col-span-2 justify-items-center text-center px-4 py-6 min-w-0 gap-y-2.5">
+    <li className={`grid sm:row-span-6 sm:grid-rows-subgrid w-full lg:col-span-2 justify-items-center text-center px-4 py-6 min-w-0 gap-y-2.5 ${className}`}>
       <div className="row-start-1">
         {conFoto ? (
           <img
@@ -114,31 +114,28 @@ function PerfilPersona({ persona }) {
 // la columna 2 y una de sola arranca en la 3. En móvil/tableta el flujo
 // sigue siendo 1 y 2 columnas; el perfil suelto de una fila de dos conserva
 // su altura natural.
-function CuadriculaPerfiles({ personas }) {
+
+
+// ... (later)
+
+function CuadriculaPerfiles({ personas, espaciadorDespues }) {
+  const claseLista = espaciadorDespues
+    ? 'mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 grid-rows-[auto_auto_auto_auto_auto_auto] gap-x-6 gap-y-2.5'
+    : 'mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 grid-rows-[auto_auto_auto_auto_auto_auto] gap-x-6 gap-y-2.5 lg:[&>li:nth-child(3n+1):nth-last-child(2)]:col-start-2 lg:[&>li:nth-child(3n+1):last-child]:col-start-3 sm:max-lg:[&>li:last-child:nth-child(odd)]:col-span-2';
   return (
-    <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 grid-rows-[auto_auto_auto_auto_auto_auto] gap-x-6 gap-y-2.5 lg:[&>li:nth-child(3n+1):nth-last-child(2)]:col-start-2 lg:[&>li:nth-child(3n+1):last-child]:col-start-3">
-      {personas.map((persona) => (
-        <PerfilPersona key={persona.nombre} persona={persona} />
+    <ul className={claseLista}>
+      {personas.map((persona, index) => (
+        <Fragment key={persona.nombre}>
+          <PerfilPersona
+            persona={persona}
+            className={espaciadorDespues === 2 && index === 0 ? 'lg:col-start-2' : ''}
+          />
+          {espaciadorDespues === index + 1 && (
+            <li className="hidden lg:block lg:col-span-6 h-0 overflow-hidden" aria-hidden="true" />
+          )}
+        </Fragment>
       ))}
     </ul>
-  );
-}
-
-// Subtítulo de grupo dentro de "Personas que contribuyen". Centrado con
-// filete ámbar y tamaño de subtítulo para distinguirlo de la línea de rol
-// (micro-texto mayúscula) de cada perfil.
-function TituloGrupo({ id, children }) {
-  const { modoOscuro } = useTheme();
-  return (
-    <h3 id={id} className="text-center">
-      <span
-        className={`inline-block border-l-4 border-amber-400 pl-3 sm:pl-4 text-base sm:text-lg font-black ${
-          modoOscuro ? 'text-white' : 'text-slate-900'
-        }`}
-      >
-        {children}
-      </span>
-    </h3>
   );
 }
 
@@ -209,7 +206,7 @@ export default function PaginaAcercaProyecto() {
       >
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
           <div
-            className="max-w-6xl mx-auto grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:items-stretch"
+            className="max-w-6xl mx-auto grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:gap-14 md:items-stretch"
             data-reveal
           >
             <div className="max-w-2xl">
@@ -228,15 +225,15 @@ export default function PaginaAcercaProyecto() {
             {/* En lg la columna derecha iguala la altura del bloque de
                 texto: la foto se estira (object-cover) y los hitos quedan
                 alineados a la base. En móvil conserva aspect-[3/4]. */}
-            <div className="lg:flex lg:flex-col">
+            <div className="md:flex md:flex-col">
               {/* w-full + lg:max-w-none: en el contexto flex de la columna,
                   mx-auto solo centraría con ancho de contenido (la leyenda),
                   no al ancho de la columna. */}
-              <figure className="mx-auto w-full max-w-[20rem] lg:max-w-none lg:flex lg:flex-col lg:flex-1 lg:min-h-0">
+              <figure className="mx-auto w-full max-w-[20rem] md:max-w-none md:flex md:flex-col md:flex-1 md:min-h-0">
                 {/* img absoluta: no aporta altura intrínseca, así la fila
                     la define el texto y la foto se estira a ese alto. */}
                 <div
-                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] lg:aspect-auto lg:flex-1 lg:min-h-0 ${
+                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:flex-1 md:min-h-0 ${
                     modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-100'
                   }`}
                 >
@@ -279,12 +276,12 @@ export default function PaginaAcercaProyecto() {
                 declaración (object-cover); el texto queda centrado a la
                 derecha. min-h evita que la fila quede demasiado baja y la
                 foto, una tira fina. En móvil conserva aspect-[3/4]. */}
-            <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:gap-14 lg:items-stretch lg:min-h-[24rem]">
-              <figure className="mx-auto w-full max-w-[20rem] lg:max-w-none lg:flex lg:flex-col lg:min-h-0">
+            <div className="mt-8 grid gap-8 md:grid-cols-2 md:gap-14 md:items-stretch md:min-h-[24rem]">
+              <figure className="mx-auto w-full max-w-[20rem] md:max-w-none md:flex md:flex-col md:min-h-0">
                 {/* img absoluta: la fila la define el texto, no el intrinsic
                     de la foto vertical. */}
                 <div
-                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] lg:aspect-auto lg:flex-1 lg:min-h-0 ${
+                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:flex-1 md:min-h-0 ${
                     modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-100'
                   }`}
                 >
@@ -300,7 +297,7 @@ export default function PaginaAcercaProyecto() {
                   {ACERCA.paraQuien.imagen.leyenda}
                 </figcaption>
               </figure>
-              <div className="lg:self-start">
+              <div className="md:self-start">
                 <h3 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight ${tema.title}`}>
                   <span className="border-b-4 border-amber-400 pb-1">{ACERCA.paraQuien.protagonista}</span>
                 </h3>
@@ -338,11 +335,11 @@ export default function PaginaAcercaProyecto() {
         className={`scroll-mt-8 ${bandaSuave}`}
       >
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto text-center">
             <h2 id="titulo-equipo" className={tituloSeccion}>
               {ACERCA.equipo.titulo}
             </h2>
-            <p className={`mt-3 max-w-2xl text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
+            <p className={`mt-3 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
               {ACERCA.equipo.intro}
             </p>
             <CuadriculaPerfiles personas={ACERCA.equipo.integrantes} />
@@ -357,20 +354,15 @@ export default function PaginaAcercaProyecto() {
         className="scroll-mt-8"
       >
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto text-center">
             <h2 id="titulo-contribuciones" className={tituloSeccion}>
               {ACERCA.colaboradores.titulo}
             </h2>
-            <p className={`mt-3 max-w-2xl text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
+            <p className={`mt-3 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
               {ACERCA.colaboradores.intro}
             </p>
-            <div className="mt-12" role="group" aria-labelledby="grupo-acompanamiento">
-              <TituloGrupo id="grupo-acompanamiento">Acompañamiento</TituloGrupo>
-              <CuadriculaPerfiles personas={ACERCA.colaboradores.acompanamiento} />
-            </div>
-            <div className="mt-12" role="group" aria-labelledby="grupo-colaboracion">
-              <TituloGrupo id="grupo-colaboracion">Colaboración</TituloGrupo>
-              <CuadriculaPerfiles personas={ACERCA.colaboradores.colaboracion} />
+            <div className="mt-6" role="group" aria-labelledby="grupo-colaboracion">
+              <CuadriculaPerfiles personas={ACERCA.colaboradores.colaboracion} espaciadorDespues={2} />
             </div>
           </div>
         </div>
@@ -383,16 +375,16 @@ export default function PaginaAcercaProyecto() {
         className={`scroll-mt-8 ${bandaSuave}`}
       >
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto text-center">
             <h2 id="titulo-como-trabajamos" className={tituloSeccion}>
               {ACERCA.comoTrabajamos.titulo}
             </h2>
-            <p className={`mt-3 max-w-2xl text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
+            <p className={`mt-3 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
               {ACERCA.comoTrabajamos.intro}
             </p>
-            <ul className="mt-8 grid gap-x-6 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-8 grid gap-x-6 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 sm:max-lg:[&>li:last-child:nth-child(odd)]:col-span-2">
               {ACERCA.comoTrabajamos.pasos.map((paso) => (
-                <li key={paso.titulo} className="flex items-start gap-4 min-w-0">
+                <li key={paso.titulo} className="flex flex-col items-center text-center gap-3 min-w-0">
                   <span
                     aria-hidden="true"
                     className={`shrink-0 w-11 h-11 rounded-full border flex items-center justify-center ${
@@ -417,8 +409,8 @@ export default function PaginaAcercaProyecto() {
       {/* Cierre: invitación y retorno a la landing. */}
       <section aria-labelledby="titulo-cierre" className="scroll-mt-8">
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
-          <div className="max-w-6xl mx-auto">
-            <div className="max-w-2xl">
+          <div className="max-w-6xl mx-auto text-center">
+            <div className="max-w-2xl mx-auto">
               <h2 id="titulo-cierre" className={tituloSeccion}>
                 {ACERCA.cierre.titulo}
               </h2>

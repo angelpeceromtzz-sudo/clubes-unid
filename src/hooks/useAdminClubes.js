@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { useConfirmacionPendiente } from './useConfirmacionPendiente';
 import { filtrarClubes } from '../utils/filtros';
-import { PARTICIPACION } from '../constants/clubes';
+import { PARTICIPACION, CUPOS_CLUB } from '../constants/clubes';
 
-export function useAdminClubes(setFeedback, setErrorFeedback) {
+export function useAdminClubes(setFeedback, setErrorFeedback, currentUser) {
   const [clubes, setClubes] = useState([]);
   const [busquedaClubes, setBusquedaClubes] = useState('');
   const [mostrarModalCrear, setMostrarModalCrear] = useState(false);
   const [editandoClub, setEditandoClub] = useState(null);
-  const [formularioClub, setFormularioClub] = useState({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '', imagen_portada: '', participacion: '', niveles: [] });
+  const [formularioClub, setFormularioClub] = useState({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '20', imagen_portada: '', participacion: '', niveles: [], lugar_actividades: '' });
   const [enviando, setEnviando] = useState(false);
   const [errorModal, setErrorModal] = useState('');
   const [cargandoClubes, setCargandoClubes] = useState(true);
@@ -25,7 +25,9 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
 
   const clubesActivos = clubes.filter((c) => c.id_estatus_club === 1).length;
   const clubesActivosLista = clubes.filter((c) => c.id_estatus_club === 1);
-  const clubesFiltrados = filtrarClubes(clubes, busquedaClubes);
+  const clubesFiltrados = filtrarClubes(clubes, busquedaClubes)
+    .slice()
+    .sort((a, b) => (a.id_estatus_club - b.id_estatus_club) || (a.id_club - b.id_club));
 
   const refetchClubes = useCallback(async () => {
     try {
@@ -41,17 +43,38 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
       solicitarConfirmacion({ tipo: 'baja', clubId, nuevoEstatusId });
       return;
     }
+
+    const club = clubes.find((c) => c.id_club === clubId);
+    const listoParaActivar = Boolean(
+      club &&
+      club.id_presidente &&
+      club.lugar_actividades &&
+      String(club.lugar_actividades).trim() &&
+      club.tiene_horarios_validos
+    );
+
+    let password;
+    if (nuevoEstatusId === 1 && !listoParaActivar) {
+      if (currentUser?.id_rol !== 3) {
+        setErrorFeedback('El club no cumple los requisitos para activarse: responsable, lugar de actividades y horarios válidos.');
+        return;
+      }
+      password = window.prompt('El club no cumple los requisitos. Ingresa ADMIN_SECRET para forzar la activación:');
+      if (!password) return;
+    }
+
     try {
-      await api.updateClubEstatus(clubId, nuevoEstatusId);
+      await api.updateClubEstatus(clubId, nuevoEstatusId, password);
       const actualizados = await api.getClubesAdmin();
       setClubes(actualizados);
+      if (password) setFeedback('Club activado por excepción');
     } catch (err) {
       setErrorFeedback(err.message);
     }
-  }, [solicitarConfirmacion, setErrorFeedback]);
+  }, [clubes, currentUser, solicitarConfirmacion, setErrorFeedback, setFeedback]);
 
   const abrirModalCrear = useCallback(() => {
-    setFormularioClub({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '', imagen_portada: '', participacion: '', niveles: [] });
+    setFormularioClub({ nombre_club: '', descripcion: '', categoria: '', cupo_maximo: '20', imagen_portada: '', participacion: '', niveles: [], lugar_actividades: '' });
     setEditandoClub(null);
     setErrorModal('');
     setMostrarModalCrear(true);
@@ -66,6 +89,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
       imagen_portada: club.imagen_portada || '',
       participacion: club.participacion || '',
       niveles: (club.niveles || []).map((n) => n.id_nivel),
+      lugar_actividades: club.lugar_actividades || '',
     });
     setEditandoClub(club);
     setErrorModal('');
@@ -81,6 +105,10 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
     setErrorModal('');
     if (!formularioClub.nombre_club.trim() || !formularioClub.descripcion.trim() || !formularioClub.categoria.trim() || !formularioClub.cupo_maximo) {
       setErrorModal('Todos los campos son obligatorios');
+      return;
+    }
+    if (!CUPOS_CLUB.includes(Number(formularioClub.cupo_maximo))) {
+      setErrorModal('Cupo máximo inválido');
       return;
     }
     if (!PARTICIPACION.some((p) => p.valor === formularioClub.participacion)) {
@@ -110,6 +138,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
         imagen_portada: formularioClub.imagen_portada || null,
         participacion: formularioClub.participacion,
         niveles: formularioClub.niveles,
+        lugar_actividades: formularioClub.lugar_actividades || null,
       });
       setFeedback('Club creado correctamente');
       const actualizados = await api.getClubesAdmin();
@@ -162,6 +191,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback) {
               imagen_portada: formularioClub.imagen_portada || null,
               participacion: formularioClub.participacion,
               niveles: formularioClub.niveles,
+              lugar_actividades: formularioClub.lugar_actividades || null,
             });
             setFeedback('Club actualizado correctamente');
             setMostrarModalCrear(false);

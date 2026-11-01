@@ -8,9 +8,8 @@ export default function PaginaOferta() {
 
   return (
     <main className={oscuro ? 'bg-[#0b111e] text-white overflow-x-hidden' : 'bg-slate-50 text-slate-900 overflow-x-hidden'}>
-      <BarraGeneral />
-
       <section className="relative min-h-[84vh] overflow-hidden flex items-center" aria-labelledby="hero-oferta">
+        <BarraGeneral flotante />
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/actividades/interunid.jpeg')" }}

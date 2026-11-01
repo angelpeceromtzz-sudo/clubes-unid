@@ -50,8 +50,10 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   }, []);
 
   const handleRoleChange = useCallback(async (userId, nuevoRolId) => {
+    const password = window.prompt('Ingresa la contraseña de administrador para cambiar el rol:');
+    if (!password) return;
     try {
-      await api.updateUserRol(userId, nuevoRolId);
+      await api.updateUserRol(userId, nuevoRolId, password);
       const actualizados = await api.getUsuarios();
       setUsuarios(actualizados);
       setFeedback('Rol actualizado correctamente');

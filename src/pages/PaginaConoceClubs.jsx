@@ -16,7 +16,6 @@
    se activan con ENCUESTA_SLUG en src/config/landing.js. Se monta fuera
    del layout del sistema (ver App.jsx) con su propia barra. */
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { api } from '../services/api';
 import { obtenerUrlImagen } from '../utils/imagen';
@@ -407,20 +406,6 @@ export default function PaginaConoceClubs({ onLoginClick }) {
               <p className="text-base leading-relaxed text-slate-300">
                 UNID Campus Campeche reune experiencias extracurriculares para que cada estudiante encuentre un espacio para participar, aprender y crecer.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Link
-                  to="/campus/campeche/portal"
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-amber-400 text-[#0e162c] font-black shadow-lg shadow-amber-400/20 hover:bg-amber-300 transition"
-                >
-                  Entrar al portal
-                </Link>
-                <Link
-                  to="/conocenos"
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-full border border-slate-500 font-black hover:border-amber-400/70 transition"
-                >
-                  Conocenos
-                </Link>
-              </div>
             </div>
           </div>
         </div>
@@ -457,24 +442,10 @@ export default function PaginaConoceClubs({ onLoginClick }) {
                   <p className="text-sm uppercase tracking-[0.25em] font-bold text-amber-300">
                     {slide.linea}
                   </p>
-                  <p className="text-base sm:text-lg leading-relaxed max-w-xl text-slate-300">
-                    {slide.descripcion}
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <Link
-                      to={slide.cta.href}
-                      className="inline-flex items-center justify-center px-7 py-4 rounded-full bg-amber-400 text-[#0e162c] font-black text-base shadow-2xl shadow-amber-400/25 hover:bg-amber-300 transition"
-                    >
-                      {slide.cta.texto}
-                    </Link>
-                    <Link
-                      to="/conocenos"
-                      className="inline-flex items-center justify-center px-7 py-4 rounded-full border border-slate-500 font-black text-base hover:border-amber-400/70 transition"
-                    >
-                      Conocenos
-                    </Link>
-                  </div>
-                </div>
+                   <p className="text-base sm:text-lg leading-relaxed max-w-xl text-slate-300">
+                     {slide.descripcion}
+                   </p>
+                 </div>
               </div>
             </div>
           ))}
@@ -557,9 +528,29 @@ export default function PaginaConoceClubs({ onLoginClick }) {
         </div>
       </section>
 
-      {/* C. Propuestas: datos reales de la API â€” carrusel lateral en mÃ³vil y
-          grid con vista previa + Â«Mostrar mÃ¡sÂ» en escritorio â€” con estados de
-          carga, vacÃ­o y error con reintento. */}
+      {/* Rector */}
+      <section className="scroll-mt-8">
+        <div className={`${CONTENEDOR} py-12 sm:py-16`}>
+          <div className="max-w-6xl mx-auto" data-reveal>
+            <div className="mt-8 flex justify-center">
+              <img
+                src="/personas/rector-campeche.png"
+                alt="Foto de David Antonio Chacón González"
+                loading="lazy"
+                className="w-full max-w-md aspect-[3/4] rounded-2xl object-cover"
+              />
+            </div>
+            <div className="max-w-2xl mx-auto text-center mt-6">
+              <h2 className={tituloSeccion}>David Antonio Chacón González</h2>
+              <p className={`mt-2 text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] ${modoOscuro ? 'text-amber-400' : 'text-amber-600'}`}>
+                Rector de la universidad
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* C. Propuestas: datos reales de la API */}
       <section
         id={LANDING.explorar.seccionPropuestas}
         aria-labelledby="titulo-propuestas"

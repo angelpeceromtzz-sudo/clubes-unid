@@ -10,6 +10,11 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem('theme', modoOscuro ? 'dark' : 'light');
+    if (modoOscuro) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, [modoOscuro]);
 
   const esOscuro = modoOscuro;
@@ -25,7 +30,7 @@ export function ThemeProvider({ children }) {
         subtitle: 'text-slate-400',
         navPill: 'bg-[#18223f]/60 border border-slate-800 rounded-full p-1',
         btnActive: 'bg-amber-400 text-[#0e162c] font-black rounded-full',
-        btnInactive: 'bg-transparent text-slate-400 hover:text-white rounded-full',
+        btnInactive: 'bg-transparent text-white hover:text-amber-400 rounded-full',
         dropdownBg: 'bg-[#0e162c]',
         dropdownBorder: 'border-slate-700',
         dropdownItem: 'hover:bg-slate-700/50',

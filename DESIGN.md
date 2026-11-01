@@ -377,6 +377,15 @@ Los paneles comparten amber + azul noche, pero cambian densidad y layout:
 
 Al diseñar pantallas de panel, reutilizar `ThemeContext` (`sbBg`, `tableBg`, `inputCls`) y no el lenguaje de hero/tarjetas del catálogo.
 
+### 12.1 Gráficas ejecutivas (Verificado en navegador con datos de prueba)
+
+- Motor: Recharts ya instalado. `MarcoGrafica` y `graficas.css` comparten superficies azul noche/blanco, títulos en caja normal, rejilla discreta y acentos ámbar/azul según el tema. Los colores se definen dentro de `.grafica-unid`.
+- Barras horizontales para comparar clubes, asistencia y respuestas; barras agrupadas para las series mensuales. Los valores se muestran directamente y los nombres completos permanecen en el tooltip y en **Ver datos**. Desde nueve categorías se muestran ocho y el botón **Ver todos** permite consultar el resto.
+- Pastel para participación en clubes y preguntas de opción única o licenciatura cuya suma coincide con las respuestas de la pregunta. Las preguntas de opción múltiple conservan barras y explican su base; los porcentajes pueden superar 100 % al sumarse. Se cuentan envíos de respuestas, sin afirmar que sean personas distintas.
+- El pastel muestra cantidades y porcentajes junto a la leyenda. Más de seis categorías positivas se agrupan en cinco opciones y **Otras opciones**, conservando el total y todas las filas en **Ver datos**. Cero respuestas y base desconocida tienen mensajes diferenciados, sin sectores ficticios.
+- Ocupación: eje fijo de 0 a 100 %, cantidades y cupo en el tooltip. La etiqueta conserva el porcentaje real cuando existe sobrecupo. Los ceros conservan su etiqueta sin dibujar una barra artificial; una base no disponible se presenta como **Sin registros**.
+- Verificación: resumen en claro/oscuro; encuestas y evolución mensual a 320, 390, 768 y 1440 px sin desbordamiento de página. Se probaron el selector Barras/Pastel, tooltips, tablas, expansión, opciones múltiples, cero respuestas y sobrecupo con rutas API interceptadas. Esta revisión no valida registros de producción.
+
 ---
 
 ## 13. Inconsistencias, pendientes y mantenimiento
