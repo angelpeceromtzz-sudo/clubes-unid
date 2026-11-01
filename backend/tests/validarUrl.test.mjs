@@ -185,9 +185,9 @@ test('PUT /horarios/:id: rechaza javascript: en ubicacion_maps con 400', async (
       ubicacion_maps: 'javascript:alert(1)',
     }),
   });
-  assert.equal(r.status, 400);
+  assert.equal(r.status, 409);
   const cuerpo = await r.json();
-  assert.match(cuerpo.error, /ubicación en el mapa/);
+  assert.equal(cuerpo.error, 'Los cambios deben enviarse como una propuesta y ser aprobados por Coordinación VIVE');
 });
 
 test('PUT /horarios/:id: guarda una URL https válida', async () => {
@@ -199,9 +199,9 @@ test('PUT /horarios/:id: guarda una URL https válida', async () => {
       ubicacion_maps: 'https://maps.google.com/?q=Cancha',
     }),
   });
-  assert.equal(r.status, 200);
-  const horario = await r.json();
-  assert.equal(horario.ubicacion_maps, 'https://maps.google.com/?q=Cancha');
+  assert.equal(r.status, 409);
+  const cuerpo = await r.json();
+  assert.equal(cuerpo.error, 'Los cambios deben enviarse como una propuesta y ser aprobados por Coordinación VIVE');
 });
 
 const clubValido = {

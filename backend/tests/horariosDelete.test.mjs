@@ -103,22 +103,22 @@ beforeEach(() => {
   consultas = [];
 });
 
-test('borrar horario con sesiones de asistencia (FK RESTRICT): 409 con mensaje de negocio', async () => {
+test('borrar horario con sesiones de asistencia: 409 (escritura directa bloqueada)', async () => {
   const r = await borrar(101);
   assert.equal(r.status, 409);
-  assert.match(r.body.error, /sesiones de asistencia/);
+  assert.equal(r.body.error, 'Los cambios deben enviarse como una propuesta y ser aprobados por Coordinación VIVE');
 });
 
-test('borrar horario con sesiones simulando el error 23503 exacto: 409 (no 500)', async () => {
+test('borrar horario simulando error 23503: 409', async () => {
   borrarFallaConRestriccion = true;
   const r = await borrar(101);
   assert.equal(r.status, 409);
 });
 
-test('borrar horario sin sesiones: 200', async () => {
+test('borrar horario sin sesiones: 409 (escritura directa bloqueada)', async () => {
   horarioConSesiones = false;
   borrarFallaConRestriccion = false;
   const r = await borrar(101);
-  assert.equal(r.status, 200);
-  assert.match(r.body.mensaje, /eliminado/i);
+  assert.equal(r.status, 409);
+  assert.equal(r.body.error, 'Los cambios deben enviarse como una propuesta y ser aprobados por Coordinación VIVE');
 });

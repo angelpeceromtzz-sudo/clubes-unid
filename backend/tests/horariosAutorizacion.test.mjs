@@ -1,17 +1,9 @@
 // H16: autorización de las rutas reales de horarios contra el middleware.
 //
-// El middleware es la primera capa que decide (se ejecuta antes del handler),
-// por lo que estas pruebas demuestran que conserva las restricciones
-// actuales ANTES de retirar la verificación inline duplicada del handler:
-//   - club propio (líder sobre el club del horario) → pasa;
-//   - club ajeno → 403 con el mensaje del middleware
-//     ('No eres líder de este club', distinto del inline
-//      'No eres presidente ni vicepresidente de este club');
-//   - usuario sin permisos (rol ≠ 2/5) → 403 del middleware;
-//   - identificador inválido → 400 (antes un 'abc' llegaba a PostgreSQL y
-//     terminaba en 500 por error de casteo).
-// Rutas montadas en un Express real con pool simulado y JWT ficticio;
-// sin red externa y sin tocar ninguna base de datos.
+// Tras PBI-11, las escrituras directas de horarios ya no se aplican: el
+// endpoint responde 409 y exige enviar una propuesta para aprobación por
+// Coordinación VIVE. Estas pruebas verifican ese nuevo contrato para las
+// rutas reales montadas en Express.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -23,15 +15,9 @@ const jwt = (await import('jsonwebtoken')).default;
 const { default: pool } = await import('../db.js');
 const { default: horariosRouter } = await import('../routes/horarios.js');
 
-// --- Escenario ficticio ---
-// Líder (id 100, rol 2) preside el club 5; Ajeno (id 200, rol 2) preside el
-// club 9; Estudiante (id 50, rol 1) no lidera nada. El horario 7 pertenece
-// al club 5.
-
 function responder(sql, params = []) {
   const texto = String(sql).trim();
 
-  // Revalidación de authenticate (H2).
   if (/FROM usuarios u[\s\S]*WHERE u\.id_usuario = \$1 AND u\.deleted_at IS NULL/.test(texto)) {
     const usuarios = {
       100: { id_usuario: 100, nombre_completo: 'Líder Ficticio', id_rol: 2 },
@@ -42,7 +28,6 @@ function responder(sql, params = []) {
     return fila ? { rows: [fila], rowCount: 1 } : { rows: [], rowCount: 0 };
   }
 
-  // requireClubLeader (POST /club/:idClub): liderazgo por club.
   if (/SELECT id_presidente, id_vicepresidente FROM clubes WHERE id_club = \$1/.test(texto)) {
     const clubes = {
       5: { id_presidente: 100, id_vicepresidente: null },
@@ -52,13 +37,11 @@ function responder(sql, params = []) {
     return fila ? { rows: [fila], rowCount: 1 } : { rows: [], rowCount: 0 };
   }
 
-  // requireHorarioLeader y handler PUT: club real del horario.
   if (/SELECT id_club FROM horarios_club WHERE id_horario = \$1/.test(texto)) {
     if (Number(params[0]) === 7) return { rows: [{ id_club: 5 }], rowCount: 1 };
     return { rows: [], rowCount: 0 };
   }
 
-  // Liderazgo explícito sobre el club resuelto (middleware y handler).
   if (/SELECT id_club FROM clubes WHERE id_club = \$1 AND \(id_presidente/.test(texto)) {
     const [idClub, idUsuario] = params.map(Number);
     const lideres = { '5:100': true, '9:200': true };
@@ -67,39 +50,6 @@ function responder(sql, params = []) {
       : { rows: [], rowCount: 0 };
   }
 
-  // Conflicto de horario: siempre sin conflicto en estas pruebas.
-  if (/FROM horarios_club[\s\S]*hora_inicio < /.test(texto)) {
-    return { rows: [], rowCount: 0 };
-  }
-
-  if (/INSERT INTO horarios_club \(/.test(texto)) {
-    const [idClub, dia, hin, hfin, lugar, maps, desc] = params;
-    return {
-      rows: [{
-        id_horario: 10, id_club: Number(idClub), dia_semana: dia,
-        hora_inicio: hin, hora_fin: hfin, lugar,
-        ubicacion_maps: maps, descripcion: desc,
-      }],
-      rowCount: 1,
-    };
-  }
-
-  if (/UPDATE horarios_club/.test(texto)) {
-    const [dia, hin, hfin, lugar, maps, desc] = params;
-    return {
-      rows: [{
-        id_horario: 7, id_club: 5, dia_semana: dia, hora_inicio: hin,
-        hora_fin: hfin, lugar, ubicacion_maps: maps, descripcion: desc,
-      }],
-      rowCount: 1,
-    };
-  }
-
-  if (/DELETE FROM horarios_club/.test(texto)) {
-    return { rows: [{ id_horario: Number(params[0]) }], rowCount: 1 };
-  }
-
-  // BEGIN / COMMIT / ROLLBACK y cualquier otra consulta de la ruta.
   return { rows: [], rowCount: 0 };
 }
 
@@ -146,100 +96,95 @@ async function pedir(metodo, ruta, tokenUsuario, cuerpo) {
   });
 }
 
-// --- POST /club/:idClub (antes respondía siempre 400 por :idClub) ---
+const MENSAJE_PROPUESTA = 'Los cambios deben enviarse como una propuesta y ser aprobados por Coordinación VIVE';
 
-test('POST: líder del club crea horarios en su club (club propio)', async () => {
+test('POST: líder del club recibe 409 (escritura directa bloqueada)', async () => {
   const r = await pedir('POST', '/club/5', tokenLider, cuerpoHorario);
-  assert.equal(r.status, 201);
-  const filas = await r.json();
-  assert.equal(filas.length, 1);
-  assert.equal(filas[0].id_club, 5);
-});
-
-test('POST: líder de otro club recibe 403 del middleware (club ajeno)', async () => {
-  const r = await pedir('POST', '/club/5', tokenAjeno, cuerpoHorario);
-  assert.equal(r.status, 403);
+  assert.equal(r.status, 409);
   const cuerpo = await r.json();
-  assert.equal(cuerpo.error, 'No eres líder de este club');
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
 });
 
-test('POST: usuario sin rol líder recibe 403 del middleware (sin permisos)', async () => {
+test('POST: líder de otro club recibe 409 (escritura directa bloqueada)', async () => {
+  const r = await pedir('POST', '/club/5', tokenAjeno, cuerpoHorario);
+  assert.equal(r.status, 409);
+  const cuerpo = await r.json();
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
+});
+
+test('POST: usuario sin rol líder recibe 403 del middleware', async () => {
   const r = await pedir('POST', '/club/5', tokenEstudiante, cuerpoHorario);
   assert.equal(r.status, 403);
   const cuerpo = await r.json();
   assert.equal(cuerpo.error, 'No tienes permisos para esta acción');
 });
 
-test('POST: identificador de club no numérico responde 400 (antes 500)', async () => {
+test('POST: identificador de club no numérico recibe 409 (escritura directa bloqueada)', async () => {
   const r = await pedir('POST', '/club/abc', tokenLider, cuerpoHorario);
-  assert.equal(r.status, 400);
+  assert.equal(r.status, 409);
   const cuerpo = await r.json();
-  assert.equal(cuerpo.error, 'id_club inválido');
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
 });
 
-// --- PUT /:id ---
-
-test('PUT: líder del club del horario lo actualiza (club propio)', async () => {
+test('PUT: líder del club recibe 409 (escritura directa bloqueada)', async () => {
   const r = await pedir('PUT', '/7', tokenLider, cuerpoHorario);
-  assert.equal(r.status, 200);
-  const horario = await r.json();
-  assert.equal(horario.id_club, 5);
-});
-
-test('PUT: líder de otro club recibe 403 del middleware (club ajeno)', async () => {
-  const r = await pedir('PUT', '/7', tokenAjeno, cuerpoHorario);
-  assert.equal(r.status, 403);
+  assert.equal(r.status, 409);
   const cuerpo = await r.json();
-  assert.equal(cuerpo.error, 'No eres líder de este club');
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
 });
 
-test('PUT: usuario sin rol líder recibe 403 del middleware (sin permisos)', async () => {
+test('PUT: líder de otro club recibe 409 (escritura directa bloqueada)', async () => {
+  const r = await pedir('PUT', '/7', tokenAjeno, cuerpoHorario);
+  assert.equal(r.status, 409);
+  const cuerpo = await r.json();
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
+});
+
+test('PUT: usuario sin rol líder recibe 403 del middleware', async () => {
   const r = await pedir('PUT', '/7', tokenEstudiante, cuerpoHorario);
   assert.equal(r.status, 403);
   const cuerpo = await r.json();
   assert.equal(cuerpo.error, 'No tienes permisos para esta acción');
 });
 
-test('PUT: identificador de horario no numérico responde 400', async () => {
+test('PUT: identificador de horario no numérico recibe 409 (escritura directa bloqueada)', async () => {
   const r = await pedir('PUT', '/abc', tokenLider, cuerpoHorario);
-  assert.equal(r.status, 400);
+  assert.equal(r.status, 409);
   const cuerpo = await r.json();
-  assert.equal(cuerpo.error, 'id de horario inválido');
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
 });
 
-test('PUT: horario inexistente responde 404 desde el middleware', async () => {
+test('PUT: horario inexistente recibe 409 (escritura directa bloqueada)', async () => {
   const r = await pedir('PUT', '/999', tokenLider, cuerpoHorario);
-  assert.equal(r.status, 404);
+  assert.equal(r.status, 409);
   const cuerpo = await r.json();
-  assert.equal(cuerpo.error, 'Horario no encontrado');
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
 });
 
-// --- DELETE /:id ---
-
-test('DELETE: líder del club del horario lo elimina (club propio)', async () => {
+test('DELETE: líder del club recibe 409 (escritura directa bloqueada)', async () => {
   const r = await pedir('DELETE', '/7', tokenLider);
-  assert.equal(r.status, 200);
+  assert.equal(r.status, 409);
   const cuerpo = await r.json();
-  assert.match(cuerpo.mensaje, /eliminado/);
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
 });
 
-test('DELETE: líder de otro club recibe 403 del middleware (club ajeno)', async () => {
+test('DELETE: líder de otro club recibe 409 (escritura directa bloqueada)', async () => {
   const r = await pedir('DELETE', '/7', tokenAjeno);
-  assert.equal(r.status, 403);
+  assert.equal(r.status, 409);
   const cuerpo = await r.json();
-  assert.equal(cuerpo.error, 'No eres líder de este club');
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
 });
 
-test('DELETE: usuario sin rol líder recibe 403 del middleware (sin permisos)', async () => {
+test('DELETE: usuario sin rol líder recibe 403 del middleware', async () => {
   const r = await pedir('DELETE', '/7', tokenEstudiante);
   assert.equal(r.status, 403);
   const cuerpo = await r.json();
   assert.equal(cuerpo.error, 'No tienes permisos para esta acción');
 });
 
-test('DELETE: identificador de horario no numérico responde 400', async () => {
+test('DELETE: identificador de horario no numérico recibe 409 (escritura directa bloqueada)', async () => {
   const r = await pedir('DELETE', '/abc', tokenLider);
-  assert.equal(r.status, 400);
+  assert.equal(r.status, 409);
   const cuerpo = await r.json();
-  assert.equal(cuerpo.error, 'id de horario inválido');
+  assert.equal(cuerpo.error, MENSAJE_PROPUESTA);
 });
