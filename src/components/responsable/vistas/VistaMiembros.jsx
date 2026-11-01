@@ -9,7 +9,7 @@ import { EncabezadoPagina } from '../../ui/EncabezadoPagina';
 import { MiembroCard } from '../miembros/MiembroCard';
 import { ModalVP } from '../miembros/ModalVP';
 
-export function VistaMiembros({ club, esPresidente, onActualizarClub }) {
+export function VistaMiembros({ club, esResponsableClub, onActualizarClub }) {
   const { tema, modoOscuro } = useTheme();
   const [miembros, setMiembros] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -83,7 +83,7 @@ export function VistaMiembros({ club, esPresidente, onActualizarClub }) {
               key={m.id_usuario}
               miembro={m}
               club={club}
-              esPresidente={esPresidente}
+              esResponsableClub={esResponsableClub}
               tieneVP={tieneVP}
               asignando={asignando}
               onAsignarVP={(usuario, accion) => setModalVP({ usuario, accion })}

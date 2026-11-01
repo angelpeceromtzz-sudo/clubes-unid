@@ -136,11 +136,11 @@ ON CONFLICT DO NOTHING;
 
 -- Asignar presidente al club de Basketball
 UPDATE clubes cl
-SET id_presidente = u.id_usuario
+SET id_responsable_club = u.id_usuario
 FROM usuarios u
 WHERE cl.nombre_club = 'Equipo de Basketball'
   AND u.correo_institucional = 'presidente@unid.mx'
-  AND cl.id_presidente IS NULL;
+  AND cl.id_responsable_club IS NULL;
 
 -- ============================================================
 -- 4. INSCRIPCIONES DE PRUEBA

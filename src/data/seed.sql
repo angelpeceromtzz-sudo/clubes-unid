@@ -50,7 +50,7 @@ VALUES (
 -- ASIGNAR PRESIDENTE AL CLUB DE BASKETBALL (id_club = 4)
 -- ============================================================
 UPDATE clubes
-SET id_presidente = (SELECT id_usuario FROM usuarios WHERE correo_institucional = 'presidente@unid.mx')
+SET id_responsable_club = (SELECT id_usuario FROM usuarios WHERE correo_institucional = 'presidente@unid.mx')
 WHERE id_club = 4;
 
 -- ============================================================

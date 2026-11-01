@@ -4,9 +4,9 @@ import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { InformacionClub } from '../components/clubes/InformacionClub';
 import { SeccionAvisos } from '../components/responsable/secciones/SeccionAvisos';
 import { SeccionMiembros } from '../components/responsable/secciones/SeccionMiembros';
-import { usePanelPresidente } from '../hooks/usePanelPresidente';
+import { usePanelResponsableClub } from '../hooks/usePanelResponsableClub';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
-import { ELEMENTOS_NAV_PRESIDENTE } from '../constants/navegacion';
+import { ELEMENTOS_NAV_RESPONSABLE_CLUB } from '../constants/navegacion';
 import { EstadoVacio } from '../components/responsable/EmptyState';
 import { VistaConvocatorias } from '../components/responsable/vistas/VistaConvocatorias';
 import { VistaMiembros } from '../components/responsable/vistas/VistaMiembros';
@@ -16,9 +16,9 @@ import { HorariosClub } from '../components/clubes/sections/HorariosClub';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 
-export function PanelPresidente() {
+export function PanelResponsableClub() {
   const { usuario } = useAutenticacion();
-  const d = usePanelPresidente(usuario);
+  const d = usePanelResponsableClub(usuario);
 
   if (d.loading) {
     return (
@@ -45,12 +45,12 @@ export function PanelPresidente() {
   }
 
   // Asistencia V1: disponible únicamente para el presidente (no vicepresidente).
-  const elementosNav = d.esPresidente
-    ? ELEMENTOS_NAV_PRESIDENTE
-    : ELEMENTOS_NAV_PRESIDENTE.filter((item) => item.key !== 'asistencia');
+  const elementosNav = d.esResponsableClub
+    ? ELEMENTOS_NAV_RESPONSABLE_CLUB
+    : ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item) => item.key !== 'asistencia');
 
   const vistaVisible =
-    d.vistaActiva === 'asistencia' && !d.esPresidente ? 'principal' : d.vistaActiva;
+    d.vistaActiva === 'asistencia' && !d.esResponsableClub ? 'principal' : d.vistaActiva;
 
   return (
     <RutaProtegida>
@@ -61,8 +61,8 @@ export function PanelPresidente() {
       >
         <div className="mb-6 md:mb-8">
             <EncabezadoPagina
-              titulo={d.esPresidente ? 'Panel de Presidente' : 'Panel de Vicepresidente'}
-              subtitulo={`Bienvenido, ${d.user.nombre_completo} · ${d.esPresidente ? 'Presidente' : 'Vicepresidente'} de ${d.club.nombre_club}`}
+              titulo={d.esResponsableClub ? 'Panel de Presidente' : 'Panel de Vicepresidente'}
+              subtitulo={`Bienvenido, ${d.user.nombre_completo} · ${d.esResponsableClub ? 'Presidente' : 'Vicepresidente'} de ${d.club.nombre_club}`}
             />
           </div>
 
@@ -70,7 +70,7 @@ export function PanelPresidente() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <InformacionClub club={d.club} />
-                <SeccionAvisos club={d.club} esPresidente={true} />
+                <SeccionAvisos club={d.club} esResponsableClub={true} />
               </div>
               <div className="space-y-8">
                 <SeccionMiembros miembros={d.miembros} club={d.club} />
@@ -83,7 +83,7 @@ export function PanelPresidente() {
           )}
 
           {vistaVisible === 'miembros' && (
-            <VistaMiembros club={d.club} esPresidente={d.esPresidente} onActualizarClub={d.actualizarClub} />
+            <VistaMiembros club={d.club} esResponsableClub={d.esResponsableClub} onActualizarClub={d.actualizarClub} />
           )}
 
           {vistaVisible === 'historial' && (
@@ -99,7 +99,7 @@ export function PanelPresidente() {
               club={d.club}
               modoOscuro={d.isDark}
               esAdmin={false}
-              esPresidente={true}
+              esResponsableClub={true}
             />
           )}
 

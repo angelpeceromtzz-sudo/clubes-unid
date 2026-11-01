@@ -23,8 +23,8 @@ const SECRET = process.env.JWT_SECRET;
 
 // --- Stub del pool: registra llamadas y resuelve solo lo que la ruta usa ---
 const llamadas = [];
-const CLUB_PROPIO = { id_club: 7, id_presidente: 50, id_vicepresidente: 51 };
-const CLUB_OTRO = { id_club: 8, id_presidente: 60, id_vicepresidente: 61 };
+const CLUB_PROPIO = { id_club: 7, id_responsable_club: 50, id_vicepresidente: 51 };
+const CLUB_OTRO = { id_club: 8, id_responsable_club: 60, id_vicepresidente: 61 };
 
 // Usuarios activos ficticios (id → fila). La revalidación de authenticate
 // (H2) consulta usuarios con deleted_at IS NULL; el stub replica ese filtro.

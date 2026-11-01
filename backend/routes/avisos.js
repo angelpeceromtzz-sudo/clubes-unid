@@ -39,7 +39,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const clubResult = await pool.query(
-      'SELECT id_presidente, id_vicepresidente FROM clubes WHERE id_club = $1',
+      'SELECT id_responsable_club, id_vicepresidente FROM clubes WHERE id_club = $1',
       [id_club]
     );
 
@@ -48,7 +48,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const club = clubResult.rows[0];
-    const esPresidente = club.id_presidente === req.user.id;
+    const esPresidente = club.id_responsable_club === req.user.id;
     const esVicepresidente = club.id_vicepresidente === req.user.id;
     const esAdmin = req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION;
 
@@ -87,7 +87,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     const { id } = req.params;
 
     const avisoResult = await pool.query(
-      'SELECT a.*, c.id_presidente, c.id_vicepresidente FROM avisos_clubes a JOIN clubes c ON c.id_club = a.id_club WHERE a.id_aviso = $1',
+      'SELECT a.*, c.id_responsable_club, c.id_vicepresidente FROM avisos_clubes a JOIN clubes c ON c.id_club = a.id_club WHERE a.id_aviso = $1',
       [id]
     );
 
@@ -96,7 +96,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     }
 
     const aviso = avisoResult.rows[0];
-    const esPresidente = aviso.id_presidente === req.user.id;
+    const esPresidente = aviso.id_responsable_club === req.user.id;
     const esVicepresidente = aviso.id_vicepresidente === req.user.id;
     const esAdmin = req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION;
 

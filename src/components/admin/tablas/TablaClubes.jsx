@@ -49,8 +49,8 @@ export function TablaClubes({
                         onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
                         className={selectCls}
                       >
-                        <option value={1} disabled={!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3}>
-                          Activo{!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}
+                        <option value={1} disabled={!(c.id_responsable_club && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3}>
+                          Activo{!(c.id_responsable_club && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}
                         </option>
                         <option value={2}>Próximamente</option>
                         <option value={3}>Inactivo</option>
@@ -97,8 +97,8 @@ export function TablaClubes({
                  onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
                  className={selectCls}
                >
-                 <option value={1} disabled={!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3}>
-                   Activo{!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}
+                 <option value={1} disabled={!(c.id_responsable_club && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3}>
+                   Activo{!(c.id_responsable_club && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}
                  </option>
                  <option value={2}>Próximamente</option>
                  <option value={3}>Inactivo</option>

@@ -47,7 +47,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback, currentUser) {
     const club = clubes.find((c) => c.id_club === clubId);
     const listoParaActivar = Boolean(
       club &&
-      club.id_presidente &&
+      club.id_responsable_club &&
       club.lugar_actividades &&
       String(club.lugar_actividades).trim() &&
       club.tiene_horarios_validos

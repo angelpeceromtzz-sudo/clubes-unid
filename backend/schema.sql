@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS clubes (
     participacion VARCHAR(20) NOT NULL DEFAULT 'mixta' CONSTRAINT chk_club_participacion CHECK (participacion IN ('masculina', 'femenina', 'mixta')),
     cupo_maximo INT NOT NULL CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo IN (10, 15, 20, 25, 30, 40, 50)),
     lugar_actividades VARCHAR(255),
-    id_presidente INT,
+    id_responsable_club INT,
     id_vicepresidente INT,
     imagen_portada VARCHAR(255),
     id_estatus_club INT NOT NULL DEFAULT 2,
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS clubes (
     cerrada_manualmente BOOLEAN DEFAULT FALSE,
     fecha_apertura_programada TIMESTAMPTZ DEFAULT NULL,
     fecha_limite_cierre TIMESTAMPTZ DEFAULT NULL,
-    CONSTRAINT fk_club_presidente FOREIGN KEY (id_presidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_club_presidente FOREIGN KEY (id_responsable_club) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_vicepresidente FOREIGN KEY (id_vicepresidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_estatus FOREIGN KEY (id_estatus_club) REFERENCES cat_estatus_clubes(id_estatus_club) ON DELETE RESTRICT
 );
@@ -268,7 +268,7 @@ ALTER TABLE formularios DROP COLUMN IF EXISTS turno;
 CREATE TABLE IF NOT EXISTS convocatorias (
     id_convocatoria SERIAL PRIMARY KEY,
     id_club INTEGER NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
-    id_presidente INT,
+    id_responsable_club INT,
     bloque CHAR(1) NOT NULL,
     periodo VARCHAR(50) NOT NULL,
     fecha DATE,
@@ -369,7 +369,7 @@ CREATE TABLE IF NOT EXISTS actividad_clubes (
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_fecha ON actividad_clubes(fecha_creacion DESC);
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_club ON actividad_clubes(id_club);
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_club_id_presidente ON clubes (id_presidente) WHERE id_presidente IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_club_id_responsable_club ON clubes (id_responsable_club) WHERE id_responsable_club IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS diapositivas_hero (
     id_diapositiva SERIAL PRIMARY KEY,

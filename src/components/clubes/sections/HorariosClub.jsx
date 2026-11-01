@@ -10,7 +10,7 @@ import { ROW_HEIGHT, COL_HORA_W } from '../../../constants/horario';
 
 export function HorariosClub({ club, modoOscuro, esMiembro, expandirHorarios = false }) {
   const { usuario } = useAutenticacion();
-  const presidente = usuario?.id_rol === 2 && Number(club.id_presidente) === Number(usuario.id ?? usuario.id_usuario);
+  const presidente = usuario?.id_rol === 2 && Number(club.id_responsable_club) === Number(usuario.id ?? usuario.id_usuario);
   const [horarios, setHorarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');

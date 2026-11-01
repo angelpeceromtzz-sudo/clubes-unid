@@ -20,7 +20,7 @@ router.get('/', authenticate, async (req, res) => {
     let clubIdAlumno = null;
 
     if (roleId === 2 || roleId === 5) {
-      const pres = await pool.query('SELECT id_club FROM clubes WHERE id_presidente = $1 OR id_vicepresidente = $1', [userId]);
+      const pres = await pool.query('SELECT id_club FROM clubes WHERE id_responsable_club = $1 OR id_vicepresidente = $1', [userId]);
       if (pres.rows.length > 0) clubIdPresidente = pres.rows[0].id_club;
     }
 
@@ -139,7 +139,7 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
     let clubRow = null;
     if (idClub !== null && idClub !== undefined) {
       const club = await pool.query(
-        'SELECT id_club, id_presidente, id_vicepresidente FROM clubes WHERE id_club = $1',
+        'SELECT id_club, id_responsable_club, id_vicepresidente FROM clubes WHERE id_club = $1',
         [idClub]
       );
       clubRow = club.rows[0] ?? null;
@@ -227,7 +227,7 @@ router.post('/leer-todas', authenticate, async (req, res) => {
 
     let clubId = null;
     if (roleId === 2) {
-      const pres = await pool.query('SELECT id_club FROM clubes WHERE id_presidente = $1', [userId]);
+      const pres = await pool.query('SELECT id_club FROM clubes WHERE id_responsable_club = $1', [userId]);
       if (pres.rows.length > 0) clubId = pres.rows[0].id_club;
     }
     if (roleId === 1) {

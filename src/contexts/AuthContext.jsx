@@ -133,8 +133,8 @@ export function ProveedorAutenticacion({ children: hijos }) {
       if (!inscripcion) return null;
       const club = await api.getClub(inscripcion.id_club);
       const avisos = await api.getAvisos(inscripcion.id_club);
-      const esPresidente = club.id_presidente === usuario?.id;
-      return { club, avisos, esPresidente, inscripcion };
+      const esResponsableClub = club.id_responsable_club === usuario?.id;
+      return { club, avisos, esResponsableClub, inscripcion };
     } catch {
       return null;
     }
@@ -144,7 +144,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
   const esAdmin = usuario?.id_rol === 3;
   const esCoordinacion = usuario?.id_rol === 7;
   const esAdminOCoordinacion = esAdmin || esCoordinacion;
-  const esPresidente = usuario?.id_rol === 2;
+  const esResponsableClub = usuario?.id_rol === 2;
   const esRectoria = usuario?.id_rol === 4;
   // El responsable administra el mural digital y redacta noticias;
   // la aprobación editorial de noticias corresponde a rectoría.
@@ -158,7 +158,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
       value={{
         usuario, authReady,
         iniciarSesion, iniciarSesionMicrosoft, iniciarSesionOtp, cerrarSesion,
-        estaAutenticado, esAdmin, esCoordinacion, esAdminOCoordinacion, esPresidente, esRectoria,
+        estaAutenticado, esAdmin, esCoordinacion, esAdminOCoordinacion, esResponsableClub, esRectoria,
         esResponsableMural, puedeGestionarMural, puedeGestionarNoticias, puedeAprobarNoticias,
         tieneInscripcionActiva, clubesPostulados,
         actualizarClubesPostulados: setClubesPostulados,

@@ -50,9 +50,9 @@ export function AsignacionClubUsuario({ u, clubesActivosList, asignando, onRemov
           onChange={(e) => {
             const clubId = e.target.value ? Number(e.target.value) : null;
             const clubSeleccionado = clubesActivosList.find((c) => c.id_club === clubId);
-            const presidenteReemplazado = clubSeleccionado?.id_presidente && clubSeleccionado.id_presidente !== u.id_usuario;
+            const presidenteReemplazado = clubSeleccionado?.id_responsable_club && clubSeleccionado.id_responsable_club !== u.id_usuario;
             if (presidenteReemplazado) {
-              const nombrePresidente = usuarios.find((u2) => u2.id_usuario === clubSeleccionado.id_presidente)?.nombre_completo || 'otro usuario';
+              const nombrePresidente = usuarios.find((u2) => u2.id_usuario === clubSeleccionado.id_responsable_club)?.nombre_completo || 'otro usuario';
               const mensaje = `El club "${clubSeleccionado.nombre_club}" ya tiene un presidente asignado (${nombrePresidente}). ¿Estás seguro de que deseas reemplazarlo?`;
               setConfirmPendiente({ userId: u.id_usuario, clubId, mensaje, tipo: 'presidente' });
               return;

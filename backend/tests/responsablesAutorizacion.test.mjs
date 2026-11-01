@@ -32,9 +32,9 @@ const usuarios = {
 };
 
 const clubes = {
-  5: { id_club: 5, nombre_club: 'Club A', id_presidente: 201 },
-  6: { id_club: 6, nombre_club: 'Club B', id_presidente: null },
-  7: { id_club: 7, nombre_club: 'Club C', id_presidente: 999 },
+  5: { id_club: 5, nombre_club: 'Club A', id_responsable_club: 201 },
+  6: { id_club: 6, nombre_club: 'Club B', id_responsable_club: null },
+  7: { id_club: 7, nombre_club: 'Club C', id_responsable_club: 999 },
 };
 
 function registrarConsulta(lista, sql, params) {
@@ -52,7 +52,7 @@ function responderCliente(sql, params = []) {
   if (/^BEGIN/i.test(texto)) {
     snapshot = {
       usuarios: Object.fromEntries(Object.entries(usuarios).map(([k, v]) => [k, { id_rol: v.id_rol }])),
-      clubes: Object.fromEntries(Object.entries(clubes).map(([k, v]) => [k, { id_presidente: v.id_presidente }])),
+      clubes: Object.fromEntries(Object.entries(clubes).map(([k, v]) => [k, { id_responsable_club: v.id_responsable_club }])),
     };
     return { rows: [], rowCount: 0 };
   }
@@ -66,7 +66,7 @@ function responderCliente(sql, params = []) {
     rollbackLlamado = true;
     if (snapshot) {
       for (const [k, v] of Object.entries(snapshot.usuarios)) usuarios[k].id_rol = v.id_rol;
-      for (const [k, v] of Object.entries(snapshot.clubes)) clubes[k].id_presidente = v.id_presidente;
+      for (const [k, v] of Object.entries(snapshot.clubes)) clubes[k].id_responsable_club = v.id_responsable_club;
       snapshot = null;
     }
     return { rows: [], rowCount: 0 };
@@ -77,21 +77,21 @@ function responderCliente(sql, params = []) {
     return u ? { rows: [u], rowCount: 1 } : { rows: [], rowCount: 0 };
   }
 
-  if (/SELECT id_club, nombre_club, id_presidente FROM clubes WHERE id_club = \$1/.test(texto)) {
+  if (/SELECT id_club, nombre_club, id_responsable_club FROM clubes WHERE id_club = \$1/.test(texto)) {
     const c = clubes[params[0]];
     return c ? { rows: [c], rowCount: 1 } : { rows: [], rowCount: 0 };
   }
 
-  if (/SELECT id_club FROM clubes WHERE id_presidente = \$1/.test(texto)) {
+  if (/SELECT id_club FROM clubes WHERE id_responsable_club = \$1/.test(texto)) {
     const ids = Object.values(clubes)
-      .filter((c) => c.id_presidente === params[0])
+      .filter((c) => c.id_responsable_club === params[0])
       .map((c) => ({ id_club: c.id_club }));
     return { rows: ids, rowCount: ids.length };
   }
 
-  if (/UPDATE clubes SET id_presidente = NULL WHERE id_presidente = \$1 AND id_club <> \$2/.test(texto)) {
+  if (/UPDATE clubes SET id_responsable_club = NULL WHERE id_responsable_club = \$1 AND id_club <> \$2/.test(texto)) {
     for (const c of Object.values(clubes)) {
-      if (c.id_presidente === params[0] && Number(c.id_club) !== Number(params[1])) c.id_presidente = null;
+      if (c.id_responsable_club === params[0] && Number(c.id_club) !== Number(params[1])) c.id_responsable_club = null;
     }
     return { rows: [], rowCount: 1 };
   }
@@ -101,15 +101,15 @@ function responderCliente(sql, params = []) {
     return { rows: [], rowCount: 1 };
   }
 
-  if (/UPDATE clubes SET id_presidente = \$1 WHERE id_club = \$2/.test(texto)) {
+  if (/UPDATE clubes SET id_responsable_club = \$1 WHERE id_club = \$2/.test(texto)) {
     if (fallarAsignacion) throw new Error('fallo simulado');
-    clubes[params[1]].id_presidente = params[0];
+    clubes[params[1]].id_responsable_club = params[0];
     return { rows: [], rowCount: 1 };
   }
 
-  if (/UPDATE clubes SET id_presidente = NULL WHERE id_presidente = \$1/.test(texto)) {
+  if (/UPDATE clubes SET id_responsable_club = NULL WHERE id_responsable_club = \$1/.test(texto)) {
     for (const c of Object.values(clubes)) {
-      if (c.id_presidente === params[0]) c.id_presidente = null;
+      if (c.id_responsable_club === params[0]) c.id_responsable_club = null;
     }
     return { rows: [], rowCount: 1 };
   }
@@ -167,9 +167,9 @@ function reiniciarEstado() {
   auditorias.length = 0;
   usuarios[200].id_rol = 1;
   usuarios[201].id_rol = 2;
-  clubes[5].id_presidente = 201;
-  clubes[6].id_presidente = null;
-  clubes[7].id_presidente = 999;
+  clubes[5].id_responsable_club = 201;
+  clubes[6].id_responsable_club = null;
+  clubes[7].id_responsable_club = 999;
 }
 
 async function pedir(tokenUsuario, idUsuario, body) {
@@ -190,7 +190,7 @@ test('admin puede asignar responsabilidad a un alumno', async () => {
   const cuerpo = await r.json();
   assert.equal(cuerpo.nombre_club, 'Club B');
   assert.equal(usuarios[200].id_rol, 2);
-  assert.equal(clubes[6].id_presidente, 200);
+  assert.equal(clubes[6].id_responsable_club, 200);
   assert.equal(consultasInscripciones.length, 0);
   assert.equal(auditorias.length, 1);
   assert.equal(auditorias[0].params[2], 'asignar_responsable');
@@ -203,7 +203,7 @@ test('coordinacion puede asignar responsabilidad a un alumno', async () => {
   const r = await pedir(token(101, 7), 200, { id_club: 6 });
   assert.equal(r.status, 200);
   assert.equal(usuarios[200].id_rol, 2);
-  assert.equal(clubes[6].id_presidente, 200);
+  assert.equal(clubes[6].id_responsable_club, 200);
 });
 
 test('alumno no puede ejecutar el endpoint', async () => {
@@ -260,16 +260,16 @@ test('un responsable no puede quedar asignado a dos clubes', async () => {
   reiniciarEstado();
   const r = await pedir(token(100, 3), 201, { id_club: 6 });
   assert.equal(r.status, 200);
-  assert.equal(clubes[5].id_presidente, null);
-  assert.equal(clubes[6].id_presidente, 201);
+  assert.equal(clubes[5].id_responsable_club, null);
+  assert.equal(clubes[6].id_responsable_club, 201);
 });
 
 test('reasignacion actualiza club anterior y nuevo en la misma transaccion', async () => {
   reiniciarEstado();
   const r = await pedir(token(100, 3), 201, { id_club: 6 });
   assert.equal(r.status, 200);
-  assert.equal(clubes[5].id_presidente, null);
-  assert.equal(clubes[6].id_presidente, 201);
+  assert.equal(clubes[5].id_responsable_club, null);
+  assert.equal(clubes[6].id_responsable_club, 201);
   assert.equal(usuarios[201].id_rol, 2);
   assert.equal(consultasInscripciones.length, 0);
   const auditoria = auditorias[0];
@@ -282,7 +282,7 @@ test('retirar responsabilidad devuelve al usuario a alumno', async () => {
   const r = await pedir(token(100, 3), 201, { id_club: null });
   assert.equal(r.status, 200);
   assert.equal(usuarios[201].id_rol, 1);
-  assert.equal(clubes[5].id_presidente, null);
+  assert.equal(clubes[5].id_responsable_club, null);
   assert.equal(consultasInscripciones.length, 0);
   assert.equal(auditorias.length, 1);
   assert.equal(auditorias[0].params[2], 'retirar_responsable');
@@ -295,7 +295,7 @@ test('una falla en la asignacion revierte la transaccion', async () => {
   const r = await pedir(token(100, 3), 200, { id_club: 6 });
   assert.equal(r.status, 500);
   assert.equal(rollbackLlamado, true);
-  assert.equal(clubes[6].id_presidente, null);
+  assert.equal(clubes[6].id_responsable_club, null);
   assert.equal(usuarios[200].id_rol, 1);
   assert.equal(auditorias.length, 0);
 });

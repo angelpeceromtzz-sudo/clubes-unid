@@ -147,7 +147,7 @@ router.get('/admin', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), asy
   try {
     const result = await pool.query(
       `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
-              c.cupo_maximo, c.id_presidente, c.participacion, c.lugar_actividades,
+              c.cupo_maximo, c.id_responsable_club, c.participacion, c.lugar_actividades,
               p.nombre_completo AS presidente_nombre,
               c.imagen_portada,
               c.id_estatus_club, e.nombre_estatus as estatus,
@@ -168,7 +168,7 @@ router.get('/admin', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), asy
               ) AS cupo_actual
        FROM clubes_con_estado c
        JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
-       LEFT JOIN usuarios p ON p.id_usuario = c.id_presidente
+       LEFT JOIN usuarios p ON p.id_usuario = c.id_responsable_club
        ORDER BY c.id_club`
     );
 
@@ -206,7 +206,7 @@ router.get('/:id', async (req, res) => {
     // en frontend) ni el id del vicepresidente (el panel presidente lo toma de getMe).
     const result = await pool.query(
       `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria, c.participacion,
-              c.cupo_maximo, c.id_presidente,
+              c.cupo_maximo, c.id_responsable_club,
               p.nombre_completo AS presidente_nombre,
               c.imagen_portada, c.horario,
               c.id_estatus_club, e.nombre_estatus as estatus,
@@ -225,7 +225,7 @@ router.get('/:id', async (req, res) => {
               ) AS cupo_actual
        FROM clubes_con_estado c
        JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
-       LEFT JOIN usuarios p ON p.id_usuario = c.id_presidente
+       LEFT JOIN usuarios p ON p.id_usuario = c.id_responsable_club
        WHERE c.id_club = $1`,
       [id]
     );
@@ -552,7 +552,7 @@ router.put('/:id/vicepresidente', authenticate, requireRole(2), async (req, res)
     const { id_usuario } = req.body;
 
     const club = await pool.query(
-      'SELECT id_club, id_vicepresidente FROM clubes WHERE id_club = $1 AND id_presidente = $2',
+      'SELECT id_club, id_vicepresidente FROM clubes WHERE id_club = $1 AND id_responsable_club = $2',
       [id, req.user.id]
     );
     if (club.rows.length === 0) {

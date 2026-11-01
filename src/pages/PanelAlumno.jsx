@@ -20,7 +20,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 
 export function PanelAlumno() {
   const navigate = useNavigate();
-  const { usuario, esPresidente, esAdmin, esRectoria, esResponsableMural } = useAutenticacion();
+  const { usuario, esResponsableClub, esAdmin, esRectoria, esResponsableMural } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();
   const d = usePanelAlumno();
   const [dismissMiembroBanner, setDismissMiembroBanner] = useState(() => {
@@ -37,9 +37,9 @@ export function PanelAlumno() {
 
   useEffect(() => {
     if (redirigir.current) return;
-    if (esPresidente) {
+    if (esResponsableClub) {
       redirigir.current = true;
-      navigate('/presidente/dashboard', { replace: true });
+      navigate('/campus/campeche/portal/responsable-de-club/dashboard', { replace: true });
     } else if (esAdmin) {
       redirigir.current = true;
       navigate('/admin/dashboard', { replace: true });
@@ -50,14 +50,14 @@ export function PanelAlumno() {
       redirigir.current = true;
       navigate('/mural/dashboard', { replace: true });
     }
-  }, [esPresidente, esAdmin, esRectoria, esResponsableMural, navigate]);
+  }, [esResponsableClub, esAdmin, esRectoria, esResponsableMural, navigate]);
 
   const recargarPostulaciones = useCallback(() => {
     d.recargar();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d.recargar]);
 
-  if (esPresidente || esAdmin || esRectoria || esResponsableMural) {
+  if (esResponsableClub || esAdmin || esRectoria || esResponsableMural) {
     return <Spinner className="py-32" />;
   }
 
@@ -127,7 +127,7 @@ export function PanelAlumno() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <InformacionClub club={d.club} />
-                <SeccionAvisos club={d.club} esPresidente={false} />
+                <SeccionAvisos club={d.club} esResponsableClub={false} />
               </div>
               <div className="space-y-8">
                 <SeccionMiembros miembros={d.miembros} club={d.club} />

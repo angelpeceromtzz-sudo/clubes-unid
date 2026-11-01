@@ -13,7 +13,7 @@ import { ModalConfirmacion } from './components/ui/ModalConfirmacion';
 import { NavegacionInferiorMovil } from './components/layout/paneles-navegacion/NavegacionInferiorMovil';
 import { RutaProtegida } from './components/layout/RutaProtegida';
 import { PanelAlumno } from './pages/PanelAlumno';
-import { PanelPresidente } from './pages/PanelPresidente';
+import { PanelResponsableClub } from './pages/PanelResponsableClub';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
 import { PanelCoordinacion } from './pages/PanelCoordinacion';
@@ -69,7 +69,7 @@ function ScrollAlInicio() {
 }
 
 function App() {
-  const { estaAutenticado, authReady, esAdmin, esCoordinacion, esPresidente, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { estaAutenticado, authReady, esAdmin, esCoordinacion, esResponsableClub, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
   const { actualizacionesAbiertas } = useNoticias();
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
@@ -122,7 +122,7 @@ function App() {
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
   // coincide con NAVBAR_HEIGHT y no con la del logotipo de NAVBAR_HEIGHT_LOGO.
-  const esRutaPanel = ['/dashboard', '/presidente/dashboard', '/admin/dashboard', '/rectoria/dashboard', '/mural/dashboard'].includes(location.pathname);
+  const esRutaPanel = ['/dashboard', '/campus/campeche/portal/responsable-de-club/dashboard', '/admin/dashboard', '/rectoria/dashboard', '/mural/dashboard'].includes(location.pathname);
   const alturaNavbar = esRutaPanel ? NAVBAR_HEIGHT_LOGO : NAVBAR_HEIGHT;
 
   // La encuesta pública se monta FUERA del layout de abajo, a propósito: es la
@@ -196,8 +196,8 @@ function App() {
       navigate('/campus/campeche/coordinacion/dashboard');
     } else if (esAdmin) {
       navigate('/admin/dashboard');
-    } else if (esPresidente) {
-      navigate('/presidente/dashboard');
+    } else if (esResponsableClub) {
+      navigate('/campus/campeche/portal/responsable-de-club/dashboard');
     } else if (esRectoria) {
       navigate('/rectoria/dashboard');
     } else if (esResponsableMural) {
@@ -282,9 +282,9 @@ function App() {
             <PanelAlumno />
           </RutaProtegida>
         } />
-        <Route path="/presidente/dashboard" element={
+        <Route path="/campus/campeche/portal/responsable-de-club/dashboard" element={
           <RutaProtegida requierePresidente>
-            <PanelPresidente />
+            <PanelResponsableClub />
           </RutaProtegida>
         } />
         <Route path="/admin/dashboard" element={

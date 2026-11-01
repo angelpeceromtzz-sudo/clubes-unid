@@ -14,7 +14,7 @@ router.get('/activa', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT i.*, c.nombre_club, c.descripcion, c.cupo_maximo,
-              c.id_presidente, c.imagen_portada as imagen,
+              c.id_responsable_club, c.imagen_portada as imagen,
               c.id_estatus_club, e.nombre_estatus as estatus_club,
               c.fecha_creacion
        FROM inscripciones i
@@ -109,7 +109,7 @@ router.delete('/:userId', authenticate, async (req, res) => {
     if (!esAdmin) {
       // Verificar que el usuario pertenezca al club del presidente/vicepresidente
       const clubDelLeader = await pool.query(
-        `SELECT id_club FROM clubes WHERE id_presidente = $1 OR id_vicepresidente = $1`,
+        `SELECT id_club FROM clubes WHERE id_responsable_club = $1 OR id_vicepresidente = $1`,
         [req.user.id]
       );
 

@@ -24,7 +24,7 @@ before(async () => {
     options: `-c search_path=${esquema}`, max: 5, connectionTimeoutMillis: 5000 });
   await testPool.query(`
     CREATE TABLE usuarios (id_usuario INT PRIMARY KEY, id_rol INT NOT NULL, nombre_completo TEXT NOT NULL, deleted_at TIMESTAMPTZ, institutional_id TEXT);
-    CREATE TABLE clubes (id_club INT PRIMARY KEY, nombre_club TEXT NOT NULL, id_presidente INT, id_vicepresidente INT,
+    CREATE TABLE clubes (id_club INT PRIMARY KEY, nombre_club TEXT NOT NULL, id_responsable_club INT, id_vicepresidente INT,
       fecha_apertura_programada TIMESTAMPTZ, fecha_limite_cierre TIMESTAMPTZ, max_postulaciones INT,
       cerrada_manualmente BOOLEAN DEFAULT FALSE, postulaciones_actuales INT DEFAULT 0, id_estatus_club INT NOT NULL DEFAULT 1);
     CREATE TABLE cat_licenciaturas (id_licenciatura INT PRIMARY KEY, nombre TEXT NOT NULL);
@@ -33,7 +33,7 @@ before(async () => {
     CREATE TABLE horarios_club (id_horario SERIAL PRIMARY KEY, id_club INT NOT NULL, dia_semana INT NOT NULL,
       hora_inicio TIME NOT NULL, hora_fin TIME NOT NULL, lugar VARCHAR(255) NOT NULL,
       descripcion TEXT DEFAULT '', ubicacion_maps TEXT DEFAULT '', fecha_creacion TIMESTAMPTZ DEFAULT NOW());
-    CREATE TABLE convocatorias (id_convocatoria SERIAL PRIMARY KEY, id_club INT, id_presidente INT,
+    CREATE TABLE convocatorias (id_convocatoria SERIAL PRIMARY KEY, id_club INT, id_responsable_club INT,
       fecha DATE, hora TIME, lugar TEXT, bloque TEXT, periodo TEXT, enviada BOOLEAN DEFAULT FALSE);
     CREATE TABLE formularios (id_formulario SERIAL PRIMARY KEY, id_club INT, id_alumno INT, nombre_completo TEXT,
       matricula TEXT, id_licenciatura INT, cuatrimestre INT, telefono_contacto TEXT, motivo_ingreso TEXT,
@@ -44,7 +44,7 @@ before(async () => {
     CREATE TABLE actividad_clubes (id SERIAL PRIMARY KEY, tipo_evento TEXT, id_club INT, id_actor INT, descripcion TEXT, detalles JSONB);
     CREATE TABLE historial_admin (id SERIAL PRIMARY KEY, id_admin INT, admin_nombre TEXT, accion TEXT, descripcion TEXT, entidad_tipo TEXT, entidad_id INT, detalles JSONB);
     INSERT INTO usuarios(id_usuario,id_rol,nombre_completo) VALUES (1,3,'Coordinación'),(2,2,'Presidente A'),(3,2,'Presidente B'),(4,1,'Alumno'),(5,4,'Rectoría'),(6,5,'Vicepresidente'),(7,3,'Coordinación B'),(8,1,'Alumno 8'),(9,1,'Alumno 9'),(10,1,'Alumno 10');
-    INSERT INTO clubes(id_club,nombre_club,id_presidente,id_vicepresidente) VALUES (1,'Club A',2,6),(2,'Club B',3,NULL);
+    INSERT INTO clubes(id_club,nombre_club,id_responsable_club,id_vicepresidente) VALUES (1,'Club A',2,6),(2,'Club B',3,NULL);
     INSERT INTO cat_licenciaturas(id_licenciatura,nombre) VALUES (1,'Licenciatura de prueba');
   `);
   const sql = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
@@ -344,7 +344,7 @@ test('PBI-12: el presidente prepara bloques sin convocar alumnos y admin publica
 });
 
 test('PBI-12: bloques devueltos requieren corrección y nueva solicitud; admin no puede editar al presidente', async () => {
-  await testPool.query("INSERT INTO convocatorias(id_club,id_presidente,bloque,periodo,fecha,hora,lugar,estado_revision) VALUES (1,2,'A','Prueba','2099-01-01','10:00','Salón','pendiente')");
+  await testPool.query("INSERT INTO convocatorias(id_club,id_responsable_club,bloque,periodo,fecha,hora,lugar,estado_revision) VALUES (1,2,'A','Prueba','2099-01-01','10:00','Salón','pendiente')");
   assert.equal((await enviar('PUT','/convocatorias/1',{lugar:'Otro'},3)).status,403);
   assert.equal((await enviar('POST','/convocatorias/1/rechazar',{})).status,400);
   assert.equal((await enviar('POST','/convocatorias/1/rechazar',{observaciones:'Ajusta la hora'})).status,200);
