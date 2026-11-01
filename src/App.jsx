@@ -193,7 +193,7 @@ function App() {
 
   function irADashboard() {
     if (esCoordinacion) {
-      navigate('/coordinacion/dashboard');
+      navigate('/campus/campeche/coordinacion/dashboard');
     } else if (esAdmin) {
       navigate('/admin/dashboard');
     } else if (esPresidente) {
@@ -297,7 +297,7 @@ function App() {
             <PanelRectoria />
           </RutaProtegida>
         } />
-        <Route path="/coordinacion/dashboard" element={
+        <Route path="/campus/campeche/coordinacion/dashboard" element={
           <RutaProtegida requiereCoordinacion>
             <PanelCoordinacion />
           </RutaProtegida>
