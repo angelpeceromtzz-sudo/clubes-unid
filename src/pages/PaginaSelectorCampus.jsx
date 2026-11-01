@@ -38,12 +38,15 @@ export default function PaginaSelectorCampus() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/45 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
-              <h2 className="text-3xl sm:text-4xl font-black">Campus Campeche</h2>
+              <h2 className="text-2xl sm:text-4xl font-black">Campus Campeche</h2>
               <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-sm sm:text-base text-slate-200 max-w-md">
+                <p className="text-[11px] sm:text-base text-slate-200 max-w-md">
                   Clubes, noticias, calendario y portal estudiantil.
                 </p>
-                <span className="text-sm font-black text-amber-400">Explorar Campus Campeche</span>
+                <span className="text-sm font-black text-amber-400">
+                  <span className="sm:hidden">Explorar</span>
+                  <span className="hidden sm:inline">Explorar Campus Campeche</span>
+                </span>
               </div>
             </div>
           </Link>
