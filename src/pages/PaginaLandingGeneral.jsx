@@ -38,19 +38,19 @@ export default function PaginaLandingGeneral() {
   return (
     <main className={oscuro ? 'bg-[#0b111e] text-white overflow-x-hidden' : 'bg-slate-50 text-slate-900 overflow-x-hidden'}>
       <SplashScreen authReady={authReady} clubesLoading={false} onFinish={() => setSplashDone(true)} />
-      <BarraGeneral splashActivo={!splashDone} />
 
       <section
         className="relative min-h-[92vh] overflow-hidden flex items-center"
         aria-labelledby="hero-general"
       >
+        <BarraGeneral splashActivo={!splashDone} flotante />
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center opacity-80 sm:opacity-90"
           style={{ backgroundImage: "url('/actividades/hero-principal.jpg')" }}
           aria-hidden="true"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-r from-[#0b111e] via-[#0b111e]/70 to-[#0b111e]/30"
+          className="absolute inset-0 bg-gradient-to-r from-[#0b111e]/45 via-[#0b111e]/30 to-transparent"
           aria-hidden="true"
         />
         <div
@@ -94,7 +94,7 @@ export default function PaginaLandingGeneral() {
 
       <section className="px-6 sm:px-8 lg:px-12 xl:px-16 py-16 sm:py-24">
         <div className="max-w-6xl mx-auto">
-          <div className="max-w-2xl mb-10">
+          <div className="max-w-2xl mb-10 mx-auto text-center">
             <p className="text-xs uppercase tracking-[0.25em] font-black text-amber-400 mb-3">
               Experiencias
             </p>
@@ -128,6 +128,17 @@ export default function PaginaLandingGeneral() {
         </div>
       </section>
 
+      <section className="px-6 sm:px-8 lg:px-12 xl:px-16 py-16 sm:py-20">
+        <div className="max-w-4xl mx-auto text-center space-y-6">
+          <h2 className="text-4xl sm:text-6xl font-black tracking-tight text-balance">
+            Tu próxima experiencia puede empezar aquí.
+          </h2>
+          <p className={`text-base sm:text-lg leading-relaxed max-w-2xl mx-auto ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+            Explora nuestro campus disponible y encuentra el espacio donde quieras participar.
+          </p>
+        </div>
+      </section>
+
       <section className="px-6 sm:px-8 lg:px-12 xl:px-16 py-12 sm:py-16">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-8">
@@ -137,9 +148,6 @@ export default function PaginaLandingGeneral() {
             <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-balance">
               Empieza por un campus
             </h2>
-            <p className={`mt-4 text-base sm:text-lg leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-              Clubs UNID estará funcionando pronto para el Campus Campeche!
-            </p>
           </div>
 
           <div className="max-w-3xl mx-auto grid gap-4">
@@ -155,14 +163,11 @@ export default function PaginaLandingGeneral() {
             <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/45 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6">
               <h3 className="text-2xl font-black">Campus Campeche</h3>
-              <p className="mt-2 text-sm text-slate-200">
-                Clubes, noticias, calendario y portal estudiantil.
-              </p>
-              <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-sm text-slate-200">
+                  Clubes, noticias, calendario y portal estudiantil.
+                </p>
                 <span className="text-sm font-black text-amber-400">Entrar →</span>
-                <span className={`text-xs ${oscuro ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Una visión que puede crecer.
-                </span>
               </div>
             </div>
           </Link>
@@ -174,23 +179,6 @@ export default function PaginaLandingGeneral() {
               </p>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="px-6 sm:px-8 lg:px-12 xl:px-16 py-16 sm:py-20">
-        <div className="max-w-4xl mx-auto text-center space-y-6">
-          <h2 className="text-4xl sm:text-6xl font-black tracking-tight text-balance">
-            Tu próxima experiencia puede empezar aquí.
-          </h2>
-          <p className={`text-base sm:text-lg leading-relaxed max-w-2xl mx-auto ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-            Explora Campus Campeche y encuentra el espacio donde quieres participar.
-          </p>
-          <Link
-            to="/campus/campeche"
-            className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-amber-400 text-[#0e162c] font-black text-base shadow-2xl shadow-amber-400/25 hover:bg-amber-300 transition"
-          >
-            Entrar a Campus Campeche
-          </Link>
         </div>
       </section>
       <PiePagina />

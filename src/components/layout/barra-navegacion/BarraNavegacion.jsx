@@ -81,7 +81,7 @@ export function BarraNavegacion({
               <div className="hidden lg:flex items-center gap-3">
                 <BadgeNotificaciones />
                 <button onClick={onDashboardClick}
-                  className={`p-2 rounded-full cursor-pointer ${modoOscuro ? 'md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : ''} ${tema.iconColor} hover:text-amber-400 transition-colors`}
+                  className={`p-2 rounded-full cursor-pointer ${modoOscuro ? 'md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : ''} text-white hover:text-amber-400 transition-colors`}
                   title="Dashboard"
                 >
                   <Icono nombre="grid" className="h-5 w-5" strokeWidth={2} />

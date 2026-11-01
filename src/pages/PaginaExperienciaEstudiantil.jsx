@@ -93,7 +93,7 @@ export default function PaginaExperienciaEstudiantil() {
   return (
     <main className={oscuro ? 'bg-[#0b111e] text-white overflow-x-hidden' : 'bg-slate-50 text-slate-900 overflow-x-hidden'}>
       <BarraGeneral />
-      <section className="px-6 sm:px-8 lg:px-12 xl:px-16 py-16 sm:py-24">
+      <section className="px-6 sm:px-8 lg:px-12 xl:px-16 pt-16 sm:pt-24 pb-4 sm:pb-8">
         <div className="max-w-6xl mx-auto">
           <p className="text-xs sm:text-sm uppercase tracking-[0.35em] font-black text-amber-400 mb-4">
             Experiencia estudiantil
@@ -108,7 +108,7 @@ export default function PaginaExperienciaEstudiantil() {
       </section>
 
       <section
-        className="px-6 sm:px-8 lg:px-12 xl:px-16 py-16 sm:py-24"
+        className="px-6 sm:px-8 lg:px-12 xl:px-16 pt-4 sm:pt-8 pb-16 sm:pb-24"
         aria-roledescription="carousel"
         aria-label="Experiencias estudiantiles"
       >
@@ -170,8 +170,8 @@ export default function PaginaExperienciaEstudiantil() {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/55 to-transparent" />
                 <div className="relative h-full flex flex-col justify-end p-6 sm:p-10">
-                  <h2 className="text-3xl sm:text-4xl font-black">{slide.titulo}</h2>
-                  <p className="mt-3 text-sm sm:text-base text-slate-200 max-w-xl">
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black">{slide.titulo}</h2>
+                  <p className="mt-3 text-xs sm:text-sm lg:text-base text-slate-200 max-w-xl">
                     {slide.texto}
                   </p>
                 </div>

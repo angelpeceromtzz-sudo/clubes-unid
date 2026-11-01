@@ -7,25 +7,25 @@ export function PiePagina() {
   return (
     <footer className={`border-t transition-colors duration-300 ${tema.headerBorder} ${tema.bg}`}>
       <div className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 pt-12 sm:pt-16 lg:pt-20 pb-6 sm:pb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_2fr_auto] gap-8 sm:gap-10 lg:gap-12">
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
+          <div className="space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
               <img src="/branding/lobounid.png" alt="Lobo UNID" className="h-10 w-auto object-contain" />
-              <div>
+              <div className="text-center sm:text-left">
                 <span className={`text-lg font-black tracking-tight ${tema.logoText}`}>UNID</span>
                 <p className="text-[10px] uppercase tracking-widest text-amber-400 font-bold leading-tight">
                   Clubs Lobos Rojos
                 </p>
               </div>
             </div>
-            <p className={`text-sm leading-relaxed ${tema.subtitle} max-w-xs`}>
+            <p className={`text-sm leading-relaxed ${tema.subtitle} max-w-xs text-center sm:text-left`}>
               Descubre, participa y lidera en los clubes universitarios UNID. Forma parte de la manada.
             </p>
           </div>
 
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-6">
+          <div>
+            <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-6 text-center sm:text-left">
               <div>
                 <h3 className={`text-xs sm:text-sm font-black uppercase tracking-widest mb-3 sm:mb-5 ${tema.title}`}>Contacto</h3>
                 <ul className="space-y-2 sm:space-y-3">
