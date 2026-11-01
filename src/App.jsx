@@ -16,6 +16,7 @@ import { PanelAlumno } from './pages/PanelAlumno';
 import { PanelPresidente } from './pages/PanelPresidente';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
+import { PanelCoordinacion } from './pages/PanelCoordinacion';
 import { PanelMural } from './pages/PanelMural';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { PaginaCalendario } from './pages/PaginaCalendario';
@@ -68,7 +69,7 @@ function ScrollAlInicio() {
 }
 
 function App() {
-  const { estaAutenticado, authReady, esAdminOCoordinacion, esPresidente, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { estaAutenticado, authReady, esAdmin, esCoordinacion, esPresidente, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
   const { actualizacionesAbiertas } = useNoticias();
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
@@ -191,7 +192,9 @@ function App() {
   }
 
   function irADashboard() {
-    if (esAdminOCoordinacion) {
+    if (esCoordinacion) {
+      navigate('/coordinacion/dashboard');
+    } else if (esAdmin) {
       navigate('/admin/dashboard');
     } else if (esPresidente) {
       navigate('/presidente/dashboard');
@@ -292,6 +295,11 @@ function App() {
         <Route path="/rectoria/dashboard" element={
           <RutaProtegida requiereRectoria>
             <PanelRectoria />
+          </RutaProtegida>
+        } />
+        <Route path="/coordinacion/dashboard" element={
+          <RutaProtegida requiereCoordinacion>
+            <PanelCoordinacion />
           </RutaProtegida>
         } />
         <Route path="/mural/dashboard" element={

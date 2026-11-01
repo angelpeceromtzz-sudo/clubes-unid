@@ -10,7 +10,7 @@ const router = Router();
 validarParamsEnteros(router);
 
 // Todas las rutas requieren autenticación y rol admin/rectoría (Coordinación)
-router.use(authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA));
+router.use(authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION));
 
 // Encuestas agregadas para vista ejecutiva
 router.get('/encuestas-ejecutivas', async (req, res) => {
