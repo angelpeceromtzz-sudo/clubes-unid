@@ -44,7 +44,7 @@ export default function PaginaSelectorCampus() {
                   Clubes, noticias, calendario y portal estudiantil.
                 </p>
                 <span className="text-sm font-black text-amber-400">
-                  <span className="sm:hidden">Explorar</span>
+                  <span className="sm:hidden">Entrar</span>
                   <span className="hidden sm:inline">Explorar Campus Campeche</span>
                 </span>
               </div>
