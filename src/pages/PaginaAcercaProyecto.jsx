@@ -121,7 +121,7 @@ function PerfilPersona({ persona, className = '' }) {
 function CuadriculaPerfiles({ personas, espaciadorDespues }) {
   const claseLista = espaciadorDespues
     ? 'mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 grid-rows-[auto_auto_auto_auto_auto_auto] gap-x-6 gap-y-2.5'
-    : 'mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 grid-rows-[auto_auto_auto_auto_auto_auto] gap-x-6 gap-y-2.5 lg:[&>li:nth-child(3n+1):nth-last-child(2)]:col-start-2 lg:[&>li:nth-child(3n+1):last-child]:col-start-3';
+    : 'mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 grid-rows-[auto_auto_auto_auto_auto_auto] gap-x-6 gap-y-2.5 lg:[&>li:nth-child(3n+1):nth-last-child(2)]:col-start-2 lg:[&>li:nth-child(3n+1):last-child]:col-start-3 sm:max-lg:[&>li:last-child:nth-child(odd)]:col-span-2';
   return (
     <ul className={claseLista}>
       {personas.map((persona, index) => (
@@ -206,7 +206,7 @@ export default function PaginaAcercaProyecto() {
       >
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
           <div
-            className="max-w-6xl mx-auto grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:items-stretch"
+            className="max-w-6xl mx-auto grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:gap-14 md:items-stretch"
             data-reveal
           >
             <div className="max-w-2xl">
@@ -225,15 +225,15 @@ export default function PaginaAcercaProyecto() {
             {/* En lg la columna derecha iguala la altura del bloque de
                 texto: la foto se estira (object-cover) y los hitos quedan
                 alineados a la base. En móvil conserva aspect-[3/4]. */}
-            <div className="lg:flex lg:flex-col">
+            <div className="md:flex md:flex-col">
               {/* w-full + lg:max-w-none: en el contexto flex de la columna,
                   mx-auto solo centraría con ancho de contenido (la leyenda),
                   no al ancho de la columna. */}
-              <figure className="mx-auto w-full max-w-[20rem] lg:max-w-none lg:flex lg:flex-col lg:flex-1 lg:min-h-0">
+              <figure className="mx-auto w-full max-w-[20rem] md:max-w-none md:flex md:flex-col md:flex-1 md:min-h-0">
                 {/* img absoluta: no aporta altura intrínseca, así la fila
                     la define el texto y la foto se estira a ese alto. */}
                 <div
-                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] lg:aspect-auto lg:flex-1 lg:min-h-0 ${
+                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:flex-1 md:min-h-0 ${
                     modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-100'
                   }`}
                 >
@@ -276,12 +276,12 @@ export default function PaginaAcercaProyecto() {
                 declaración (object-cover); el texto queda centrado a la
                 derecha. min-h evita que la fila quede demasiado baja y la
                 foto, una tira fina. En móvil conserva aspect-[3/4]. */}
-            <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:gap-14 lg:items-stretch lg:min-h-[24rem]">
-              <figure className="mx-auto w-full max-w-[20rem] lg:max-w-none lg:flex lg:flex-col lg:min-h-0">
+            <div className="mt-8 grid gap-8 md:grid-cols-2 md:gap-14 md:items-stretch md:min-h-[24rem]">
+              <figure className="mx-auto w-full max-w-[20rem] md:max-w-none md:flex md:flex-col md:min-h-0">
                 {/* img absoluta: la fila la define el texto, no el intrinsic
                     de la foto vertical. */}
                 <div
-                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] lg:aspect-auto lg:flex-1 lg:min-h-0 ${
+                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:flex-1 md:min-h-0 ${
                     modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-100'
                   }`}
                 >
@@ -297,7 +297,7 @@ export default function PaginaAcercaProyecto() {
                   {ACERCA.paraQuien.imagen.leyenda}
                 </figcaption>
               </figure>
-              <div className="lg:self-start">
+              <div className="md:self-start">
                 <h3 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight ${tema.title}`}>
                   <span className="border-b-4 border-amber-400 pb-1">{ACERCA.paraQuien.protagonista}</span>
                 </h3>
@@ -382,7 +382,7 @@ export default function PaginaAcercaProyecto() {
             <p className={`mt-3 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed ${tema.subtitle}`}>
               {ACERCA.comoTrabajamos.intro}
             </p>
-            <ul className="mt-8 grid gap-x-6 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-8 grid gap-x-6 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 sm:max-lg:[&>li:last-child:nth-child(odd)]:col-span-2">
               {ACERCA.comoTrabajamos.pasos.map((paso) => (
                 <li key={paso.titulo} className="flex flex-col items-center text-center gap-3 min-w-0">
                   <span

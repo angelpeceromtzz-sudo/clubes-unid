@@ -532,12 +532,6 @@ export default function PaginaConoceClubs({ onLoginClick }) {
       <section className="scroll-mt-8">
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
           <div className="max-w-6xl mx-auto" data-reveal>
-            <div className="max-w-2xl mx-auto text-center">
-              <h2 className={tituloSeccion}>David Antonio Chacón González</h2>
-              <p className={`mt-2 text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] ${modoOscuro ? 'text-amber-400' : 'text-amber-600'}`}>
-                Rector de la universidad
-              </p>
-            </div>
             <div className="mt-8 flex justify-center">
               <img
                 src="/personas/rector-campeche.png"
@@ -545,6 +539,12 @@ export default function PaginaConoceClubs({ onLoginClick }) {
                 loading="lazy"
                 className="w-full max-w-md aspect-[3/4] rounded-2xl object-cover"
               />
+            </div>
+            <div className="max-w-2xl mx-auto text-center mt-6">
+              <h2 className={tituloSeccion}>David Antonio Chacón González</h2>
+              <p className={`mt-2 text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] ${modoOscuro ? 'text-amber-400' : 'text-amber-600'}`}>
+                Rector de la universidad
+              </p>
             </div>
           </div>
         </div>

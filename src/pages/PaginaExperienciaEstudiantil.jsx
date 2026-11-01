@@ -65,7 +65,7 @@ export default function PaginaExperienciaEstudiantil() {
     if (prefiereMovimientoReducido || pausado || SLIDES.length < 2) return undefined;
     const temporizador = window.setInterval(() => {
       setSlideActual((actual) => (actual + 1) % SLIDES.length);
-    }, 5000);
+    }, 3000);
     return () => window.clearInterval(temporizador);
   }, [pausado, prefiereMovimientoReducido]);
 
@@ -126,8 +126,6 @@ export default function PaginaExperienciaEstudiantil() {
               }
               setTouchInicio(null);
             }}
-            onMouseEnter={() => setPausado(true)}
-            onMouseLeave={() => setPausado(false)}
             onFocus={() => setPausado(true)}
             onBlur={() => setPausado(false)}
             onKeyDown={(e) => {

@@ -65,7 +65,7 @@ export default function PaginaLandingGeneral() {
             </p>
             <h1
               id="hero-general"
-              className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.9] whitespace-nowrap"
+              className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.9] whitespace-nowrap"
             >
               Tu universidad.
               <span className="block text-amber-400 whitespace-nowrap">Tus pasiones.</span>
@@ -158,16 +158,16 @@ export default function PaginaLandingGeneral() {
             <img
               src="/campus/unid-campeche.jpeg"
               alt="Campus Campeche"
-              className="h-[500px] w-full object-cover transition duration-700"
+              className="h-[520px] w-full object-cover transition duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/45 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6">
-              <h3 className="text-2xl font-black">Campus Campeche</h3>
+              <h3 className="text-xl max-[375px]:text-lg sm:text-2xl font-black">Campus Campeche</h3>
               <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-sm text-slate-200">
+                <p className="text-xs max-[375px]:text-[11px] sm:text-sm text-slate-200">
                   Clubes, noticias, calendario y portal estudiantil.
                 </p>
-                <span className="text-sm font-black text-amber-400">Entrar →</span>
+                <span className="text-sm font-black text-amber-400">Entrar</span>
               </div>
             </div>
           </Link>

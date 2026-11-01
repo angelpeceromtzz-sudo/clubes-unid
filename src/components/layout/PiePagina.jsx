@@ -7,25 +7,20 @@ export function PiePagina() {
   return (
     <footer className={`border-t transition-colors duration-300 ${tema.headerBorder} ${tema.bg}`}>
       <div className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 pt-12 sm:pt-16 lg:pt-20 pb-6 sm:pb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_2fr_auto] gap-8 sm:gap-10 lg:gap-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-[1fr_2fr_auto] gap-8 sm:gap-10 lg:gap-12">
 
-          <div className="space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left">
-            <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left md:items-center md:text-center lg:items-start lg:text-left">
+            <div className="flex flex-col sm:flex-row items-center gap-3 lg:gap-0">
               <img src="/branding/lobounid.png" alt="Lobo UNID" className="h-10 w-auto object-contain" />
-              <div className="text-center sm:text-left">
-                <span className={`text-lg font-black tracking-tight ${tema.logoText}`}>UNID</span>
-                <p className="text-[10px] uppercase tracking-widest text-amber-400 font-bold leading-tight">
-                  Clubs Lobos Rojos
-                </p>
-              </div>
+              <img src="/branding/clubs-unid.png" alt="Clubs UNID" className="h-10 w-auto object-contain" />
             </div>
-            <p className={`text-sm leading-relaxed ${tema.subtitle} max-w-xs text-center sm:text-left`}>
+            <p className={`text-sm leading-relaxed ${tema.subtitle} max-w-xs text-center sm:text-left md:text-center lg:text-left`}>
               Descubre, participa y lidera en los clubes universitarios UNID. Forma parte de la manada.
             </p>
           </div>
 
           <div>
-            <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-6 text-center sm:text-left">
+            <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-6 text-center sm:text-left md:text-center lg:text-left">
               <div>
                 <h3 className={`text-xs sm:text-sm font-black uppercase tracking-widest mb-3 sm:mb-5 ${tema.title}`}>Contacto</h3>
                 <ul className="space-y-2 sm:space-y-3">
@@ -65,9 +60,9 @@ export function PiePagina() {
             </div>
           </div>
 
-          <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+          <div className="flex flex-col items-center text-center sm:items-start sm:text-left md:items-center md:text-center lg:items-start lg:text-left">
             <h3 className={`text-sm font-black uppercase tracking-widest mb-5 ${tema.title}`}>Síguenos</h3>
-            <div className="flex gap-4 justify-center sm:justify-start">
+            <div className="flex gap-4 justify-center sm:justify-start md:justify-center lg:justify-start">
               <a href="https://www.facebook.com/UNIDCampeche" target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-lg border flex items-center justify-center transition-all duration-200 hover:bg-amber-400 hover:text-[#0e162c] hover:border-amber-400 ${tema.subtitle} ${tema.headerBorder}`}>
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.773-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
       </a>

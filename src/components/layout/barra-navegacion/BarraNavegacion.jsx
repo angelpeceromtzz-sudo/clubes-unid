@@ -52,7 +52,7 @@ export function BarraNavegacion({
             : mostrarLogo
               ? 'w-full pl-6 md:pl-7 pr-6 sm:pr-8 lg:pr-10 xl:pr-16'
               : 'w-full px-6 sm:px-8 lg:px-10 xl:px-16'
-        } ${muestroLogo ? 'py-2.5 md:py-3' : 'py-1.5 md:py-3'} flex items-center justify-between gap-2 md:gap-4 lg:gap-6`}>
+        } h-16 flex items-center justify-between gap-2 md:gap-4 lg:gap-6`}>
           <div className="flex items-center gap-4 md:gap-6">
             {muestroLogo ? (
               <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={onLogoClick}>
