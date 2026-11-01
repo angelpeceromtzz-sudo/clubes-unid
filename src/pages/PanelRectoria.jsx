@@ -1,9 +1,12 @@
 /* Panel de rectoría: resumen estadístico, detalle de clubes, padrón y control de asistencia. */
 import { useTheme } from '../contexts/ThemeContext';
 import { usePanelRectoria } from '../hooks/usePanelRectoria';
+import { useVistaEjecutiva } from '../hooks/useVistaEjecutiva';
+import { VistaEjecutiva } from '../components/ejecutivo/VistaEjecutiva';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
 import { ELEMENTOS_NAV_RECTORIA } from '../constants/navegacion';
-import { SeccionResumen } from '../components/rectoria/SeccionResumen';
+
+
 import { SeccionClubes } from '../components/rectoria/SeccionClubes';
 import { SeccionPadron } from '../components/rectoria/SeccionPadron';
 import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
@@ -18,6 +21,7 @@ import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionE
 export function PanelRectoria() {
   const { tema } = useTheme();
   const d = usePanelRectoria();
+  const ejecutivo = useVistaEjecutiva();
 
   return (
     <NavegacionPanel
@@ -36,7 +40,7 @@ export function PanelRectoria() {
         <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
 
         {d.vistaActiva === 'resumen' && (
-          <SeccionResumen stats={d.stats} ocupacionClubes={d.ocupacionClubes} topClubes={d.topClubes} cargando={d.cargando} />
+          <VistaEjecutiva d={ejecutivo} />
         )}
         {d.vistaActiva === 'clubes' && (
           <SeccionClubes clubesDetalle={d.clubesDetalle} cargando={d.cargando} />

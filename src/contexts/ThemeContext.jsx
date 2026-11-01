@@ -10,6 +10,11 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem('theme', modoOscuro ? 'dark' : 'light');
+    if (modoOscuro) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, [modoOscuro]);
 
   const esOscuro = modoOscuro;

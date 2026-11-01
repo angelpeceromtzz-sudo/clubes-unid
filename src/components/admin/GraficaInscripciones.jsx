@@ -3,24 +3,24 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 
-function TooltipPersonalizado({ activo, payload, label }) {
+function TooltipPersonalizado({ activo, payload, label, etiqueta = 'inscripciones' }) {
   if (!activo || !payload?.length) return null;
   return (
     <div className="bg-[#0e162c] border border-slate-700/60 rounded-xl px-3 py-2 shadow-xl">
       <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-0.5">{label}</p>
-      <p className="text-sm font-black text-amber-400">{payload[0].value} inscripciones</p>
+      <p className="text-sm font-black text-amber-400">{payload[0].value} {etiqueta}</p>
     </div>
   );
 }
 
-export function GraficaInscripciones({ datos, cargando }) {
+export function GraficaInscripciones({ datos, cargando, titulo = 'Tendencia', etiqueta = 'inscripciones' }) {
   const { cardCls, modoOscuro } = useTheme();
 
   return (
     <div className={`${cardCls} border rounded-2xl overflow-hidden`}>
       <div className="px-5 py-4 border-b" style={{ borderColor: modoOscuro ? 'rgba(51,65,85,0.3)' : 'rgba(226,232,240,1)' }}>
         <h3 className={`text-sm font-black uppercase tracking-wider ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-          Tendencia de Inscripciones
+          {titulo}
         </h3>
       </div>
 
@@ -56,7 +56,7 @@ export function GraficaInscripciones({ datos, cargando }) {
                 tick={{ fill: modoOscuro ? '#64748b' : '#94a3b8', fontSize: 11 }}
                 allowDecimals={false}
               />
-              <Tooltip content={<TooltipPersonalizado />} />
+              <Tooltip content={<TooltipPersonalizado etiqueta={etiqueta} />} />
               <Area
                 type="monotone"
                 dataKey="total"
