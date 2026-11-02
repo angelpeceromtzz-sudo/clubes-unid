@@ -1,4 +1,3 @@
-import { Icono } from '../../../ui/Icono';
 import { Spinner } from '../../../ui/Spinner';
 
 export function AsignacionClubUsuario({ u, clubesActivosList, asignando, onRemoveFromClub, onAsignarClub, usuarios, currentUser, selectCls, setConfirmPendiente }) {
@@ -10,7 +9,10 @@ export function AsignacionClubUsuario({ u, clubesActivosList, asignando, onRemov
           value={clubActual ? String(clubesActivosList.find((c) => c.nombre_club === clubActual)?.id_club || '') : ''}
           onChange={(e) => {
             const clubId = e.target.value ? Number(e.target.value) : null;
-            if (!clubId) return;
+            if (!clubId) {
+              if (clubActual) onRemoveFromClub(u.id_usuario);
+              return;
+            }
             const clubSel = clubesActivosList.find((c) => c.id_club === clubId);
             if (!clubSel) return;
             const mensaje = clubActual
@@ -19,23 +21,14 @@ export function AsignacionClubUsuario({ u, clubesActivosList, asignando, onRemov
             setConfirmPendiente({ userId: u.id_usuario, clubId, mensaje });
           }}
           disabled={asignando[u.id_usuario] || u.id_usuario === currentUser.id}
-          className={selectCls}
+          className={`${selectCls} text-xs py-1 px-2 w-auto max-w-[140px]`}
           title={u.id_usuario === currentUser.id ? 'No puedes asignarte un club a ti mismo' : ''}
         >
-          <option value="">{clubActual ? clubActual : 'Sin club'}</option>
+          <option value="">Sin club</option>
           {clubesActivosList.map((c) => (
             <option key={c.id_club} value={c.id_club}>{c.nombre_club}</option>
           ))}
         </select>
-        {clubActual && u.id_usuario !== currentUser.id && (
-          <button
-            onClick={() => onRemoveFromClub(u.id_usuario)}
-            className="p-1 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors cursor-pointer active:scale-90"
-            title="Dar de baja del club"
-          >
-            <Icono nombre="close" strokeWidth={2} className="h-4 w-4" />
-          </button>
-        )}
         {asignando[u.id_usuario] && (
           <Spinner size="sm" color="border-amber-400" className="!py-0" />
         )}
@@ -60,7 +53,7 @@ export function AsignacionClubUsuario({ u, clubesActivosList, asignando, onRemov
             onAsignarClub(u.id_usuario, clubId);
           }}
           disabled={asignando[u.id_usuario] || u.id_usuario === currentUser.id}
-          className={selectCls}
+          className={`${selectCls} text-xs py-1 px-2 w-auto max-w-[140px]`}
           title={u.id_usuario === currentUser.id ? 'No puedes asignarte un club a ti mismo' : ''}
         >
           <option value="">Sin club</option>
