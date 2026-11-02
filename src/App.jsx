@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
+import { usePanelNav } from './contexts/PanelNavContext';
 import { useNoticias } from './contexts/NoticiasContext';
 import { useTheme } from './contexts/ThemeContext';
 import { BarraNavegacion } from './components/layout/barra-navegacion/BarraNavegacion';
@@ -70,6 +71,7 @@ function ScrollAlInicio() {
 
 function App() {
   const { estaAutenticado, authReady, esAdmin, esCoordinacion, esResponsableClub, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { itemsNav: panelItemsNav, onNavChange: panelOnNavChange } = usePanelNav();
   const { actualizacionesAbiertas } = useNoticias();
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
@@ -213,7 +215,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  return (
+return (
       <div
         className={`min-h-screen font-sans transition-colors duration-300 overflow-x-clip pb-16 lg:pb-0 ${esLandingGeneral ? '' : 'lg:pt-[var(--navbar-height)]'} ${tema.bg} ${tema.text}`}
       style={{ '--navbar-height': modoOscuro && !esLandingGeneral && !esOferta && location.pathname !== '/campus/campeche/portal' ? `${alturaNavbar}px` : '0px' }}
@@ -231,11 +233,15 @@ function App() {
           onLogout={() => setConfirmarLogout(true)}
           onDashboardClick={irADashboard}
           mostrarFiltros={mostrarFiltros}
+          mostrarNoticias={mostrarFiltros || location.pathname === '/admin/dashboard'}
           mostrarLogo={esRutaPanel}
           onVolverCatalogo={irACatalogo}
-          contenidoMax={location.pathname.startsWith('/club/') ? '7xl' : null}
+          contenidoMax={location.pathname.startsWith('/campus/campeche/portal/club/') ? '7xl' : null}
           heroVisible={heroVisible}
           onScrollChange={handleScrollChange}
+          itemsNav={panelItemsNav}
+          onNavChange={panelOnNavChange}
+          ocultarHamburguesa={true}
         />
       )}
 
@@ -274,7 +280,7 @@ function App() {
         <Route path="/privacidad" element={<PaginaAvisoPrivacidad />} />
         <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />
         <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />
-        <Route path="/club/:id" element={
+        <Route path="/campus/campeche/portal/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />
         <Route path="/dashboard" element={
