@@ -3,7 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useNoticias } from '../../contexts/NoticiasContext';
 import { Icono } from '../ui/Icono';
 
-export function BotonNoticias({ className = '' }) {
+export function BotonNoticias({ className = '', colorClase = null }) {
   const { tema } = useTheme();
   const { noLeidas, abrirActualizaciones } = useNoticias();
   const hayNuevas = noLeidas > 0;
@@ -12,14 +12,14 @@ export function BotonNoticias({ className = '' }) {
     <button
       onClick={abrirActualizaciones}
       aria-label={`Noticias y eventos${hayNuevas ? `, ${noLeidas} sin leer` : ''}`}
-      className={`inline-flex items-center gap-1.5 font-semibold text-xs lg:text-sm tracking-wide px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${
-        hayNuevas ? 'text-amber-400 hover:text-amber-300' : `${tema.btnInactive} hover:text-amber-400`
+      className={`inline-flex items-center gap-1.5 font-semibold text-xs lg:text-sm tracking-wide px-3 py-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${
+        hayNuevas ? 'text-amber-400 hover:text-amber-300' : `${colorClase || tema.btnInactive} hover:text-amber-500`
       } ${className}`}
       title="Noticias y eventos"
     >
       <Icono
-        nombre="book"
-        className={`h-3.5 w-3.5 shrink-0 ${hayNuevas ? 'text-amber-400' : ''}`}
+        nombre="newspaper"
+        className={`h-5 w-5 lg:h-6 lg:w-6 shrink-0 ${hayNuevas ? 'text-amber-400' : ''}`}
         strokeWidth={2}
       />
       <span className="hidden sm:inline">Noticias</span>

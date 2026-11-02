@@ -14,10 +14,13 @@ export function BarraNavegacion({
   menuAbierto, setMenuAbierto, onLogoClick,
   user, onLoginClick, onLogout, onDashboardClick,
   mostrarFiltros = true,
+  mostrarNoticias = false,
   mostrarLogo = false,
   heroVisible = true, contenidoMax,
   onScrollChange,
   splashActivo = false,
+  itemsNav = [],
+  onNavChange,
 }) {
   const { tema, modoOscuro } = useTheme();
   const { scrolled } = useScrollHeader(onScrollChange);
@@ -53,42 +56,62 @@ export function BarraNavegacion({
               ? 'w-full pl-6 md:pl-7 pr-6 sm:pr-8 lg:pr-10 xl:pr-16'
               : 'w-full px-6 sm:px-8 lg:px-10 xl:px-16'
         } h-16 flex items-center justify-between gap-2 md:gap-4 lg:gap-6`}>
-          <div className="flex items-center gap-4 md:gap-6">
+          <div className="flex items-center gap-0 md:gap-2">
+            <button
+                onClick={() => setMenuAbierto((prev) => !prev)}
+                className={`md:hidden p-1 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${modoOscuro ? 'text-white hover:text-amber-400' : 'text-slate-900 hover:text-amber-500'}`}
+                aria-label="Menú"
+              >
+                <Icono nombre="menu" className="h-5 w-5" strokeWidth={2} />
+              </button>
             {muestroLogo ? (
-              <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={onLogoClick}>
+              <div className="flex items-center gap-1 cursor-pointer shrink-0" onClick={onLogoClick}>
                 <Logotipo splashActivo={splashActivo} />
               </div>
             ) : (
-              <button onClick={onLogoClick}
-                className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 md:bg-amber-400/10 md:border md:border-amber-400/20 md:px-3 md:py-1.5 md:rounded-full transition-colors cursor-pointer active:scale-95"
-              >
-                <Icono nombre="arrow-left" className="h-3.5 w-3.5" strokeWidth={2.5} />
-                Volver al Portal
-              </button>
+              <div className="flex items-center shrink-0 cursor-pointer" onClick={onLogoClick} aria-label="Clubs UNID">
+                <img src="/branding/lobounid.png" alt="Lobo UNID" className="h-8 sm:h-10 w-auto object-contain self-center" />
+                <img src="/branding/clubs-unid.png" alt="Clubs UNID" className="h-9 sm:h-12 w-auto object-contain self-center -ml-1 sm:ml-0" />
+              </div>
             )}
-
-            {mostrarFiltros && user && (
-              <div className="hidden md:flex items-center gap-1 shrink-0">
-                <BotonNoticias />
-                <BotonCalendario />
+            {mostrarNoticias && user && (
+              <div className="hidden md:flex items-center gap-0 shrink-0">
+                <BotonNoticias colorClase={modoOscuro ? '' : 'text-[#0B1535]'} />
+                <BotonCalendario colorClase={modoOscuro ? '' : 'text-[#0B1535]'} />
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 ml-auto shrink-0">
+            {mostrarNoticias && user && (
+              <div className="flex md:hidden items-center gap-0 shrink-0">
+                <BotonNoticias colorClase={modoOscuro ? '' : 'text-[#0B1535]'} />
+                <BotonCalendario colorClase={modoOscuro ? '' : 'text-[#0B1535]'} />
+              </div>
+            )}
             <BotonPortal />
             {user && (
               <div className="hidden lg:flex items-center gap-3">
-                <BadgeNotificaciones />
+                <BadgeNotificaciones colorClase={modoOscuro ? '' : 'text-[#0B1535]'} />
                 <button onClick={onDashboardClick}
-                  className={`p-2 rounded-full cursor-pointer ${modoOscuro ? 'md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : ''} text-white hover:text-amber-400 transition-colors`}
+                  className={`p-2 rounded-full cursor-pointer ${modoOscuro ? tema.btnInactive : 'bg-transparent text-[#0B1535] hover:text-amber-500 rounded-full'} hover:text-amber-500 transition-colors`}
                   title="Dashboard"
                 >
-                  <Icono nombre="grid" className="h-5 w-5" strokeWidth={2} />
+                  <Icono nombre="grid" className="h-6 w-6" strokeWidth={2} />
                 </button>
               </div>
             )}
-            {user && <BadgeNotificaciones className="flex lg:hidden" variante="modal" />}
+            {user && <BadgeNotificaciones className="flex lg:hidden" variante="modal" colorClase={modoOscuro ? '' : 'text-[#0B1535]'} />}
+
+            {!user && (
+              <button
+                onClick={() => setMenuAbierto((prev) => !prev)}
+                className={`hidden md:inline-flex p-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${modoOscuro ? 'text-white hover:text-amber-400' : 'text-slate-900 hover:text-amber-500'}`}
+                aria-label="Menú"
+              >
+                <Icono nombre="menu" className="h-5 w-5" strokeWidth={2} />
+              </button>
+            )}
 
             <MenuUsuario
               user={user}
@@ -98,6 +121,9 @@ export function BarraNavegacion({
               onLogout={onLogout}
               onLoginClick={onLoginClick}
               onAyuda={() => setMostrarAyuda(true)}
+              itemsNav={itemsNav}
+              onNavChange={onNavChange}
+              ocultarHamburguesa={true}
             />
           </div>
         </div>
