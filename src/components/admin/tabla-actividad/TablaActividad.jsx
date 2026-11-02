@@ -13,6 +13,13 @@ export function TablaActividad() {
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [filtros, setFiltros] = useState({ desde: '', hasta: '', actor: '', tipo: '', club: '' });
+  const [opciones, setOpciones] = useState({ actores: [], tipos: [], clubes: [] });
+
+  useEffect(() => {
+    api.getActividadFiltros()
+      .then((data) => setOpciones(data || { actores: [], tipos: [], clubes: [] }))
+      .catch(() => setOpciones({ actores: [], tipos: [], clubes: [] }));
+  }, []);
 
   const cargar = useCallback(async (page, filtrosActuales) => {
     setCargando(true);
@@ -50,11 +57,26 @@ export function TablaActividad() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-3 mb-4">
-        <input type="date" value={filtros.desde} onChange={(e) => actualizarFiltro('desde', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
-        <input type="date" value={filtros.hasta} onChange={(e) => actualizarFiltro('hasta', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
-        <input type="text" placeholder="Actor" value={filtros.actor} onChange={(e) => actualizarFiltro('actor', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
-        <input type="text" placeholder="Tipo" value={filtros.tipo} onChange={(e) => actualizarFiltro('tipo', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
-        <input type="text" placeholder="Club" value={filtros.club} onChange={(e) => actualizarFiltro('club', e.target.value)} className="px-3 py-2 rounded-xl border text-sm" />
+        <select value={filtros.actor} onChange={(e) => actualizarFiltro('actor', e.target.value)} className={`px-3 py-2 rounded-xl border text-sm ${modoOscuro ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}>
+          <option value="">Autor (todos)</option>
+          {opciones.actores.map((a) => (
+            <option key={a.id} value={a.nombre}>{a.nombre}</option>
+          ))}
+        </select>
+
+        <select value={filtros.tipo} onChange={(e) => actualizarFiltro('tipo', e.target.value)} className={`px-3 py-2 rounded-xl border text-sm ${modoOscuro ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}>
+          <option value="">Tipo (todos)</option>
+          {opciones.tipos.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+
+        <select value={filtros.club} onChange={(e) => actualizarFiltro('club', e.target.value)} className={`px-3 py-2 rounded-xl border text-sm ${modoOscuro ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}>
+          <option value="">Club (todos)</option>
+          {opciones.clubes.map((c) => (
+            <option key={c.id} value={c.id}>{c.nombre}</option>
+          ))}
+        </select>
       </div>
 
       {cargando ? (
