@@ -26,6 +26,8 @@ const FORMULARIO_VACIO = {
   // Sólo tiene efecto para rectoría al CREAR: "publicar directamente". Para
   // admin y responsable la noticia nace siempre como borrador.
   publicada: false,
+  // Estado editorial (PBI-17). Sólo rectoría puede cambiarlo al editar.
+  status: 'draft',
   categoria: 'informativo',
   fecha_evento: '',
   fecha_fin_evento: '',
@@ -116,6 +118,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       // El estado de una noticia ya existente no se toca desde el formulario:
       // lo mueven los botones de revisión. Sólo sirve para reflejarlo.
       publicada: noticia.status === 'published',
+      status: noticia.status || 'draft',
       categoria: noticia.categoria || 'informativo',
       fecha_evento: noticia.fecha_evento ? String(noticia.fecha_evento).slice(0, 10) : '',
       fecha_fin_evento: noticia.fecha_fin_evento ? String(noticia.fecha_fin_evento).slice(0, 10) : '',
@@ -259,6 +262,9 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       };
 
       if (editando) {
+        if (esAprobador) {
+          payload.status = form.status;
+        }
         await api.updateNoticia(editando.id_noticia, payload);
         setFeedback(form.categoria === 'evento' ? 'Evento actualizado correctamente' : 'Noticia actualizada correctamente');
       } else {

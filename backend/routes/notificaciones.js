@@ -114,11 +114,12 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
       titulo, mensaje, audiencia,
       id_club: idClub, id_destinatario: idDestinatario,
       mostrar_en_mural, url_imagen,
+       password,
     } = req.body;
     const userId = req.user.id;
     const roleId = req.user.id_rol;
 
-    if (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 200 || typeof mensaje !== 'string' || !mensaje.trim() || !audiencia) {
+    if (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 100 || typeof mensaje !== 'string' || !mensaje.trim() || !audiencia) {
       return res.status(400).json({ error: 'titulo, mensaje y audiencia son obligatorios' });
     }
 
@@ -133,6 +134,15 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
     }
     if (mostrar_en_mural && url_imagen != null && (typeof url_imagen !== 'string' || url_imagen.length > 500)) {
       return res.status(400).json({ error: 'Imagen del mural no válida' });
+    }
+
+    // Roles institucionales (admin/rectoría/coordinación) deben confirmar con
+    // ADMIN_SECRET al publicar anuncios desde el panel de gestión.
+    if ([ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION].includes(roleId)) {
+      const ADMIN_SECRET = process.env.ADMIN_SECRET;
+      if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
+        return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+      }
     }
 
     // Matriz de permisos por rol/audiencia/club/destinatario: lib/notificacionPermisos.js
@@ -171,7 +181,8 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
     let publicacionMural = null;
     if (conexion) {
       const publicacion = await conexion.query(
-        `INSERT INTO noticias (titulo, contenido, categoria, publicada, mostrar_en_mural, url_imagen, id_autor, status)
+        `INSERT INTO noticias (titulo, contenido, categoria, publicada, mostrar_en_mural, url_imagen,
+       id_autor, status)
          VALUES ($1, $2, 'informativo', $5 = 'published', TRUE, $3, $4, $5) RETURNING *`,
         [titulo.trim(), mensaje.trim(), url_imagen || null, userId, roleId === 4 ? 'published' : 'draft']
       );
@@ -199,6 +210,89 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   } finally {
     conexion?.release();
+  }
+});
+
+// Listar anuncios creados por el usuario actual (roles institucionales)
+router.get('/mis-anuncios', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const roleId = req.user.id_rol;
+    if (![ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION].includes(roleId)) {
+      return res.status(403).json({ error: 'Sin permisos' });
+    }
+    const result = await pool.query(
+      `SELECT n.id_notificacion, n.titulo, n.mensaje, n.audiencia, n.id_club,
+              n.id_destinatario, n.fecha_creacion,
+              c.nombre_club
+       FROM notificaciones n
+       LEFT JOIN clubes c ON c.id_club = n.id_club
+       WHERE n.id_emisor = $1
+       ORDER BY n.fecha_creacion DESC
+       LIMIT 50`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al listar mis anuncios:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Editar un anuncio (no afecta el estado de lectura de los destinatarios)
+router.put('/:id', authenticate, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const notifId = parseInt(req.params.id, 10);
+    const userId = req.user.id;
+    const roleId = req.user.id_rol;
+
+    if (![ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION].includes(roleId)) {
+      return res.status(403).json({ error: 'Sin permisos' });
+    }
+
+    const { titulo, mensaje, audiencia, id_club, password } = req.body;
+
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+    if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
+      return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+    }
+
+    if (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 100 ||
+        typeof mensaje !== 'string' || !mensaje.trim()) {
+      return res.status(400).json({ error: 'titulo y mensaje son obligatorios' });
+    }
+    if (!['global', 'presidentes', 'alumnos', 'club'].includes(audiencia)) {
+      return res.status(400).json({ error: 'Audiencia no válida' });
+    }
+
+    const existing = await client.query(
+      'SELECT id_notificacion, id_emisor FROM notificaciones WHERE id_notificacion = $1',
+      [notifId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Anuncio no encontrado' });
+    }
+    if (existing.rows[0].id_emisor !== userId) {
+      return res.status(403).json({ error: 'Solo puedes modificar tus propios anuncios' });
+    }
+
+    const clubIdFinal = audiencia === 'club' ? (Number.isInteger(id_club) ? id_club : null) : null;
+
+    const result = await client.query(
+      `UPDATE notificaciones
+       SET titulo = $1, mensaje = $2, audiencia = $3, id_club = $4
+       WHERE id_notificacion = $5
+       RETURNING *`,
+      [titulo.trim(), mensaje.trim(), audiencia, clubIdFinal, notifId]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al editar anuncio:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    client.release();
   }
 });
 

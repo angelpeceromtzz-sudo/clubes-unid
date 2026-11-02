@@ -38,7 +38,7 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, subiend
       <form onSubmit={onGuardar} className="space-y-4">
         <CampoTexto label="Título" name="titulo" value={form.titulo} onChange={onFormChange} placeholder="Ej: Convocatoria a integración" required maxLength={200} />
         <CampoTexto label="Subtítulo" name="subtitulo" value={form.subtitulo} onChange={onFormChange} placeholder="Frase breve que resume la noticia (opcional)" maxLength={300} />
-        <CampoTexto label="Contenido" name="contenido" type="textarea" value={form.contenido} onChange={onFormChange} placeholder="Escribe aquí el detalle de la novedad..." required />
+        <CampoTexto label="Contenido" name="contenido" type="textarea" value={form.contenido} onChange={onFormChange} placeholder="Escribe aquí el detalle de la novedad..." required maxLength={500} />
 
         <SubirImagen label="Imagen" urlImagen={form.url_imagen} onUpload={onSubirImagen} modoOscuro={modoOscuro} labelCls={labelCls} inputId="noticia-image-upload" editando={editando} />
 
@@ -90,6 +90,24 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, subiend
             })}
           </div>
         </div>}
+
+        {editando && esAprobador && (
+          <div>
+            <label htmlFor="status-noticia" className={labelCls}>Estado de publicación</label>
+            <select
+              id="status-noticia"
+              name="status"
+              value={form.status || 'draft'}
+              onChange={onFormChange}
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm ${modoOscuro ? 'bg-[#18223f] border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-300 text-slate-700'}`}
+            >
+              <option value="draft">Borrador</option>
+              <option value="pending">Pendiente de aprobación</option>
+              <option value="published">Publicada</option>
+              <option value="rejected">Rechazada</option>
+            </select>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3">
           {puedePublicarDirecto && (
