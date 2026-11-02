@@ -13,7 +13,7 @@ import { useConfirmacionPendiente } from './useConfirmacionPendiente';
 import { filtrarPorTexto } from '../utils/filtros';
 import { useNoticias } from '../contexts/NoticiasContext';
 import { useAutenticacion } from '../contexts/AuthContext';
-import { fechaHoyCampus } from '../utils/fechas';
+import { validarFechasEvento } from '../utils/validacionCalendario';
 import { normalizarCategoriaEvento } from '../constants/categoriasEvento';
 import { esAprobadorNoticias, esRolResponsableMural } from '../constants/noticias';
 
@@ -228,18 +228,12 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       setErrorModal('El contenido es obligatorio');
       return;
     }
-    if (form.categoria === 'evento' && !form.fecha_evento) {
-      setErrorModal('La fecha del evento es obligatoria');
-      return;
-    }
-    if (form.categoria === 'evento' && form.fecha_evento < fechaHoyCampus() &&
-        (!editando || form.fecha_evento !== String(editando.fecha_evento || '').slice(0, 10))) {
-      setErrorModal('La fecha del evento no puede ser pasada');
-      return;
-    }
-    if (form.categoria === 'evento' && form.fecha_fin_evento && form.fecha_fin_evento < form.fecha_evento) {
-      setErrorModal('La fecha de fin no puede ser anterior al inicio');
-      return;
+    if (form.categoria === 'evento') {
+      const erroresFechas = validarFechasEvento(form, { original: editando && {
+        fecha_evento: String(editando.fecha_evento || '').slice(0, 10), fecha_fin_evento: String(editando.fecha_fin_evento || '').slice(0, 10),
+      } });
+      const mensajeFecha = Object.values(erroresFechas)[0];
+      if (mensajeFecha) { setErrorModal(mensajeFecha); return; }
     }
     setEnviando(true);
     try {

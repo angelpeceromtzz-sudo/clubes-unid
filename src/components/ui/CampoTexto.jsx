@@ -4,7 +4,7 @@ import { Icono } from './Icono';
 // `inputRef` es opcional: sirve para que quien lo usa pueda llevar el foco al
 // campo (por ejemplo, al abrir una pregunta en línea). Los usos que no lo
 // pasan no cambian.
-export function CampoTexto({ label, name, placeholder, value, onChange, onBlur, type = 'text', disabled, readOnly, error, required, maxLength, min, inputRef, autoComplete, inputMode, autoFocus, pattern }) {
+export function CampoTexto({ label, name, placeholder, value, onChange, onBlur, type = 'text', disabled, readOnly, error, required, maxLength, min, max, inputRef, autoComplete, inputMode, autoFocus, pattern }) {
   const { inputCls, labelCls } = useTheme();
 
   const lockedCls = readOnly
@@ -35,15 +35,18 @@ export function CampoTexto({ label, name, placeholder, value, onChange, onBlur, 
         readOnly={readOnly}
         maxLength={maxLength}
         min={min}
+        max={max}
+        required={required}
         autoComplete={autoComplete}
         inputMode={inputMode}
         autoFocus={autoFocus}
         pattern={pattern}
         aria-invalid={error ? 'true' : undefined}
+        aria-describedby={error ? `${name}-error` : undefined}
         rows={type === 'textarea' ? 3 : undefined}
         className={`${inputCls} ${lockedCls} ${type === 'textarea' ? 'resize-none' : ''}`}
       />
-      {error && <p className="text-red-400 text-xs mt-1 font-medium">{error}</p>}
+      {error && <p id={`${name}-error`} role="alert" className="text-red-400 text-xs mt-1 font-medium">{error}</p>}
     </div>
   );
 }

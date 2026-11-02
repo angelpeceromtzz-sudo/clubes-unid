@@ -6,7 +6,7 @@ import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION, ROL_RESPONSABLE_MURAL } from
 import { registrarHistorial } from '../lib/audit.js';
 import { eliminarImagenCloudinary } from '../lib/eliminarImagenCloudinary.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
-import { fechaEventoValida, errorPeriodoEvento } from '../lib/fechasEvento.js';
+import { fechaEventoValida, errorProgramacionEvento, hoyEnCampus } from '../lib/fechasEvento.js';
 
 // 3 admin · 4 rectoría · 6 responsable_mural. Los tres redactan; sólo
 // rectoría (4) aprueba, rechaza u oculta. Ver `TRANSICIONES`.
@@ -24,14 +24,6 @@ const CAMPOS = `id_noticia, titulo, subtitulo, contenido, url_imagen, destacada,
                 mostrar_en_mural, hora_evento, lugar_evento, categoria_evento,
                 status, motivo_rechazo, fecha_revision,
                 id_autor, fecha_publicacion, fecha_actualizacion`;
-
-function hoyEnCampus() {
-  const partes = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date());
-  const fecha = Object.fromEntries(partes.map(({ type, value }) => [type, value]));
-  return `${fecha.year}-${fecha.month}-${fecha.day}`;
-}
 
 function errorDatosEvento(fecha, hora, lugar) {
   if (fecha != null && fecha !== '' && !fechaEventoValida(fecha)) return 'Fecha del evento no válida';
@@ -255,9 +247,8 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
       const error = errorDatosEvento(fecha_evento, hora_evento, lugar_evento);
       if (error) return res.status(400).json({ error });
       if (!fecha_evento) return res.status(400).json({ error: 'La fecha del evento es obligatoria' });
-      if (fecha_evento < hoyEnCampus()) return res.status(400).json({ error: 'La fecha del evento no puede ser pasada' });
       if (!CATEGORIAS_EVENTO.includes(categoria_evento ?? 'social')) return res.status(400).json({ error: 'Categoría del evento no válida' });
-      const errorPeriodo = errorPeriodoEvento(fecha_evento, fecha_fin_evento);
+      const errorPeriodo = errorProgramacionEvento(fecha_evento, fecha_fin_evento);
       if (errorPeriodo) return res.status(400).json({ error: errorPeriodo });
     }
     if (mostrar_en_mural !== undefined && typeof mostrar_en_mural !== 'boolean') return res.status(400).json({ error: 'Opción de mural no válida' });
@@ -380,15 +371,14 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     const fechaFinal = fecha_evento === undefined ? noticiaActual.fecha_evento : fecha_evento;
     const finFinal = fecha_fin_evento === undefined ? noticiaActual.fecha_fin_evento : fecha_fin_evento;
     if (categoriaFinal === 'evento') {
-      const errorPeriodo = errorPeriodoEvento(fechaFinal, finFinal);
+      const errorPeriodo = errorProgramacionEvento(fechaFinal, finFinal, {
+        inicioOriginal: noticiaActual.categoria === 'evento' ? noticiaActual.fecha_evento : undefined,
+        finOriginal: noticiaActual.categoria === 'evento' ? noticiaActual.fecha_fin_evento : undefined,
+      });
       if (errorPeriodo) return res.status(400).json({ error: errorPeriodo });
     }
     if ((categoria !== undefined || fecha_evento !== undefined) && categoriaFinal === 'evento' && !fechaFinal) {
       return res.status(400).json({ error: 'La fecha del evento es obligatoria' });
-    }
-    if (categoriaFinal === 'evento' && fecha_evento !== undefined &&
-        fecha_evento !== noticiaActual.fecha_evento && fecha_evento < hoyEnCampus()) {
-      return res.status(400).json({ error: 'La fecha del evento no puede ser pasada' });
     }
 
     const urlAnterior = noticiaActual.url_imagen;

@@ -1,7 +1,7 @@
 export const CATEGORIAS_EVENTO = [
-  { value: 'social', label: 'Social', emoji: '🤝' },
-  { value: 'deportivo', label: 'Deportivo', emoji: '⚽' },
-  { value: 'cultural', label: 'Cultural', emoji: '🎭' },
+  { value: 'social', label: 'Social', icono: 'users' },
+  { value: 'deportivo', label: 'Deportivo', icono: 'trophy' },
+  { value: 'cultural', label: 'Cultural', icono: 'drama' },
 ];
 
 const ESTILOS_CATEGORIA_EVENTO = {
@@ -23,6 +23,6 @@ export function nombreCategoriaEvento(value) {
   return CATEGORIAS_EVENTO.find((categoria) => categoria.value === normalizarCategoriaEvento(value)).label;
 }
 
-export function emojiCategoriaEvento(value) {
-  return CATEGORIAS_EVENTO.find((categoria) => categoria.value === normalizarCategoriaEvento(value)).emoji;
+export function iconoCategoriaEvento(value) {
+  return CATEGORIAS_EVENTO.find((categoria) => categoria.value === normalizarCategoriaEvento(value)).icono;
 }
