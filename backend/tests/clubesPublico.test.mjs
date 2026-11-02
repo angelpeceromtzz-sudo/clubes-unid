@@ -71,7 +71,7 @@ test('GET público: filtra estatus 3 en servidor y no selecciona datos del presi
   assert.equal(r.status, 200);
   const listado = consultas.find((c) => /FROM clubes_con_estado/.test(c.sql));
   assert.ok(listado.sql.includes('id_estatus_club <> 3'), 'debe filtrar estatus 3 en el WHERE');
-  assert.ok(!/id_presidente/.test(listado.sql), 'no debe seleccionar id_presidente');
+  assert.ok(!/id_responsable_club/.test(listado.sql), 'no debe seleccionar id_responsable_club');
   assert.ok(!/presidente_nombre/.test(listado.sql), 'no debe seleccionar presidente_nombre');
   assert.ok(!/FROM usuarios p|LEFT JOIN usuarios/.test(listado.sql), 'no debe unirse a usuarios');
 });
@@ -93,7 +93,7 @@ test('GET /admin: el SELECT incluye estatus 3 y los campos de presidente', async
   assert.equal(r.status, 200);
   const listado = consultas.find((c) => /FROM clubes_con_estado/.test(c.sql));
   assert.ok(!/id_estatus_club <> 3/.test(listado.sql), 'el admin ve todos los estatus');
-  assert.ok(/id_presidente/.test(listado.sql), 'el admin ve id_presidente');
+  assert.ok(/id_responsable_club/.test(listado.sql), 'el admin ve id_responsable_club');
   assert.ok(/presidente_nombre/.test(listado.sql), 'el admin ve presidente_nombre');
 });
 
@@ -106,5 +106,5 @@ test('GET /:id público: no expone presidente_correo ni id_vicepresidente', asyn
   assert.ok(!/presidente_correo|correo_institucional/.test(detalle.sql), 'no debe seleccionar el correo del presidente');
   assert.ok(!/id_vicepresidente/.test(detalle.sql), 'no debe seleccionar el id del vicepresidente');
   assert.ok(/presidente_nombre/.test(detalle.sql), 'conserva presidente_nombre para la tarjeta pública');
-  assert.ok(/id_presidente/.test(detalle.sql), 'conserva id_presidente (gate de render y badge de panel)');
+  assert.ok(/id_responsable_club/.test(detalle.sql), 'conserva id_responsable_club (gate de render y badge de panel)');
 });

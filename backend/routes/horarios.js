@@ -18,9 +18,9 @@ async function transaccion(res, trabajo) {
   finally { client?.release(); }
 }
 async function presidente(client, req, idClub) {
-  const result = await client.query('SELECT id_club, id_presidente, version_horario FROM clubes WHERE id_club = $1', [idClub]);
+  const result = await client.query('SELECT id_club, id_responsable_club, version_horario FROM clubes WHERE id_club = $1', [idClub]);
   if (!result.rows.length) throw fallo(404, 'Club no encontrado');
-  if (req.user.id_rol !== 2 || Number(result.rows[0].id_presidente) !== Number(req.user.id)) throw fallo(403, 'Solo el presidente de este club puede preparar y enviar propuestas');
+  if (req.user.id_rol !== 2 || Number(result.rows[0].id_responsable_club) !== Number(req.user.id)) throw fallo(403, 'Solo el presidente de este club puede preparar y enviar propuestas');
   return result.rows[0];
 }
 async function obtener(client, id) {
@@ -151,7 +151,7 @@ router.post('/solicitudes/:id/revision', requireRole(ROL_ADMIN, ROL_COORDINACION
       fecha_actualizacion = CURRENT_TIMESTAMP WHERE id_solicitud = $4 RETURNING *`, [estado, req.user.id, observaciones?.trim() || null, s.id_solicitud]);
     await historial(client, req, s, estado, observaciones?.trim());
     await client.query(`INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
-      SELECT $1, $2, $3, 'presidentes', id_club, id_presidente FROM clubes WHERE id_club = $4 AND id_presidente IS NOT NULL`,
+      SELECT $1, $2, $3, 'presidentes', id_club, id_responsable_club FROM clubes WHERE id_club = $4 AND id_responsable_club IS NOT NULL`,
     [req.user.id, `Horario ${estado}`, observaciones?.trim() || 'Coordinación VIVE aprobó el horario. Ya es visible para la comunidad.', s.id_club]);
     return result.rows[0];
   });

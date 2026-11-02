@@ -2,8 +2,8 @@
 import { Navigate } from 'react-router-dom';
 import { useAutenticacion } from '../../contexts/AuthContext';
 
-export function RutaProtegida({ children, requiereAdmin = false, requiereAdminOCoordinacion = false, requierePresidente = false, requiereRectoria = false, requiereResponsableMural = false }) {
-  const { estaAutenticado, esAdmin, esCoordinacion, esPresidente, esRectoria, esResponsableMural } = useAutenticacion();
+export function RutaProtegida({ children, requiereAdmin = false, requiereAdminOCoordinacion = false, requiereCoordinacion = false, requierePresidente = false, requiereRectoria = false, requiereResponsableMural = false }) {
+  const { estaAutenticado, esAdmin, esCoordinacion, esResponsableClub, esRectoria, esResponsableMural } = useAutenticacion();
 
   if (!estaAutenticado) {
     return <Navigate to="/campus/campeche/portal" replace />;
@@ -17,7 +17,11 @@ export function RutaProtegida({ children, requiereAdmin = false, requiereAdminOC
     return <Navigate to="/campus/campeche/portal" replace />;
   }
 
-  if (requierePresidente && !esPresidente) {
+  if (requiereCoordinacion && !esCoordinacion) {
+    return <Navigate to="/campus/campeche/portal" replace />;
+  }
+
+  if (requierePresidente && !esResponsableClub) {
     return <Navigate to="/campus/campeche/portal" replace />;
   }
 

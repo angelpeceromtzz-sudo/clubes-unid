@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 import { validarCreacionNotificacion } from '../lib/notificacionPermisos.js';
 
 // Club ficticio 7: presidente id 50, vicepresidente id 51.
-const CLUB_PROPIO = { id_club: 7, id_presidente: 50, id_vicepresidente: 51 };
-const CLUB_OTRO = { id_club: 8, id_presidente: 60, id_vicepresidente: 61 };
+const CLUB_PROPIO = { id_club: 7, id_responsable_club: 50, id_vicepresidente: 51 };
+const CLUB_OTRO = { id_club: 8, id_responsable_club: 60, id_vicepresidente: 61 };
 
 function validar(params) {
   return validarCreacionNotificacion({

@@ -118,7 +118,7 @@ export function PaginaInicio() {
                   cupoMaximo={club.cupo_maximo}
                   cupoActual={parseInt(club.cupo_actual) || 0}
                   imagen={obtenerUrlImagen(club.imagen_portada || club.imagen)}
-                  onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
+                  onClick={() => navigate(`/campus/campeche/portal/club/${club.id_club}`, { state: { club } })}
                   idEstatusClub={club.id_estatus_club}
                   estatus={club.estatus}
                   estadoCalculado={club.estado_calculado}
@@ -150,7 +150,7 @@ export function PaginaInicio() {
                           cupoMaximo={club.cupo_maximo}
                           cupoActual={parseInt(club.cupo_actual) || 0}
                           imagen={obtenerUrlImagen(club.imagen_portada || club.imagen)}
-                          onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
+                          onClick={() => navigate(`/campus/campeche/portal/club/${club.id_club}`, { state: { club } })}
                           idEstatusClub={club.id_estatus_club}
                           estatus={club.estatus}
                           estadoCalculado={club.estado_calculado}

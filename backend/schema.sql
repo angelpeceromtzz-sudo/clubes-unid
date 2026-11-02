@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS clubes (
     participacion VARCHAR(20) NOT NULL DEFAULT 'mixta' CONSTRAINT chk_club_participacion CHECK (participacion IN ('masculina', 'femenina', 'mixta')),
     cupo_maximo INT NOT NULL CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo IN (10, 15, 20, 25, 30, 40, 50)),
     lugar_actividades VARCHAR(255),
-    id_presidente INT,
+    id_responsable_club INT,
     id_vicepresidente INT,
     imagen_portada VARCHAR(255),
     id_estatus_club INT NOT NULL DEFAULT 2,
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS clubes (
     cerrada_manualmente BOOLEAN DEFAULT FALSE,
     fecha_apertura_programada TIMESTAMPTZ DEFAULT NULL,
     fecha_limite_cierre TIMESTAMPTZ DEFAULT NULL,
-    CONSTRAINT fk_club_presidente FOREIGN KEY (id_presidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_club_presidente FOREIGN KEY (id_responsable_club) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_vicepresidente FOREIGN KEY (id_vicepresidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_estatus FOREIGN KEY (id_estatus_club) REFERENCES cat_estatus_clubes(id_estatus_club) ON DELETE RESTRICT
 );
@@ -268,7 +268,7 @@ ALTER TABLE formularios DROP COLUMN IF EXISTS turno;
 CREATE TABLE IF NOT EXISTS convocatorias (
     id_convocatoria SERIAL PRIMARY KEY,
     id_club INTEGER NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
-    id_presidente INT,
+    id_responsable_club INT,
     bloque CHAR(1) NOT NULL,
     periodo VARCHAR(50) NOT NULL,
     fecha DATE,
@@ -369,7 +369,7 @@ CREATE TABLE IF NOT EXISTS actividad_clubes (
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_fecha ON actividad_clubes(fecha_creacion DESC);
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_club ON actividad_clubes(id_club);
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_club_id_presidente ON clubes (id_presidente) WHERE id_presidente IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_club_id_responsable_club ON clubes (id_responsable_club) WHERE id_responsable_club IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS diapositivas_hero (
     id_diapositiva SERIAL PRIMARY KEY,
@@ -920,7 +920,7 @@ CREATE TABLE IF NOT EXISTS detalle_respuestas (
     texto_otro   TEXT,
     CONSTRAINT chk_detalle_valor CHECK (num_nonnulls(id_opcion, texto, numero) = 1),
     CONSTRAINT chk_detalle_texto CHECK (char_length(texto) <= 2000),
-    CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 200),
+    CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70),
     CONSTRAINT fk_detalle_respuesta FOREIGN KEY (id_respuesta) REFERENCES respuestas_encuesta(id_respuesta) ON DELETE CASCADE,
     -- Integridad histórica: con respuestas registradas, ni la pregunta ni la
     -- opción se pueden borrar (RESTRICT, no CASCADE).
@@ -944,7 +944,7 @@ ALTER TABLE detalle_respuestas
     DROP CONSTRAINT IF EXISTS chk_detalle_texto_otro;
 
 ALTER TABLE detalle_respuestas
-    ADD CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 200);
+    ADD CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70);
 
 -- Índices para las consultas de resultados
 CREATE INDEX IF NOT EXISTS idx_preguntas_encuesta        ON preguntas(id_encuesta);

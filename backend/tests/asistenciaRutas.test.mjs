@@ -46,8 +46,8 @@ const USUARIOS = new Map([
 ]);
 
 const CLUBES = new Map([
-  [7, { id_club: 7, id_presidente: 50 }],
-  [8, { id_club: 8, id_presidente: 99 }], // club ajeno al presidente 50
+  [7, { id_club: 7, id_responsable_club: 50 }],
+  [8, { id_club: 8, id_responsable_club: 99 }], // club ajeno al presidente 50
 ]);
 
 let SESIONES = new Map();
@@ -304,13 +304,13 @@ async function responder(sql, params = []) {
     return { rows: [{ ok: true }], rowCount: 1 };
   }
 
-  if (/SELECT id_presidente FROM clubes WHERE id_club = \$1/.test(q)) {
+  if (/SELECT id_responsable_club FROM clubes WHERE id_club = \$1/.test(q)) {
     const c = CLUBES.get(parseInt(params[0], 10));
-    return { rows: c ? [{ id_presidente: c.id_presidente }] : [], rowCount: 0 };
+    return { rows: c ? [{ id_responsable_club: c.id_responsable_club }] : [], rowCount: 0 };
   }
 
-  if (/SELECT id_club FROM clubes WHERE id_presidente = \$1/.test(q)) {
-    const club = [...CLUBES.values()].find((c) => c.id_presidente === params[0]);
+  if (/SELECT id_club FROM clubes WHERE id_responsable_club = \$1/.test(q)) {
+    const club = [...CLUBES.values()].find((c) => c.id_responsable_club === params[0]);
     return { rows: club ? [{ id_club: club.id_club }] : [], rowCount: 0 };
   }
 

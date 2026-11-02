@@ -71,6 +71,7 @@ export const ROL_ALUMNO = 1;
 export const ROL_ADMIN = 3;
 export const ROL_RECTORIA = 4;
 export const ROL_RESPONSABLE_MURAL = 6;
+export const ROL_COORDINACION = 7;
 
 /** Puede redactar y gestionar el periódico mural (PBI-16). */
 export function esEditorNoticias(idRol) {
@@ -105,7 +106,10 @@ export function accionesNoticia(estado, idRol) {
     editar: editor && !aprobador && (estado === 'draft' || estado === 'rejected'),
     editarCualquiera: aprobador,
     enviarRevision: editor && (estado === 'draft' || estado === 'rejected'),
-    eliminar: editor && (aprobador || estado === 'draft' || estado === 'rejected'),
+    // Eliminar: rectoría/admin/coordinación pueden eliminar en cualquier estado;
+    // el responsable del mural sólo sus borradores o rechazadas (el backend lo
+    // revalida en DELETE /:id).
+    eliminar: editor && (aprobador || idRol === ROL_ADMIN || idRol === ROL_COORDINACION || estado === 'draft' || estado === 'rejected'),
     // Rectoría:
     aprobar: aprobador && estado === 'pending',
     rechazar: aprobador && estado === 'pending',

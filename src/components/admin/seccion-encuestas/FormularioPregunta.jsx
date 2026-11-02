@@ -367,6 +367,7 @@ export function FormularioPregunta({
               onChange={(e) => onChange({ ayuda: e.target.value })}
               placeholder="Texto de apoyo que verá el alumno"
               disabled={disabled}
+              maxLength={200}
             />
             <button
               type="button"

@@ -16,7 +16,7 @@ export function SeccionMiembros({ miembros, club }) {
       <div className="space-y-2">
         {miembros.map((m) => {
           const userId = m.id_usuario || m.id;
-          const esPresidenteDelClub = club.id_presidente === userId;
+          const esResponsableClubDelClub = club.id_responsable_club === userId;
 
           return (
             <div key={userId} className={`${cardCls} rounded-xl px-5 py-3 flex items-center justify-between`}>
@@ -25,7 +25,7 @@ export function SeccionMiembros({ miembros, club }) {
                 <div>
                   <p className={`text-sm font-medium ${tema.title}`}>
                     {m.nombre_completo}
-                    {esPresidenteDelClub && (
+                    {esResponsableClubDelClub && (
                       <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-400 font-bold">{etiquetaResponsable(club)}</span>
                     )}
                   </p>

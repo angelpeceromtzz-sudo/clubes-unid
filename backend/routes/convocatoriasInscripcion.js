@@ -54,7 +54,7 @@ router.put('/', authenticate, requireRole(2), transaccion(async (req, client) =>
   const club = (await client.query('SELECT * FROM clubes WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
   if (!club) throw fallo(404, 'Club no encontrado');
   if (!clubEstaActivo(club)) throw fallo(409, MENSAJE_CLUB_NO_ACTIVO);
-  if (club.id_presidente !== req.user.id) throw fallo(403, 'Solo el presidente de este club puede proponer la convocatoria');
+  if (club.id_responsable_club !== req.user.id) throw fallo(403, 'Solo el presidente de este club puede proponer la convocatoria');
   await vencerInscripciones(client, req.params.id);
   const pendiente = await client.query("SELECT id_solicitud FROM solicitudes_convocatoria WHERE id_club = $1 AND estado = 'pendiente'", [req.params.id]);
   if (pendiente.rows.length) throw fallo(409, 'Ya hay una convocatoria pendiente de revisión');
@@ -91,7 +91,7 @@ router.post('/revision', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION),
     return { error: MENSAJE_VENCIMIENTO, ...await configuracion(client, req.params.id) };
   }
   if (s.estado !== 'pendiente') throw fallo(409, 'Esta solicitud ya fue revisada');
-  if (accion === 'aprobar' && club.id_presidente !== s.id_solicitante) throw fallo(409, 'Cambió la presidencia. El presidente actual debe presentar una nueva convocatoria');
+  if (accion === 'aprobar' && club.id_responsable_club !== s.id_solicitante) throw fallo(409, 'Cambió la presidencia. El presidente actual debe presentar una nueva convocatoria');
   if (accion === 'aprobar') {
     const c = s.configuracion;
     const normalizarFecha = (valor) => valor == null ? null : new Date(valor).toISOString();
@@ -140,7 +140,7 @@ router.post('/revision', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION),
   await client.query('UPDATE solicitudes_convocatoria SET estado=$1,id_revisor=$2,observaciones=$3,fecha_revision=NOW() WHERE id_solicitud=$4',
     [accion === 'aprobar' ? 'aprobado' : 'rechazado', req.user.id, observaciones || null, id_solicitud]);
   await notificar(client, req.user.id, club.id_club, accion === 'aprobar' ? 'Convocatoria aprobada' : 'Convocatoria por corregir',
-    club.nombre_club + ': ' + (accion === 'aprobar' ? 'Coordinación aprobó y publicó la convocatoria.' : observaciones), club.id_presidente);
+    club.nombre_club + ': ' + (accion === 'aprobar' ? 'Coordinación aprobó y publicó la convocatoria.' : observaciones), club.id_responsable_club);
   await registrar(client, req, accion === 'aprobar' ? 'convocatoria_aprobada' : 'convocatoria_rechazada', { id_solicitud, observaciones });
   return configuracion(client, req.params.id);
 }));

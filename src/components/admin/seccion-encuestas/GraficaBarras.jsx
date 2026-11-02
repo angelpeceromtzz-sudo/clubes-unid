@@ -20,9 +20,9 @@ export function GraficaBarras({ filas }) {
     <div className="flex flex-col gap-3 mt-2">
       {filas.map((fila) => (
         <div key={fila.etiqueta} className="flex flex-col w-full">
-          <div className="flex justify-between items-center mb-1 gap-4">
+          <div className="flex justify-between items-center mb-1 gap-2 min-w-0">
             <span
-              className={`text-sm font-semibold truncate ${tema.title}`}
+              className={`text-sm font-semibold truncate flex-1 min-w-0 ${tema.title}`}
               title={fila.etiqueta}
             >
               {fila.etiqueta}

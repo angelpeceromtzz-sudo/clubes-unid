@@ -338,8 +338,8 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     // endpoints de revisión (enviar-revision / aprobar / rechazar / ocultar).
     let statusParam = null;
     if (status !== undefined) {
-      if (req.user.id_rol !== ROL_RECTORIA) {
-        return res.status(403).json({ error: 'Sólo rectoría puede cambiar el estado de una publicación' });
+      if (req.user.id_rol !== ROL_RECTORIA && req.user.id_rol !== ROL_ADMIN) {
+        return res.status(403).json({ error: 'Sólo rectoría o administración pueden cambiar el estado de una publicación' });
       }
       if (!esEstadoValido(status)) {
         return res.status(400).json({ error: 'Estado no válido' });
@@ -361,7 +361,7 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     }
     // El admin y el responsable corrigen borradores o rechazadas; mientras la
     // noticia está en revisión o publicada, el contenido lo decide rectoría.
-    if (req.user.id_rol !== ROL_RECTORIA && !['draft', 'rejected'].includes(noticiaActual.status)) {
+    if (req.user.id_rol !== ROL_RECTORIA && req.user.id_rol !== ROL_ADMIN && !['draft', 'rejected'].includes(noticiaActual.status)) {
       return res.status(409).json({
         error: 'Sólo puedes editar borradores o noticias rechazadas; mientras esté en revisión o publicada el contenido lo valida rectoría',
       });

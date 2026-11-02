@@ -6,6 +6,7 @@
    necesita: pestañas por estado, botones de revisión, modal de rechazo… */
 import { useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { api } from '../../../services/api';
 import { Icono } from '../../ui/Icono';
 import { TablaNoticiasDesktop } from './TablaNoticiasDesktop';
 import { TarjetasNoticiasMobile } from './TarjetasNoticiasMobile';
@@ -65,6 +66,15 @@ export function SeccionNoticias({ gestion }) {
     onOcultar: ocultar,
     onEditar: abrirModalEditar,
     onEliminar: eliminar,
+    onCambiarEstado: async (id, nuevoEstado) => {
+      if (![3, 4].includes(idRol)) return;
+      try {
+        await api.updateNoticia(id, { status: nuevoEstado });
+        await gestion.refetch();
+      } catch (err) {
+        console.error('Error al cambiar estado:', err);
+      }
+    },
   };
 
   return (
@@ -84,35 +94,6 @@ export function SeccionNoticias({ gestion }) {
         ))}
       </div>
 
-      {/* Pestañas por estado del flujo de aprobación (PBI-17). */}
-      <div className="flex flex-wrap gap-2 mb-4" role="tablist" aria-label="Estado de publicación">
-        {FILTROS_ESTADO.map((opcion) => {
-          const activa = filtroEstado === opcion.valor;
-          const total = contadores[opcion.valor] ?? 0;
-          const resaltada = opcion.valor === 'pending' && esAprobador && total > 0;
-          return (
-            <button
-              key={opcion.valor}
-              type="button"
-              role="tab"
-              aria-selected={activa}
-              onClick={() => setFiltroEstado(opcion.valor)}
-              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px] font-black uppercase tracking-wider transition-colors cursor-pointer ${
-                activa
-                  ? 'border-amber-400 bg-amber-400 text-slate-950 shadow-sm'
-                  : resaltada
-                    ? 'border-amber-400/50 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20'
-                    : modoOscuro ? 'border-slate-700 bg-[#18223f] text-slate-400 hover:text-slate-200' : 'border-slate-200 bg-white text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {opcion.etiqueta}
-              <span className={`rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
-                activa ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-500/20 text-slate-400'
-              }`}>{total}</span>
-            </button>
-          );
-        })}
-      </div>
 
       {/* Rectoría: aviso de lo que está esperando aprobación. */}
       {puedeRevisar && filtroEstado !== 'pending' && (
@@ -155,6 +136,22 @@ export function SeccionNoticias({ gestion }) {
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <select
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+          className={`flex-1 sm:flex-none max-w-[110px] truncate px-1 py-0.5 rounded-lg border text-xs font-bold outline-none transition-colors cursor-pointer ${
+            modoOscuro
+              ? 'bg-[#0e162c] border-slate-700 text-slate-200'
+              : 'bg-white border-slate-200 text-slate-800'
+          }`}
+          aria-label="Estado de publicación"
+        >
+          {FILTROS_ESTADO.filter((opcion) => opcion.valor === 'todos' || (contadores[opcion.valor] ?? 0) > 0).map((opcion) => (
+            <option key={opcion.valor} value={opcion.valor}>
+              {opcion.etiqueta} ({contadores[opcion.valor] ?? 0})
+            </option>
+          ))}
+        </select>
         <div className="relative flex-1">
           <Icono nombre="search" strokeWidth={2} className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} />
           <input
@@ -162,7 +159,7 @@ export function SeccionNoticias({ gestion }) {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por título o contenido..."
-            className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-400/50 ${
+            className={`w-full pl-10 pr-4 py-2 rounded-xl border text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-400/50 ${
               modoOscuro
                 ? 'bg-[#0e162c] border-slate-700 text-slate-200 placeholder-slate-500'
                 : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
@@ -171,7 +168,7 @@ export function SeccionNoticias({ gestion }) {
         </div>
         <button
           onClick={() => abrirModalCrear(esEvento ? 'evento' : 'informativo')}
-          className="flex-1 sm:flex-none font-black text-xs uppercase tracking-widest rounded-xl px-5 py-3 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0 bg-amber-400 hover:bg-amber-500 text-[#0e162c]"
+          className="flex-1 sm:flex-none font-black text-[11px] uppercase tracking-widest rounded-xl px-3 py-2 transition-all duration-200 cursor-pointer active:scale-95 flex items-center justify-center gap-2 shrink-0 bg-amber-400 hover:bg-amber-500 text-[#0e162c]"
         >
           <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
           {esAprobador ? (esEvento ? 'Agregar Evento' : 'Publicar Noticia') : (esEvento ? 'Nuevo Evento' : 'Nueva Noticia')}

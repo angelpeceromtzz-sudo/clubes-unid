@@ -32,7 +32,7 @@ export function EditorEncuesta({ hook }) {
           id="titulo"
           name="titulo"
           type="text"
-          maxLength={200}
+          maxLength={64}
           value={formEncuesta.titulo}
           disabled={soloLectura || enviando}
           onChange={(e) => actualizarFormulario({ titulo: e.target.value })}
@@ -49,6 +49,7 @@ export function EditorEncuesta({ hook }) {
         disabled={soloLectura || enviando}
         onChange={(e) => actualizarFormulario({ descripcion: e.target.value })}
         placeholder="Qué se le pregunta al alumno y para qué"
+        maxLength={200}
       />
 
       {soloLectura && (

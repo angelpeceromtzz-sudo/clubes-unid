@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 
-export function usePanelPresidente(usuario) {
+export function usePanelResponsableClub(usuario) {
   const { esOscuro, tema } = useTheme();
   const [vistaActiva, setVistaActiva] = useState('principal');
   const [estado, setEstado] = useState({ club: null, miembros: [], loading: true, error: '' });
@@ -17,7 +17,7 @@ export function usePanelPresidente(usuario) {
 
         if (!montado) return;
 
-        if (!perfil.id_club || (Number(perfil.id_presidente) !== Number(perfil.id_usuario) && Number(perfil.id_vicepresidente) !== Number(perfil.id_usuario))) {
+        if (!perfil.id_club || (Number(perfil.id_responsable_club) !== Number(perfil.id_usuario) && Number(perfil.id_vicepresidente) !== Number(perfil.id_usuario))) {
           setEstado({ club: null, miembros: [], loading: false, error: '' });
           return;
         }
@@ -34,11 +34,11 @@ export function usePanelPresidente(usuario) {
         }
 
         if (montado) {
-          const esPresidente = Number(perfil.id_presidente) === Number(perfil.id_usuario);
+          const esResponsableClub = Number(perfil.id_responsable_club) === Number(perfil.id_usuario);
           setEstado({
-            club: { ...clubCompleto, id_presidente: perfil.id_presidente, id_vicepresidente: perfil.id_vicepresidente },
+            club: { ...clubCompleto, id_responsable_club: perfil.id_responsable_club, id_vicepresidente: perfil.id_vicepresidente },
             miembros, loading: false, error: '',
-            esPresidente,
+            esResponsableClub,
           });
         }
       } catch (err) {

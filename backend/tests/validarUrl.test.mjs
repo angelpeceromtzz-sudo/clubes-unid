@@ -39,15 +39,15 @@ function responder(sql, params = []) {
   // liderazgo del club 5 para que la petición llegue al handler donde se
   // valida la URL. En PUT/DELETE ahora opera requireHorarioLeader, cuyo
   // stub de horario/club está más abajo.
-  if (/SELECT id_presidente, id_vicepresidente FROM clubes WHERE id_club = \$1/.test(texto)) {
-    return { rows: [{ id_presidente: 100, id_vicepresidente: null }], rowCount: 1 };
+  if (/SELECT id_responsable_club, id_vicepresidente FROM clubes WHERE id_club = \$1/.test(texto)) {
+    return { rows: [{ id_responsable_club: 100, id_vicepresidente: null }], rowCount: 1 };
   }
 
   // requireHorarioLeader (H16) y handler PUT: horario 7 del club 5.
   if (/SELECT id_club FROM horarios_club WHERE id_horario = \$1/.test(texto)) {
     return { rows: [{ id_club: 5 }], rowCount: 1 };
   }
-  if (/SELECT id_club FROM clubes WHERE id_club = \$1 AND \(id_presidente/.test(texto)) {
+  if (/SELECT id_club FROM clubes WHERE id_club = \$1 AND \(id_responsable_club/.test(texto)) {
     return { rows: [{ id_club: 5 }], rowCount: 1 };
   }
   if (/FROM horarios_club[\s\S]*hora_inicio < /.test(texto)) {
