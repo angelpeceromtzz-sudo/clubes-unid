@@ -40,13 +40,31 @@ const TIPOS_CON_OPCIONES = ['opcion_unica', 'opcion_multiple'];
 // Techo alineado con el esquema: detalle_respuestas.chk_detalle_texto corta en
 // 2000. Validarlo aquí da un mensaje útil en vez de un 500 del CHECK.
 const LONGITUD_TEXTO = {
-  texto_corto: 200,
-  texto_largo: 2000,
+  texto_corto: 70,
+  texto_largo: 200,
 };
 
 // Texto libre que el alumno escribe al elegir la opción especial «Otro».
 // Usa el mismo límite que el texto corto.
-const LONGITUD_TEXTO_OTRO = 200;
+const LONGITUD_TEXTO_OTRO = 70;
+
+// Validacion de texto: no emojis ni caracteres especiales. Solo letras
+// (incluidas acentuadas), numeros, espacios y puntuacion basica.
+function tieneCaracteresNoPermitidos(texto) {
+  if (texto === null || texto === undefined) return false;
+  const valor = String(texto);
+  if (valor.trim() === '') return false;
+  return !/^[\p{L}\p{N}\s.,;:!?¿¡()\-'"\/&#]+$/u.test(valor);
+}
+
+function validarTextoPermitido(texto, campo) {
+  if (texto === null || texto === undefined) return null;
+  if (tieneCaracteresNoPermitidos(texto)) {
+    return `El campo ${campo} no permite emojis ni caracteres especiales`;
+  }
+  return null;
+}
+
 
 // Etiqueta de la opción especial «Otro». La opción se identifica por la
 // propiedad `es_otro`, no por este texto: una opción normal escrita a mano
@@ -500,6 +518,9 @@ function textoDeOtro(textoCrudo) {
     };
   }
 
+  const errOtro = validarTextoPermitido(limpio, 'respuesta de "Otro"');
+  if (errOtro) return { error: errOtro };
+
   return { texto: limpio };
 }
 
@@ -551,6 +572,8 @@ function valorDeRespuesta(valorCrudo, definicion, textoOtroCrudo) {
     if (valorCrudo.length > maximo) {
       return { error: `La respuesta no puede exceder ${maximo} caracteres` };
     }
+    const errTexto = validarTextoPermitido(valorCrudo, 'respuesta');
+    if (errTexto) return { error: errTexto };
 
     return {
       vacio: false,
@@ -700,9 +723,15 @@ router.post('/admin', authenticate, requireRole(...ROLES_ESCRITURA), async (req,
     return res.status(400).json({ error: 'El título es obligatorio' });
   }
 
-  if (titulo.length > 200) {
-    return res.status(400).json({ error: 'El título no puede exceder 200 caracteres' });
+  if (titulo.length > 64) {
+    return res.status(400).json({ error: 'El título no puede exceder 64 caracteres' });
   }
+    const errTitulo = validarTextoPermitido(titulo, 'título');
+    if (errTitulo) return res.status(400).json({ error: errTitulo });
+    if (descripcion) {
+      const errDesc = validarTextoPermitido(descripcion, 'descripción');
+      if (errDesc) return res.status(400).json({ error: errDesc });
+    }
 
   const fechas = validarFechas(fecha_inicio, fecha_fin);
   if (fechas.error) {
@@ -1016,6 +1045,110 @@ router.get(
 );
 
 /**
+ * GET /admin/:id/respuestas - historial de respuestas individuales.
+ */
+router.get(
+  '/admin/:id/respuestas',
+  authenticate,
+  requireRole(...ROLES_LECTURA),
+  async (req, res) => {
+    const idEncuesta = Number(req.params.id);
+    if (!Number.isInteger(idEncuesta)) {
+      return res.status(400).json({ error: 'El id de la encuesta debe ser un numero' });
+    }
+    try {
+      const respuestas = await pool.query(
+        `SELECT r.id_respuesta, r.fecha_envio, r.id_licenciatura, l.nombre AS licenciatura
+         FROM respuestas_encuesta r
+         LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = r.id_licenciatura
+         WHERE r.id_encuesta = $1
+         ORDER BY r.fecha_envio DESC`,
+        [idEncuesta]
+      );
+      const ids = respuestas.rows.map((r) => r.id_respuesta);
+      let detalles = [];
+      if (ids.length) {
+        const resDet = await pool.query(
+          `SELECT d.id_respuesta, d.id_pregunta, p.texto AS pregunta, p.tipo,
+                  d.id_opcion, o.texto AS opcion, d.texto, d.numero, d.texto_otro
+           FROM detalle_respuestas d
+           JOIN preguntas p ON p.id_pregunta = d.id_pregunta
+           LEFT JOIN opciones_pregunta o ON o.id_opcion = d.id_opcion AND o.id_pregunta = d.id_pregunta
+           WHERE d.id_respuesta = ANY($1::int[])
+           ORDER BY d.id_respuesta, p.orden ASC`,
+          [ids]
+        );
+        detalles = resDet.rows;
+      }
+      const porRespuesta = new Map();
+      for (const r of respuestas.rows) {
+        porRespuesta.set(r.id_respuesta, {
+          id_respuesta: r.id_respuesta,
+          fecha_envio: r.fecha_envio,
+          licenciatura: r.licenciatura || null,
+          respuestas: [],
+        });
+      }
+      for (const d of detalles) {
+        const item = porRespuesta.get(d.id_respuesta);
+        if (!item) continue;
+        item.respuestas.push({
+          id_pregunta: d.id_pregunta,
+          pregunta: d.pregunta,
+          tipo: d.tipo,
+          opcion: d.opcion,
+          texto: d.texto,
+          numero: d.numero,
+          texto_otro: d.texto_otro,
+        });
+      }
+      res.json(Array.from(porRespuesta.values()));
+    } catch (err) {
+      console.error('Error al listar respuestas individuales:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  }
+);
+
+/**
+ * DELETE /admin/:id/respuestas/:idRespuesta - elimina una respuesta individual.
+ */
+router.delete(
+  '/admin/:id/respuestas/:idRespuesta',
+  authenticate,
+  requireRole(...ROLES_ESCRITURA),
+  async (req, res) => {
+    const idEncuesta = Number(req.params.id);
+    const idRespuesta = Number(req.params.idRespuesta);
+    if (!Number.isInteger(idEncuesta) || !Number.isInteger(idRespuesta)) {
+      return res.status(400).json({ error: 'Identificadores invalidos' });
+    }
+    try {
+      const existe = await pool.query(
+        'SELECT id_respuesta FROM respuestas_encuesta WHERE id_respuesta = $1 AND id_encuesta = $2',
+        [idRespuesta, idEncuesta]
+      );
+      if (existe.rows.length === 0) {
+        return res.status(404).json({ error: 'Respuesta no encontrada' });
+      }
+
+      const password = req.body?.password || req.query?.password;
+      const ADMIN_SECRET = process.env.ADMIN_SECRET;
+      if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
+        return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+      }
+
+      await pool.query('DELETE FROM detalle_respuestas WHERE id_respuesta = $1', [idRespuesta]);
+      await pool.query('DELETE FROM respuestas_encuesta WHERE id_respuesta = $1 AND id_encuesta = $2', [idRespuesta, idEncuesta]);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Error al eliminar respuesta individual:', err);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  }
+);
+
+/**
  * Arma el arreglo `preguntas` de la respuesta, mezclando la definición de cada
  * pregunta con sus conteos.
  *
@@ -1259,6 +1392,34 @@ router.put('/admin/:id', authenticate, requireRole(...ROLES_ESCRITURA), async (r
   if (fechas.error) {
     return res.status(400).json({ error: fechas.error });
   }
+  if (titulo !== undefined) {
+    if (typeof titulo !== 'string' || titulo.trim().length === 0) {
+      return res.status(400).json({ error: 'El título es obligatorio' });
+    }
+    if (titulo.length > 64) {
+      return res.status(400).json({ error: 'El título no puede exceder 64 caracteres' });
+    }
+    const errTitulo = validarTextoPermitido(titulo, 'título');
+    if (errTitulo) return res.status(400).json({ error: errTitulo });
+  }
+  if (descripcion !== undefined && descripcion) {
+    const errDesc = validarTextoPermitido(descripcion, 'descripción');
+    if (errDesc) return res.status(400).json({ error: errDesc });
+  }
+  if (titulo !== undefined) {
+    if (typeof titulo !== 'string' || titulo.trim().length === 0) {
+      return res.status(400).json({ error: 'El título es obligatorio' });
+    }
+    if (titulo.length > 64) {
+      return res.status(400).json({ error: 'El título no puede exceder 64 caracteres' });
+    }
+    const errTitulo = validarTextoPermitido(titulo, 'título');
+    if (errTitulo) return res.status(400).json({ error: errTitulo });
+  }
+  if (descripcion !== undefined && descripcion) {
+    const errDesc = validarTextoPermitido(descripcion, 'descripción');
+    if (errDesc) return res.status(400).json({ error: errDesc });
+  }
 
   try {
     const result = await pool.query(
@@ -1407,6 +1568,20 @@ router.post(
 
     if (texto.length > 500) {
       return res.status(400).json({ error: 'La pregunta no puede exceder 500 caracteres' });
+    }
+    const errTexto = validarTextoPermitido(texto, 'pregunta');
+    if (errTexto) return res.status(400).json({ error: errTexto });
+    if (ayuda) {
+      const errAyuda = validarTextoPermitido(ayuda, 'ayuda');
+      if (errAyuda) return res.status(400).json({ error: errAyuda });
+    }
+    if (escala_min_texto) {
+      const errMin = validarTextoPermitido(escala_min_texto, 'etiqueta mínima');
+      if (errMin) return res.status(400).json({ error: errMin });
+    }
+    if (escala_max_texto) {
+      const errMax = validarTextoPermitido(escala_max_texto, 'etiqueta máxima');
+      if (errMax) return res.status(400).json({ error: errMax });
     }
 
     if (!TIPOS_VALIDOS.includes(tipo)) {
@@ -1965,6 +2140,8 @@ function sanitizarOpciones(opciones) {
     if (texto.length > 300) {
       return { error: 'Una opción no puede exceder 300 caracteres' };
     }
+    const errOpcion = validarTextoPermitido(texto, 'opción');
+    if (errOpcion) return { error: errOpcion };
 
     if (esOtro) {
       // Como máximo una opción «Otro» por pregunta. El índice parcial único

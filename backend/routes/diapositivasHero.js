@@ -10,6 +10,14 @@ import { registrarHistorial } from '../lib/audit.js';
 import { eliminarImagenCloudinary, mismaIdentidad } from '../lib/eliminarImagenCloudinary.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
 
+
+function tieneCaracteresNoPermitidos(texto) {
+  if (texto === null || texto === undefined) return false;
+  const valor = String(texto).trim();
+  if (valor === '') return false;
+  return !/^[\p{L}\p{N}\s.,;:!?¿¡()\-'"\/#&]+$/u.test(valor);
+}
+
 const router = Router();
 
 validarParamsEnteros(router);
@@ -56,6 +64,12 @@ router.post('/', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (
 
     if (!titulo || !url_imagen) {
       return res.status(400).json({ error: 'Título e imagen son obligatorios' });
+    }
+    if (tieneCaracteresNoPermitidos(titulo)) {
+      return res.status(400).json({ error: 'El título no permite emojis ni caracteres especiales' });
+    }
+    if (subtitulo && tieneCaracteresNoPermitidos(subtitulo)) {
+      return res.status(400).json({ error: 'El subtítulo no permite emojis ni caracteres especiales' });
     }
 
     const ordenNum = parseInt(orden, 10) || 1;
@@ -135,6 +149,17 @@ router.put('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async
     // Imagen móvil: string cambia la URL; '' la limpia (NULL); ausente la conserva.
     const incluyeMovil = Object.prototype.hasOwnProperty.call(req.body, 'url_imagen_movil');
     const urlImagenMovilNueva = incluyeMovil ? (req.body.url_imagen_movil || null) : null;
+
+    if (titulo !== undefined && titulo !== null && titulo !== '') {
+      if (tieneCaracteresNoPermitidos(titulo)) {
+        return res.status(400).json({ error: 'El título no permite emojis ni caracteres especiales' });
+      }
+    }
+    if (subtitulo) {
+      if (tieneCaracteresNoPermitidos(subtitulo)) {
+        return res.status(400).json({ error: 'El subtítulo no permite emojis ni caracteres especiales' });
+      }
+    }
 
     if (orden !== undefined) {
       const ordenNum = parseInt(orden, 10);

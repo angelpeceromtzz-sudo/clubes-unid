@@ -920,7 +920,7 @@ CREATE TABLE IF NOT EXISTS detalle_respuestas (
     texto_otro   TEXT,
     CONSTRAINT chk_detalle_valor CHECK (num_nonnulls(id_opcion, texto, numero) = 1),
     CONSTRAINT chk_detalle_texto CHECK (char_length(texto) <= 2000),
-    CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 200),
+    CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70),
     CONSTRAINT fk_detalle_respuesta FOREIGN KEY (id_respuesta) REFERENCES respuestas_encuesta(id_respuesta) ON DELETE CASCADE,
     -- Integridad histórica: con respuestas registradas, ni la pregunta ni la
     -- opción se pueden borrar (RESTRICT, no CASCADE).
@@ -944,7 +944,7 @@ ALTER TABLE detalle_respuestas
     DROP CONSTRAINT IF EXISTS chk_detalle_texto_otro;
 
 ALTER TABLE detalle_respuestas
-    ADD CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 200);
+    ADD CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70);
 
 -- Índices para las consultas de resultados
 CREATE INDEX IF NOT EXISTS idx_preguntas_encuesta        ON preguntas(id_encuesta);

@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 
 process.env.JWT_SECRET = 'secreto-de-prueba-ficticio-solo-para-tests';
 process.env.DB_PASSWORD = 'ficticio';
+process.env.ADMIN_SECRET = 'secreto-admin-prueba';
 
 const { default: pool } = await import('../db.js');
 const { default: notificacionesRouter } = await import('../routes/notificaciones.js');
@@ -179,7 +180,7 @@ test('presidente sin id_club: 400 y sin inserción', async () => {
 
 test('admin (rol 3) con audiencia global: 201 y una inserción', async () => {
   reiniciarRegistro();
-  const r = await postNotificacion(tokenDe(10, 3), { titulo: 'Anuncio', mensaje: 'x', audiencia: 'global' });
+  const r = await postNotificacion(tokenDe(10, 3), { titulo: 'Anuncio', mensaje: 'x', audiencia: 'global', password: 'secreto-admin-prueba' });
   assert.equal(r.status, 201);
   assert.equal(insercionesNotificaciones().length, 1);
 });
@@ -187,7 +188,7 @@ test('admin (rol 3) con audiencia global: 201 y una inserción', async () => {
 test('admin a club inexistente: 404 y sin inserción (sin depender del FK)', async () => {
   reiniciarRegistro();
   const r = await postNotificacion(tokenDe(10, 3), {
-    titulo: 'Anuncio', mensaje: 'x', audiencia: 'club', id_club: 999,
+    titulo: 'Anuncio', mensaje: 'x', audiencia: 'club', id_club: 999, password: 'secreto-admin-prueba',
   });
   assert.equal(r.status, 404);
   assert.equal(insercionesNotificaciones().length, 0);
@@ -196,7 +197,7 @@ test('admin a club inexistente: 404 y sin inserción (sin depender del FK)', asy
 test('admin con id_destinatario inválido: 400 y sin inserción', async () => {
   reiniciarRegistro();
   const r = await postNotificacion(tokenDe(10, 3), {
-    titulo: 'Directo', mensaje: 'x', audiencia: 'global', id_destinatario: 'no-numerico',
+    titulo: 'Directo', mensaje: 'x', audiencia: 'global', id_destinatario: 'no-numerico', password: 'secreto-admin-prueba',
   });
   assert.equal(r.status, 400);
   assert.equal(insercionesNotificaciones().length, 0);
@@ -204,14 +205,14 @@ test('admin con id_destinatario inválido: 400 y sin inserción', async () => {
 
 test('audiencia desconocida: 400 y sin inserción', async () => {
   reiniciarRegistro();
-  const r = await postNotificacion(tokenDe(10, 3), { titulo: 'x', mensaje: 'y', audiencia: 'todos' });
+  const r = await postNotificacion(tokenDe(10, 3), { titulo: 'x', mensaje: 'y', audiencia: 'todos', password: 'secreto-admin-prueba' });
   assert.equal(r.status, 400);
   assert.equal(insercionesNotificaciones().length, 0);
 });
 
 test('rectoría (rol 4) conserva la capacidad pre-existente de emitir global (decisión pendiente documentada)', async () => {
   reiniciarRegistro();
-  const r = await postNotificacion(tokenDe(11, 4), { titulo: 'Aviso', mensaje: 'x', audiencia: 'global' });
+  const r = await postNotificacion(tokenDe(11, 4), { titulo: 'Aviso', mensaje: 'x', audiencia: 'global', password: 'secreto-admin-prueba' });
   assert.equal(r.status, 201);
   assert.equal(insercionesNotificaciones().length, 1);
 });
