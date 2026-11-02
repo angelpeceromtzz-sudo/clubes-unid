@@ -3,7 +3,7 @@ import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
-import { fechaEventoValida, errorPeriodoEvento } from '../lib/fechasEvento.js';
+import { errorProgramacionEvento } from '../lib/fechasEvento.js';
 
 const router = Router();
 const TIPOS_FECHA = ['examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite'];
@@ -15,11 +15,10 @@ function idValido(valor) {
   return /^\d+$/.test(valor) && Number.isSafeInteger(Number(valor)) && Number(valor) > 0;
 }
 
-function errorFecha(datos) {
+function errorFecha(datos, original) {
   if (typeof datos.titulo !== 'string' || !datos.titulo.trim() || datos.titulo.length > 200) return 'Escribe un concepto de hasta 200 caracteres';
   if (!TIPOS_FECHA.includes(datos.tipo_fecha)) return 'Tipo de fecha académica no válido';
-  if (!fechaEventoValida(datos.fecha_inicio)) return 'Fecha de inicio no válida';
-  const errorPeriodo = errorPeriodoEvento(datos.fecha_inicio, datos.fecha_fin);
+  const errorPeriodo = errorProgramacionEvento(datos.fecha_inicio, datos.fecha_fin, { inicioOriginal: original?.fecha_inicio, finOriginal: original?.fecha_fin });
   if (errorPeriodo) return errorPeriodo;
   if (datos.nota != null && typeof datos.nota !== 'string') return 'Nota no válida';
   if (typeof datos.publicada !== 'boolean') return 'Visibilidad de la fecha no válida';
@@ -89,7 +88,7 @@ router.put('/:id', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDI
     for (const campo of ['titulo', 'tipo_fecha', 'fecha_inicio', 'fecha_fin', 'nota', 'publicada', 'mostrar_en_mural']) {
       if (req.body[campo] !== undefined) datos[campo] = req.body[campo];
     }
-    const error = errorFecha(datos);
+    const error = errorFecha(datos, actual.rows[0]);
     if (error) return res.status(400).json({ error });
     const resultado = await pool.query(
       `UPDATE fechas_calendario SET titulo = $1, tipo_fecha = $2, fecha_inicio = $3,

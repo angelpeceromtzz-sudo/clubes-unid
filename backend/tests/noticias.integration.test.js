@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import pg from 'pg';
+import { hoyEnCampus } from '../lib/fechasEvento.js';
 
 // Requiere una base de pruebas explícita. Nunca usa backend/.env ni sus tablas.
 const databaseUrl = process.env.NOTICIAS_TEST_DATABASE_URL;
@@ -63,8 +64,12 @@ describe('integración de aprobación, eventos y mural', { skip: !databaseUrl },
     return { status: respuesta.status, datos: await respuesta.json() };
   }
 
+  const inicioEvento = new Date(`${hoyEnCampus()}T12:00:00Z`);
+  inicioEvento.setUTCDate(inicioEvento.getUTCDate() + 30);
+  const finEvento = new Date(inicioEvento);
+  finEvento.setUTCDate(finEvento.getUTCDate() + 17);
   const evento = { titulo: 'Evento con periodo', contenido: 'Actividad para el campus', categoria: 'evento',
-    fecha_evento: '2099-12-20', fecha_fin_evento: '2100-01-06', hora_evento: '10:30',
+    fecha_evento: inicioEvento.toISOString().slice(0, 10), fecha_fin_evento: finEvento.toISOString().slice(0, 10), hora_evento: '10:30',
     lugar_evento: 'Auditorio', categoria_evento: 'cultural', mostrar_en_mural: true };
 
   async function verificarVisible(id, visible, rol = 1) {

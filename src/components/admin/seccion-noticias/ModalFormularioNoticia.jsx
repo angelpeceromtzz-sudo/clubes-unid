@@ -7,6 +7,8 @@ import { SubirImagen } from '../../ui/SubirImagen';
 import { CATEGORIAS_EVENTO } from '../../../constants/categoriasEvento';
 import { OpcionMural } from '../../noticias/OpcionMural';
 import { fechaHoyCampus } from '../../../utils/fechas';
+import { fechaLegible } from '../../../utils/calendario';
+import { fechaMaximaCalendario, limitesFechasCalendario, validarFechasEvento } from '../../../utils/validacionCalendario';
 
 const CATEGORIAS_NOTICIA = [
   { value: 'promocion', label: 'Promoción' },
@@ -16,7 +18,10 @@ const CATEGORIAS_NOTICIA = [
 export function ModalFormularioNoticia({ show, editando, form, enviando, subiendoImagen, errorModal, modoOscuro, tema, labelCls, esAprobador = false, onClose, onGuardar, onFormChange, onSubirImagen, tipoSeccion = 'noticia' }) {
   const hoy = fechaHoyCampus();
   const fechaAnterior = editando?.fecha_evento ? String(editando.fecha_evento).slice(0, 10) : '';
-  const fechaMinima = fechaAnterior && fechaAnterior < hoy ? fechaAnterior : hoy;
+  const finAnterior = editando?.fecha_fin_evento ? String(editando.fecha_fin_evento).slice(0, 10) : '';
+  const limitesInicio = limitesFechasCalendario(fechaAnterior, hoy);
+  const limitesFin = limitesFechasCalendario(finAnterior, hoy);
+  const erroresFechas = validarFechasEvento(form, { hoy, original: editando ? { fecha_evento: fechaAnterior, fecha_fin_evento: finAnterior } : undefined });
   // PBI-17: publicar directo es exclusivo de rectoría, y sólo al crear; una
   // noticia ya existente cambia de estado desde los botones de revisión.
   const puedePublicarDirecto = esAprobador && !editando;
@@ -35,7 +40,7 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, subiend
         </button>
       </div>
 
-      <form onSubmit={onGuardar} className="space-y-4">
+      <form onSubmit={onGuardar} noValidate={tipoSeccion === 'evento'} className="space-y-4">
         <CampoTexto label="Título" name="titulo" value={form.titulo} onChange={onFormChange} placeholder="Ej: Convocatoria a integración" required maxLength={200} />
         <CampoTexto label="Subtítulo" name="subtitulo" value={form.subtitulo} onChange={onFormChange} placeholder="Frase breve que resume la noticia (opcional)" maxLength={300} />
         <CampoTexto label="Contenido" name="contenido" type="textarea" value={form.contenido} onChange={onFormChange} placeholder="Escribe aquí el detalle de la novedad..." required maxLength={500} />
@@ -44,12 +49,10 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, subiend
 
         {tipoSeccion === 'evento' && (
           <div className="space-y-4">
-            <CampoTexto label="Fecha del evento" name="fecha_evento" type="date" value={form.fecha_evento || ''} onChange={onFormChange} min={fechaMinima} required />
-            <CampoTexto label="Fecha de fin (opcional)" name="fecha_fin_evento" type="date" value={form.fecha_fin_evento || ''} onChange={onFormChange} min={form.fecha_evento || fechaMinima} />
+            <CampoTexto label="Fecha del evento" name="fecha_evento" type="date" value={form.fecha_evento || ''} onChange={onFormChange} min={limitesInicio.min} max={limitesInicio.max} error={errorModal ? erroresFechas.fecha_evento : undefined} required />
+            <CampoTexto label="Fecha de fin (opcional)" name="fecha_fin_evento" type="date" value={form.fecha_fin_evento || ''} onChange={onFormChange} min={form.fecha_evento > limitesFin.min ? form.fecha_evento : limitesFin.min} max={limitesFin.max} error={errorModal ? erroresFechas.fecha_fin_evento : undefined} />
             <p className={`-mt-2 text-[11px] ${tema.subtitle}`}>
-              {fechaAnterior && fechaAnterior < hoy
-                ? 'Puedes conservar la fecha original. Si la cambias, elige hoy o una fecha futura.'
-                : 'Selecciona hoy o una fecha futura.'}
+              {editando ? 'Puedes conservar las fechas originales. Para reprogramar, elige' : 'Elige'} desde hoy hasta el {fechaLegible(fechaMaximaCalendario(hoy), true)}.
             </p>
             <div className="grid sm:grid-cols-2 gap-4">
               <CampoTexto label="Hora" name="hora_evento" type="time" value={form.hora_evento || ''} onChange={onFormChange} />
@@ -57,9 +60,12 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, subiend
             </div>
             <div>
               <label htmlFor="categoria-evento-noticia" className={labelCls}>Categoría del evento</label>
-              <select id="categoria-evento-noticia" name="categoria_evento" value={form.categoria_evento} onChange={onFormChange} className={`w-full rounded-xl border px-3 py-2.5 text-sm ${modoOscuro ? 'bg-[#18223f] border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-300 text-slate-700'}`}>
-                {CATEGORIAS_EVENTO.map((cat) => <option key={cat.value} value={cat.value}>{cat.emoji} {cat.label}</option>)}
-              </select>
+              <div className="relative">
+                <span className={`pointer-events-none absolute inset-y-0 left-3 flex items-center ${tema.subtitle}`}><Icono nombre={CATEGORIAS_EVENTO.find((cat) => cat.value === form.categoria_evento)?.icono || 'users'} className="h-4 w-4" /></span>
+                <select id="categoria-evento-noticia" name="categoria_evento" value={form.categoria_evento} onChange={onFormChange} className={`w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm ${modoOscuro ? 'bg-[#18223f] border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-300 text-slate-700'}`}>
+                  {CATEGORIAS_EVENTO.map((cat) => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
+                </select>
+              </div>
             </div>
           </div>
         )}

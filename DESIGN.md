@@ -23,7 +23,7 @@ Cada regla se marca como:
 | Enfoque visual | Oscuro por defecto («azul noche») con acento **ámbar**; modo claro alternativo | `src/contexts/ThemeContext.jsx` (`modoOscuro` inicia en `true`) |
 | Estilos | **Tailwind CSS 4** vía `@import "tailwindcss"`; sin `tailwind.config.*` ni tokens CSS globales | `src/index.css`, `package.json` |
 | Fuentes | `font-sans` de Tailwind (pila del sistema). **No** hay `@font-face` ni Google Fonts | `src/App.jsx:132`; grep de `@font-face` sin resultados |
-| Iconografía | Mapa propio SVG (Heroicons-style), componente `Icono` | `src/components/ui/Icono.jsx` |
+| Iconografía | Lucide React, con nombres compatibles a través del componente `Icono`; símbolos académicos con color por categoría | `src/components/ui/Icono.jsx`, `src/constants/tiposFecha.js` |
 | Marca gráfica | `logo-lobo.svg` (navbar), `lobounid.png` (marca de agua encuesta/landing), `LogoU.png` (Portal), `favicon.svg` | `public/`, `src/components/layout/barra-navegacion/Logotipo.jsx`, `FondoEncuesta.jsx`, `BotonPortal.jsx` |
 
 **Alcance de esta guía:** páginas públicas (`/`, `/club/:id`, `/conoce-clubs`, `/encuesta/:slug`, `/calendario?vista=mural`) y componentes compartidos de `src/components/ui` y `layout`. El calendario sin `vista=mural` requiere sesión desde PBI-18. Los paneles (`/dashboard`, `/presidente`, `/admin`, `/rectoria`) se describen aparte (sección 12).
@@ -173,7 +173,7 @@ Se aplica como `--navbar-height` en el root de `App.jsx`.
 | `ModalBase` / `ModalConfirmacion` | `ui/` | Portal, overlay, `rounded-2xl`; **única** zona de scroll en el div interno (`max-h-[85vh] overflow-y-auto p-5 sm:p-8`), panel solo marco (props `panelClassName` / `innerClassName` para modales que gestionan su propio alto, p.ej. `ModalActualizaciones`); bloquea el scroll del body (`useBloqueoScroll`) |
 | `TarjetaClub` | `clubes/tarjetas/TarjetaClub.jsx` | Activa / «próximamente» (opaca, sin hover) |
 | `Heroe` | `clubes/Heroe.jsx` | Dual: móvil (< md) carrusel de tarjetas verticales 3:4 (~90% del ancho) con texto sobre fundido al fondo del tema, flechas laterales visibles y indicadores con target 24×24; desktop banner a sangre 21:9 con crossfade y flechas; imagen móvil opcional por slide (`<picture>`, §11.8) |
-| `Icono` | `ui/Icono.jsx` | Mapa de paths; `strokeWidth` configurable |
+| `Icono` | `ui/Icono.jsx` | Mapa de componentes Lucide React; `strokeWidth` configurable |
 | `BotonAccion` CTA interés | CSS `.boton-interes-cta` | Estado normal, hover, procesando, confirmado |
 | `FondoEncuesta` | `encuestas/FondoEncuesta.jsx` | Marca de agua `lobounid.png` con tratamiento por tema |
 | `SubirImagen` | `ui/SubirImagen.jsx` | `obligatorio`, `onRemove` (botón «Quitar»), `ayuda` (texto bajo el control) |
@@ -251,7 +251,7 @@ Tailwind 4 con breakpoints por defecto. Puntos **usados de forma consistente** e
 - Tratamiento de `lobounid.png`: en oscuro `opacity-25 brightness-110`; en claro `opacity-[0.14] brightness-[0.55] saturate-150` (`FondoEncuesta.jsx`).
 - **Hero móvil del catálogo (verificado con CDP/headless; revisión visual humana pendiente):** por debajo de `lg`, `Heroe` renderiza un carrusel de tarjetas verticales `aspect-[3/4]` de `w-[86vw]` (`max-w-[440px]`, `rounded-2xl`) dentro de una pista `<ul>` con `scroll-snap-type: x mandatory`, `gap-2` y `px-6 sm:px-8` (barra oculta con `.nf-scroll` + `scrollbarWidth: none`). Cada tarjeta: imagen `object-cover` a pantalla completa (misma selección `<picture>` que escritorio: `url_imagen_movil` con fallback a `url_imagen`), degradado inferior `from-black/90 via-black/45 to-transparent` y bloque HTML encima con `h2` (`line-clamp-2`), subtítulo (`line-clamp-3`) y CTA ámbar «Explorar clubes» → `#catalogo` (scroll con offset `NAVBAR_HEIGHT`, respetando `prefers-reduced-motion`). Debajo de las tarjetas: indicadores tipo píldora (activa ámbar 24 px, inactivas slate 8 px) con target táctil de 24×24 px (`h-6 w-6`), `aria-label` y `aria-current`. El autoplay de 8 s centra la tarjeta con `scrollTo` (vuelto última→primera sin animación) y el `scroll` del usuario devuelve el control (indicador sincronizado, temporizador reiniciado). Desktop conserva el banner crossfade + flechas sin cambios; ambas variantes comparten estado y `id="hero"` (clase `hero-catalogo`).
 
-**Iconos:** no se usa librería externa; siempre `Icono` + nombre del mapa. Nombres inexistentes hacen `console.warn` y no renderizan.
+**Iconos:** se usa `lucide-react` a través de `Icono` + nombre del mapa, con importaciones explícitas. Nombres inexistentes hacen `console.warn` y no renderizan. Las fechas académicas usan `SimboloFecha` para conservar el icono y color de su categoría.
 
 ---
 

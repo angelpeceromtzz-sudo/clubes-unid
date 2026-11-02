@@ -5,6 +5,9 @@ import jwt from 'jsonwebtoken';
 import pool from '../db.js';
 import { errorPeriodoEvento, fechaEventoValida } from '../lib/fechasEvento.js';
 
+mock.timers.enable({ apis: ['Date'], now: new Date('2026-11-02T18:00:00Z') });
+after(() => mock.timers.reset());
+
 // Todas las consultas se sustituyen antes de montar las rutas. No se conecta a una base real.
 process.env.JWT_SECRET = 'calendario-test-secret';
 const consultas = [];
@@ -44,7 +47,7 @@ async function enviar(method, datos, rol = 3, ruta = '', modulo = 'noticias') {
   const respuesta = await fetch(`${base}/${modulo}${ruta}`, { method, headers, body: datos ? JSON.stringify(datos) : undefined });
   return { status: respuesta.status, datos: await respuesta.json() };
 }
-const datosEvento = { titulo: 'Jornada de clubes', contenido: 'Actividades de la comunidad', categoria: 'evento', fecha_evento: '2099-12-20', fecha_fin_evento: '2100-01-06', categoria_evento: 'social' };
+const datosEvento = { titulo: 'Jornada de clubes', contenido: 'Actividades de la comunidad', categoria: 'evento', fecha_evento: '2027-12-20', fecha_fin_evento: '2028-01-06', categoria_evento: 'social' };
 
 test('valida fechas reales, fin opcional e inicio anterior al fin', () => {
   assert.equal(fechaEventoValida('2028-02-29'), true);
@@ -67,21 +70,21 @@ test('guarda las tres categorías de eventos y el periodo completo', async () =>
     assert.equal((await enviar('POST', { ...datosEvento, categoria_evento: categoria })).status, 201);
     const insercion = consultas.find((item) => item.sql.includes('INSERT INTO noticias'));
     assert.equal(insercion.valores[10], categoria);
-    assert.equal(insercion.valores[13], '2100-01-06');
+    assert.equal(insercion.valores[13], '2028-01-06');
   }
 });
 
 test('rechaza periodos inválidos al crear y al cambiar parcialmente la fecha de inicio', async () => {
-  assert.equal((await enviar('POST', { ...datosEvento, fecha_fin_evento: '2099-12-19' })).status, 400);
+  assert.equal((await enviar('POST', { ...datosEvento, fecha_fin_evento: '2027-12-19' })).status, 400);
   assert.equal(consultas.length, 0);
-  actual = { categoria: 'evento', fecha_evento: '2099-12-20', fecha_fin_evento: '2100-01-06', status: 'draft', id_autor: 7 };
-  assert.equal((await enviar('PUT', { fecha_evento: '2100-01-10' }, 3, '/8')).status, 400);
+  actual = { categoria: 'evento', fecha_evento: '2027-12-20', fecha_fin_evento: '2028-01-06', status: 'draft', id_autor: 7 };
+  assert.equal((await enviar('PUT', { fecha_evento: '2028-01-10' }, 3, '/8')).status, 400);
   assert.equal(consultas.some((item) => item.sql.includes('UPDATE noticias')), false);
-  assert.equal((await enviar('PUT', { fecha_fin_evento: '2100-02-30' }, 3, '/8')).status, 400);
+  assert.equal((await enviar('PUT', { fecha_fin_evento: '2028-02-30' }, 3, '/8')).status, 400);
 });
 
 test('permite quitar el fin de un periodo y conserva los datos omitidos en otras ediciones', async () => {
-  actual = { categoria: 'evento', fecha_evento: '2099-12-20', fecha_fin_evento: '2100-01-06', status: 'draft', id_autor: 7 };
+  actual = { categoria: 'evento', fecha_evento: '2027-12-20', fecha_fin_evento: '2028-01-06', status: 'draft', id_autor: 7 };
   assert.equal((await enviar('PUT', { fecha_fin_evento: null }, 3, '/8')).status, 200);
   let cambio = consultas.find((item) => item.sql.includes('UPDATE noticias'));
   assert.equal(cambio.valores[16], true);
@@ -90,6 +93,39 @@ test('permite quitar el fin de un periodo y conserva los datos omitidos en otras
   cambio = consultas.find((item) => item.sql.includes('UPDATE noticias'));
   assert.equal(cambio.valores[16], false);
   assert.equal(cambio.valores[18], null);
+});
+
+test('los eventos rechazan fechas pasadas y lejanas, incluso desde solicitudes directas', async () => {
+  for (const fecha_evento of ['2026-11-01', '2028-11-03', '2099-12-20', '9999-12-31']) {
+    const respuesta = await enviar('POST', { ...datosEvento, fecha_evento, fecha_fin_evento: null });
+    assert.equal(respuesta.status, 400, fecha_evento);
+    assert.match(respuesta.datos.error, /anterior a hoy|dos años/);
+    assert.equal(consultas.length, 0);
+  }
+  assert.equal((await enviar('POST', { ...datosEvento, fecha_fin_evento: '2028-11-03' })).status, 400);
+  assert.equal(consultas.length, 0);
+  for (const fecha_evento of ['2026-11-02', '2028-11-02']) assert.equal((await enviar('POST', { ...datosEvento, fecha_evento, fecha_fin_evento: fecha_evento })).status, 201);
+  actual = { ...datosEvento, status: 'draft', id_autor: 7 };
+  for (const datos of [{ fecha_evento: '2026-11-01' }, { fecha_evento: '2099-12-20', fecha_fin_evento: null }, { fecha_fin_evento: '2099-12-20' }]) {
+    assert.equal((await enviar('PUT', datos, 3, '/8')).status, 400);
+    assert.equal(consultas.some((item) => item.sql.includes('UPDATE noticias')), false);
+  }
+});
+
+test('los eventos antiguos conservan sus fechas exactas y toda reprogramación respeta el rango', async () => {
+  for (const anio of ['2020', '2099']) {
+    actual = { categoria: 'evento', fecha_evento: `${anio}-12-14`, fecha_fin_evento: `${anio}-12-17`, status: 'draft', id_autor: 7 };
+    assert.equal((await enviar('PUT', { titulo: 'Corrección', fecha_evento: actual.fecha_evento, fecha_fin_evento: actual.fecha_fin_evento }, 3, '/8')).status, 200);
+    assert.equal((await enviar('PUT', { fecha_evento: `${anio}-12-15` }, 3, '/8')).status, 400);
+    assert.equal(consultas.some((item) => item.sql.includes('UPDATE noticias')), false);
+    assert.equal((await enviar('PUT', { fecha_fin_evento: `${anio}-12-18` }, 3, '/8')).status, 400);
+    assert.equal(consultas.some((item) => item.sql.includes('UPDATE noticias')), false);
+    assert.equal((await enviar('PUT', { fecha_evento: '2026-11-02', fecha_fin_evento: null }, 3, '/8')).status, 200);
+  }
+  // Convertir una noticia en evento no permite recuperar una fecha vieja ajena al evento.
+  actual = { categoria: 'informativo', fecha_evento: '2020-12-14', status: 'draft', id_autor: 7 };
+  assert.equal((await enviar('PUT', { categoria: 'evento', fecha_evento: actual.fecha_evento }, 3, '/8')).status, 400);
+  assert.equal(consultas.some((item) => item.sql.includes('UPDATE noticias')), false);
 });
 
 test('rectoría publica avisos de mural y la consulta exige sesión y selección explícita', async () => {
