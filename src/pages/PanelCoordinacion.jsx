@@ -1,5 +1,7 @@
 /* Panel de coordinación: métricas y resumen ejecutivo de lectura. */
+import { useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePanelNav } from '../contexts/PanelNavContext';
 import { useVistaEjecutiva } from '../hooks/useVistaEjecutiva';
 import { VistaEjecutiva } from '../components/ejecutivo/VistaEjecutiva';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
@@ -8,6 +10,12 @@ import { ELEMENTOS_NAV_COORDINACION } from '../constants/navegacion';
 export function PanelCoordinacion() {
   const { tema } = useTheme();
   const ejecutivo = useVistaEjecutiva();
+  const { setPanelNav } = usePanelNav();
+
+  useEffect(() => {
+    setPanelNav({ itemsNav: ELEMENTOS_NAV_COORDINACION, onNavChange: () => {} });
+    return () => setPanelNav({ itemsNav: [], onNavChange: null });
+  }, [setPanelNav]);
 
   return (
     <NavegacionPanel

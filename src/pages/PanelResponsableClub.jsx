@@ -1,5 +1,7 @@
 /* Panel del presidente de club: información del club y gestión completa de convocatorias. */
+import { useEffect } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
+import { usePanelNav } from '../contexts/PanelNavContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { InformacionClub } from '../components/clubes/InformacionClub';
 import { SeccionAvisos } from '../components/responsable/secciones/SeccionAvisos';
@@ -19,6 +21,11 @@ import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 export function PanelResponsableClub() {
   const { usuario } = useAutenticacion();
   const d = usePanelResponsableClub(usuario);
+  const { setPanelNav } = usePanelNav();
+  useEffect(() => {
+    setPanelNav({ itemsNav: d.esResponsableClub ? ELEMENTOS_NAV_RESPONSABLE_CLUB : ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item) => item.key !== 'asistencia'), onNavChange: d.setVistaActiva });
+    return () => setPanelNav({ itemsNav: [], onNavChange: null });
+  }, [setPanelNav, d.esResponsableClub, d.setVistaActiva]);
 
   if (d.loading) {
     return (

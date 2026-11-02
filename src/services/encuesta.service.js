@@ -37,6 +37,11 @@ export const encuestaService = {
     }),
   eliminarPregunta: (idPregunta) =>
     request(`/encuestas/admin/preguntas/${idPregunta}`, { method: 'DELETE' }),
+  eliminarRespuesta: (idEncuesta, idRespuesta, password) =>
+    request(`/encuestas/admin/${idEncuesta}/respuestas/${idRespuesta}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    }),
   actualizarOpciones: (idPregunta, opciones) =>
     request(`/encuestas/admin/preguntas/${idPregunta}/opciones`, {
       method: 'PUT',

@@ -1,5 +1,7 @@
 /* Panel de rectoría: resumen estadístico, detalle de clubes, padrón y control de asistencia. */
+import { useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePanelNav } from '../contexts/PanelNavContext';
 import { usePanelRectoria } from '../hooks/usePanelRectoria';
 import { useVistaEjecutiva } from '../hooks/useVistaEjecutiva';
 import { VistaEjecutiva } from '../components/ejecutivo/VistaEjecutiva';
@@ -22,13 +24,19 @@ export function PanelRectoria() {
   const { tema } = useTheme();
   const d = usePanelRectoria();
   const ejecutivo = useVistaEjecutiva();
+  const { setPanelNav } = usePanelNav();
+  useEffect(() => {
+    setPanelNav({ itemsNav: ELEMENTOS_NAV_RECTORIA, onNavChange: d.setVistaActiva });
+    return () => setPanelNav({ itemsNav: [], onNavChange: null });
+  }, [setPanelNav, d.setVistaActiva]);
 
   return (
-    <NavegacionPanel
-      elementosNav={ELEMENTOS_NAV_RECTORIA}
-      vistaActiva={d.vistaActiva}
-      onVistaChange={d.setVistaActiva}
-    >
+    <>
+      <NavegacionPanel
+        elementosNav={ELEMENTOS_NAV_RECTORIA}
+        vistaActiva={d.vistaActiva}
+        onVistaChange={d.setVistaActiva}
+      >
       <h1 className={`text-2xl font-black tracking-tight mb-6 ${tema.title}`}>Panel de Rectoría</h1>
 
         {d.error && (
@@ -91,5 +99,6 @@ export function PanelRectoria() {
           onCancelar={d.cancelarPendienteNoticia}
         />
     </NavegacionPanel>
+    </>
   );
 }
