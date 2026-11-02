@@ -1,11 +1,19 @@
+import { useRef, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from './Icono';
 
-// `inputRef` es opcional: sirve para que quien lo usa pueda llevar el foco al
-// campo (por ejemplo, al abrir una pregunta en línea). Los usos que no lo
-// pasan no cambian.
 export function CampoTexto({ label, name, placeholder, value, onChange, onBlur, type = 'text', disabled, readOnly, error, required, maxLength, min, inputRef, autoComplete, inputMode, autoFocus, pattern }) {
-  const { inputCls, labelCls } = useTheme();
+  const { inputCls, labelCls, modoOscuro } = useTheme();
+  const textareaRef = useRef(null);
+
+  // Auto-resize para textarea: crece con el contenido.
+  useEffect(() => {
+    if (type !== 'textarea') return;
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value, type]);
 
   const lockedCls = readOnly
     ? 'bg-slate-200/60 dark:bg-slate-700/40 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600 cursor-not-allowed select-all'
@@ -23,7 +31,7 @@ export function CampoTexto({ label, name, placeholder, value, onChange, onBlur, 
         </label>
       )}
       <InputTag
-        ref={inputRef}
+        ref={inputRef || textareaRef}
         id={name}
         name={name}
         type={type === 'textarea' ? undefined : type}
@@ -41,8 +49,13 @@ export function CampoTexto({ label, name, placeholder, value, onChange, onBlur, 
         pattern={pattern}
         aria-invalid={error ? 'true' : undefined}
         rows={type === 'textarea' ? 3 : undefined}
-        className={`${inputCls} ${lockedCls} ${type === 'textarea' ? 'resize-none' : ''}`}
+        className={`${inputCls} ${lockedCls} ${type === 'textarea' ? 'resize-none overflow-hidden' : ''}`}
       />
+      {maxLength && (value != null ? String(value).length : 0) >= maxLength - 20 && (
+        <p className={`text-[10px] mt-1 text-right ${((value != null ? String(value).length : 0) >= maxLength) ? 'text-red-500 animate-pulse font-bold' : (modoOscuro ? 'text-slate-500' : 'text-slate-400')}`}>
+          {(value != null ? String(value).length : 0)}/{maxLength} caracteres
+        </p>
+      )}
       {error && <p className="text-red-400 text-xs mt-1 font-medium">{error}</p>}
     </div>
   );

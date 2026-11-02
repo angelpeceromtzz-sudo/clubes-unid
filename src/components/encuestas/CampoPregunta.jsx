@@ -55,6 +55,11 @@ function CampoTextoOtro({ idPregunta, valor, onChange, error, deshabilitado, cla
         placeholder="Escribe tu respuesta"
         className={claseInput}
       />
+      {(valor != null ? String(valor).length : 0) >= MAX_CARACTERES_TEXTO_OTRO - 20 && (
+        <p className={`mt-1 text-right text-xs ${(valor != null ? String(valor).length : 0) >= MAX_CARACTERES_TEXTO_OTRO ? 'text-red-500 animate-pulse font-bold' : 'text-slate-400'}`}>
+          {(valor != null ? String(valor).length : 0)}/{MAX_CARACTERES_TEXTO_OTRO}
+        </p>
+      )}
       {error && (
         <p
           id={`error-texto-otro-${idPregunta}`}
@@ -207,15 +212,22 @@ export function CampoPregunta({
 
     case 'texto_corto':
       return (
-        <input
-          type="text"
-          value={typeof valor === 'string' ? valor : ''}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={deshabilitado}
-          maxLength={200}
-          className={base}
-          placeholder="Tu respuesta"
-        />
+        <div>
+          <input
+            type="text"
+            value={typeof valor === 'string' ? valor : ''}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={deshabilitado}
+            maxLength={70}
+            className={base}
+            placeholder="Tu respuesta"
+          />
+          {(typeof valor === 'string' ? valor.length : 0) >= 70 - 20 && (
+          <p className={`mt-1 text-right text-xs ${(typeof valor === 'string' ? valor.length : 0) >= 70 ? 'text-red-500 animate-pulse font-bold' : tema.subtitle}`}>
+            {(typeof valor === 'string' ? valor.length : 0)}/70
+          </p>
+        )}
+        </div>
       );
 
     case 'texto_largo':
@@ -225,16 +237,18 @@ export function CampoPregunta({
             value={typeof valor === 'string' ? valor : ''}
             onChange={(e) => onChange(e.target.value)}
             disabled={deshabilitado}
-            maxLength={2000}
+            maxLength={200}
             rows={4}
             className={`${base} resize-y`}
             placeholder="Tu respuesta"
           />
-          {/* El backend corta en 2000 igual; el contador evita que se descubra
+          {/* El backend corta en 200 igual; el contador evita que se descubra
               al enviar y perder todo el formulario. */}
-          <p className={`mt-1 text-right text-xs ${tema.subtitle}`}>
-            {(typeof valor === 'string' ? valor.length : 0)}/2000
+          {(typeof valor === 'string' ? valor.length : 0) >= 200 - 20 && (
+          <p className={`mt-1 text-right text-xs ${(typeof valor === 'string' ? valor.length : 0) >= 200 ? 'text-red-500 animate-pulse font-bold' : tema.subtitle}`}>
+            {(typeof valor === 'string' ? valor.length : 0)}/200
           </p>
+        )}
         </div>
       );
 

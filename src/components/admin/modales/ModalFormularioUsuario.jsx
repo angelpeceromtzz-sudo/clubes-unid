@@ -29,6 +29,9 @@ export function ModalFormularioUsuario({
             onChange={onFormChange}
             placeholder="Ej: Juan Pérez"
             className={inputCls}
+            maxLength={60}
+            pattern="[A-Za-zÀ-ÿ ]+"
+            title="Solo letras y espacios"
             required
           />
         </div>
@@ -42,6 +45,7 @@ export function ModalFormularioUsuario({
             onChange={onFormChange}
             placeholder="ejemplo@unid.edu.mx"
             className={inputCls}
+            maxLength={30}
             required
           />
         </div>
@@ -55,6 +59,9 @@ export function ModalFormularioUsuario({
             onChange={onFormChange}
             placeholder="Contraseña temporal"
             className={inputCls}
+            maxLength={64}
+            pattern="[A-Za-z0-9]+"
+            title="Solo letras y números"
             required
           />
         </div>

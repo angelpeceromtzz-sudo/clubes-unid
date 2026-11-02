@@ -17,8 +17,8 @@ export function ModalFormularioDiapositiva({ show, editando, form, enviando, err
       </div>
 
       <form onSubmit={onGuardar} className="space-y-4">
-        <CampoTexto label="Título" name="titulo" value={form.titulo} onChange={onFormChange} placeholder="Ej: Bienvenidos a la manada" required />
-        <CampoTexto label="Subtítulo" name="subtitulo" value={form.subtitulo} onChange={onFormChange} placeholder="Texto secundario (opcional)" />
+        <CampoTexto label="Título" name="titulo" value={form.titulo} onChange={onFormChange} placeholder="Ej: Bienvenidos a la manada" required maxLength={64} />
+        <CampoTexto label="Subtítulo" name="subtitulo" value={form.subtitulo} onChange={onFormChange} placeholder="Texto secundario (opcional)" maxLength={64} />
 
         <div>
           <label className={labelCls}>Orden</label>
