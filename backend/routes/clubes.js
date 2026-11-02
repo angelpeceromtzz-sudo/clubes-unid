@@ -13,6 +13,13 @@ import convocatoriasInscripcion from './convocatoriasInscripcion.js';
 
 const CUPOS_CLUB_VALIDOS = [10, 15, 20, 25, 30, 40, 50];
 
+
+function tieneCaracteresNoPermitidos(texto) {
+  if (texto === null || texto === undefined) return false;
+  const valor = String(texto).trim();
+  if (valor === '') return false;
+  return !/^[\p{L}\p{N}\s.,;:!?¿¡()\-'"\/#&]+$/u.test(valor);
+}
 const router = Router();
 router.use('/:id/convocatoria', convocatoriasInscripcion);
 
@@ -140,6 +147,40 @@ router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_
   }
 });
 
+// Opciones de filtro para actividad de clubes: solo valores con registros.
+router.get('/actividad/filtros', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
+  try {
+    const actores = await pool.query(
+      `SELECT DISTINCT u.id_usuario AS id, u.nombre_completo AS nombre
+       FROM actividad_clubes a
+       JOIN usuarios u ON u.id_usuario = a.id_actor
+       WHERE a.id_actor IS NOT NULL
+       ORDER BY u.nombre_completo ASC`
+    );
+    const tipos = await pool.query(
+      `SELECT DISTINCT a.tipo_evento AS tipo
+       FROM actividad_clubes a
+       WHERE a.tipo_evento IS NOT NULL AND a.tipo_evento <> ''
+       ORDER BY a.tipo_evento ASC`
+    );
+    const clubes = await pool.query(
+      `SELECT DISTINCT c.id_club AS id, c.nombre_club AS nombre
+       FROM actividad_clubes a
+       JOIN clubes c ON c.id_club = a.id_club
+       WHERE a.id_club IS NOT NULL
+       ORDER BY c.nombre_club ASC`
+    );
+    res.json({
+      actores: actores.rows,
+      tipos: tipos.rows.map((r) => r.tipo),
+      clubes: clubes.rows,
+    });
+  } catch (err) {
+    console.error('Error al obtener filtros de actividad:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // Lista completa para el panel admin (H6): incluye estatus 3 y los campos de
 // presidente que el flujo de reasignación usa; requiere rol 3. El público usa
 // GET / y no ve esos datos.
@@ -259,11 +300,12 @@ router.get('/:id', async (req, res) => {
 router.put('/:id/estatus', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id } = req.params;
-    const { id_estatus_club } = req.body;
+    const { id_estatus_club, password } = req.body;
 
     if (![1, 2, 3].includes(id_estatus_club)) {
       return res.status(400).json({ error: 'Estatus inválido' });
     }
+
 
     const result = await pool.query(
       `UPDATE clubes SET id_estatus_club = $1 WHERE id_club = $2
@@ -326,7 +368,12 @@ router.get('/:id/miembros', authenticate, async (req, res) => {
 router.post('/', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   const client = await pool.connect();
   try {
-    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles, lugar_actividades } = req.body;
+    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles, lugar_actividades, password } = req.body;
+
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+    if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
+      return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+    }
 
     if (!nombre_club || !descripcion || !categoria || !cupo_maximo) {
       return res.status(400).json({ error: 'Nombre, descripción, categoría y cupo máximo son obligatorios' });
@@ -335,6 +382,26 @@ router.post('/', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (
     const cupoNumero = Number(cupo_maximo);
     if (!Number.isInteger(cupoNumero) || !CUPOS_CLUB_VALIDOS.includes(cupoNumero)) {
       return res.status(400).json({ error: 'Cupo máximo inválido' });
+    }
+
+    if (tieneCaracteresNoPermitidos(nombre_club)) {
+      return res.status(400).json({ error: 'El nombre del club no permite emojis ni caracteres especiales' });
+    }
+    if (descripcion && tieneCaracteresNoPermitidos(descripcion)) {
+      return res.status(400).json({ error: 'La descripción no permite emojis ni caracteres especiales' });
+    }
+    if (lugar_actividades && tieneCaracteresNoPermitidos(lugar_actividades)) {
+      return res.status(400).json({ error: 'El lugar de actividades no permite emojis ni caracteres especiales' });
+    }
+
+    if (tieneCaracteresNoPermitidos(nombre_club)) {
+      return res.status(400).json({ error: 'El nombre del club no permite emojis ni caracteres especiales' });
+    }
+    if (descripcion && tieneCaracteresNoPermitidos(descripcion)) {
+      return res.status(400).json({ error: 'La descripción no permite emojis ni caracteres especiales' });
+    }
+    if (lugar_actividades && tieneCaracteresNoPermitidos(lugar_actividades)) {
+      return res.status(400).json({ error: 'El lugar de actividades no permite emojis ni caracteres especiales' });
     }
 
     const PARTICIPACION_VALIDA = ['masculina', 'femenina', 'mixta'];
@@ -409,6 +476,26 @@ router.put('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async
     const cupoNumero = Number(cupo_maximo);
     if (!Number.isInteger(cupoNumero) || !CUPOS_CLUB_VALIDOS.includes(cupoNumero)) {
       return res.status(400).json({ error: 'Cupo máximo inválido' });
+    }
+
+    if (tieneCaracteresNoPermitidos(nombre_club)) {
+      return res.status(400).json({ error: 'El nombre del club no permite emojis ni caracteres especiales' });
+    }
+    if (descripcion && tieneCaracteresNoPermitidos(descripcion)) {
+      return res.status(400).json({ error: 'La descripción no permite emojis ni caracteres especiales' });
+    }
+    if (lugar_actividades && tieneCaracteresNoPermitidos(lugar_actividades)) {
+      return res.status(400).json({ error: 'El lugar de actividades no permite emojis ni caracteres especiales' });
+    }
+
+    if (tieneCaracteresNoPermitidos(nombre_club)) {
+      return res.status(400).json({ error: 'El nombre del club no permite emojis ni caracteres especiales' });
+    }
+    if (descripcion && tieneCaracteresNoPermitidos(descripcion)) {
+      return res.status(400).json({ error: 'La descripción no permite emojis ni caracteres especiales' });
+    }
+    if (lugar_actividades && tieneCaracteresNoPermitidos(lugar_actividades)) {
+      return res.status(400).json({ error: 'El lugar de actividades no permite emojis ni caracteres especiales' });
     }
 
     const PARTICIPACION_VALIDA = ['masculina', 'femenina', 'mixta'];
