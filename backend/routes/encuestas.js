@@ -1483,7 +1483,21 @@ router.delete('/admin/:id', authenticate, requireRole(...ROLES_ESCRITURA), async
       return res.status(404).json({ error: 'Encuesta no encontrada' });
     }
 
-    if (encuesta.rows[0].estado === 'borrador') {
+    const countRes = await client.query(
+      'SELECT COUNT(*)::int AS n FROM respuestas_encuesta WHERE id_encuesta = $1',
+      [req.params.id]
+    );
+    const tieneRespuestas = countRes.rows[0].n > 0;
+
+    if (tieneRespuestas) {
+      const password = req.body?.password ?? req.query?.password;
+      const ADMIN_SECRET = process.env.ADMIN_SECRET;
+      if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({
+          error: 'Se requiere la contraseña de administrador para eliminar una encuesta con respuestas.',
+        });
+      }
       await client.query(
         'DELETE FROM respuestas_encuesta WHERE id_encuesta = $1',
         [req.params.id]

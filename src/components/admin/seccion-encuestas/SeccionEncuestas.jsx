@@ -108,7 +108,7 @@ function accionesDeEncuesta({
   // respuestas fuera de un borrador el botón no aparece en vez de fallar.
   const peligrosas = [];
 
-  if (esAdmin && (encuesta.estado === 'borrador' || !tieneRespuestas)) {
+  if (esAdmin) {
     peligrosas.push({
       clave: 'eliminar',
       icono: 'trash',
@@ -410,7 +410,11 @@ function ListaEncuestas({ hook }) {
                 borrando.estado === 'borrador' && borrando.total_respuestas > 0
                   ? ` Sus ${borrando.total_respuestas} ${
                       borrando.total_respuestas === 1 ? 'respuesta' : 'respuestas'
-                    } anónimas también se descartarán.`
+                    } anónimas también se descartarán (requiere contraseña de administrador).`
+                  : borrando.total_respuestas > 0
+                  ? ` Tiene ${borrando.total_respuestas} ${
+                      borrando.total_respuestas === 1 ? 'respuesta' : 'respuestas'
+                    }; se eliminarán (requiere contraseña de administrador).`
                   : ' No tiene respuestas, así que se puede borrar sin dejar nada atrás.'
               }`
             : ''
@@ -419,8 +423,17 @@ function ListaEncuestas({ hook }) {
         varianteDanger
         cargando={enviando}
         onConfirmar={async () => {
+          const conRespuestas = borrando.total_respuestas > 0;
+          let password;
+          if (conRespuestas) {
+            password = window.prompt('Ingresa la contraseña de administrador para eliminar la encuesta con respuestas:');
+            if (password === null) {
+              setBorrando(null);
+              return;
+            }
+          }
           setBorrando(null);
-          await eliminar(borrando.id_encuesta);
+          await eliminar(borrando.id_encuesta, password);
         }}
         onCancelar={() => setBorrando(null)}
       />
