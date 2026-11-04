@@ -53,7 +53,7 @@ router.get('/club/:idClub', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'No se pudieron cargar los horarios oficiales' }); }
 });
 router.use(authenticate);
-router.get('/espacios', requireRole(2, 3), async (_req, res) => {
+router.get('/espacios', requireRole(2, 3, ROL_COORDINACION), async (_req, res) => {
   try { res.json((await pool.query('SELECT id_espacio, nombre FROM espacios_club ORDER BY nombre')).rows); }
   catch { res.status(500).json({ error: 'No se pudieron cargar los espacios' }); }
 });
@@ -66,10 +66,10 @@ router.get('/solicitudes', requireRole(ROL_ADMIN, ROL_COORDINACION), async (_req
   try { res.json((await pool.query(`${SELECTOR} ORDER BY CASE s.estado WHEN 'pendiente' THEN 0 ELSE 1 END, s.fecha_actualizacion DESC`)).rows); }
   catch { res.status(500).json({ error: 'No se pudieron cargar las propuestas' }); }
 });
-router.get('/solicitudes/club/:idClub', requireRole(2, 3), async (req, res) => {
+router.get('/solicitudes/club/:idClub', requireRole(2, 3, ROL_COORDINACION), async (req, res) => {
   if (!idValido(req.params.idClub)) return res.status(400).json({ error: 'Club no válido' });
   try {
-    if (req.user.id_rol !== 3) await presidente(pool, req, req.params.idClub);
+    if (req.user.id_rol !== 3 && req.user.id_rol !== ROL_COORDINACION) await presidente(pool, req, req.params.idClub);
     const result = await pool.query(`${SELECTOR} WHERE s.id_club = $1 ORDER BY s.fecha_actualizacion DESC`, [req.params.idClub]);
     res.json(result.rows);
   } catch (err) { res.status(err.status || 500).json({ error: err.status ? err.message : 'No se pudieron cargar las propuestas' }); }
