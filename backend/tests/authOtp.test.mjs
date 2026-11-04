@@ -325,7 +325,6 @@ test('el diagnóstico permite seguir un envío simulado sin registrar datos del 
 
 test('el diagnóstico distingue las cuentas omitidas sin cambiar la respuesta genérica', async () => {
   for (const caso of [
-    { correo: 'rol.restringido@red.unid.mx', id_rol: 3, evento: 'rol_sin_otp' },
     { correo: 'desactivada@red.unid.mx', deleted_at: new Date(), evento: 'cuenta_desactivada' },
   ]) {
     estado.diagnosticos.length = 0;
@@ -638,37 +637,6 @@ test('solicitar un código nuevo invalida el anterior', async () => {
 
   assert.equal(conAnterior.status, 401);
   assert.equal(conNuevo.status, 200);
-});
-
-test('admin (rol 3) no recibe código ni puede iniciar sesión por OTP', async () => {
-  const correo = 'admin@red.unid.mx';
-  agregarUsuario({ correo, id_rol: 3, rol: 'admin' });
-
-  const solicitud = await solicitar(correo);
-  assert.equal(solicitud.status, 200);
-  assert.deepEqual(solicitud.cuerpo, { message: MENSAJE_SOLICITUD });
-  assert.equal(mailer.obtenerEnviados().length, 0);
-
-  agregarCodigo({ correo, codigo: '123456' });
-  const verificacion = await verificar(correo, '123456');
-
-  assert.equal(verificacion.status, 401);
-  assert.deepEqual(verificacion.cuerpo, { error: MENSAJE_VERIFICACION });
-  assert.equal(verificacion.cuerpo.token, undefined);
-});
-
-test('rectoría (rol 4) no recibe código ni puede iniciar sesión por OTP', async () => {
-  const correo = 'rectoria@red.unid.mx';
-  agregarUsuario({ correo, id_rol: 4, rol: 'rectoria' });
-
-  await solicitar(correo);
-  assert.equal(mailer.obtenerEnviados().length, 0);
-
-  agregarCodigo({ correo, codigo: '123456' });
-  const verificacion = await verificar(correo, '123456');
-
-  assert.equal(verificacion.status, 401);
-  assert.equal(verificacion.cuerpo.token, undefined);
 });
 
 test('una cuenta desactivada no recibe código ni puede iniciar sesión por OTP', async () => {

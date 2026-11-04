@@ -36,7 +36,7 @@ const MENSAJE_ERROR_INTERNO = 'No se pudo procesar la solicitud.';
 
 import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 
-const ROLES_SIN_OTP = new Set([ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION]);
+const ROLES_SIN_OTP = new Set([]);
 const NOMBRES_ROL = {
   1: 'alumno',
   2: 'responsable_club',
