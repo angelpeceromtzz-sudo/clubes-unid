@@ -8,6 +8,7 @@ import { ProveedorAutenticacion } from './contexts/AuthContext';
 import { ProveedorNotificacion } from './contexts/NotificationContext';
 import { ProveedorNoticias } from './contexts/NoticiasContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { PanelNavProvider } from './contexts/PanelNavContext';
 import App from './App.jsx';
 
 createRoot(document.getElementById('root')).render(
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')).render(
           <ProveedorNotificacion>
             <ProveedorNoticias>
               <ThemeProvider>
-                <App />
+                <PanelNavProvider>
+                  <App />
+                </PanelNavProvider>
               </ThemeProvider>
             </ProveedorNoticias>
           </ProveedorNotificacion>

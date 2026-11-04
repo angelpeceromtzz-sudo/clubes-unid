@@ -26,8 +26,8 @@ export function BarraGeneral({ onLoginClick, splashActivo = false, flotante = fa
       }`}>
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:max-w-none lg:mx-0 lg:px-12 xl:px-16 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center shrink-0" aria-label="Clubs UNID">
-          <img src="/branding/lobounid.png" alt="Lobo UNID" id="navbar-logo" className={`h-10 w-auto object-contain self-center transition-opacity duration-200 ${splashActivo ? 'opacity-0' : 'opacity-100'}`} />
-          <img src="/branding/clubs-unid.png" alt="Clubs UNID" className="h-12 w-auto object-contain self-center" />
+          <img src="/branding/lobounid.png" alt="Lobo UNID" id="navbar-logo" className={`h-8 sm:h-10 w-auto object-contain self-center transition-opacity duration-200 ${splashActivo ? 'opacity-0' : 'opacity-100'}`} />
+          <img src={oscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'} alt="Clubs UNID" className="h-9 sm:h-12 w-auto object-contain self-center -ml-1 sm:ml-0" />
         </Link>
 
         <nav className={`hidden md:flex items-center gap-5 text-sm font-bold ${flotante && modoOscuro && !scrolled ? 'text-white' : ''}`}>
@@ -39,7 +39,7 @@ export function BarraGeneral({ onLoginClick, splashActivo = false, flotante = fa
             <button
               type="button"
               onClick={onLoginClick}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-amber-400 text-[#0e162c] font-black hover:bg-amber-300 transition"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-amber-400 text-[#0e162c] font-black hover:bg-amber-300 transition cursor-pointer"
             >
               Iniciar sesión
             </button>
@@ -51,7 +51,7 @@ export function BarraGeneral({ onLoginClick, splashActivo = false, flotante = fa
           onClick={() => setMenuAbierto((prev) => !prev)}
           aria-label="Abrir menú"
           aria-expanded={menuAbierto}
-          className="md:hidden inline-flex items-center justify-center p-2 rounded-full text-white hover:text-amber-400 transition"
+          className="md:hidden inline-flex items-center justify-center p-2 rounded-full text-white hover:text-amber-400 transition cursor-pointer"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             {menuAbierto ? (
@@ -77,7 +77,7 @@ export function BarraGeneral({ onLoginClick, splashActivo = false, flotante = fa
                   onLoginClick();
                   cerrarMenu();
                 }}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-amber-400 text-[#0e162c] font-black hover:bg-amber-300 transition"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-amber-400 text-[#0e162c] font-black hover:bg-amber-300 transition cursor-pointer"
               >
                 Iniciar sesión
               </button>

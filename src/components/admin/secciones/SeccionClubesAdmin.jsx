@@ -29,7 +29,7 @@ export function SeccionClubesAdmin({ d }) {
           className="flex-1 sm:flex-none shrink-0"
         >
           <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
-          Agregar Nuevo Club
+          Crear Club
         </BotonAccion>
       </div>
       <TablaClubes

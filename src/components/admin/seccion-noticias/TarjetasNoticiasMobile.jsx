@@ -3,10 +3,9 @@ import { obtenerUrlImagen } from '../../../utils/imagen';
 import { fechaCorta } from '../../../utils/formato';
 import { periodoEvento } from '../../../utils/calendario';
 import { nombreCategoriaEvento } from '../../../constants/categoriasEvento';
-import { BadgeEstadoNoticia } from './BadgeEstadoNoticia';
 import { AccionesNoticia } from './AccionesNoticia';
 
-export function TarjetasNoticiasMobile({ noticias, modoOscuro, tdTitle, tdCls, idRol, onEnviarRevision, onAprobar, onRechazar, onOcultar, onEditar, onEliminar }) {
+export function TarjetasNoticiasMobile({ noticias, modoOscuro, tdTitle, tdCls, idRol, onEnviarRevision, onAprobar, onRechazar, onOcultar, onEditar, onEliminar, onCambiarEstado }) {
   return (
     <div className="space-y-2 md:hidden">
       {noticias.map((n) => (
@@ -31,7 +30,22 @@ export function TarjetasNoticiasMobile({ noticias, modoOscuro, tdTitle, tdCls, i
               </div>
               {n.categoria === 'evento' && n.lugar_evento && <p className={`text-[10px] mt-1 ${tdCls}`}>📍 {n.lugar_evento}</p>}
             </div>
-            <BadgeEstadoNoticia estado={n.status} motivo={n.motivo_rechazo} />
+            <select
+              value={n.status || 'draft'}
+              onChange={(e) => onCambiarEstado?.(n.id_noticia, e.target.value)}
+              disabled={![3, 4].includes(idRol)}
+              className={`px-2 py-1 rounded-lg border text-xs font-bold outline-none transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+                n.status === 'draft' ? 'text-slate-400' :
+                n.status === 'pending' ? 'text-amber-400' :
+                n.status === 'published' ? 'text-emerald-400' :
+                n.status === 'rejected' ? 'text-red-400' : 'text-slate-400'
+              } ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'}`}
+            >
+              <option value="draft" style={{ color: '#94a3b8' }}>Borrador</option>
+              <option value="pending" style={{ color: '#fbbf24' }}>Pendiente</option>
+              <option value="published" style={{ color: '#34d399' }}>Publicada</option>
+              <option value="rejected" style={{ color: '#f87171' }}>Rechazada</option>
+            </select>
           </div>
 
           {/* Motivo del rechazo (PBI-17): el autor ve aquí qué corregir. */}

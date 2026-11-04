@@ -36,8 +36,8 @@ export const TIPOS_CON_OPCIONES = ['opcion_unica', 'opcion_multiple'];
 // esperar el 400.
 export const MAX_OPCIONES_POR_PREGUNTA = 30;
 export const MAX_PREGUNTAS_POR_ENCUESTA = 60;
-export const MAX_CARACTERES_TEXTO_LARGO = 2000;
-export const MAX_CARACTERES_TEXTO_CORTO = 200;
+export const MAX_CARACTERES_TEXTO_LARGO = 200;
+export const MAX_CARACTERES_TEXTO_CORTO = 70;
 
 export function etiquetaTipoPregunta(tipo) {
   return TIPOS_PREGUNTA_ETIQUETA.find((t) => t.value === tipo)?.label ?? tipo;
@@ -57,7 +57,7 @@ export const ETIQUETA_OPCION_OTRO = 'Otro';
 
 // Texto libre que el alumno escribe al elegir la opción «Otro». Usa el límite
 // vigente del texto corto.
-export const MAX_CARACTERES_TEXTO_OTRO = 200;
+export const MAX_CARACTERES_TEXTO_OTRO = 70;
 
 // Estados del guardado del formulario de una encuesta.
 //

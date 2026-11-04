@@ -417,7 +417,7 @@ router.put('/:id/estatus', authenticate, requireRole(2, 5), async (req, res) => 
     const form = formulario.rows[0];
 
     const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
+      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
       [form.id_club, req.user.id]
     );
     if (club.rows.length === 0) {
@@ -513,7 +513,7 @@ router.put('/:id/bloque', authenticate, requireRole(2, 5), async (req, res) => {
 
     const form = formulario.rows[0];
     const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
+      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
       [form.id_club, req.user.id]
     );
     if (club.rows.length === 0) {
@@ -543,7 +543,7 @@ router.post('/seleccionar', authenticate, requireRole(2, 5), async (req, res) =>
 
     const club = await pool.query(
       `SELECT id_club, nombre_club, id_convocatoria_inscripcion_actual
-       FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)`,
+       FROM clubes WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)`,
       [id_club, req.user.id],
     );
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });

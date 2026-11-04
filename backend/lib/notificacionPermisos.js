@@ -42,7 +42,7 @@ function esIdEnteroPositivo(valor) {
  * @param {string} params.audiencia - Audiencia pedida en el body.
  * @param {number|null} [params.idClub] - Club pedido en el body.
  * @param {number|null} [params.idDestinatario] - Destinatario personal pedido.
- * @param {{id_club:number,id_presidente:number,id_vicepresidente:number}|null} [params.club]
+ * @param {{id_club:number,id_responsable_club:number,id_vicepresidente:number}|null} [params.club]
  *        Fila del club consultado en BD para idClub (null si no existe).
  * @returns {{permitido:boolean, status:number|null, error:string|null,
  *            valores:{id_club:number|null, id_destinatario:number|null}}}
@@ -82,7 +82,7 @@ export function validarCreacionNotificacion({
     if (!club) {
       return rechazar(404, 'Club no encontrado');
     }
-    if (club.id_presidente !== idEmisor && club.id_vicepresidente !== idEmisor) {
+    if (club.id_responsable_club !== idEmisor && club.id_vicepresidente !== idEmisor) {
       return rechazar(403, 'No eres líder de este club');
     }
     return {

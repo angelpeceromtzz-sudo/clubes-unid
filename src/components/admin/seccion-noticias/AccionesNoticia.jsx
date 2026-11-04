@@ -44,11 +44,15 @@ export function AccionesNoticia({
   if (acc.ocultar) {
     botones.push({ clave: 'ocultar', icono: 'eye-off', texto: 'Ocultar', titulo: 'Sacar del mural sin eliminarla', clase: CLASES.ocultar, accion: () => onOcultar(noticia) });
   }
-  if (acc.editar) {
+  if (acc.editar || acc.editarCualquiera) {
     botones.push({ clave: 'editar', icono: 'edit', texto: 'Editar', titulo: 'Editar', clase: CLASES.editar, accion: () => onEditar(noticia) });
   }
   if (acc.eliminar) {
     botones.push({ clave: 'eliminar', icono: 'trash', texto: 'Eliminar', titulo: 'Eliminar', clase: CLASES.eliminar, accion: () => onEliminar(noticia) });
+  }
+
+  if (botones.length === 0) {
+    return <span className="text-xs text-slate-500">—</span>;
   }
 
   return (
@@ -63,8 +67,7 @@ export function AccionesNoticia({
           className={`${CLASE_BASE} ${b.clase} ${compacto ? 'px-2 py-1.5' : 'text-xs px-2.5 py-1.5'}`}
         >
           <Icono nombre={b.icono} strokeWidth={2} className="h-4 w-4 shrink-0" />
-          {/* "Eliminar" siempre sólo icono: es la acción destructiva y ya tiene título. */}
-          {!compacto && b.clave !== 'eliminar' && b.texto}
+          {!compacto && b.texto}
         </button>
       ))}
     </div>

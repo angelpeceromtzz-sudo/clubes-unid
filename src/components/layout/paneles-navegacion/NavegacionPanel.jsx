@@ -8,8 +8,13 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
   const { modoOscuro } = useTheme();
   const [abiertos, setAbiertos] = useState(() => new Set());
   const [cerrados, setCerrados] = useState(() => new Set());
+  const [sidebarAbierto, setSidebarAbierto] = useState(true);
 
-  // Al cambiar de sección, se respeta la apertura automática del grupo activo.
+  const tieneAdmin = elementosNav.some((i) => i.key === 'gestion-clubes');
+  const itemUsuarios = elementosNav.find((i) => i.key === 'usuarios');
+  const itemGestionClubes = elementosNav.find((i) => i.key === 'gestion-clubes');
+  const itemResumen = elementosNav.find((i) => i.key === 'resumen');
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCerrados(new Set());
@@ -86,9 +91,11 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
             modoOscuro ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-          </svg>
+          {item.key !== 'gestion-clubes' && (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+            </svg>
+          )}
           <span className="flex-1 text-left">{item.label}</span>
           <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform ${estaAbierto ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -107,26 +114,67 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
     item.children ? renderGrupo(item, compacto) : renderBoton(item, compacto);
 
   return (
-    <>
-      <style>{`.nav-tabs-hide-scroll::-webkit-scrollbar { display: none; }`}</style>
-      <div className="flex min-h-screen">
-        <div
-          className={`hidden md:flex flex-col shrink-0 w-64 border-r sticky self-start overflow-y-auto ${modoOscuro ? 'bg-[#0a1128] border-slate-800/60' : 'bg-white border-slate-200 shadow-sm'}`}
-          style={{ top: `${NAVBAR_HEIGHT_LOGO}px`, height: `calc(100vh - ${NAVBAR_HEIGHT_LOGO}px)` }}
-        >
-          <nav className="pt-6 px-3 space-y-1">
-            {elementosNav.map((item) => renderElemento(item, false))}
-          </nav>
+    <div className="flex min-h-screen">
+      <div
+        className={`hidden md:flex flex-col shrink-0 border-r sticky self-start overflow-y-auto transition-all duration-300 ${sidebarAbierto ? 'w-64' : 'w-12'} ${modoOscuro ? 'bg-[#0a1128] border-slate-800/60' : 'bg-white border-slate-200 shadow-sm'}`}
+        style={{ top: `${NAVBAR_HEIGHT_LOGO}px`, height: `calc(100vh - ${NAVBAR_HEIGHT_LOGO}px)`, direction: 'rtl', scrollbarColor: '#fbbf24 transparent', scrollbarWidth: 'thin' }}
+      >
+        <div style={{ direction: 'ltr' }} className="flex flex-col">
+          <button
+            type="button"
+            onClick={() => setSidebarAbierto((prev) => !prev)}
+            className={`m-2 inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${modoOscuro ? 'text-amber-400 hover:text-amber-300 hover:bg-slate-700/80 hover:shadow-sm' : 'text-amber-500 hover:text-amber-600 hover:bg-slate-200 hover:shadow-sm'}`}
+            aria-label={sidebarAbierto ? 'Ocultar menú lateral' : 'Mostrar menú lateral'}
+          >
+            {sidebarAbierto ? 'Cerrar' : 'Abrir'}
+          </button>
+          {sidebarAbierto && (
+            <nav className="pt-2 px-3 space-y-1">
+              {tieneAdmin && (
+                 <>
+                   <div className={`px-4 py-2 text-xs font-black uppercase tracking-wider ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
+                     ADMINISTRAR
+                   </div>
+                   <button
+                     onClick={() => onVistaChange('resumen')}
+                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
+                       vistaActiva === 'resumen'
+                         ? 'bg-amber-400/20 text-amber-400 border border-amber-400/30'
+                         : modoOscuro
+                           ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'
+                           : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                     }`}
+                   >
+                     {itemResumen && (
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                         <path strokeLinecap="round" strokeLinejoin="round" d={itemResumen.icon} />
+                       </svg>
+                     )}
+                     <span>Mi Dashboard</span>
+                   </button>
+                   {itemUsuarios && renderBoton(itemUsuarios, false)}
+                   {itemGestionClubes && renderGrupo(itemGestionClubes, false)}
+                 </>
+               )}
+               {elementosNav
+                 .filter((i) => !tieneAdmin || !['resumen', 'usuarios', 'gestion-clubes'].includes(i.key))
+                 .map((item) => (
+                   <div key={item.key}>
+                     {item.key === 'calendario' && (
+                       <div className="h-px mx-3 my-1 border-t border-amber-400/40" />
+                     )}
+                     {renderElemento(item, false)}
+                   </div>
+                 ))}
+               <div className="h-px mx-3 my-1 border-t border-amber-400/40" />
+            </nav>
+          )}
         </div>
-
-        <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <div className={`flex md:hidden gap-1 p-1 mb-6 rounded-full overflow-x-auto nav-tabs-hide-scroll ${modoOscuro ? 'bg-[#18223f]/60 border border-slate-800' : 'bg-slate-100 border border-slate-200'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {elementosNav.map((item) => renderElemento(item, true))}
-          </div>
-
-          {children}
-        </main>
       </div>
-    </>
+
+      <main className="flex-1 p-4 md:p-8 overflow-auto">
+        {children}
+      </main>
+    </div>
   );
 }

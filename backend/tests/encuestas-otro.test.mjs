@@ -305,14 +305,14 @@ test('«Otro» con sólo espacios se rechaza', async () => {
   assert.match(cuerpo.error, /Especifica tu respuesta/);
 });
 
-test('el texto de «Otro» no puede exceder 200 caracteres', async () => {
+test('el texto de «Otro» no puede exceder 70 caracteres', async () => {
   const { r } = await enviarRespuestas([
     { id_pregunta: 11, valor: 112, texto_otro: 'x'.repeat(201) },
   ]);
 
   assert.equal(r.status, 400);
   const cuerpo = await r.json();
-  assert.match(cuerpo.error, /200 caracteres/);
+  assert.match(cuerpo.error, /70 caracteres/);
 });
 
 test('un texto de «Otro» sin haber marcado esa opción se rechaza', async () => {

@@ -92,7 +92,7 @@ router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
           );
 
           const clubInfo = await client.query(
-            'SELECT id_presidente, nombre_club FROM clubes WHERE id_club = $1',
+            'SELECT id_responsable_club, nombre_club FROM clubes WHERE id_club = $1',
             [otra.id_club],
           );
           if (clubInfo.rows.length > 0) {
@@ -104,7 +104,7 @@ router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
                 `Cupo liberado: ${clubInfo.rows[0].nombre_club}`,
                 `El alumno aceptó otra oferta. El cupo en "${clubInfo.rows[0].nombre_club}" ha quedado disponible.`,
                 otra.id_club,
-                clubInfo.rows[0].id_presidente,
+                clubInfo.rows[0].id_responsable_club,
               ],
             );
           }
@@ -142,7 +142,7 @@ router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
         );
 
         const clubPres = await client.query(
-          'SELECT id_presidente FROM clubes WHERE id_club = $1',
+          'SELECT id_responsable_club FROM clubes WHERE id_club = $1',
           [form.id_club],
         );
         if (clubPres.rows.length > 0) {
@@ -154,7 +154,7 @@ router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
               `Cupo liberado: ${form.nombre_club}`,
               `El alumno rechazó la oferta de "${form.nombre_club}". El cupo ha quedado disponible.`,
               form.id_club,
-              clubPres.rows[0].id_presidente,
+              clubPres.rows[0].id_responsable_club,
             ],
           );
         }

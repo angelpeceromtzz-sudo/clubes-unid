@@ -9,7 +9,7 @@ export function ResponsableClub({ club, modoOscuro }) {
     title: modoOscuro ? "text-white" : "text-slate-900",
   };
 
-  if (!club?.id_presidente) return null;
+  if (!club?.id_responsable_club) return null;
 
   return (
     <section className={`rounded-2xl border p-6 md:p-8 ${c.bg}`}>

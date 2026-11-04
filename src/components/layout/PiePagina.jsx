@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function PiePagina() {
-  const { tema } = useTheme();
+  const { tema, modoOscuro } = useTheme();
   return (
     <footer className={`border-t transition-colors duration-300 ${tema.headerBorder} ${tema.bg}`}>
       <div className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 pt-12 sm:pt-16 lg:pt-20 pb-6 sm:pb-8">
@@ -12,7 +12,7 @@ export function PiePagina() {
           <div className="space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left md:items-center md:text-center lg:items-start lg:text-left">
             <div className="flex flex-col sm:flex-row items-center gap-3 lg:gap-0">
               <img src="/branding/lobounid.png" alt="Lobo UNID" className="h-10 w-auto object-contain" />
-              <img src="/branding/clubs-unid.png" alt="Clubs UNID" className="h-10 w-auto object-contain" />
+              <img src={modoOscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'} alt="Clubs UNID" className="h-10 w-auto object-contain" />
             </div>
             <p className={`text-sm leading-relaxed ${tema.subtitle} max-w-xs text-center sm:text-left md:text-center lg:text-left`}>
               Descubre, participa y lidera en los clubes universitarios UNID. Forma parte de la manada.
@@ -20,43 +20,28 @@ export function PiePagina() {
           </div>
 
           <div>
-            <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-6 text-center sm:text-left md:text-center lg:text-left">
-              <div>
-                <h3 className={`text-xs sm:text-sm font-black uppercase tracking-widest mb-3 sm:mb-5 ${tema.title}`}>Contacto</h3>
-                <ul className="space-y-2 sm:space-y-3">
-                  <li>
-                    <a href="mailto:00906641@red.unid.mx" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
-                      00906641@red.unid.mx
-                    </a>
-                  </li>
-                  <li>
-                    <a href="tel:+529812240307" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
-                      +52 981 224 0307
-                    </a>
-                  </li>
-                  <li className={`text-xs sm:text-sm font-medium ${tema.subtitle}`}>Campeche, Campeche, MX</li>
-                </ul>
-              </div>
-              <div>
-                <h3 className={`text-xs sm:text-sm font-black uppercase tracking-widest mb-3 sm:mb-5 ${tema.title}`}>Legal</h3>
-                <ul className="space-y-2 sm:space-y-3">
-                  <li>
-                    <Link to="/terminos" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
-                      Términos y Condiciones
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/privacidad" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
-                      Aviso de Privacidad
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/reportar-problemas" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
-                      Reportar Problemas
-                    </Link>
-                  </li>
-                </ul>
-              </div>
+            <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-3 sm:gap-y-4 text-center sm:text-left md:text-center lg:text-left">
+              <h3 className={`text-xs sm:text-sm font-black uppercase tracking-widest ${tema.title}`}>Contacto</h3>
+              <h3 className={`text-xs sm:text-sm font-black uppercase tracking-widest ${tema.title}`}>Legal</h3>
+
+              <a href="mailto:00906641@red.unid.mx" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                00906641@red.unid.mx
+              </a>
+              <Link to="/terminos" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                Términos y Condiciones
+              </Link>
+
+              <a href="tel:+529812240307" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                +52 981 224 0307
+              </a>
+              <Link to="/privacidad" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                Aviso de Privacidad
+              </Link>
+
+              <span className={`text-xs sm:text-sm font-medium ${tema.subtitle}`}>Campeche, Campeche, MX</span>
+              <Link to="/reportar-problemas" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                Reportar Problemas
+              </Link>
             </div>
           </div>
 

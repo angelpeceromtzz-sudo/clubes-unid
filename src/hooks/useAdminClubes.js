@@ -47,27 +47,27 @@ export function useAdminClubes(setFeedback, setErrorFeedback, currentUser) {
     const club = clubes.find((c) => c.id_club === clubId);
     const listoParaActivar = Boolean(
       club &&
-      club.id_presidente &&
+      club.id_responsable_club &&
       club.lugar_actividades &&
       String(club.lugar_actividades).trim() &&
       club.tiene_horarios_validos
     );
 
-    let password;
+    let forzado = false;
     if (nuevoEstatusId === 1 && !listoParaActivar) {
       if (currentUser?.id_rol !== 3) {
         setErrorFeedback('El club no cumple los requisitos para activarse: responsable, lugar de actividades y horarios válidos.');
         return;
       }
-      password = window.prompt('El club no cumple los requisitos. Ingresa ADMIN_SECRET para forzar la activación:');
-      if (!password) return;
+      // No se requiere ADMIN_SECRET: el admin puede forzar la activación directamente.
+      forzado = true;
     }
 
     try {
-      await api.updateClubEstatus(clubId, nuevoEstatusId, password);
+      await api.updateClubEstatus(clubId, nuevoEstatusId);
       const actualizados = await api.getClubesAdmin();
       setClubes(actualizados);
-      if (password) setFeedback('Club activado por excepción');
+      if (forzado) setFeedback('Club activado por excepción');
     } catch (err) {
       setErrorFeedback(err.message);
     }
@@ -128,6 +128,11 @@ export function useAdminClubes(setFeedback, setErrorFeedback, currentUser) {
       solicitarConfirmacion({ tipo: 'editar', club: editandoClub });
       return;
     }
+    const password = window.prompt('Ingresa la contraseña de administrador para crear el club:');
+    if (!password) {
+      setEnviando(false);
+      return;
+    }
     setEnviando(true);
     try {
       await api.createClub({
@@ -139,6 +144,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback, currentUser) {
         participacion: formularioClub.participacion,
         niveles: formularioClub.niveles,
         lugar_actividades: formularioClub.lugar_actividades || null,
+        password,
       });
       setFeedback('Club creado correctamente');
       const actualizados = await api.getClubesAdmin();

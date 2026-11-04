@@ -7,7 +7,6 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { Alerta } from '../../ui/Alerta';
 import { Badge } from '../../ui/Badge';
 import { BotonAccion } from '../../ui/BotonAccion';
-import { CampoSelect } from '../../ui/CampoSelect';
 import { CampoTexto } from '../../ui/CampoTexto';
 import { EmptyState } from '../../ui/EmptyState';
 import { EncabezadoPagina } from '../../ui/EncabezadoPagina';
@@ -17,20 +16,17 @@ import { ModalConfirmacion } from '../../ui/ModalConfirmacion';
 import { Spinner } from '../../ui/Spinner';
 import { ORDEN_ESTADO_ENCUESTA, infoEstadoEncuesta } from '../../../constants/estatus';
 import {
-  enlacePublicoEncuesta,
-  enlacePublicoUtilizable,
   textoVigenciaEncuesta,
 } from '../../../utils/encuesta';
 import { useSeccionEncuestas } from '../../../hooks/useSeccionEncuestas';
-import { useDetalleEncuesta } from '../../../hooks/useDetalleEncuesta';
 import { BarraEditorEncuesta } from './BarraEditorEncuesta';
 import { ConfiguracionEncuesta } from './ConfiguracionEncuesta';
 import { EditorEncuesta } from './EditorEncuesta';
 import { EditorPreguntas } from './EditorPreguntas';
 import { PanelResultados } from './PanelResultados';
+import { PanelRespuestas } from './PanelRespuestas';
 import { PestanasEncuesta } from './PestanasEncuesta';
 import { MenuAcciones } from './MenuAcciones';
-import { VistaPreviaEncuesta } from './VistaPreviaEncuesta';
 
 // --- acciones de la fila ---------------------------------------------------
 
@@ -52,12 +48,10 @@ function accionesDeEncuesta({
   encuesta,
   esAdmin,
   tieneRespuestas,
-  setViendoPrevia,
   setCerrando,
   setBorrando,
   abrirEditor,
   abrirResultados,
-  copiarEnlace,
 }) {
   const principales = [];
 
@@ -70,8 +64,9 @@ function accionesDeEncuesta({
         size="sm"
         onClick={() => abrirResultados(encuesta)}
         aria-label={`Ver resultados de ${encuesta.titulo}`}
+          className="px-2 py-1 text-[9px] gap-1"
       >
-        <Icono nombre="chart-bar" className="h-3.5 w-3.5" />
+        <Icono nombre="chart-bar" className="h-3 w-3" />
         Resultados
       </BotonAccion>
     );
@@ -91,24 +86,8 @@ function accionesDeEncuesta({
     });
   }
 
-  // Las siguientes son de lectura y se ven igual para los dos roles.
-  secundarias.push({
-    clave: 'previa',
-    icono: 'eye',
-    texto: 'Vista previa',
-    onClick: () => setViendoPrevia(encuesta),
-  });
-
-  // El enlace de un borrador o de una cerrada no abre nada: el backend sólo
-  // sirve estado publicada. Copiarlo ahí haría pensar que ya se puede repartir.
-  if (enlacePublicoUtilizable(encuesta)) {
-    secundarias.push({
-      clave: 'copiar',
-      icono: 'link',
-      texto: 'Copiar enlace',
-      onClick: () => copiarEnlace(encuesta),
-    });
-  }
+  // Vista previa y copiar enlace se dejaron fuera del listado: sólo están
+  // disponibles dentro del editor, para no saturar la fila de acciones.
 
   if (esAdmin) {
     // Cerrar sustituye a eliminar cuando hay respuestas en publicada/cerrada:
@@ -145,35 +124,26 @@ function accionesDeEncuesta({
 // --- lista ---------------------------------------------------------------
 
 function ListaEncuestas({ hook }) {
-  const { cardCls, tema } = useTheme();
+  const { cardCls, tema, selectCls, modoOscuro } = useTheme();
   const {
-    lista, totalLista, filtro, setFiltro, cargandoLista, errorLista, cargarLista,
+    lista, listaCompleta, totalLista, filtro, setFiltro, cargandoLista, errorLista, cargarLista,
     abrirEditor, abrirResultados, eliminar, aplicarEstado, enviando, esAdmin,
     formNueva, setFormNueva, crear,
   } = hook;
 
   const [creando, setCreando] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const listaVisible = busqueda.trim()
+    ? lista.filter((e) => (e.titulo || '').toLowerCase().includes(busqueda.trim().toLowerCase()))
+    : lista;
   const [borrando, setBorrando] = useState(null);
   const [cerrando, setCerrando] = useState(null);
-  const [viendoPrevia, setViendoPrevia] = useState(null);
-  const [enlaceCopiado, setEnlaceCopiado] = useState(false);
 
   // Una encuesta con respuestas fuera de un borrador no se borra: se cierra.
   // La decisión se toma acá para que el botón ni aparezca, y `eliminar` vuelve
   // a comprobarla en el hook por si se dispara por otra vía.
   const conRespuestas = (e) => e.total_respuestas > 0;
 
-  const copiarEnlace = async (encuesta) => {
-    try {
-      await navigator.clipboard.writeText(enlacePublicoEncuesta(encuesta.slug));
-      setEnlaceCopiado(true);
-      setTimeout(() => setEnlaceCopiado(false), 2000);
-    } catch {
-      // Sin https o sin permiso el portapapeles falla. No vale la pena romper la
-      // pantalla por eso: el enlace se puede copiar a mano desde el editor.
-      setEnlaceCopiado(false);
-    }
-  };
 
   if (cargandoLista) return <Spinner size="md" />;
 
@@ -193,41 +163,47 @@ function ListaEncuestas({ hook }) {
       <EncabezadoPagina
         titulo="Encuestas"
         subtitulo="Diagnóstico de intereses de los alumnos. El enlace es público y no pide sesión."
-        accion={
-          esAdmin && (
-            <BotonAccion onClick={() => setCreando(true)} disabled={enviando} className="px-8">
-              <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
-              Nueva
-            </BotonAccion>
-          )
-        }
       />
 
-      {enlaceCopiado && (
-        // Aviso propio y no el feedback del panel: aquel se limpia solo a los
-        // 4s y lo comparten todas las secciones.
-        <Alerta tipo="success" mensaje="Enlace copiado al portapapeles" />
-      )}
 
-      {totalLista > 0 && (
-        <div className="flex items-end gap-3 max-w-xs">
-          <CampoSelect
-            label="Estado"
-            name="filtro-estado"
-            value={filtro ?? ''}
-            onChange={(e) => setFiltro(e.target.value || null)}
-            opciones={[
-              { value: '', label: 'Todas' },
-              ...ORDEN_ESTADO_ENCUESTA.map((valor) => ({
-                value: valor,
-                label: infoEstadoEncuesta(valor).etiqueta,
-              })),
-            ]}
+
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4">
+        <select
+          value={filtro ?? ''}
+          onChange={(e) => setFiltro(e.target.value || null)}
+          className={`flex-1 sm:flex-none px-3 py-2 rounded-xl border text-sm font-bold outline-none transition-colors cursor-pointer ${selectCls}`}
+          aria-label="Estado"
+        >
+          <option value="">Todas</option>
+          {ORDEN_ESTADO_ENCUESTA.filter((valor) =>
+            (listaCompleta || []).some((e) => e.estado === valor)
+          ).map((valor) => (
+            <option key={valor} value={valor}>{infoEstadoEncuesta(valor).etiqueta}</option>
+          ))}
+        </select>
+        <div className="relative flex-1">
+          <Icono nombre="search" strokeWidth={2} className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`} />
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por título..."
+            className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-400/50 ${
+              modoOscuro
+                ? 'bg-[#0e162c] border-slate-700 text-slate-200 placeholder-slate-500'
+                : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
+            }`}
           />
         </div>
-      )}
+        {esAdmin && (
+          <BotonAccion onClick={() => setCreando(true)} disabled={enviando} size="sm" className="flex-1 sm:flex-none shrink-0">
+            <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
+            Crear Encuesta
+          </BotonAccion>
+        )}
+      </div>
 
-      {lista.length === 0 ? (
+      {listaVisible.length === 0 ? (
         <EmptyState
           icono="clipboard"
           titulo={totalLista === 0 ? 'Todavía no hay encuestas' : 'Ninguna con ese estado'}
@@ -241,7 +217,7 @@ function ListaEncuestas({ hook }) {
         />
       ) : (
         <ul className="space-y-2">
-          {lista.map((encuesta) => {
+          {listaVisible.map((encuesta) => {
             const info = infoEstadoEncuesta(encuesta.estado);
             const tieneRespuestas = conRespuestas(encuesta);
 
@@ -253,12 +229,10 @@ function ListaEncuestas({ hook }) {
               encuesta,
               esAdmin,
               tieneRespuestas,
-              setViendoPrevia,
               setCerrando,
               setBorrando,
               abrirEditor,
               abrirResultados,
-              copiarEnlace,
             });
 
             return (
@@ -307,8 +281,9 @@ function ListaEncuestas({ hook }) {
                         size="sm"
                         onClick={accion.onClick}
                         disabled={enviando}
+                        className="px-2 py-1 text-[9px] gap-1"
                       >
-                        <Icono nombre={accion.icono} className="h-3.5 w-3.5" />
+                        <Icono nombre={accion.icono} className="h-3 w-3" />
                         {accion.texto}
                       </BotonAccion>
                     ))}
@@ -319,8 +294,9 @@ function ListaEncuestas({ hook }) {
                         size="sm"
                         onClick={accion.onClick}
                         disabled={enviando}
+                        className="px-2 py-1 text-[9px] gap-1"
                       >
-                        <Icono nombre={accion.icono} className="h-3.5 w-3.5" />
+                        <Icono nombre={accion.icono} className="h-3 w-3" />
                         {accion.texto}
                       </BotonAccion>
                     ))}
@@ -346,13 +322,6 @@ function ListaEncuestas({ hook }) {
         </ul>
       )}
 
-      {viendoPrevia && (
-        <VistaPreviaCargando
-          encuesta={viendoPrevia}
-          onCerrar={() => setViendoPrevia(null)}
-        />
-      )}
-
       {/* --- alta --- */}
       <ModalBase
         show={creando}
@@ -376,7 +345,7 @@ function ListaEncuestas({ hook }) {
             onChange={(e) => setFormNueva({ ...formNueva, titulo: e.target.value })}
             placeholder="Intereses para clubes"
             required
-            maxLength={200}
+            maxLength={64}
             disabled={enviando}
           />
 
@@ -388,6 +357,7 @@ function ListaEncuestas({ hook }) {
             onChange={(e) => setFormNueva({ ...formNueva, descripcion: e.target.value })}
             placeholder="Qué se le va a preguntar"
             disabled={enviando}
+            maxLength={200}
           />
 
           <div className="grid grid-cols-2 gap-3">
@@ -491,27 +461,6 @@ function ListaEncuestas({ hook }) {
         se descartan —; en las demás no, sólo cerrar.
       </p>
     </div>
-  );
-}
-
-// Carga el detalle de la encuesta que se está previsualizando.
-//
-// Va en su propio componente porque la vista previa necesita los datos de una
-// encuesta distinta a la que está abierta en el editor. Si reutilizara
-// `detalle` del hook tendría que abrir el editor para ver el borrador, y eso
-// arrastra el formulario editable, la lista de preguntas y los modales con él.
-function VistaPreviaCargando({ encuesta, onCerrar }) {
-  const { detalle, cargando, error, recargar } = useDetalleEncuesta(encuesta.id_encuesta);
-
-  return (
-    <VistaPreviaEncuesta
-      encuesta={detalle ?? encuesta}
-      preguntas={detalle?.preguntas ?? []}
-      cargando={cargando}
-      error={error}
-      onRecargar={recargar}
-      onClose={onCerrar}
-    />
   );
 }
 
@@ -651,11 +600,12 @@ export function SeccionEncuestas({ d }) {
               no hay nada todavía es una respuesta válida, y esconder la pestaña
               sólo cuando hay datos hace que la encuesta parezca cambiar de
               forma al llegar la primera respuesta. */}
-          <div className="shrink-0 px-2 sm:px-5">
+          <div className="shrink-0 px-2 sm:px-5 pt-4">
             <PestanasEncuesta
               pestanas={[
                 { clave: 'preguntas', etiqueta: 'Preguntas' },
                 { clave: 'resultados', etiqueta: 'Resultados' },
+                { clave: 'respuestas', etiqueta: 'Respuestas' },
                 { clave: 'configuracion', etiqueta: 'Configuración' },
               ]}
               activa={hook.pestana}
@@ -679,7 +629,7 @@ export function SeccionEncuestas({ d }) {
               paneles oscuros, la segunda en las superficies con ambos temas);
               no hace falta ninguna regla nueva ni esconder la barra. */}
           <div
-            className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 ${
+            className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-4 sm:px-5 py-4 ${
               tema.isDark ? 'scrollbar-dark' : 'scrollbar-amber'
             }`}
           >
@@ -727,6 +677,16 @@ export function SeccionEncuestas({ d }) {
                       cargando={hook.cargandoResultados}
                       resultados={hook.resultados}
                     />
+                  </div>
+                )}
+
+                {hook.pestana === 'respuestas' && (
+                  <div
+                    id="panel-respuestas"
+                    role="tabpanel"
+                    aria-labelledby="pestana-respuestas"
+                  >
+                    <PanelRespuestas idEncuesta={hook.seleccion?.id_encuesta} />
                   </div>
                 )}
               </>

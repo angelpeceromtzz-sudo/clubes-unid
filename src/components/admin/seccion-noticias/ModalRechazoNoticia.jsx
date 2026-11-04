@@ -8,7 +8,7 @@ import { BotonAccion } from '../../ui/BotonAccion';
 import { Spinner } from '../../ui/Spinner';
 import { ETIQUETAS_ESTADO } from '../../../constants/noticias';
 
-const MOTIVO_MAX = 500;
+const MOTIVO_MAX = 200;
 
 export function ModalRechazoNoticia({ show, noticia, motivo, enviando, error, modoOscuro, tema, onMotivoChange, onConfirmar, onCerrar }) {
   if (!noticia) return null;

@@ -5,7 +5,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { Icono } from '../../ui/Icono';
 import { FormularioNotificacion } from '../../formularios/FormularioNotificacion';
 
-export function SeccionAvisos({ club, esPresidente }) {
+export function SeccionAvisos({ club, esResponsableClub }) {
   const { tema, modoOscuro } = useTheme();
   const [avisos, setAvisos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -64,7 +64,7 @@ export function SeccionAvisos({ club, esPresidente }) {
         <h3 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>
           Avisos del Club
         </h3>
-        {esPresidente && (
+        {esResponsableClub && (
           <button
             onClick={() => setMostrarFormulario((p) => !p)}
             className="bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-xs uppercase tracking-widest rounded-xl px-4 py-2 transition-all duration-200 cursor-pointer active:scale-95"
@@ -108,7 +108,7 @@ export function SeccionAvisos({ club, esPresidente }) {
                     Por {aviso.autor} &middot; {new Date(aviso.fecha_publicacion).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
-                {esPresidente && (
+                {esResponsableClub && (
                   <button
                     onClick={() => manejarEliminar(aviso.id_aviso)}
                     className="text-red-400 hover:text-red-300 transition-colors cursor-pointer shrink-0"

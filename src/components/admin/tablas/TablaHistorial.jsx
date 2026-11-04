@@ -1,8 +1,10 @@
 /* Tabla de historial de acciones del administrador con fecha, admin, acción y descripción. */
+import { useState, useEffect } from 'react';
 import { Icono } from '../../ui/Icono';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Badge } from '../../ui/Badge';
 import { Spinner } from '../../ui/Spinner';
+import { api } from '../../../services/api';
 
 export function TablaHistorial({
   historial,
@@ -12,10 +14,50 @@ export function TablaHistorial({
   onFiltrosChange,
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle } = useTheme();
+  const [opciones, setOpciones] = useState({ actores: [], acciones: [] });
+
+  useEffect(() => {
+    api.getHistorial({})
+      .then((data) => {
+        const actores = [...new Set((data || []).map((h) => h.admin_nombre).filter(Boolean))];
+        const acciones = [...new Set((data || []).map((h) => h.accion).filter(Boolean))];
+        setOpciones({ actores, acciones });
+      })
+      .catch(() => setOpciones({ actores: [], acciones: [] }));
+  }, []);
+
+  const ETIQUETAS_ACCION = {
+    cambio_rol: 'Cambio de Rol',
+    asignar_responsable: 'Asignar Responsable',
+    reasignar_responsable: 'Reasignar Responsable',
+    retirar_responsable: 'Retirar Responsable',
+    crear_club: 'Crear Club',
+    actualizar_club: 'Actualizar Club',
+    cambio_estatus_club: 'Cambio Estatus',
+    enviar_anuncio: 'Enviar Anuncio',
+    baja_usuario: 'Dar de Baja',
+    desactivar_usuario: 'Desactivar Usuario',
+    reactivar_usuario: 'Reactivar Usuario',
+    promover_admin: 'Promover Admin',
+    degradar_admin: 'Degradar Admin',
+    crear_noticia: 'Noticia Creada',
+    actualizar_noticia: 'Noticia Actualizada',
+    eliminar_noticia: 'Noticia Eliminada',
+    aprobar_noticia: 'Noticia Aprobada',
+    rechazar_noticia: 'Noticia Rechazada',
+    ocultar_noticia: 'Noticia Ocultada',
+    enviar_revision_noticia: 'Noticia Enviada a Revisión',
+    crear_diapositiva_hero: 'Banner Creado',
+    actualizar_diapositiva_hero: 'Banner Actualizado',
+    eliminar_diapositiva_hero: 'Banner Eliminado',
+    asignar_club: 'Asignar Club',
+    desasignar_club: 'Desasignar Club',
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-black uppercase tracking-wider">Historial administrativo</h2>
+        <h2 className="text-lg font-black uppercase tracking-wider">Historial de acciones</h2>
         <button
           onClick={onRefresh}
           className="text-xs font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
@@ -25,10 +67,19 @@ export function TablaHistorial({
       </div>
 
       <div className="flex flex-col md:flex-row gap-3 mb-4">
-        <input type="date" value={filtros?.desde || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, desde: e.target.value })} className="px-3 py-2 rounded-xl border text-sm" />
-        <input type="date" value={filtros?.hasta || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, hasta: e.target.value })} className="px-3 py-2 rounded-xl border text-sm" />
-        <input type="text" placeholder="Actor" value={filtros?.actor || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, actor: e.target.value })} className="px-3 py-2 rounded-xl border text-sm" />
-        <input type="text" placeholder="Acción" value={filtros?.accion || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, accion: e.target.value })} className="px-3 py-2 rounded-xl border text-sm" />
+        <select value={filtros?.actor || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, actor: e.target.value })} className={`px-3 py-2 rounded-xl border text-sm ${modoOscuro ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}>
+          <option value="">Autor (todos)</option>
+          {opciones.actores.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+
+        <select value={filtros?.accion || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, accion: e.target.value })} className={`px-3 py-2 rounded-xl border text-sm ${modoOscuro ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}>
+          <option value="">Acción (todas)</option>
+          {opciones.acciones.map((a) => (
+            <option key={a} value={a}>{ETIQUETAS_ACCION[a] || a}</option>
+          ))}
+        </select>
       </div>
 
       {historialLoading ? (
@@ -47,26 +98,26 @@ export function TablaHistorial({
           {/* Versión escritorio - tabla */}
           <div className={`${tableBg} rounded-2xl overflow-hidden hidden md:block`}>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="min-w-max w-full text-sm">
                 <thead>
                   <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Fecha</th>
-                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Realizado por</th>
-                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acción</th>
-                    <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Descripción</th>
+                    <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Fecha</th>
+                    <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Realizado por</th>
+                    <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acción</th>
+                    <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Descripción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {historial.map((h) => (
                     <tr key={h.id_historial} className={`border-b transition-colors ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
-                      <td className={`px-5 py-4 whitespace-nowrap font-mono text-xs ${tdCls}`}>
+                      <td className={`px-5 py-4   font-mono text-xs ${tdCls}`}>
                         {new Date(h.fecha).toLocaleString('es-MX', {
                           day: '2-digit', month: '2-digit', year: 'numeric',
                           hour: '2-digit', minute: '2-digit',
                         })}
                       </td>
-                      <td className={`px-5 py-4 font-medium ${tdTitle}`}>{h.admin_nombre}</td>
-                      <td className="px-5 py-4">
+                      <td className={`px-5 py-4  font-medium ${tdTitle}`}>{h.admin_nombre}</td>
+                      <td className="px-5 py-4 ">
                         <Badge texto={{
                           cambio_rol: 'Cambio de Rol',
                           asignar_responsable: 'Asignar Responsable',
@@ -103,7 +154,7 @@ export function TablaHistorial({
                             : 'blue'
                         } />
                       </td>
-                      <td className={`px-5 py-4 ${tdCls} max-w-md break-words`}>{h.descripcion}</td>
+                      <td className={`px-5 py-4 ${tdCls} max-w-xl break-words`}>{h.descripcion}</td>
                     </tr>
                   ))}
                 </tbody>

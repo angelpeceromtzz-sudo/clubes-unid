@@ -20,13 +20,13 @@ function RolTag({ tipo, club }) {
   );
 }
 
-export function MiembroCard({ miembro, club, esPresidente, tieneVP, asignando, onAsignarVP, onExpulsar, modoOscuro, tema }) {
-  const esPresidenteDelClub = club.id_presidente === miembro.id_usuario;
+export function MiembroCard({ miembro, club, esResponsableClub, tieneVP, asignando, onAsignarVP, onExpulsar, modoOscuro, tema }) {
+  const esResponsableClubDelClub = club.id_responsable_club === miembro.id_usuario;
   const esVicepresidente = club.id_vicepresidente === miembro.id_usuario;
-  const puedeQuitarVP = esPresidente && esVicepresidente;
-  const puedeAsignarVP = esPresidente && !esPresidenteDelClub && !esVicepresidente && !tieneVP;
+  const puedeQuitarVP = esResponsableClub && esVicepresidente;
+  const puedeAsignarVP = esResponsableClub && !esResponsableClubDelClub && !esVicepresidente && !tieneVP;
 
-  const rol = esPresidenteDelClub ? 'presidente' : esVicepresidente ? 'vicepresidente' : 'miembro';
+  const rol = esResponsableClubDelClub ? 'presidente' : esVicepresidente ? 'vicepresidente' : 'miembro';
 
   return (
     <div className={`group rounded-xl px-5 py-3 flex items-center justify-between ${modoOscuro ? 'bg-[#0e162c] border border-slate-700/50' : 'bg-white border border-slate-200 shadow-sm'}`}>
@@ -49,7 +49,7 @@ export function MiembroCard({ miembro, club, esPresidente, tieneVP, asignando, o
             {asignando === miembro.id_usuario ? '...' : esVicepresidente ? 'Quitar Vicepresidente' : 'Hacer Vicepresidente'}
           </button>
         )}
-        {!esPresidenteDelClub && (
+        {!esResponsableClubDelClub && (
           <button onClick={() => onExpulsar(miembro)}
             className={`text-xs sm:text-sm font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors cursor-pointer ${modoOscuro ? 'text-red-400 hover:bg-red-500/10' : 'text-red-500 hover:bg-red-50'}`}
           >

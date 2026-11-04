@@ -1088,6 +1088,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     filtro,
     setFiltro,
     lista: listaFiltrada,
+    listaCompleta: lista,
     totalLista: lista.length,
     cargandoLista,
     errorLista,

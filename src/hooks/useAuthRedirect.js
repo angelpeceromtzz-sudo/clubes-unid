@@ -18,7 +18,7 @@ export function useAuthRedirect() {
         if (id_rol === 4) navigate('/rectoria/dashboard', { replace: true });
         else if (id_rol === 3 || id_rol === 7) navigate('/admin/dashboard', { replace: true });
         else if (id_rol === 6) navigate('/mural/dashboard', { replace: true });
-        else if (id_rol === 2) navigate('/presidente/dashboard', { replace: true });
+        else if (id_rol === 2) navigate('/campus/campeche/portal/responsable-de-club/dashboard', { replace: true });
         else if (id_rol === 1 && tieneInscripcionActiva) navigate('/dashboard', { replace: true });
         // eslint-disable-next-line react-hooks/set-state-in-effect
         else if (id_rol === 1) setRedireccionPendiente(true);
@@ -43,7 +43,7 @@ export function useAuthRedirect() {
       if (id_rol === 4) navigate('/rectoria/dashboard', { replace: true });
       else if (id_rol === 3) navigate('/admin/dashboard', { replace: true });
       else if (id_rol === 6) navigate('/mural/dashboard', { replace: true });
-      else if (id_rol === 2) navigate('/presidente/dashboard', { replace: true });
+      else if (id_rol === 2) navigate('/campus/campeche/portal/responsable-de-club/dashboard', { replace: true });
       else if (id_rol === 1) {
         api.getInscripcionActiva().then((insc) => {
           if (insc) navigate('/dashboard', { replace: true });

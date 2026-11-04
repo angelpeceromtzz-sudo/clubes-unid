@@ -8,7 +8,7 @@ import { Icono } from '../ui/Icono';
 import { ModalNotificacion } from './navegacion/ModalNotificacion';
 import { ElementoNotificacion } from './navegacion/ElementoNotificacion';
 
-export function BadgeNotificaciones({ className = '', variante = 'dropdown' }) {
+export function BadgeNotificaciones({ className = '', variante = 'dropdown', colorClase = null }) {
   const { modoOscuro, tema } = useTheme();
   const { notificaciones, noLeidas, marcarComoLeida, marcarTodasLeidas, eliminarNotificacion } = useNotificaciones();
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
@@ -90,11 +90,11 @@ export function BadgeNotificaciones({ className = '', variante = 'dropdown' }) {
     <div className={`relative ${className}`}>
       <button
         onClick={() => setMostrarNotificaciones((prev) => !prev)}
-        className={`relative p-2 rounded-full cursor-pointer ${modoOscuro ? 'md:bg-[#0b111e]/60 md:backdrop-blur-md md:hover:bg-[#0b111e]/70' : ''} ${tema.iconColor} hover:text-amber-400 transition-colors`}
+        className={`relative p-2 rounded-full cursor-pointer ${colorClase || tema.btnInactive} hover:text-amber-400 transition-colors`}
         aria-label="Notificaciones"
         title="Notificaciones"
       >
-        <Icono nombre="bell" className="h-6 w-6 md:h-5 md:w-5" strokeWidth={2} />
+        <Icono nombre="bell" className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={2} />
         {noLeidas > 0 && (
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
             {noLeidas}

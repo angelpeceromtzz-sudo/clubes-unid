@@ -1,7 +1,6 @@
 /* Tabla de gestión de clubes: cambiar estatus, editar, dar de baja o crear nuevo club. */
 import { Icono } from '../../ui/Icono';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { Badge } from '../../ui/Badge';
 
 export function TablaClubes({
   clubes,
@@ -19,42 +18,41 @@ export function TablaClubes({
       {/* Desktop - tabla */}
       <div className={`${tableBg} rounded-2xl overflow-hidden hidden md:block`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="min-w-max w-full text-sm">
             <thead>
               <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>ID</th>
-                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Nombre</th>
-                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Categoría</th>
-                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Cupo</th>
-                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Estatus</th>
-                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acciones</th>
+                <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>ID</th>
+                <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Nombre</th>
+                <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Categoría</th>
+                <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Cupo</th>
+                <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Estatus</th>
+                <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {clubes.map((c) => (
                 <tr key={c.id_club} className={`border-b transition-colors ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
-                  <td className={`px-5 py-4 font-mono text-xs ${tdCls}`}>{c.id_club}</td>
-                  <td className={`px-5 py-4 font-medium ${tdTitle}`}>{c.nombre_club}</td>
-                  <td className={`px-5 py-4 ${tdCls}`}>{c.categoria}</td>
-                  <td className={`px-5 py-4 ${tdCls}`}>{c.cupo_maximo}</td>
-                  <td className="px-5 py-4">
-                    <Badge texto={c.estatus} color={
-                      c.id_estatus_club === 1 ? 'emerald' : c.id_estatus_club === 2 ? 'amber' : 'red'
-                    } size="md" />
+                  <td className={`px-5 py-4  font-mono text-xs ${tdCls}`}>{c.id_club}</td>
+                  <td className={`px-5 py-4  font-medium ${tdTitle}`}>{c.nombre_club}</td>
+                  <td className={`px-5 py-4  ${tdCls}`}>{c.categoria}</td>
+                  <td className={`px-5 py-4  ${tdCls}`}>{c.cupo_maximo}</td>
+                  <td className="px-5 py-4 ">
+                    <select
+                      value={c.id_estatus_club}
+                      onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
+                      className={`${selectCls} ${
+                        c.id_estatus_club === 1 ? '!text-emerald-400' :
+                        c.id_estatus_club === 2 ? '!text-amber-400' :
+                        c.id_estatus_club === 3 ? '!text-red-400' : ''
+                      }`}
+                    >
+                      <option value={1} disabled={!(c.id_responsable_club && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3} style={{ color: '#34d399' }}>Activo{!(c.id_responsable_club && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}</option>
+                      <option value={2} style={{ color: '#fbbf24' }}>Próximamente</option>
+                      <option value={3} style={{ color: '#f87171' }}>Inactivo</option>
+                    </select>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="px-5 py-4 ">
                     <div className="flex items-center gap-2">
-                      <select
-                        value={c.id_estatus_club}
-                        onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
-                        className={selectCls}
-                      >
-                        <option value={1} disabled={!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3}>
-                          Activo{!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}
-                        </option>
-                        <option value={2}>Próximamente</option>
-                        <option value={3}>Inactivo</option>
-                      </select>
                       <button
                         onClick={() => onEditar(c)}
                         className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1"
@@ -65,9 +63,11 @@ export function TablaClubes({
                       </button>
                       <button
                         onClick={() => onStatusChange(c.id_club, 3)}
-                        className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1.5 rounded-lg border border-red-400/30 bg-red-400/10 cursor-pointer active:scale-95"
+                        className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1.5 rounded-lg border border-red-400/30 bg-red-400/10 cursor-pointer active:scale-95 flex items-center gap-1"
+                        title="Eliminar (pone el club en inactivo)"
                       >
-                        Dar de Baja
+                        <Icono nombre="trash" strokeWidth={2} className="h-4 w-4" />
+                        Eliminar
                       </button>
                     </div>
                   </td>
@@ -84,7 +84,15 @@ export function TablaClubes({
           <div key={c.id_club} className={`rounded-xl border p-3 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200'}`}>
             <div className="flex items-center justify-between mb-2">
               <span className={`text-[10px] font-mono ${tdCls}`}>#{c.id_club}</span>
-              <Badge texto={c.estatus} color={c.id_estatus_club === 1 ? 'emerald' : c.id_estatus_club === 2 ? 'amber' : 'red'} size="sm" />
+              <select
+                value={c.id_estatus_club}
+                onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
+                className={`${selectCls} ${c.id_estatus_club === 1 ? '!text-emerald-400' : c.id_estatus_club === 2 ? '!text-amber-400' : c.id_estatus_club === 3 ? '!text-red-400' : ''}`}
+              >
+                <option value={1} disabled={!(c.id_responsable_club && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3} style={{ color: '#34d399' }}>Activo{!(c.id_responsable_club && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}</option>
+                <option value={2} style={{ color: '#fbbf24' }}>Próximamente</option>
+                <option value={3} style={{ color: '#f87171' }}>Inactivo</option>
+              </select>
             </div>
             <p className={`text-sm font-semibold mb-1 ${tdTitle}`}>{c.nombre_club}</p>
             <div className="flex items-center gap-3 mb-3">
@@ -92,17 +100,6 @@ export function TablaClubes({
               <span className={`text-xs ${tdCls}`}>Cupo: {c.cupo_maximo}</span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-               <select
-                 value={c.id_estatus_club}
-                 onChange={(e) => onStatusChange(c.id_club, Number(e.target.value))}
-                 className={selectCls}
-               >
-                 <option value={1} disabled={!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) && currentUser?.id_rol !== 3}>
-                   Activo{!(c.id_presidente && c.lugar_actividades && c.tiene_horarios_validos) ? ' (faltan requisitos)' : ''}
-                 </option>
-                 <option value={2}>Próximamente</option>
-                 <option value={3}>Inactivo</option>
-               </select>
               <button
                 onClick={() => onEditar(c)}
                 className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1"

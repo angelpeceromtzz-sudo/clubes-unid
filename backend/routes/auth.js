@@ -257,14 +257,39 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
 // peticiones sin sesión válida contra esta ruta.
 router.post('/register', limitadorRegistro, authenticate, requireRole(ROL_ADMIN), async (req, res) => {
   try {
-    const { nombre_completo, correo_institucional, contrasena, id_rol } = req.body;
+    const { nombre_completo, correo_institucional, contrasena, id_rol, password } = req.body;
 
     if (!nombre_completo || !correo_institucional || !contrasena) {
       return res.status(400).json({ error: 'nombre_completo, correo_institucional y contrasena son obligatorios' });
     }
 
-    // El correo se normaliza para no duplicar cuentas por mayúsculas/minúsculas.
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+    if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
+      return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+    }
+
+    // Validaciones de longitud y caracteres
+    if (nombre_completo.trim().length > 60) {
+      return res.status(400).json({ error: 'El nombre no puede exceder 60 caracteres' });
+    }
+    if (!/^[\p{L}\s]+$/u.test(nombre_completo.trim())) {
+      return res.status(400).json({ error: 'El nombre solo permite letras y espacios' });
+    }
+
     const correoLimpio = correo_institucional.toLowerCase().trim();
+    if (correoLimpio.length > 30) {
+      return res.status(400).json({ error: 'El correo no puede exceder 30 caracteres' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoLimpio)) {
+      return res.status(400).json({ error: 'Correo institucional inválido' });
+    }
+
+    if (contrasena.length > 64) {
+      return res.status(400).json({ error: 'La contraseña no puede exceder 64 caracteres' });
+    }
+    if (!/^[A-Za-z0-9]+$/.test(contrasena)) {
+      return res.status(400).json({ error: 'La contraseña solo permite letras y números' });
+    }
 
     if (id_rol != null && ![ROL_ALUMNO, ROL_RESPONSABLE_CLUB, ROL_RECTORIA, ROL_RESPONSABLE_MURAL, ROL_COORDINACION].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
@@ -303,11 +328,11 @@ router.get('/me', authenticate, async (req, res) => {
               COALESCE(cp.nombre_club, cv.nombre_club, c.nombre_club) AS nombre_club,
               COALESCE(cp.categoria, cv.categoria, c.categoria) AS categoria,
               COALESCE(cp.cupo_maximo, cv.cupo_maximo, c.cupo_maximo) AS cupo_maximo,
-              cp.id_presidente,
+              cp.id_responsable_club,
               cv.id_vicepresidente
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
-       LEFT JOIN clubes cp ON cp.id_presidente = u.id_usuario
+       LEFT JOIN clubes cp ON cp.id_responsable_club = u.id_usuario
        LEFT JOIN clubes cv ON cv.id_vicepresidente = u.id_usuario AND cp.id_club IS NULL
        LEFT JOIN inscripciones i ON i.id_usuario = u.id_usuario AND i.id_estatus_inscripcion = 1
        LEFT JOIN clubes c ON c.id_club = i.id_club

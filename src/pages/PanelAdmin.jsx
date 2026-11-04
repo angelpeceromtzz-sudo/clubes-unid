@@ -1,5 +1,7 @@
 /* Panel de administración: gestiona usuarios, clubes, anuncios e historial mediante NavegacionPanel. */
+import { useEffect } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
+import { usePanelNav } from '../contexts/PanelNavContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { usePanelAdmin } from '../hooks/usePanelAdmin';
 import { useVistaEjecutiva } from '../hooks/useVistaEjecutiva';
@@ -31,6 +33,11 @@ export function PanelAdmin() {
   const { usuario } = useAutenticacion();
   const d = usePanelAdmin(usuario);
   const ejecutivo = useVistaEjecutiva();
+  const { setPanelNav } = usePanelNav();
+  useEffect(() => {
+    setPanelNav({ itemsNav: ELEMENTOS_NAV_ADMIN, onNavChange: d.setVistaActiva });
+    return () => setPanelNav({ itemsNav: [], onNavChange: null });
+  }, [setPanelNav, d.setVistaActiva]);
 
   if (d.loading) {
     return (

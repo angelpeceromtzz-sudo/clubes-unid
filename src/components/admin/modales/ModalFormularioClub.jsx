@@ -36,9 +36,9 @@ export function ModalFormularioClub({
       </div>
 
       <form onSubmit={onSave} className="space-y-4">
-        <CampoTexto label="Nombre del Club" name="nombre_club" value={formClub.nombre_club} onChange={onFormChange} placeholder="Ej: Equipo de Voleibol" required />
+        <CampoTexto label="Nombre del Club" name="nombre_club" value={formClub.nombre_club} onChange={onFormChange} placeholder="Ej: Equipo de Voleibol" required maxLength={64} />
 
-        <CampoTexto label="Descripción" name="descripcion" value={formClub.descripcion} onChange={onFormChange} placeholder="Describe el club y sus actividades..." type="textarea" required />
+        <CampoTexto label="Descripción" name="descripcion" value={formClub.descripcion} onChange={onFormChange} placeholder="Describe el club y sus actividades..." type="textarea" required maxLength={300} />
 
         <div>
           <label className={labelCls}>Categoría <span className="text-red-400">*</span></label>
@@ -94,7 +94,7 @@ export function ModalFormularioClub({
           </select>
         </div>
 
-        <CampoTexto label="Lugar de actividades" name="lugar_actividades" value={formClub.lugar_actividades || ''} onChange={onFormChange} placeholder="Ej: Cancha principal" />
+        <CampoTexto label="Lugar de actividades" name="lugar_actividades" value={formClub.lugar_actividades || ''} onChange={onFormChange} placeholder="Ej: Cancha principal" maxLength={128} />
 
         <SubirImagen label="Imagen del Club" urlImagen={formClub.imagen_portada} onUpload={onUploadImage} modoOscuro={modoOscuro} labelCls={labelCls} inputId="club-image-upload" obligatorio />
 

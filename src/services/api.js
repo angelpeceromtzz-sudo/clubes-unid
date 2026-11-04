@@ -58,6 +58,7 @@ export const api = {
   updateVicepresidente: clubService.updateVicepresidente,
   asignarClubAPresidente: clubService.asignarClubAPresidente,
   getActividadClubes: clubService.getActividadClubes,
+  getActividadFiltros: clubService.getActividadFiltros,
   getActividad: clubService.getActividad,
 
   getUsuarios: usuarioService.getUsuarios,
@@ -82,6 +83,8 @@ export const api = {
 
   getNotificaciones: notificacionService.getNotificaciones,
   createNotificacion: notificacionService.createNotificacion,
+  getMisAnuncios: notificacionService.getMisAnuncios,
+  updateNotificacion: notificacionService.updateNotificacion,
   marcarNotificacionLeida: notificacionService.marcarNotificacionLeida,
   marcarTodasNotificacionesLeidas: notificacionService.marcarTodasNotificacionesLeidas,
   eliminarNotificacion: notificacionService.eliminarNotificacion,

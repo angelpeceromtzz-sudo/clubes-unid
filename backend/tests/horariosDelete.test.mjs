@@ -34,7 +34,7 @@ async function responder(sql, params = []) {
     return { rows: [{ id_club: 7 }], rowCount: 1 };
   }
 
-  if (/FROM clubes WHERE id_club = \$1 AND \(id_presidente/.test(q)) {
+  if (/FROM clubes WHERE id_club = \$1 AND \(id_responsable_club/.test(q)) {
     return { rows: [{ id_club: 7 }], rowCount: 1 };
   }
 

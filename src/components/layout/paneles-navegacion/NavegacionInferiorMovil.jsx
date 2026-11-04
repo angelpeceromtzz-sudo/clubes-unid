@@ -9,7 +9,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
   const { modoOscuro } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { esAdmin, esPresidente, esResponsableMural } = useAutenticacion();
+  const { esAdmin, esResponsableClub, esResponsableMural } = useAutenticacion();
 
   const [mostrarNav, setMostrarNav] = useState(true);
   const ultimoScrollY = useRef(0);
@@ -32,7 +32,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
 
   function irPanel() {
     if (esAdmin) navigate('/admin/dashboard');
-    else if (esPresidente) navigate('/presidente/dashboard');
+    else if (esResponsableClub) navigate('/campus/campeche/portal/responsable-de-club/dashboard');
     else if (esResponsableMural) navigate('/mural/dashboard');
     else navigate('/dashboard');
   }
@@ -41,7 +41,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
     /* Tema oscuro: azul marino #080d18 — un paso más oscuro que el fondo de
        página #0b111e y del mismo tono azulado de la paleta (sustituye al
        negro puro anterior). Tema claro sin cambios. */
-    <nav className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom border-t transition-transform duration-300 ${mostrarNav ? 'translate-y-0' : 'translate-y-full'} ${modoOscuro ? 'bg-[#080d18] border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
+    <nav className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom border-t transition-transform duration-300 ${mostrarNav ? 'translate-y-0' : 'translate-y-full'} ${modoOscuro ? 'bg-[#0b111e] border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
       <div className="flex items-center justify-around py-2 px-4">
         <button
           onClick={() => { onInicioClick?.(); navigate('/campus/campeche/portal'); }}
@@ -71,7 +71,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
             ) : (
               <Icono nombre="logout" strokeWidth={2} className="h-5 w-5" />
             )}
-            <span className="text-[10px] font-medium">{estaAutenticado ? (esAdmin || esPresidente || esResponsableMural ? 'Panel' : 'Mis Postulaciones') : 'Iniciar Sesión'}</span>
+            <span className="text-[10px] font-medium">{estaAutenticado ? (esAdmin || esResponsableClub || esResponsableMural ? 'Panel' : 'Mis Postulaciones') : 'Iniciar Sesión'}</span>
           </button>
         )}
       </div>

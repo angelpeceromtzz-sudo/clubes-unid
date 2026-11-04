@@ -48,5 +48,7 @@ export const clubService = {
     return request(`/clubes/actividad?${params.toString()}`);
   },
 
+  getActividadFiltros: () => request('/clubes/actividad/filtros'),
+
   getActividad: (page = 1) => request(`/notificaciones/actividad?page=${page}`),
 };

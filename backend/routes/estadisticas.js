@@ -2,7 +2,7 @@ import { Router } from 'express';
 import pool from '../db.js';
 import XLSX from 'xlsx';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { ROL_ADMIN, ROL_RECTORIA } from '../constants/roles.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { esIdEntero, validarParamsEnteros } from '../lib/validarId.js';
 import { crearLibroEjecutivo } from '../lib/reporteEjecutivoExcel.js';
 
@@ -11,7 +11,7 @@ const router = Router();
 validarParamsEnteros(router);
 
 // Todas las rutas requieren autenticación y rol admin/rectoría (Coordinación)
-router.use(authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA));
+router.use(authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION));
 
 // Encuestas agregadas para vista ejecutiva
 router.get('/encuestas-ejecutivas', async (req, res) => {
@@ -252,7 +252,7 @@ router.get('/clubes-detalle', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
-        c.cupo_maximo, c.id_presidente,
+        c.cupo_maximo, c.id_responsable_club,
         COALESCE(u.nombre_completo, 'Sin asignar') AS presidente,
         c.horario,
         c.id_estatus_club, e.nombre_estatus AS estatus,
@@ -265,7 +265,7 @@ router.get('/clubes-detalle', async (req, res) => {
         ), 0) AS cupo_ocupado
       FROM clubes c
       JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
-      LEFT JOIN usuarios u ON u.id_usuario = c.id_presidente
+      LEFT JOIN usuarios u ON u.id_usuario = c.id_responsable_club
       ORDER BY c.nombre_club
     `);
     res.json(result.rows);

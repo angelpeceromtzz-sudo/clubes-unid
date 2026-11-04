@@ -6,22 +6,22 @@ export function TablaDiapositivasDesktop({ diapositivas, modoOscuro, tableBg, th
   return (
     <div className={`${tableBg} rounded-2xl overflow-hidden hidden md:block`}>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="min-w-max w-full text-sm">
           <thead>
             <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-              <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>ID</th>
-              <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Imagen</th>
-              <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Título</th>
-              <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Orden</th>
-              <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Estado</th>
-              <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acciones</th>
+              <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>ID</th>
+              <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Imagen</th>
+              <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Título</th>
+              <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Orden</th>
+              <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Estado</th>
+              <th className={`px-5 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {diapositivas.map((d) => (
               <tr key={d.id_diapositiva} className={`border-b transition-colors ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
-                <td className={`px-5 py-4 font-mono text-xs ${tdCls}`}>{d.id_diapositiva}</td>
-                <td className="px-5 py-4">
+                <td className={`px-5 py-4  font-mono text-xs ${tdCls}`}>{d.id_diapositiva}</td>
+                <td className="px-5 py-4 ">
                   <div className="w-16 h-10 rounded-lg overflow-hidden bg-slate-800/30">
                     <img src={obtenerUrlImagen(d.url_imagen)} alt={d.titulo} className="w-full h-full object-cover" />
                   </div>
@@ -29,12 +29,12 @@ export function TablaDiapositivasDesktop({ diapositivas, modoOscuro, tableBg, th
                     <span className="mt-1 inline-block text-[9px] uppercase tracking-wider font-bold text-amber-400">Con imagen móvil</span>
                   )}
                 </td>
-                <td className={`px-5 py-4 font-medium ${tdTitle}`}>{d.titulo}</td>
-                <td className={`px-5 py-4 ${tdCls}`}>{d.orden}</td>
-                <td className="px-5 py-4">
+                <td className={`px-5 py-4 font-medium ${tdTitle} max-w-md break-words`}>{d.titulo}</td>
+                <td className={`px-5 py-4  ${tdCls}`}>{d.orden}</td>
+                <td className="px-5 py-4 ">
                   <Badge texto={d.activa ? 'Activa' : 'Inactiva'} color={d.activa ? 'emerald' : 'slate'} size="md" />
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-5 py-4 ">
                   <div className="flex items-center gap-2">
                     <button onClick={() => onToggle(d)}
                       className={`text-xs font-bold px-2 py-1.5 rounded-lg border cursor-pointer active:scale-95 transition-colors ${

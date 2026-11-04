@@ -12,7 +12,7 @@ const AUDIENCIAS = [
   { value: 'club', label: 'Club en Específico' },
 ];
 
-export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess }) {
+export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess, requiereSecret = false }) {
   const { modoOscuro } = useTheme();
   const { crearNotificacion } = useNotificaciones();
   const [titulo, setTitulo] = useState('');
@@ -36,7 +36,17 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
       const clubIdFinal = audienciaFinal === 'club'
         ? (audienciaFija ? clubId : Number(clubSeleccionado))
         : undefined;
-      await crearNotificacion(titulo.trim(), mensaje.trim(), audienciaFinal, clubIdFinal);
+
+      let password;
+      if (requiereSecret) {
+        password = window.prompt('Ingresa la contraseña de administrador para publicar el anuncio:');
+        if (!password) {
+          setEnviando(false);
+          return;
+        }
+      }
+
+      await crearNotificacion(titulo.trim(), mensaje.trim(), audienciaFinal, clubIdFinal, undefined, password ? { password } : undefined);
       const tituloEnviado = titulo.trim();
       const mensajeEnviado = mensaje.trim();
       setMensajeExito('Anuncio publicado correctamente');
@@ -55,8 +65,8 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
 
   return (
     <form onSubmit={manejarEnvio} className="space-y-4">
-      <CampoTexto label="Título del anuncio" name="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Horario de entrenamiento" maxLength={200} disabled={enviando} required />
-      <CampoTexto label="Contenido del anuncio" name="mensaje" value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Escribe el contenido del anuncio..." type="textarea" disabled={enviando} required />
+      <CampoTexto label="Título del anuncio" name="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Horario de entrenamiento" maxLength={100} disabled={enviando} required />
+      <CampoTexto label="Contenido del anuncio" name="mensaje" value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Escribe el contenido del anuncio..." type="textarea" disabled={enviando} required maxLength={500} />
 
       {!audienciaFija && (
         <div>
