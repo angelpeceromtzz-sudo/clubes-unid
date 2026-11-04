@@ -34,6 +34,8 @@ import noticiasRoutes from './routes/noticias.js';
 import { limitadorGlobal } from './lib/rateLimits.js';
 import { cabecerasSeguridad } from './lib/securityHeaders.js';
 import { manejadorErroresGlobal } from './lib/errorHandler.js';
+import { mailer } from './lib/mailer.js';
+import { registrarConfiguracionOtp } from './lib/otpDiagnostico.js';
 import asistenciaRoutes from './routes/asistencia.js';
 import calendarioRoutes from './routes/calendario.js';
 import muralRoutes from './routes/mural.js';
@@ -143,6 +145,7 @@ const servidor = app.listen(PORT, () => {
   }
 
   console.log(`Servidor de Clubs UNID corriendo en puerto ${PORT}`);
+  registrarConfiguracionOtp(mailer);
 });
 
 servidor.on('error', (err) => {

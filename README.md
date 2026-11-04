@@ -278,6 +278,20 @@ código.
 `backend/.env.example` conserva `OTP_MAIL_PROVIDER=mock` como valor seguro por
 defecto para desarrollo y pruebas.
 
+Los registros del backend incluyen líneas `[OTP]` sin correos, códigos ni
+credenciales. Al arrancar, `configuracion_cargada` muestra el proveedor que
+realmente cargó el proceso; los cambios de variables requieren reiniciarlo.
+Cada solicitud tiene un `solicitud_id` generado en el servidor para seguirla:
+
+- `solicitud_recibida`: el intento llegó a este backend.
+- `envio_simulado`: está usando `mock`; no se contactó a Resend.
+- `cuenta_desactivada` o `rol_sin_otp`: se omitió el envío por el estado de la cuenta.
+- `envio_aceptado`: el proveedor aceptó el envío; la entrega se revisa en Resend.
+- `envio_fallido`: falló el intento; `http_proveedor`, si existe, es el estado
+  HTTP que devolvió el proveedor. El detalle se consulta en sus registros.
+- `solicitud_finalizada`: estado HTTP de la respuesta del portal. Un 200 por
+  sí solo no confirma el envío, ya que la respuesta es genérica.
+
 ### Orden operativo
 
 1. Revisar H17 y planificar la remediación de las cuentas demo (seed) antes

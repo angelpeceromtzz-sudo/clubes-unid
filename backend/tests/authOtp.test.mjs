@@ -26,6 +26,7 @@ const { mailer } = await import('../lib/mailer.js');
 const { generarHashOtp } = await import('../lib/otp.js');
 
 const enviarCodigoOriginal = mailer.enviarCodigoOtp.bind(mailer);
+const infoOriginal = console.info;
 const MENSAJE_SOLICITUD = 'Si el correo es válido, recibirás un código de acceso.';
 const MENSAJE_VERIFICACION = 'Código inválido o expirado.';
 
@@ -40,6 +41,7 @@ function clonar(fila) {
 function reiniciarEstado() {
   estado = {
     codigos: [],
+    diagnosticos: [],
     usuarios: new Map(),
     siguienteOtpId: 1,
     siguienteUsuarioId: 100,
@@ -243,6 +245,13 @@ const verificar = (correo, codigo, nombre) =>
   pedir('verificar', nombre === undefined ? { correo, codigo } : { correo, codigo, nombre });
 
 before(async () => {
+  console.info = (...args) => {
+    if (args[0] === '[OTP]') {
+      estado?.diagnosticos.push(JSON.parse(args[1]));
+      return;
+    }
+    infoOriginal(...args);
+  };
   const app = express();
   app.set('trust proxy', 1);
   app.use(express.json());
@@ -254,7 +263,10 @@ before(async () => {
   base = `http://127.0.0.1:${servidor.address().port}`;
 });
 
-after(() => servidor?.close());
+after(() => {
+  console.info = infoOriginal;
+  servidor?.close();
+});
 
 beforeEach(() => reiniciarEstado());
 
@@ -288,6 +300,95 @@ test('la respuesta HTTP nunca contiene el código OTP', async () => {
     [...respuesta.headers].map(([clave, valor]) => `${clave}:${valor}`).join(' ').includes(codigo),
     false,
   );
+});
+
+test('el diagnóstico permite seguir un envío simulado sin registrar datos del alumno', async () => {
+  const correo = 'diagnostico@red.unid.mx';
+  const respuesta = await solicitar(correo);
+  const registros = estado.diagnosticos;
+
+  assert.equal(respuesta.status, 200);
+  assert.deepEqual(registros.map((r) => r.evento), [
+    'solicitud_recibida', 'registro_iniciado', 'envio_iniciado',
+    'envio_simulado', 'solicitud_finalizada',
+  ]);
+  assert.equal(new Set(registros.map((r) => r.solicitud_id)).size, 1);
+  assert.equal(registros.every((r) => r.proveedor === 'mock'), true);
+  assert.equal(registros.at(-1).http, 200);
+
+  const texto = JSON.stringify(registros);
+  for (const secreto of [correo, ultimoCodigoEnviado(), estado.codigos[0].codigo_hash,
+    process.env.OTP_PEPPER, process.env.JWT_SECRET]) {
+    assert.equal(texto.includes(JSON.stringify(secreto)), false);
+  }
+});
+
+test('el diagnóstico distingue las cuentas omitidas sin cambiar la respuesta genérica', async () => {
+  for (const caso of [
+    { correo: 'rol.restringido@red.unid.mx', id_rol: 3, evento: 'rol_sin_otp' },
+    { correo: 'desactivada@red.unid.mx', deleted_at: new Date(), evento: 'cuenta_desactivada' },
+  ]) {
+    estado.diagnosticos.length = 0;
+    agregarUsuario(caso);
+    const respuesta = await solicitar(caso.correo);
+
+    assert.equal(respuesta.status, 200);
+    assert.deepEqual(respuesta.cuerpo, { message: MENSAJE_SOLICITUD });
+    assert.deepEqual(estado.diagnosticos.map((r) => r.evento), [
+      'solicitud_recibida', caso.evento, 'solicitud_finalizada',
+    ]);
+    assert.equal(mailer.obtenerEnviados().length, 0);
+    assert.equal(estado.codigos.length, 0);
+  }
+});
+
+test('el diagnóstico distingue la aceptación del proveedor del modo simulado', async () => {
+  const proveedorOriginal = mailer.proveedor;
+  try {
+    mailer.proveedor = 'resend';
+    mailer.enviarCodigoOtp = async () => {};
+    const respuesta = await solicitar('aceptado@red.unid.mx');
+
+    assert.equal(respuesta.status, 200);
+    assert.equal(estado.diagnosticos.every((r) => r.proveedor === 'resend'), true);
+    assert.equal(estado.diagnosticos.some((r) => r.evento === 'envio_aceptado'), true);
+    assert.equal(estado.diagnosticos.some((r) => r.evento === 'envio_simulado'), false);
+  } finally {
+    mailer.proveedor = proveedorOriginal;
+    mailer.enviarCodigoOtp = enviarCodigoOriginal;
+  }
+});
+
+test('el diagnóstico conserva el estado HTTP de Resend sin exponer su respuesta privada', async () => {
+  const proveedorOriginal = mailer.proveedor;
+  const errorOriginal = console.error;
+  const errores = [];
+  const detallePrivado = 'respuesta privada con clave re_prueba_y_datos_del_destinatario';
+  try {
+    mailer.proveedor = 'resend';
+    mailer.enviarCodigoOtp = async () => {
+      const error = new Error(detallePrivado);
+      error.name = 'ErrorEnvioOtp';
+      error.code = 'OTP_RESEND_HTTP';
+      error.status = 403;
+      throw error;
+    };
+    console.error = (...args) => errores.push(args.join(' '));
+    const respuesta = await solicitar('rechazado@red.unid.mx');
+
+    assert.equal(respuesta.status, 200);
+    assert.deepEqual(respuesta.cuerpo, { message: MENSAJE_SOLICITUD });
+    const fallo = estado.diagnosticos.find((r) => r.evento === 'envio_fallido');
+    assert.equal(fallo.proveedor, 'resend');
+    assert.equal(fallo.http_proveedor, 403);
+    assert.equal(estado.diagnosticos.some((r) => r.evento === 'envio_aceptado'), false);
+    assert.ok(estado.codigos[0].consumido_en, 'se invalida el código que no se pudo enviar');
+    assert.equal(JSON.stringify({ registros: estado.diagnosticos, errores }).includes(detallePrivado), false);
+  } finally {
+    console.error = errorOriginal;
+    mailer.proveedor = proveedorOriginal;
+    mailer.enviarCodigoOtp = enviarCodigoOriginal;
+  }
 });
 
 test('acepta también el dominio @unid.mx', async () => {
