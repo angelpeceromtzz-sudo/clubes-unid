@@ -4,6 +4,7 @@ import XLSX from 'xlsx';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { esIdEntero, validarParamsEnteros } from '../lib/validarId.js';
+import { crearLibroEjecutivo } from '../lib/reporteEjecutivoExcel.js';
 
 const router = Router();
 
@@ -416,6 +417,15 @@ router.get('/ejecutivo/exportar', async (req, res) => {
       return res.status(400).json({ error: 'Formato inválido. Use csv o xlsx.' });
     }
 
+    for (const [nombre, valor] of Object.entries({ id_club, id_periodo, carrera })) {
+      if (valor !== undefined && valor !== '' && !esIdEntero(valor)) {
+        return res.status(400).json({ error: `El filtro ${nombre} debe ser un entero positivo.` });
+      }
+    }
+    if (estado !== undefined && typeof estado !== 'string') {
+      return res.status(400).json({ error: 'El estado de postulación no es válido.' });
+    }
+
     const f = {
       id_club: id_club && esIdEntero(id_club) ? Number(id_club) : null,
       id_periodo: id_periodo && esIdEntero(id_periodo) ? Number(id_periodo) : null,
@@ -423,12 +433,30 @@ router.get('/ejecutivo/exportar', async (req, res) => {
       estado: estado || null,
     };
 
-    // Periodo para filtrar postulaciones/inscripciones por rango de fechas.
-    let periodo = null;
-    if (f.id_periodo) {
-      const r = await pool.query('SELECT fecha_inicio, fecha_fin FROM periodos_actividad WHERE id_periodo = $1', [f.id_periodo]);
-      if (r.rows.length) periodo = r.rows[0];
+    const [clubFiltro, periodoFiltro, licenciaturaFiltro] = await Promise.all([
+      f.id_club ? pool.query('SELECT nombre_club FROM clubes WHERE id_club = $1', [f.id_club]) : null,
+      f.id_periodo ? pool.query('SELECT nombre, fecha_inicio, fecha_fin FROM periodos_actividad WHERE id_periodo = $1', [f.id_periodo]) : null,
+      f.carrera ? pool.query('SELECT nombre FROM cat_licenciaturas WHERE id_licenciatura = $1', [f.carrera]) : null,
+    ]);
+    if ([clubFiltro, periodoFiltro, licenciaturaFiltro].some((resultado) => resultado && !resultado.rows.length)) {
+      return res.status(404).json({ error: 'Uno de los filtros seleccionados ya no está disponible.' });
     }
+    const periodo = periodoFiltro?.rows[0];
+    const paramsFormularios = [];
+    const condicionesFormularios = [];
+    for (const [columna, valor] of [['f.id_club', f.id_club], ['f.id_licenciatura', f.carrera], ['f.status', f.estado]]) {
+      if (valor) condicionesFormularios.push(`${columna} = $${paramsFormularios.push(valor)}`);
+    }
+    const paramsInscripciones = f.id_club ? [f.id_club] : [];
+    const condicionesInscripciones = f.id_club ? ['i.id_club = $1'] : [];
+    if (periodo) {
+      condicionesFormularios.push(`f.fecha_envio >= $${paramsFormularios.push(periodo.fecha_inicio)}::date`);
+      condicionesFormularios.push(`f.fecha_envio < ($${paramsFormularios.push(periodo.fecha_fin)}::date + INTERVAL '1 day')`);
+      condicionesInscripciones.push(`i.fecha_inscripcion >= $${paramsInscripciones.push(periodo.fecha_inicio)}::date`);
+      condicionesInscripciones.push(`i.fecha_inscripcion < ($${paramsInscripciones.push(periodo.fecha_fin)}::date + INTERVAL '1 day')`);
+    }
+    const whereFormularios = condicionesFormularios.length ? `AND ${condicionesFormularios.join(' AND ')}` : '';
+    const whereInscripciones = condicionesInscripciones.length ? `AND ${condicionesInscripciones.join(' AND ')}` : '';
 
     // KPIs y secciones.
     const [
@@ -464,24 +492,18 @@ router.get('/ejecutivo/exportar', async (req, res) => {
           FROM inscripciones i
           JOIN usuarios u ON u.id_usuario = i.id_usuario
           WHERE i.id_estatus_inscripcion = 1 AND u.id_rol = 1
-          ${f.id_club ? 'AND i.id_club = $1' : ''}
           GROUP BY i.id_club
         ) sub ON sub.id_club = c.id_club
         WHERE c.id_estatus_club = 1
-      `, f.id_club ? [f.id_club] : []),
+      `),
       pool.query(`
         SELECT f.status, COUNT(*)::int AS total
         FROM formularios f
         WHERE 1=1
-          ${f.id_club ? 'AND f.id_club = $1' : ''}
-          ${f.carrera ? 'AND f.id_licenciatura = $' + ((f.id_club ? 2 : 1)) : ''}
-          ${f.estado ? 'AND f.status = $' + ((f.id_club ? 2 : 1) + (f.carrera ? 1 : 0)) : ''}
+          ${whereFormularios}
         GROUP BY f.status
-      `, [
-        ...(f.id_club ? [f.id_club] : []),
-        ...(f.carrera ? [f.carrera] : []),
-        ...(f.estado ? [f.estado] : []),
-      ]),
+        ORDER BY f.status
+      `, paramsFormularios),
       pool.query(`
         SELECT s.id_club, c.nombre_club,
           COUNT(*) FILTER (WHERE a.estado = 'presente')::int AS presentes,
@@ -525,25 +547,19 @@ router.get('/ejecutivo/exportar', async (req, res) => {
         SELECT to_char(f.fecha_envio, 'YYYY-MM') AS mes, COUNT(*)::int AS total
         FROM formularios f
         WHERE f.fecha_envio >= NOW() - INTERVAL '6 months'
-          ${f.id_club ? 'AND f.id_club = $1' : ''}
-          ${f.carrera ? 'AND f.id_licenciatura = $' + (f.id_club ? 2 : 1) : ''}
-          ${f.estado ? 'AND f.status = $' + ((f.id_club ? 2 : 1) + (f.carrera ? 1 : 0)) : ''}
+          ${whereFormularios}
         GROUP BY mes
         ORDER BY mes
-      `, [
-        ...(f.id_club ? [f.id_club] : []),
-        ...(f.carrera ? [f.carrera] : []),
-        ...(f.estado ? [f.estado] : []),
-      ]),
+      `, paramsFormularios),
       pool.query(`
         SELECT to_char(i.fecha_inscripcion, 'YYYY-MM') AS mes, COUNT(*)::int AS total
         FROM inscripciones i
         WHERE i.id_estatus_inscripcion = 1
           AND i.fecha_inscripcion >= NOW() - INTERVAL '6 months'
-          ${f.id_club ? 'AND i.id_club = $1' : ''}
+          ${whereInscripciones}
         GROUP BY mes
         ORDER BY mes
-      `, f.id_club ? [f.id_club] : []),
+      `, paramsInscripciones),
       pool.query(`
         SELECT c.id_club, c.nombre_club, c.cupo_maximo,
           COALESCE((
@@ -558,93 +574,34 @@ router.get('/ejecutivo/exportar', async (req, res) => {
       `, f.id_club ? [f.id_club] : []),
     ]);
 
-    const evaluadas = asistencia.rows.reduce((acc, r) => acc + r.presentes + r.ausentes, 0);
-    const presentesTotal = asistencia.rows.reduce((acc, r) => acc + r.presentes, 0);
-    const totalRespuestasEncuestas = encuestas.rows.reduce((acc, e) => acc + e.total_respuestas, 0);
-    const fechaGeneracion = new Date().toLocaleString('es-MX');
-    const fecha = new Date().toISOString().slice(0, 10);
-
-    const wb = XLSX.utils.book_new();
-
-    // Hoja de alcance y filtros
-    const filtrosRows = [
-      ['Reporte ejecutivo — Clubs UNID'],
-      ['Generado el', fechaGeneracion],
-      [],
-      ['Filtro', 'Valor'],
-      ['Club', f.id_club ?? 'Todos'],
-      ['Periodo', f.id_periodo ?? 'Todos'],
-      ['Licenciatura', f.carrera ?? 'Todas'],
-      ['Estado', f.estado ?? 'Todos'],
-      [],
-      ['Alcance'],
-      ['Participación', 'Alumnos con inscripción activa / alumnos registrados'],
-      ['Ocupación', 'Plazas ocupadas / cupo total de clubes activos'],
-      ['Asistencia', 'Presentes / (presentes + ausentes) en sesiones completadas'],
-      ['Encuestas', 'Respuestas recibidas filtradas por licenciatura'],
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(filtrosRows), 'Alcance');
-
-    // Hoja de KPIs
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-      ['Métrica', 'Valor'],
-      ['Alumnos registrados activos', totalAlumnos.rows[0].total],
-      ['Alumnos con inscripción activa', alumnosInscritos.rows[0].total],
-      ['Participación (%)', totalAlumnos.rows[0].total > 0 ? Math.round((alumnosInscritos.rows[0].total / totalAlumnos.rows[0].total) * 1000) / 10 : 0],
-      ['Clubes activos', totalClubes.rows[0].total],
-      ['Ocupación total (%)', ocupacion.rows[0].cupo_total > 0 ? Math.round((ocupacion.rows[0].ocupado_total / ocupacion.rows[0].cupo_total) * 100) : 0],
-      ['Asistencia promedio (%)', evaluadas > 0 ? Math.round((presentesTotal / evaluadas) * 1000) / 10 : 0],
-      ['Total respuestas de encuestas', totalRespuestasEncuestas],
-    ]), 'KPIs');
-
-    // Hoja de clubes
-    const clubesRows = clubesOcupacion.rows.map((c) => ({
-      Club: c.nombre_club,
-      Cupo: c.cupo_maximo,
-      Ocupado: c.cupo_ocupado,
-      Disponible: Math.max((c.cupo_maximo || 0) - c.cupo_ocupado, 0),
-      'Ocupación (%)': c.cupo_maximo > 0 ? Math.round((c.cupo_ocupado / c.cupo_maximo) * 100) : 0,
-    }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clubesRows), 'Clubes');
-
-    // Hoja de asistencia
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(asistencia.rows.map((r) => ({
-      ...r,
-      'asistencia (%)': r.presentes + r.ausentes > 0 ? Math.round((r.presentes / (r.presentes + r.ausentes)) * 1000) / 10 : 0,
-    }))), 'Asistencia');
-
-    // Hoja de encuestas
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(encuestas.rows), 'Encuestas');
-
-    // Hoja de encuestas por licenciatura (incluye sin licenciatura)
-    const licenciaturaRows = [
-      ...porLicenciatura.rows,
-      ...(!f.carrera && sinLicenciatura.rows[0]?.respuestas > 0 ? [{ id_licenciatura: null, nombre: 'Sin licenciatura', respuestas: sinLicenciatura.rows[0].respuestas }] : []),
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(licenciaturaRows), 'Encuestas por licenciatura');
-
-    // Hoja de postulaciones
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(postulaciones.rows), 'Postulaciones por estado');
-
-    // Hoja de evolución mensual
-    const mesesMap = new Map();
-    for (const p of evolucionPostulaciones.rows) mesesMap.set(p.mes, { mes: p.mes, postulaciones: p.total, inscripciones: 0 });
-    for (const i of evolucionInscripciones.rows) {
-      const actual = mesesMap.get(i.mes) || { mes: i.mes, postulaciones: 0, inscripciones: 0 };
-      actual.inscripciones = i.total;
-      mesesMap.set(i.mes, actual);
-    }
-    const evolucionRows = [...mesesMap.values()].sort((a, b) => a.mes.localeCompare(b.mes));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(evolucionRows), 'Evolución mensual');
+    const generadoEn = new Date();
+    const fecha = generadoEn.toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
+    const wb = crearLibroEjecutivo({
+      generadoEn,
+      filtros: f,
+      nombresFiltros: { club: clubFiltro?.rows[0]?.nombre_club, periodo: periodo?.nombre, licenciatura: licenciaturaFiltro?.rows[0]?.nombre },
+      totalAlumnos: totalAlumnos.rows[0].total,
+      alumnosInscritos: alumnosInscritos.rows[0].total,
+      totalClubes: totalClubes.rows[0].total,
+      ocupacion: ocupacion.rows[0],
+      postulaciones: postulaciones.rows,
+      asistencia: asistencia.rows,
+      encuestas: encuestas.rows,
+      porLicenciatura: porLicenciatura.rows,
+      sinLicenciatura: sinLicenciatura.rows[0]?.respuestas || 0,
+      evolucionPostulaciones: evolucionPostulaciones.rows,
+      evolucionInscripciones: evolucionInscripciones.rows,
+      clubes: clubesOcupacion.rows,
+    });
 
     if (formato === 'csv') {
-      const csv = XLSX.utils.sheet_to_csv(wb.Sheets['Alcance']) + XLSX.utils.sheet_to_csv(wb.Sheets['KPIs']);
+      const csv = '\uFEFF' + XLSX.utils.sheet_to_csv(wb.Sheets['Alcance']) + '\r\n' + XLSX.utils.sheet_to_csv(wb.Sheets['KPIs']);
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="ejecutivo_${fecha}.csv"`);
       return res.send(csv);
     }
 
-    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer', compression: true });
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="ejecutivo_${fecha}.xlsx"`);
     res.send(buf);

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { isIP } from 'node:net';
 import { otpStore } from '../lib/otpStore.js';
 import { mailer } from '../lib/mailer.js';
+import { diagnosticarSolicitudOtp } from '../lib/otpDiagnostico.js';
 import { generarToken } from '../lib/jwt.js';
 import {
   normalizarCorreoInstitucional,
@@ -52,6 +53,7 @@ function otpHabilitado() {
 
 function exigirOtpHabilitado(req, res, next) {
   if (!otpHabilitado()) {
+    res.locals.registrarOtp?.('otp_deshabilitado');
     return res.status(503).json({ error: MENSAJE_NO_DISPONIBLE });
   }
 
@@ -110,6 +112,7 @@ function respuestaUsuario(usuario) {
 // cuentas desactivadas ni a roles que no tienen permitido OTP.
 router.post(
   '/solicitar',
+  diagnosticarSolicitudOtp(mailer),
   exigirOtpHabilitado,
   limitadorOtpSolicitudIp,
   limitadorOtpSolicitudCuenta,
@@ -117,15 +120,18 @@ router.post(
     const correo = normalizarCorreoInstitucional(req.body?.correo);
 
     if (!esCorreoInstitucionalValido(correo)) {
+      res.locals.registrarOtp('correo_invalido');
       return res.status(400).json({ error: 'Correo institucional inválido.' });
     }
 
     if (!pepperConfigurado()) {
+      res.locals.registrarOtp('pepper_ausente');
       console.error('OTP no disponible: OTP_PEPPER no está configurado.');
       return res.status(503).json({ error: MENSAJE_NO_DISPONIBLE });
     }
 
     if (typeof mailer.estaDisponible === 'function' && !mailer.estaDisponible()) {
+      res.locals.registrarOtp('proveedor_no_disponible');
       console.error(
         'OTP no disponible: proveedor de correo no configurado.',
         mailer.motivoNoDisponible || '',
@@ -139,6 +145,7 @@ router.post(
       // No se envía código a cuentas desactivadas ni a admin/rectoría. La
       // respuesta sigue siendo genérica para no revelar el estado de la cuenta.
       if (usuario && usuarioBloqueadoParaOtp(usuario)) {
+        res.locals.registrarOtp(usuario.deleted_at ? 'cuenta_desactivada' : 'rol_sin_otp');
         return responderSolicitudGenerica(res);
       }
 
@@ -147,6 +154,7 @@ router.post(
       const minutosExpiracion = obtenerMinutosExpiracionOtp();
       const expiraEn = calcularExpiracionOtp(new Date(), minutosExpiracion);
 
+      res.locals.registrarOtp('registro_iniciado');
       const registro = await otpStore.invalidarYGuardar({
         correo,
         codigoHash,
@@ -157,26 +165,31 @@ router.post(
       });
 
       if (registro?.id_otp == null) {
+        res.locals.registrarOtp('registro_no_creado');
         console.error('No se pudo registrar el código OTP.');
         return responderSolicitudGenerica(res);
       }
 
       try {
+        res.locals.registrarOtp('envio_iniciado');
         await mailer.enviarCodigoOtp({
           correo,
           codigo,
           expiracion: expiraEn,
           minutos: minutosExpiracion,
         });
+        res.locals.registrarOtp(mailer.proveedor === 'mock' ? 'envio_simulado' : 'envio_aceptado');
       } catch (err) {
         // El fallo se registra sin el código. El código recién guardado se
         // invalida para que no quede un registro activo sin correo enviado.
+        res.locals.registrarOtp('envio_fallido', { http_proveedor: err?.status });
         console.error('Error al enviar el código OTP:', nombreError(err), codigoError(err));
         await otpStore.marcarConsumido({ idOtp: registro.id_otp, codigoHash }).catch(() => {});
       }
 
       return responderSolicitudGenerica(res);
     } catch (err) {
+      res.locals.registrarOtp('solicitud_fallida');
       console.error('Error en la solicitud de OTP:', nombreError(err), codigoError(err));
       return res.status(500).json({ error: MENSAJE_ERROR_INTERNO });
     }
