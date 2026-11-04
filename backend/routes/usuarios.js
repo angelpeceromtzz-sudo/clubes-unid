@@ -35,7 +35,7 @@ router.get('/', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINAC
 // Lista los usuarios desactivados (soft-deleted) para su reactivación manual.
 // Son los que ya no deben aparecer en GET /usuarios, pero el admin necesita
 // verlos aquí para poder reactivarlos con PATCH /:id/reactivar.
-router.get('/desactivados', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
+router.get('/desactivados', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
@@ -54,7 +54,7 @@ router.get('/desactivados', authenticate, requireRole(ROL_ADMIN), async (req, re
 });
 
 // Cambia el rol de un usuario (solo admin, no puede auto-modificarse)
-router.put('/:id/rol', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
+router.put('/:id/rol', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id } = req.params;
     const { id_rol, password } = req.body;
@@ -282,7 +282,7 @@ router.put('/:id/asignar-club', authenticate, requireRole(ROL_ADMIN, ROL_COORDIN
 
 
 // Acción de admin protegida por contraseña: promover o degradar administradores
-router.post('/admin-action', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
+router.post('/admin-action', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { targetUserId, action, password } = req.body;
     const ADMIN_SECRET = process.env.ADMIN_SECRET;
@@ -363,7 +363,7 @@ router.post('/admin-action', authenticate, requireRole(ROL_ADMIN), async (req, r
 // Soft delete — no borro físicamente porque hay clubes, inscripciones y
 // formularios que referencian al usuario. Si lo borrara de verdad, esas
 // FKs se romperían o habría que cascadear borrados no deseados.
-router.delete('/:id', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
+router.delete('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   const client = await pool.connect();
   let enTransaccion = false;
   try {
@@ -462,7 +462,7 @@ router.delete('/:id', authenticate, requireRole(ROL_ADMIN), async (req, res) => 
 // La reactivación es manual y exclusiva del admin a propósito: si un
 // usuario fue desactivado, no quiero que reactivar dependa de que
 // Microsoft lo autentique. El admin revisa el caso y decide.
-router.patch('/:id/reactivar', authenticate, requireRole(ROL_ADMIN), async (req, res) => {
+router.patch('/:id/reactivar', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id } = req.params;
 

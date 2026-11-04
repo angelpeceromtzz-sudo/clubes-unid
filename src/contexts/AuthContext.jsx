@@ -141,7 +141,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
   }, [usuario]);
 
   const estaAutenticado = !!usuario;
-  const esAdmin = usuario?.id_rol === 3;
+  const esAdmin = usuario?.id_rol === 3 || usuario?.id_rol === 7;
   const esCoordinacion = usuario?.id_rol === 7;
   const esAdminOCoordinacion = esAdmin || esCoordinacion;
   const esResponsableClub = usuario?.id_rol === 2;

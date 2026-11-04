@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { encuestaService } from '../services/encuesta.service';
 import { ESTADO_GUARDADO, TIPOS_CON_OPCIONES } from '../constants/encuesta';
 import { ESTADO_ENCUESTA } from '../constants/estatus';
-import { ROL_ADMIN } from '../constants/roles';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles';
 import { aInputDateTime } from '../utils/encuesta';
 import { useFeedback } from './useFeedback';
 
@@ -102,7 +102,7 @@ const PREGUNTA_VACIA = {
 export function useSeccionEncuestas(setFeedbackExterno, usuario) {
   const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
 
-  const esAdmin = usuario?.id_rol === ROL_ADMIN;
+  const esAdmin = usuario?.id_rol === ROL_ADMIN || usuario?.id_rol === ROL_COORDINACION;
 
   // El éxito también se manda al panel, para que el aviso salga en el lugar donde
   // el admin ya está mirando y no dentro de la sección.
@@ -630,18 +630,12 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
   // El id llega por parámetro, no se toma de `seleccion`: el borrado se dispara
   // desde la fila de la lista, y ahí `seleccion` puede ser null o ser otra
   // encuesta. Con `seleccion` el botón "Eliminar" fallaba en silencio.
-  const eliminar = useCallback(async (idEncuesta) => {
-    // La misma regla que decide el botón en la lista: una encuesta con respuestas
-    // no se borra... salvo en borrador, donde el backend descarta esas respuestas
-    // antes de borrar la encuesta (son residuo de una prueba: un borrador no
-    // recibe respuestas por su enlace). Aquí se replica la regla por si el borrado
-    // se dispara por otra vía; el backend responde 409 si se cuela una
-    // publicada/cerrada con respuestas.
+  const eliminar = useCallback(async (idEncuesta, password) => {
     const fila = lista.find((e) => e.id_encuesta === idEncuesta);
 
-    if (fila && fila.estado !== 'borrador' && fila.total_respuestas > 0) {
+    if (fila && fila.total_respuestas > 0 && !password) {
       setErrorFeedback(
-        'Esta encuesta ya tiene respuestas, así que no se puede borrar. Ciérrala para que deje de recibir respuestas.'
+        'Se requiere la contraseña de administrador para eliminar una encuesta con respuestas.'
       );
       return;
     }
@@ -649,7 +643,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
     setEnviando(true);
 
     try {
-      await encuestaService.eliminar(idEncuesta);
+      await encuestaService.eliminar(idEncuesta, password);
       await cargarLista();
       volverALista();
       avisar('Encuesta eliminada');

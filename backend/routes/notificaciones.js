@@ -190,7 +190,7 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
       await conexion.query('COMMIT');
     }
 
-    if (roleId === 3) {
+    if (roleId === 3 || roleId === 7) {
       const audienciaLabel = { global: 'todos', presidentes: 'presidentes', alumnos: 'alumnos', club: 'club específico' };
       registrarHistorial({
         idAdmin: req.user.id,

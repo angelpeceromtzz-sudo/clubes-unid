@@ -17,7 +17,6 @@ import { PanelAlumno } from './pages/PanelAlumno';
 import { PanelResponsableClub } from './pages/PanelResponsableClub';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
-import { PanelCoordinacion } from './pages/PanelCoordinacion';
 import { PanelMural } from './pages/PanelMural';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { PaginaCalendario } from './pages/PaginaCalendario';
@@ -195,7 +194,7 @@ function App() {
 
   function irADashboard() {
     if (esCoordinacion) {
-      navigate('/campus/campeche/coordinacion/dashboard');
+      navigate('/admin/dashboard');
     } else if (esAdmin) {
       navigate('/admin/dashboard');
     } else if (esResponsableClub) {
@@ -304,8 +303,8 @@ return (
           </RutaProtegida>
         } />
         <Route path="/campus/campeche/coordinacion/dashboard" element={
-          <RutaProtegida requiereCoordinacion>
-            <PanelCoordinacion />
+          <RutaProtegida requiereAdminOCoordinacion>
+            <PanelAdmin />
           </RutaProtegida>
         } />
         <Route path="/mural/dashboard" element={

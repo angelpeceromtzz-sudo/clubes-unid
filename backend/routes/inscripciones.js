@@ -100,7 +100,7 @@ router.post('/', authenticate, async (req, res) => {
 router.delete('/:userId', authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
-    const esAdmin = req.user.id_rol === 3;
+    const esAdmin = req.user.id_rol === 3 || req.user.id_rol === 7;
 
     if (!esAdmin && req.user.id_rol !== 2 && req.user.id_rol !== 5) {
       return res.status(403).json({ error: 'No tienes permisos para esta acción' });

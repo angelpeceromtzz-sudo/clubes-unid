@@ -255,7 +255,7 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
 // Crear usuario (solo admin)
 // El límite por IP va antes de authenticate: también frena inundaciones de
 // peticiones sin sesión válida contra esta ruta.
-router.post('/register', limitadorRegistro, authenticate, requireRole(ROL_ADMIN), async (req, res) => {
+router.post('/register', limitadorRegistro, authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { nombre_completo, correo_institucional, contrasena, id_rol, password } = req.body;
 
