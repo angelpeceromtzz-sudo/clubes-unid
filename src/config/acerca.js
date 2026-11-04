@@ -188,8 +188,8 @@ export const ACERCA = {
         rol: 'Docente de Mercadotecnia',
         aportacion: 'Nos apoyó con Samai en las decisiones de marketing de la encuesta y la landing.',
         frase: null,
-        foto: '/personas/cecilia.png',
-        mostrarFoto: true,
+        foto: null,
+        mostrarFoto: false,
         visible: true,
       },
       {
@@ -215,8 +215,8 @@ export const ACERCA = {
         rol: 'Mercadotecnia',
         aportacion: 'Nos guió en marketing: la encuesta, la landing y la forma de presentar el proyecto.',
         frase: null,
-        foto: '/personas/samai.png',
-        mostrarFoto: true,
+        foto: null,
+        mostrarFoto: false,
         visible: true,
       },
       {
