@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ModalBase } from '../ui/ModalBase';
 import { Icono } from '../ui/Icono';
+import { ImagenAmpliable } from '../ui/ImagenAmpliable';
 import { useNoticias } from '../../contexts/NoticiasContext';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -725,7 +726,7 @@ export function ModalActualizaciones({ onLoginClick }) {
           ) : (
             <>
               {/* Banner superior */}
-              <div className={`relative h-52 overflow-hidden rounded-xl border sm:h-64 ${tm.borde}`}>
+              <div className={`group relative h-52 overflow-hidden rounded-xl border sm:h-64 ${tm.borde}`}>
                 <div className={`h-full w-full ${tm.gradienteBanner}`} />
                 <div
                   className="absolute inset-0 opacity-40"
@@ -739,7 +740,7 @@ export function ModalActualizaciones({ onLoginClick }) {
                     src={obtenerUrlImagen(noticia.url_imagen)}
                     alt=""
                     aria-hidden="true"
-                    className="absolute inset-0 h-full w-full object-cover opacity-60"
+                    className="absolute inset-0 h-full w-full object-cover opacity-60 transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                   />
                 )}
                 <div className={`absolute inset-0 ${tm.gradienteOverlay}`} />
@@ -751,6 +752,13 @@ export function ModalActualizaciones({ onLoginClick }) {
                     {fechaCorta(noticia.fecha_publicacion)}
                   </span>
                 </div>
+                <ImagenAmpliable
+                  key={noticia.id_noticia}
+                  src={obtenerUrlImagen(noticia.url_imagen)}
+                  alt={noticia.titulo}
+                  titulo={noticia.titulo}
+                  className="absolute inset-0 z-10 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400"
+                />
               </div>
 
               {/* Subtítulo: justo debajo del título del banner */}
@@ -814,7 +822,7 @@ export function ModalActualizaciones({ onLoginClick }) {
           </button>
 
           {/* Imagen de cabecera en banner */}
-          <div className={`relative h-56 shrink-0 overflow-hidden rounded-xl border ${tm.borde}`}>
+          <div className={`group relative h-56 shrink-0 overflow-hidden rounded-xl border ${tm.borde}`}>
             <div className={`h-full w-full ${tm.gradienteBanner}`} />
             <div
               className="absolute inset-0 opacity-40"
@@ -828,10 +836,17 @@ export function ModalActualizaciones({ onLoginClick }) {
                 src={obtenerUrlImagen(noticiaMobile.url_imagen)}
                 alt=""
                 aria-hidden="true"
-                className="absolute inset-0 h-full w-full object-cover opacity-70"
+                className="absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
               />
             )}
             <div className={`absolute inset-0 ${tm.gradienteOverlay}`} />
+            <ImagenAmpliable
+              key={noticiaMobile.id_noticia}
+              src={obtenerUrlImagen(noticiaMobile.url_imagen)}
+              alt={noticiaMobile.titulo}
+              titulo={noticiaMobile.titulo}
+              className="absolute inset-0 z-10 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400"
+            />
           </div>
 
           {/* Badge de categoría + metadatos */}
