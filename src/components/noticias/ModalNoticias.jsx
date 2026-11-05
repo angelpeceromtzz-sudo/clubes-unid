@@ -2,6 +2,7 @@
    visitante todavía no ha visto, con botón de cierre. El historial se abre en la ventana Noticias. */
 import { ModalBase } from '../ui/ModalBase';
 import { Icono } from '../ui/Icono';
+import { ImagenAmpliable } from '../ui/ImagenAmpliable';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNoticias } from '../../contexts/NoticiasContext';
 import { obtenerUrlImagen } from '../../utils/imagen';
@@ -14,6 +15,7 @@ export function ModalNoticias() {
 
   if (modal !== 'destacada' || !destacada) return null;
   const color = estiloPublicacion(destacada.categoria, modoOscuro);
+  const urlImagen = obtenerUrlImagen(destacada.url_imagen);
 
   return (
     <ModalBase show onClose={cerrarModal} maxWidth="max-w-xl">
@@ -44,15 +46,19 @@ export function ModalNoticias() {
         </p>
       </div>
 
-      {destacada.url_imagen && (
-        <div className="w-full max-w-full h-52 sm:h-64 mt-4 overflow-hidden rounded-xl">
-          <img
-            src={obtenerUrlImagen(destacada.url_imagen)}
-            alt={destacada.titulo}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
+      <ImagenAmpliable
+        key={destacada.id_noticia}
+        src={urlImagen}
+        alt={destacada.titulo}
+        titulo={destacada.titulo}
+        className="group relative mt-4 block h-52 w-full max-w-full cursor-zoom-in overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 sm:h-64"
+      >
+        <img
+          src={urlImagen}
+          alt={destacada.titulo}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+        />
+      </ImagenAmpliable>
 
       <p className={`mt-4 text-sm leading-relaxed whitespace-pre-line break-words ${tema.subtitle}`}>
         {destacada.contenido}
