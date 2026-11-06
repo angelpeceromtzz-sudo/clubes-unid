@@ -8,13 +8,15 @@ import { eliminarImagenCloudinary } from '../lib/eliminarImagenCloudinary.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
 import { fechaEventoValida, errorProgramacionEvento, hoyEnCampus } from '../lib/fechasEvento.js';
 
-// 3 admin · 4 rectoría · 6 responsable_mural. Los tres redactan; sólo
-// rectoría (4) aprueba, rechaza u oculta. Ver `TRANSICIONES`.
+// 3 admin · 4 rectoría · 6 responsable_mural · 7 coordinación. Los cuatro
+// redactan; sólo rectoría (4) aprueba, rechaza u oculta. Coordinación tiene
+// los mismos permisos que admin sobre noticias, excepto cambiar el estado.
 const ROLES_EDITOR = [ROL_ADMIN, ROL_RECTORIA, ROL_RESPONSABLE_MURAL, ROL_COORDINACION];
 
 // PBI-17: estados del flujo de aprobación previa.
 const ESTADOS_NOTICIA = ['draft', 'pending', 'published', 'rejected'];
 const MOTIVO_MAX = 500;
+const CONTENIDO_MAX = 2000;
 
 const CATEGORIAS_PERMITIDAS = ['promocion', 'evento', 'informativo'];
 const CATEGORIAS_EVENTO = ['social', 'deportivo', 'cultural'];
@@ -239,6 +241,9 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
     if (!contenidoFinal) {
       return res.status(400).json({ error: 'El contenido es obligatorio' });
     }
+    if (contenidoFinal.length > CONTENIDO_MAX) {
+      return res.status(400).json({ error: `El contenido no puede exceder ${CONTENIDO_MAX} caracteres` });
+    }
     const categoriaFinal = categoria ?? 'informativo';
     if (!CATEGORIAS_PERMITIDAS.includes(categoriaFinal)) {
       return res.status(400).json({ error: 'Categoría no válida' });
@@ -322,6 +327,9 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     if (contenido !== undefined && (typeof contenido !== 'string' || !contenido.trim())) {
       return res.status(400).json({ error: 'El contenido no puede quedar vacío' });
     }
+    if (contenido !== undefined && contenido.trim().length > CONTENIDO_MAX) {
+      return res.status(400).json({ error: `El contenido no puede exceder ${CONTENIDO_MAX} caracteres` });
+    }
     if (categoria !== undefined && !CATEGORIAS_PERMITIDAS.includes(categoria)) {
       return res.status(400).json({ error: 'Categoría no válida' });
     }
@@ -359,9 +367,12 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     if (!puedeGestionar(req, noticiaActual)) {
       return res.status(403).json({ error: 'No tienes permisos sobre esta noticia' });
     }
-    // El admin y el responsable corrigen borradores o rechazadas; mientras la
-    // noticia está en revisión o publicada, el contenido lo decide rectoría.
-    if (req.user.id_rol !== ROL_RECTORIA && req.user.id_rol !== ROL_ADMIN && !['draft', 'rejected'].includes(noticiaActual.status)) {
+    // El admin corrige cualquier noticia; coordinación, salvo las publicadas;
+    // el responsable corrige borradores o rechazadas, y mientras está en
+    // revisión o publicada el contenido lo decide rectoría.
+    const editaSinRestriccion = req.user.id_rol === ROL_RECTORIA || req.user.id_rol === ROL_ADMIN;
+    const editaCoordinacion = req.user.id_rol === ROL_COORDINACION && noticiaActual.status !== 'published';
+    if (!editaSinRestriccion && !editaCoordinacion && !['draft', 'rejected'].includes(noticiaActual.status)) {
       return res.status(409).json({
         error: 'Sólo puedes editar borradores o noticias rechazadas; mientras esté en revisión o publicada el contenido lo valida rectoría',
       });

@@ -73,9 +73,12 @@ export const ROL_RECTORIA = 4;
 export const ROL_RESPONSABLE_MURAL = 6;
 export const ROL_COORDINACION = 7;
 
-/** Puede redactar y gestionar el periódico mural (PBI-16). */
+/** Máximo de caracteres del contenido de una noticia (coincide con el backend). */
+export const LIMITE_CONTENIDO_NOTICIA = 2000;
+
+/** Puede redactar y gestionar el periódico mural (PBI-16). Coordinación tiene los permisos de admin, excepto cambiar el estado. */
 export function esEditorNoticias(idRol) {
-  return idRol === ROL_ADMIN || idRol === ROL_RECTORIA || idRol === ROL_RESPONSABLE_MURAL;
+  return idRol === ROL_ADMIN || idRol === ROL_RECTORIA || idRol === ROL_RESPONSABLE_MURAL || idRol === ROL_COORDINACION;
 }
 
 /** Única autoridad que publica, rechaza u oculta (PBI-17). */
@@ -101,9 +104,13 @@ export function accionesNoticia(estado, idRol) {
   const editor = esEditorNoticias(idRol);
 
   return {
-    // Redactores: sólo en borrador o rechazada; nunca sobre lo que está en
-    // manos de rectoría o ya publicado.
-    editar: editor && !aprobador && (estado === 'draft' || estado === 'rejected'),
+    // Admin edita en cualquier estado; coordinación en todos menos publicada;
+    // el responsable del mural sólo en borrador o rechazada.
+    editar: editor && !aprobador && (
+      idRol === ROL_ADMIN ||
+      (idRol === ROL_COORDINACION && estado !== 'published') ||
+      estado === 'draft' || estado === 'rejected'
+    ),
     editarCualquiera: aprobador,
     enviarRevision: editor && (estado === 'draft' || estado === 'rejected'),
     // Eliminar: rectoría/admin/coordinación pueden eliminar en cualquier estado;
