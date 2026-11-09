@@ -126,6 +126,30 @@ export function CampoPregunta({
 
   switch (pregunta.tipo) {
     case 'opcion_unica':
+      // Una pregunta con más de 5 opciones se vuelve un selector: mostrar
+      // todas las tarjetas desborda la pantalla y dificulta elegir. El contrato
+      // de datos no cambia (sigue siendo un id_opcion hacia onChange).
+      if ((pregunta.opciones ?? []).length > 5) {
+        return (
+          <div className="space-y-2.5">
+            <SelectorOpcionUnica
+              pregunta={pregunta}
+              valor={valor}
+              onChange={onChange}
+              deshabilitado={deshabilitado}
+              base={base}
+            />
+            {otroMarcado && (
+              <CampoTextoOtro
+                valor={textoOtro ?? ''}
+                onChange={onTextoOtroChange}
+                error={errorTextoOtro}
+                deshabilitado={deshabilitado}
+              />
+            )}
+          </div>
+        );
+      }
       return (
         <div className="space-y-2.5" role="radiogroup" aria-label={pregunta.texto}>
           {pregunta.opciones.map((opcion) => {
@@ -570,6 +594,236 @@ function SelectorLicenciatura({ valor, onChange, deshabilitado, base, esObligato
           No se pudo cargar la lista de programas. La respuesta quedará sin registrar.
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Selector para preguntas de opción única con más de 5 opciones.
+ *
+ * Reutiliza el mismo patrón que `SelectorLicenciatura` (modal accesible con
+ * portal al body) para no desbordar la pantalla con tarjetas. El contrato de
+ * datos no cambia: sigue siendo un id_opcion hacia `onChange`.
+ */
+function SelectorOpcionUnica({ pregunta, valor, onChange, deshabilitado, base }) {
+  const { modoOscuro, tema } = useTheme();
+  const opciones = pregunta.opciones ?? [];
+
+  const [abierto, setAbierto] = useState(false);
+  const [activo, setActivo] = useState(0);
+  const [focoEnBoton, setFocoEnBoton] = useState(false);
+
+  const botonRef = useRef(null);
+  const dialogoRef = useRef(null);
+  const refsOpciones = useRef([]);
+  const idLista = useId();
+
+  const textoElegido = opciones.find((o) => o.id === valor)?.texto;
+  const esPlaceholder = valor == null;
+  const textoBoton = esPlaceholder ? 'Selecciona una opción' : (textoElegido ?? 'Selecciona una opción');
+
+  const abrir = () => {
+    if (deshabilitado) return;
+    const idx = opciones.findIndex((o) => o.id === (valor ?? null));
+    setActivo(idx >= 0 ? idx : 0);
+    setFocoEnBoton(false);
+    setAbierto(true);
+  };
+
+  const cerrar = (devolverFoco) => {
+    if (devolverFoco) setFocoEnBoton(true);
+    setAbierto(false);
+  };
+
+  const elegir = (v) => {
+    onChange(v);
+    cerrar(true);
+  };
+
+  const moverA = (i) => setActivo(Math.min(Math.max(i, 0), Math.max(opciones.length - 1, 0)));
+
+  const manejarTeclaBoton = (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      abrir();
+    }
+  };
+
+  const manejarTeclaDialogo = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      cerrar(true);
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      const nodos = Array.from(
+        dialogoRef.current?.querySelectorAll('button, [role="option"]') ?? []
+      );
+      if (nodos.length === 0) return;
+      const primero = nodos[0];
+      const ultimo = nodos[nodos.length - 1];
+      if (e.shiftKey && document.activeElement === primero) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault();
+        primero.focus();
+      } else if (!nodos.includes(document.activeElement)) {
+        e.preventDefault();
+        primero.focus();
+      }
+      return;
+    }
+
+    const indiceFoco = refsOpciones.current.findIndex((el) => el === document.activeElement);
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        moverA(indiceFoco >= 0 ? indiceFoco + 1 : 0);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        moverA(indiceFoco >= 0 ? indiceFoco - 1 : opciones.length - 1);
+        break;
+      case 'Home':
+        e.preventDefault();
+        moverA(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        moverA(opciones.length - 1);
+        break;
+      case 'Enter':
+      case ' ':
+        if (indiceFoco >= 0) {
+          e.preventDefault();
+          elegir(opciones[indiceFoco]?.id ?? null);
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  useEffect(() => {
+    if (!abierto) return;
+    const el = refsOpciones.current[activo];
+    if (el) {
+      el.focus();
+      el.scrollIntoView({ block: 'nearest' });
+    }
+  }, [abierto, activo]);
+
+  useEffect(() => {
+    if (abierto || !focoEnBoton) return;
+    botonRef.current?.focus();
+  }, [abierto, focoEnBoton]);
+
+  return (
+    <div>
+      <button
+        ref={botonRef}
+        type="button"
+        disabled={deshabilitado}
+        onClick={abrir}
+        onKeyDown={manejarTeclaBoton}
+        aria-label={pregunta.texto}
+        aria-haspopup="dialog"
+        aria-expanded={abierto}
+        className={`${base} flex cursor-pointer items-center justify-between gap-2 text-left`}
+      >
+        <span className={`min-w-0 truncate ${esPlaceholder ? 'text-slate-400' : ''}`}>
+          {textoBoton}
+        </span>
+        <Icono
+          nombre={abierto ? 'chevron-up' : 'chevron-down'}
+          className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}
+          strokeWidth={2}
+        />
+      </button>
+
+      {abierto &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+            onClick={() => cerrar(true)}
+            onKeyDown={manejarTeclaDialogo}
+          >
+            <div
+              ref={dialogoRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={pregunta.texto}
+              className={`relative w-full max-w-sm rounded-2xl border p-6 scrollbar-amber ${
+                modoOscuro
+                  ? 'border-slate-700/50 bg-[#0e162c] text-slate-200'
+                  : 'border-slate-200 bg-white shadow-sm text-slate-800'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <BotonCerrar
+                onClick={() => cerrar(true)}
+                etiqueta="Cerrar"
+                className="absolute top-4 right-4"
+              />
+
+              <h3
+                className={`mb-4 pr-8 text-sm font-black uppercase tracking-widest ${
+                  modoOscuro ? 'text-white' : 'text-slate-900'
+                }`}
+              >
+                {pregunta.texto}
+              </h3>
+
+              <ul
+                id={idLista}
+                role="listbox"
+                aria-label={pregunta.texto}
+                className={`max-h-[280px] overflow-y-auto overscroll-contain rounded-xl border p-1 scrollbar-amber ${
+                  modoOscuro ? 'border-slate-700' : 'border-slate-200'
+                }`}
+              >
+                {opciones.length === 0 ? (
+                  <li role="presentation" className={`px-3 py-2.5 text-sm ${tema.subtitle}`}>
+                    No hay opciones disponibles
+                  </li>
+                ) : (
+                  opciones.map((o, i) => {
+                    const seleccionada = o.id === (valor ?? null);
+                    return (
+                      <li
+                        key={o.id}
+                        id={`${idLista}-opt-${i}`}
+                        ref={(el) => {
+                          refsOpciones.current[i] = el;
+                        }}
+                        role="option"
+                        tabIndex={-1}
+                        aria-selected={seleccionada}
+                        onClick={() => elegir(o.id)}
+                        onMouseEnter={() => setActivo(i)}
+                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm outline-none transition-colors ${
+                          seleccionada
+                            ? 'bg-amber-400/15 font-bold text-amber-500'
+                            : i === activo
+                              ? 'bg-amber-400/10'
+                              : `${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`
+                        }`}
+                      >
+                        <span className="min-w-0">{o.texto}</span>
+                        {seleccionada && (
+                          <Icono nombre="check" className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+                        )}
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
