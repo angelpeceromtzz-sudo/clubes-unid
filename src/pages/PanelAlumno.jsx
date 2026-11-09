@@ -39,16 +39,16 @@ export function PanelAlumno() {
     if (redirigir.current) return;
     if (esResponsableClub) {
       redirigir.current = true;
-      navigate('/campus/campeche/portal/responsable-de-club/dashboard', { replace: true });
+      navigate('/campus/campeche/portal/responsable-de-club/panel', { replace: true });
     } else if (esAdmin) {
       redirigir.current = true;
-      navigate('/admin/dashboard', { replace: true });
+      navigate('/admin/panel', { replace: true });
     } else if (esRectoria) {
       redirigir.current = true;
-      navigate('/rectoria/dashboard', { replace: true });
+      navigate('/rectoria/panel', { replace: true });
     } else if (esResponsableMural) {
       redirigir.current = true;
-      navigate('/mural/dashboard', { replace: true });
+      navigate('/mural/panel', { replace: true });
     }
   }, [esResponsableClub, esAdmin, esRectoria, esResponsableMural, navigate]);
 

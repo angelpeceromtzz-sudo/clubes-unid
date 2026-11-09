@@ -1,5 +1,5 @@
 import { useTheme } from '../../contexts/ThemeContext';
-import { formatearEntero, formatearPorcentaje } from '../../utils/formatoDashboard';
+import { formatearEntero, formatearPorcentaje } from '../../utils/formatoPanel';
 import { GraficaBarrasHorizontales } from './GraficaBarrasHorizontales';
 import { ContenedorFiltros, Filtro } from './FiltroSeccion';
 import { TablaDesplegable } from './TablaDesplegable';

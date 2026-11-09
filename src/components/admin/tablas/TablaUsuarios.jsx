@@ -101,7 +101,7 @@ export function TablaUsuarios({
                           <option value={1} style={{ color: '#60a5fa' }}>Alumno</option>
                           <option value={6} style={{ color: '#60a5fa' }}>Responsable del mural</option>
                           <option value={2} style={{ color: '#34d399' }}>Responsable del club</option>
-                          <option value={5} style={{ color: '#34d399' }}>Vicepresidente</option>
+                          <option value={5} style={{ color: '#34d399' }}>Lider de Club</option>
                           <option value={7} style={{ color: '#c084fc' }}>Coordinación</option>
                           <option value={4} style={{ color: '#fbbf24' }}>Rectoría</option>
                         </select>
@@ -131,7 +131,7 @@ export function TablaUsuarios({
                     2: 'Responsable del club',
                     3: 'Administrador',
                     4: 'Rectoría',
-                    5: 'Vicepresidente',
+                    5: 'Lider de Club',
                     6: 'Responsable del mural',
                     7: 'Coordinación',
                   }[u.id_rol] || (u.rol === 'presidente' ? 'Responsable del club' : u.rol)} color={u.id_rol === 3 ? 'red' : u.id_rol === 4 ? 'amber' : u.id_rol === 2 ? 'emerald' : u.id_rol === 7 ? 'purple' : 'blue'} size="sm" />

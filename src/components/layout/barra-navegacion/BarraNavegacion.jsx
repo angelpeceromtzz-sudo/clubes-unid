@@ -12,7 +12,7 @@ import { BotonPortal } from './BotonPortal';
 
 export function BarraNavegacion({
   menuAbierto, setMenuAbierto, onLogoClick,
-  user, onLoginClick, onLogout, onDashboardClick,
+  user, onLoginClick, onLogout, onPanelClick,
   mostrarFiltros = true,
   mostrarNoticias = false,
   mostrarLogo = false,
@@ -93,9 +93,9 @@ export function BarraNavegacion({
             {user && (
               <div className="hidden lg:flex items-center gap-3">
                 <BadgeNotificaciones colorClase={modoOscuro ? '' : 'text-[#0B1535]'} />
-                <button onClick={onDashboardClick}
+                <button onClick={onPanelClick}
                   className={`p-2 rounded-full cursor-pointer ${modoOscuro ? tema.btnInactive : 'bg-transparent text-[#0B1535] hover:text-amber-500 rounded-full'} hover:text-amber-500 transition-colors`}
-                  title="Dashboard"
+                  title="Panel"
                 >
                   <Icono nombre="grid" className="h-6 w-6" strokeWidth={2} />
                 </button>
@@ -117,7 +117,7 @@ export function BarraNavegacion({
               user={user}
               menuAbierto={menuAbierto}
               setMenuAbierto={setMenuAbierto}
-              onDashboardClick={onDashboardClick}
+              onPanelClick={onPanelClick}
               onLogout={onLogout}
               onLoginClick={onLoginClick}
               onAyuda={() => setMostrarAyuda(true)}

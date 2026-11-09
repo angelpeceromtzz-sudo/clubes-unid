@@ -39,7 +39,7 @@ export default function PaginaTerminosCondiciones() {
           </p>
           <ul className={`list-disc pl-6 space-y-1 ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
             <li>Alumnos.</li>
-            <li>Presidentes y responsables de clubes.</li>
+            <li>Responsables de clubes.</li>
             <li>Personal administrativo autorizado.</li>
             <li>Otros usuarios autorizados por la institución.</li>
           </ul>
@@ -51,13 +51,13 @@ export default function PaginaTerminosCondiciones() {
         <div className="space-y-4">
           <h2 className="text-xl font-black">3. Creación y administración de clubes</h2>
           <p className={`leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-            Los usuarios autorizados podrán proponer o administrar clubes conforme a las reglas establecidas por la institución.
+            La creación y administración de clubes es competencia del personal administrativo autorizado, que podrá crear, editar, suspender o dar de baja un club conforme a las reglas institucionales.
           </p>
           <p className={`leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-            La creación de un club no implica su aprobación automática. La institución podrá revisar, aprobar, rechazar, suspender o cancelar cualquier club cuando sea necesario.
+            Los responsables de un club podrán administrar la información, convocatorias, horarios y miembros de su propio club, pero no crear ni eliminar clubes.
           </p>
           <p className={`leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-            La información proporcionada al crear un club debe ser verdadera, clara y estar actualizada.
+            La información proporcionada al crear o editar un club debe ser verdadera, clara y estar actualizada.
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export default function PaginaTerminosCondiciones() {
             Los responsables de los clubes deberán publicar información correcta sobre sus convocatorias, horarios, actividades y requisitos.
           </p>
           <p className={`leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
-            El cupo máximo de un club deberá seleccionarse entre las opciones permitidas por la plataforma. El responsable no podrá establecer cupos negativos, iguales a cero o superiores al límite autorizado.
+            El cupo máximo de un club deberá seleccionarse entre las opciones permitidas por la plataforma. Los cupos los establece el personal administrativo autorizado y no podrán ser negativos, iguales a cero ni superiores al límite autorizado.
           </p>
           <p className={`leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
             La inscripción estará sujeta a la disponibilidad de lugares y a las reglas de cada club.
@@ -148,7 +148,7 @@ export default function PaginaTerminosCondiciones() {
           </p>
           <ul className={`list-disc pl-6 space-y-1 ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
             <li>Correo: 00906641@red.unid.mx</li>
-            <li>Teléfono:+52 981 224 0307</li>
+            <li>Teléfono: +52 981 224 0307</li>
             <li>Institución responsable: Universidad Interamericana para el Desarrollo</li>
           </ul>
         </div>

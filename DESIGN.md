@@ -26,7 +26,7 @@ Cada regla se marca como:
 | Iconografía | Lucide React, con nombres compatibles a través del componente `Icono`; símbolos académicos con color por categoría | `src/components/ui/Icono.jsx`, `src/constants/tiposFecha.js` |
 | Marca gráfica | `logo-lobo.svg` (navbar), `lobounid.png` (marca de agua encuesta/landing), `LogoU.png` (Portal), `favicon.svg` | `public/`, `src/components/layout/barra-navegacion/Logotipo.jsx`, `FondoEncuesta.jsx`, `BotonPortal.jsx` |
 
-**Alcance de esta guía:** páginas públicas (`/`, `/club/:id`, `/conoce-clubs`, `/encuesta/:slug`, `/calendario?vista=mural`) y componentes compartidos de `src/components/ui` y `layout`. El calendario sin `vista=mural` requiere sesión desde PBI-18. Los paneles (`/dashboard`, `/presidente`, `/admin`, `/rectoria`) se describen aparte (sección 12).
+**Alcance de esta guía:** páginas públicas (`/`, `/club/:id`, `/conoce-clubs`, `/encuesta/:slug`, `/calendario?vista=mural`) y componentes compartidos de `src/components/ui` y `layout`. El calendario sin `vista=mural` requiere sesión desde PBI-18. Los paneles (`/panel`, `/presidente`, `/admin`, `/rectoria`) se describen aparte (sección 12).
 
 **Color de marca no centralizado:** no existe un archivo de tokens de color. Los hex y clases Tailwind están repartidos en `ThemeContext` y en JSX. Cualquier alias nuevo (p. ej. `--color-brand`) se considera **Propuesta**.
 
@@ -315,7 +315,7 @@ La página deja de usar la secuencia «título + cajas con borde» y se compone 
 ### 11.4 Montaje fuera del layout del sistema (Verificado)
 
 - `/conoce-clubs` se sirve con un **return temprano en `App.jsx`** (mismo patrón que `/encuesta/:slug`): la página declara su propio `<Routes>` y se monta **sin el layout del sistema** — sin `BarraNavegacion`, sin `NavegacionInferiorMovil`, sin `SplashScreen` y sin `ModalNoticias`/`ModalActualizaciones`. Permisos y demás rutas no cambian.
-- La landing lleva su **propia barra**: solo `Logotipo` (componente compartido, estilos del tema), estática (no sticky) y **sin controles del sistema** (sin hamburguesa, portal, notificaciones, dashboard ni botón de tema; el tema usa el default/`localStorage`).
+- La landing lleva su **propia barra**: solo `Logotipo` (componente compartido, estilos del tema), estática (no sticky) y **sin controles del sistema** (sin hamburguesa, portal, notificaciones, panel ni botón de tema; el tema usa el default/`localStorage`).
 - Sin accesos salientes al catálogo ni al portal principal en esta etapa (decisión explícita de producto); el botón «Ir al portal» se retiró de la landing. La barra propia solo conserva `Logotipo` estático.
 - Anclas con `scroll-mt-8`: no hay cabecera fija que compensar.
 
@@ -461,7 +461,7 @@ Medido (CDP, `scrollHeight` vs `clientHeight`):
 | Panel del editor | 714 / 714 | 564 / 564 | 332 / 332 |
 | Contenido de la pestaña | 622 / 622 (cabe) | 439 / 761 | 168 / 788 |
 
-> **Scroll global del panel padre (preexistente, no del editor):** el documento mide 72 px más que la ventana en escritorio (972 vs 900) y 124 px en móvil. La causa está en el contenedor del panel de administración, no en el editor: la raíz reserva `pt-[var(--navbar-height)]` (72 px) para la navbar fija y la fila del panel usa `min-h-screen` (900 px), así que siempre sobra ese trozo. Es el mismo comportamiento en el dashboard y en las demás secciones, y no se tocó por mantener el alcance en el editor.
+> **Scroll global del panel padre (preexistente, no del editor):** el documento mide 72 px más que la ventana en escritorio (972 vs 900) y 124 px en móvil. La causa está en el contenedor del panel de administración, no en el editor: la raíz reserva `pt-[var(--navbar-height)]` (72 px) para la navbar fija y la fila del panel usa `min-h-screen` (900 px), así que siempre sobra ese trozo. Es el mismo comportamiento en el panel y en las demás secciones, y no se tocó por mantener el alcance en el editor.
 
 ### 14.3 Pestañas: la línea de la fila (Verificado)
 

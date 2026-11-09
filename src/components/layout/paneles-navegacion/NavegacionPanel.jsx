@@ -150,7 +150,7 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
                          <path strokeLinecap="round" strokeLinejoin="round" d={itemResumen.icon} />
                        </svg>
                      )}
-                     <span>Mi Dashboard</span>
+                     <span>Mi Panel</span>
                    </button>
                    {itemUsuarios && renderBoton(itemUsuarios, false)}
                    {itemGestionClubes && renderGrupo(itemGestionClubes, false)}

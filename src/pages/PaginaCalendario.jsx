@@ -33,7 +33,7 @@ export function PaginaCalendario({ onLoginClick }) {
   const [editorMural, setEditorMural] = useState(null);
   const [compartir, setCompartir] = useState(false);
   const [mensajeMural, setMensajeMural] = useState('');
-  const basePanel = `${esAdmin ? '/admin' : esResponsableMural ? '/mural' : '/rectoria'}/dashboard`;
+  const basePanel = `${esAdmin ? '/admin' : esResponsableMural ? '/mural' : '/rectoria'}/panel`;
   const [parametros, setParametros] = useSearchParams();
   const vista = parametros.get('vista') === 'mural' ? 'mural' : 'calendario';
   const calendarioBloqueado = authReady && !estaAutenticado;

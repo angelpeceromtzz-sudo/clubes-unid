@@ -68,8 +68,8 @@ export function PanelResponsableClub() {
       >
         <div className="mb-6 md:mb-8">
             <EncabezadoPagina
-              titulo={d.esResponsableClub ? 'Panel de Presidente' : 'Panel de Vicepresidente'}
-              subtitulo={`Bienvenido, ${d.user.nombre_completo} · ${d.esResponsableClub ? 'Presidente' : 'Vicepresidente'} de ${d.club.nombre_club}`}
+              titulo={d.esResponsableClub ? 'Panel de Presidente' : 'Panel de Lider de Club'}
+              subtitulo={`Bienvenido, ${d.user.nombre_completo} · ${d.esResponsableClub ? 'Presidente' : 'Lider de Club'} de ${d.club.nombre_club}`}
             />
           </div>
 

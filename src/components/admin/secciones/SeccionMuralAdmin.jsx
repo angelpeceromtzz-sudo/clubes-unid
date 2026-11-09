@@ -42,7 +42,7 @@ export function SeccionMuralAdmin() {
   const [devolviendo, setDevolviendo] = useState(null);
   const [revisando, setRevisando] = useState(null);
   const hoy = fechaHoyCampus();
-  const basePanel = `${esAdmin ? '/admin' : esResponsableMural ? '/mural' : '/rectoria'}/dashboard`;
+  const basePanel = `${esAdmin ? '/admin' : esResponsableMural ? '/mural' : '/rectoria'}/panel`;
 
   const lista = useMemo(() => gestor.publicaciones.filter((item) =>
     `${item.titulo} ${item.subtitulo || ''} ${item.contenido}`.toLocaleLowerCase('es').includes(busqueda.toLocaleLowerCase('es')) &&

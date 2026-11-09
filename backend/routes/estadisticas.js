@@ -101,7 +101,7 @@ router.get('/encuestas-ejecutivas', async (req, res) => {
 // Estadísticas generales del ecosistema de clubes (situación actual).
 // El filtro de club restringe el universo; el periodo NO se aplica aquí
 // porque cupos e inscripciones activas actuales no reconstruyen un corte histórico.
-router.get('/dashboard', async (req, res) => {
+router.get('/panel', async (req, res) => {
   try {
     const { id_club } = req.query;
 

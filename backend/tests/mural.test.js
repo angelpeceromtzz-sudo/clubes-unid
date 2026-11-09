@@ -142,7 +142,7 @@ test('rechaza enlaces ejecutables, fechas inexistentes y opciones mal formadas a
 });
 
 test('guarda el destino compartido del QR y lo normaliza hacia el mural público', async () => {
-  const guardado = await enviar('PUT', { url_publica: 'https://campus.example.org/admin/dashboard?seccion=usuarios#privado' }, 4, '/config');
+  const guardado = await enviar('PUT', { url_publica: 'https://campus.example.org/admin/panel?seccion=usuarios#privado' }, 4, '/config');
   assert.equal(guardado.status, 200);
   assert.equal(guardado.datos.url_publica, 'https://campus.example.org/calendario?vista=mural');
   assert.equal((await enviar('GET', null, null, '/config')).datos.url_publica, guardado.datos.url_publica);

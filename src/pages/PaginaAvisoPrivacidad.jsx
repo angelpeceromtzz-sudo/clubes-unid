@@ -28,9 +28,7 @@ export default function PaginaAvisoPrivacidad() {
             <li>Nombre completo.</li>
             <li>Matrícula o identificador institucional.</li>
             <li>Correo institucional.</li>
-            <li>Campus.</li>
             <li>Programa académico o licenciatura.</li>
-            <li>Semestre o nivel académico.</li>
             <li>Rol dentro de la plataforma.</li>
             <li>Clubes en los que participa.</li>
             <li>Registros de inscripción y asistencia.</li>
@@ -68,6 +66,9 @@ export default function PaginaAvisoPrivacidad() {
           </p>
           <p className={`leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
             No se deberán utilizar para fines comerciales ni compartirse con terceros no autorizados, salvo que exista una obligación legal o autorización correspondiente.
+          </p>
+          <p className={`leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+            Para su operación, la plataforma utiliza servicios de terceros (alojamiento y almacenamiento de archivos) y guarda localmente en el dispositivo del usuario el identificador de sesión necesario para mantener la autenticación.
           </p>
         </div>
 

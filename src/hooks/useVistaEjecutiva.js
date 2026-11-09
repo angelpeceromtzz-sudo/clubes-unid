@@ -8,7 +8,7 @@ export function useVistaEjecutiva() {
   const [ocupacionClubes, setOcupacionClubes] = useState([]);
   const [topClubes, setTopClubes] = useState([]);
   const [clubesDetalle, setClubesDetalle] = useState([]);
-  const [dashboardData, setDashboardData] = useState(null);
+  const [panelData, setPanelData] = useState(null);
   const [asistencia, setAsistencia] = useState(null);
   const [encuestas, setEncuestas] = useState(null);
   const [listaEncuestas, setListaEncuestas] = useState([]);
@@ -31,8 +31,8 @@ export function useVistaEjecutiva() {
   const cargar = useCallback(async () => {
     setCargando(true);
     setError('');
-    const paramsDashboard = new URLSearchParams();
-    if (filtros.id_club) paramsDashboard.set('id_club', filtros.id_club);
+    const paramsPanel = new URLSearchParams();
+    if (filtros.id_club) paramsPanel.set('id_club', filtros.id_club);
 
     const paramsOcupacion = new URLSearchParams();
     if (filtros.id_club) paramsOcupacion.set('id_club', filtros.id_club);
@@ -40,11 +40,11 @@ export function useVistaEjecutiva() {
     const paramsTop = new URLSearchParams();
     if (filtros.id_club) paramsTop.set('id_club', filtros.id_club);
 
-    const paramsDashboardData = new URLSearchParams();
-    if (filtros.id_club) paramsDashboardData.set('id_club', filtros.id_club);
-    if (filtros.id_periodo) paramsDashboardData.set('id_periodo', filtros.id_periodo);
-    if (filtros.carrera) paramsDashboardData.set('carrera', filtros.carrera);
-    if (filtros.estado) paramsDashboardData.set('estado', filtros.estado);
+    const paramsPanelData = new URLSearchParams();
+    if (filtros.id_club) paramsPanelData.set('id_club', filtros.id_club);
+    if (filtros.id_periodo) paramsPanelData.set('id_periodo', filtros.id_periodo);
+    if (filtros.carrera) paramsPanelData.set('carrera', filtros.carrera);
+    if (filtros.estado) paramsPanelData.set('estado', filtros.estado);
 
     const paramsAsistencia = new URLSearchParams();
     if (filtros.id_club) paramsAsistencia.set('id_club', filtros.id_club);
@@ -56,12 +56,12 @@ export function useVistaEjecutiva() {
     const qs = (p) => p.toString() ? `?${p.toString()}` : '';
 
     try {
-      const [datosStats, ocupacion, top, clubes, dashboard, datosAsistencia, datosEncuestas, datosListaEncuestas, datosPeriodos, datosLicenciaturas] = await Promise.all([
-        api.get(`/estadisticas/dashboard${qs(paramsDashboard)}`),
+      const [datosStats, ocupacion, top, clubes, panel, datosAsistencia, datosEncuestas, datosListaEncuestas, datosPeriodos, datosLicenciaturas] = await Promise.all([
+        api.get(`/estadisticas/panel${qs(paramsPanel)}`),
         api.get(`/estadisticas/ocupacion-clubes${qs(paramsOcupacion)}`),
         api.get(`/estadisticas/top-clubes${qs(paramsTop)}`),
         api.get('/estadisticas/clubes-detalle'),
-        api.get(`/admin/dashboard-data${qs(paramsDashboardData)}`),
+        api.get(`/admin/panel-data${qs(paramsPanelData)}`),
         api.get(`/estadisticas/asistencia-ejecutiva${qs(paramsAsistencia)}`),
         api.get(`/estadisticas/encuestas-ejecutivas${qs(paramsEncuestas)}`),
         api.get('/encuestas/admin'),
@@ -72,7 +72,7 @@ export function useVistaEjecutiva() {
       setOcupacionClubes(ocupacion);
       setTopClubes(top);
       setClubesDetalle(clubes);
-      setDashboardData(dashboard);
+      setPanelData(panel);
       setAsistencia(datosAsistencia);
       setEncuestas(datosEncuestas);
       setListaEncuestas(Array.isArray(datosListaEncuestas) ? datosListaEncuestas : []);
@@ -147,7 +147,7 @@ export function useVistaEjecutiva() {
     ocupacionClubes,
     topClubes,
     clubesDetalle,
-    dashboardData,
+    panelData,
     asistencia,
     encuestas,
     listaEncuestas,
@@ -164,6 +164,6 @@ export function useVistaEjecutiva() {
     filtros,
     aplicarFiltros,
     recargar: cargar,
-    actualizadoEn: dashboardData?.actualizado_en || null,
+    actualizadoEn: panelData?.actualizado_en || null,
   };
 }

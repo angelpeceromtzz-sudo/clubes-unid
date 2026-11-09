@@ -31,10 +31,10 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
   const enPanel = location.pathname !== '/campus/campeche/portal';
 
   function irPanel() {
-    if (esAdmin) navigate('/admin/dashboard');
-    else if (esResponsableClub) navigate('/campus/campeche/portal/responsable-de-club/dashboard');
-    else if (esResponsableMural) navigate('/mural/dashboard');
-    else navigate('/dashboard');
+    if (esAdmin) navigate('/admin/panel');
+    else if (esResponsableClub) navigate('/campus/campeche/portal/responsable-de-club/panel');
+    else if (esResponsableMural) navigate('/mural/panel');
+    else navigate('/panel');
   }
 
   return (

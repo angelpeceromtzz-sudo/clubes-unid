@@ -1,4 +1,4 @@
-/* Punto de entrada principal. Renderiza la barra de navegación, las rutas (inicio, dashboard por rol) y el modal de inicio de sesión. */
+/* Punto de entrada principal. Renderiza la barra de navegación, las rutas (inicio, panel por rol) y el modal de inicio de sesión. */
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
@@ -123,7 +123,7 @@ function App() {
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
   // coincide con NAVBAR_HEIGHT y no con la del logotipo de NAVBAR_HEIGHT_LOGO.
-  const esRutaPanel = ['/dashboard', '/campus/campeche/portal/responsable-de-club/dashboard', '/admin/dashboard', '/rectoria/dashboard', '/mural/dashboard'].includes(location.pathname);
+  const esRutaPanel = ['/panel', '/campus/campeche/portal/responsable-de-club/panel', '/admin/panel', '/rectoria/panel', '/mural/panel'].includes(location.pathname);
   const alturaNavbar = esRutaPanel ? NAVBAR_HEIGHT_LOGO : NAVBAR_HEIGHT;
 
   // La encuesta pública se monta FUERA del layout de abajo, a propósito: es la
@@ -192,19 +192,19 @@ function App() {
     );
   }
 
-  function irADashboard() {
+  function irAPanel() {
     if (esCoordinacion) {
-      navigate('/admin/dashboard');
+      navigate('/admin/panel');
     } else if (esAdmin) {
-      navigate('/admin/dashboard');
+      navigate('/admin/panel');
     } else if (esResponsableClub) {
-      navigate('/campus/campeche/portal/responsable-de-club/dashboard');
+      navigate('/campus/campeche/portal/responsable-de-club/panel');
     } else if (esRectoria) {
-      navigate('/rectoria/dashboard');
+      navigate('/rectoria/panel');
     } else if (esResponsableMural) {
-      navigate('/mural/dashboard');
+      navigate('/mural/panel');
     } else {
-      navigate('/dashboard');
+      navigate('/panel');
     }
     setMenuAbierto(false);
   }
@@ -230,9 +230,9 @@ return (
           user={usuario}
           onLoginClick={() => setShowLogin(true)}
           onLogout={() => setConfirmarLogout(true)}
-          onDashboardClick={irADashboard}
+          onPanelClick={irAPanel}
           mostrarFiltros={mostrarFiltros}
-          mostrarNoticias={mostrarFiltros || location.pathname === '/admin/dashboard'}
+          mostrarNoticias={mostrarFiltros || location.pathname === '/admin/panel'}
           mostrarLogo={esRutaPanel}
           onVolverCatalogo={irACatalogo}
           contenidoMax={location.pathname.startsWith('/campus/campeche/portal/club/') ? '7xl' : null}
@@ -282,32 +282,32 @@ return (
         <Route path="/campus/campeche/portal/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />
-        <Route path="/dashboard" element={
+        <Route path="/panel" element={
           <RutaProtegida>
             <PanelAlumno />
           </RutaProtegida>
         } />
-        <Route path="/campus/campeche/portal/responsable-de-club/dashboard" element={
+        <Route path="/campus/campeche/portal/responsable-de-club/panel" element={
           <RutaProtegida requierePresidente>
             <PanelResponsableClub />
           </RutaProtegida>
         } />
-        <Route path="/admin/dashboard" element={
+        <Route path="/admin/panel" element={
           <RutaProtegida requiereAdminOCoordinacion>
             <PanelAdmin />
           </RutaProtegida>
         } />
-        <Route path="/rectoria/dashboard" element={
+        <Route path="/rectoria/panel" element={
           <RutaProtegida requiereRectoria>
             <PanelRectoria />
           </RutaProtegida>
         } />
-        <Route path="/campus/campeche/coordinacion/dashboard" element={
+        <Route path="/campus/campeche/coordinacion/panel" element={
           <RutaProtegida requiereAdminOCoordinacion>
             <PanelAdmin />
           </RutaProtegida>
         } />
-        <Route path="/mural/dashboard" element={
+        <Route path="/mural/panel" element={
           <RutaProtegida requiereResponsableMural>
             <PanelMural />
           </RutaProtegida>

@@ -1,4 +1,4 @@
-/* Dashboard de administración: grid responsiva con KPIs, inscripciones, gráfica, clubes populares y actividad. */
+/* Panel de administración: grid responsiva con KPIs, inscripciones, gráfica, clubes populares y actividad. */
 import { TarjetasEstadisticas } from './TarjetasEstadisticas';
 import { UltimasInscripciones } from './UltimasInscripciones';
 import { GraficaInscripciones } from './GraficaInscripciones';
@@ -6,12 +6,12 @@ import { ClubesPopulares } from './ClubesPopulares';
 import { ActividadRecienteFeed } from './ActividadRecienteFeed';
 import { NoticiasRecientes } from './NoticiasRecientes';
 
-export function DashboardAdmin({
+export function PanelAdmin({
   totalAlumnos,
   clubesActivos,
   totalInscripciones,
   solicitudesPendientes,
-  cargandoDashboard,
+  cargandoPanel,
   inscripciones,
   inscripcionesPorMes,
   postulacionesPorMes,
@@ -28,7 +28,7 @@ export function DashboardAdmin({
         clubesActivos={clubesActivos}
         totalInscripciones={totalInscripciones}
         solicitudesPendientes={solicitudesPendientes}
-        cargandoDashboard={cargandoDashboard}
+        cargandoPanel={cargandoPanel}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -36,19 +36,19 @@ export function DashboardAdmin({
         <div className="lg:col-span-2 space-y-6">
           <UltimasInscripciones
             inscripciones={inscripciones}
-            cargando={cargandoDashboard}
+            cargando={cargandoPanel}
           />
           <GraficaInscripciones
             titulo="Postulaciones por periodo"
             etiqueta="postulaciones"
             datos={postulacionesPorMes}
-            cargando={cargandoDashboard}
+            cargando={cargandoPanel}
           />
           <GraficaInscripciones
             titulo="Inscripciones activas"
             etiqueta="inscripciones"
             datos={inscripcionesPorMes}
-            cargando={cargandoDashboard}
+            cargando={cargandoPanel}
           />
         </div>
 

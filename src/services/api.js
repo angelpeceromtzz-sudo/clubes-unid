@@ -14,7 +14,7 @@ import { diapositivaService } from './diapositiva.service';
 import { noticiaService } from './noticia.service';
 import { calendarioService } from './calendario.service';
 import { uploadService } from './upload.service';
-import { dashboardService } from './dashboard.service';
+import { panelService } from './panel.service';
 import { encuestaService, catalogoService } from './encuesta.service';
 import { asistenciaService } from './asistencia.service';
 
@@ -35,7 +35,7 @@ export { diapositivaService } from './diapositiva.service';
 export { noticiaService } from './noticia.service';
 export { calendarioService } from './calendario.service';
 export { uploadService } from './upload.service';
-export { dashboardService } from './dashboard.service';
+export { panelService } from './panel.service';
 export { encuestaService, catalogoService } from './encuesta.service';
 export { asistenciaService } from './asistencia.service';
 
@@ -143,7 +143,7 @@ export const api = {
 
   uploadImagen: uploadService.uploadImagen,
 
-  getDashboardData: dashboardService.getDashboardData,
+  getPanelData: panelService.getPanelData,
 
   obtenerEncuestaPublica: encuestaService.obtenerPublica,
   obtenerResumenPublico: encuestaService.obtenerResumenPublico,

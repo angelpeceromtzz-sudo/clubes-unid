@@ -6,7 +6,7 @@ Sistema de gestión de clubes universitarios para UNID Campeche. Permite a alumn
 
 ## Mural digital
 
-Administración, Rectoría y el rol **responsable del mural** tienen la sección **Mural digital** para crear, editar, publicar, destacar, ocultar y eliminar publicaciones con imagen, resumen, mensaje, enlace y último día visible. También pueden configurar la dirección del QR. Se pueden editar desde el panel o desde las tarjetas públicas al iniciar sesión como editor. El responsable accede desde `/mural/dashboard`; sus noticias y eventos siguen el flujo de aprobación de Rectoría. Las fechas académicas se administran desde Coordinación y Rectoría.
+Administración, Rectoría y el rol **responsable del mural** tienen la sección **Mural digital** para crear, editar, publicar, destacar, ocultar y eliminar publicaciones con imagen, resumen, mensaje, enlace y último día visible. También pueden configurar la dirección del QR. Se pueden editar desde el panel o desde las tarjetas públicas al iniciar sesión como editor. El responsable accede desde `/mural/panel`; sus noticias y eventos siguen el flujo de aprobación de Rectoría. Las fechas académicas se administran desde Coordinación y Rectoría.
 
 En el panel, **Dirección pública del sitio** guarda en la base de datos el destino del QR. También se utiliza `VITE_PUBLIC_URL` o el origen actual si no hay una dirección guardada. El QR abre `/calendario?vista=mural`, sin sesión, y se descarga en PNG o SVG. Una dirección localhost solo sirve en el equipo de desarrollo; usa el dominio publicado para compartirlo con teléfonos.
 
@@ -220,7 +220,7 @@ clubes-unid/
 | Plataforma | Componente | Configuración |
 |---|---|---|
 | **Vercel** | Frontend | `vercel.json` apunta a Vite, SPA fallback a `index.html` |
-| **Render** | Backend | Servicio Web, variables de entorno desde dashboard |
+| **Render** | Backend | Servicio Web, variables de entorno desde panel |
 | **Supabase** | Base de datos (PostgreSQL) | Conexión desde backend vía `DATABASE_URL` (SSL) |
 
 > **Destino desplegado: pendiente de confirmación.** La infraestructura
@@ -232,7 +232,7 @@ clubes-unid/
 ### Variables en producción
 
 - **Vercel**: variables `VITE_*` (URL del API, Azure), horneadas en el build.
-- **Render** (dashboard): `DATABASE_URL` **sin** parámetros `ssl`/`sslmode`
+- **Render** (panel): `DATABASE_URL` **sin** parámetros `ssl`/`sslmode`
   (el backend exige TLS verificado; ver `backend/.env.example`) y sin `DB_*`
   locales; `JWT_SECRET` y `ADMIN_SECRET` con valores nuevos (H3);
   `CLOUDINARY_URL`; `CORS_ORIGIN` de producción; `NODE_ENV=production` (H8);

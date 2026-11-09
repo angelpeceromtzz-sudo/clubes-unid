@@ -5,7 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 // import { useNoticias } from '../../contexts/NoticiasContext';
 import { Icono } from '../ui/Icono';
 
-export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClick, onLogout, onLoginClick, onAyuda, itemsNav = [], onNavChange, ocultarHamburguesa = false }) {
+export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, onLogout, onLoginClick, onAyuda, itemsNav = [], onNavChange, ocultarHamburguesa = false }) {
   const { modoOscuro, setModoOscuro, tema } = useTheme();
 // const { noLeidas } = useNoticias();
   const dropdownRef = useRef(null);
@@ -75,11 +75,11 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 {!itemsNav.some((i) => i.key === 'gestion-clubes') && (
                   <button
-                    onClick={() => { onDashboardClick(); setMenuAbierto(false); }}
+                    onClick={() => { onPanelClick(); setMenuAbierto(false); }}
                     className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                   >
                     <Icono nombre="grid" className="h-4 w-4" strokeWidth={2} />
-                    Mi Dashboard
+                    Mi Panel
                   </button>
                 )}
                 {itemsNav.length > 0 && (
@@ -95,11 +95,11 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onDashboardClic
                             ADMINISTRAR
                           </div>
                           <button
-                             onClick={() => { onDashboardClick(); setMenuAbierto(false); }}
+                             onClick={() => { onPanelClick(); setMenuAbierto(false); }}
                              className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                            >
                              <Icono nombre="grid" className="h-4 w-4" strokeWidth={2} />
-                             Mi Dashboard
+                             Mi Panel
                            </button>
                            {itemUsuarios && (
                             <button

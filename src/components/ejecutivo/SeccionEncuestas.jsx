@@ -1,5 +1,5 @@
 import { useTheme } from '../../contexts/ThemeContext';
-import { formatearEntero } from '../../utils/formatoDashboard';
+import { formatearEntero } from '../../utils/formatoPanel';
 import { GraficaBarrasHorizontales } from './GraficaBarrasHorizontales';
 import { GraficaPreguntaEncuesta } from './GraficaPreguntaEncuesta';
 import { MarcoGrafica, EstadoGrafica } from './MarcoGrafica';

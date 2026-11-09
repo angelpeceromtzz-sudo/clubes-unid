@@ -17,7 +17,7 @@ VALUES (
 );
 
 -- 2. ALUMNO YA INSCRITO (con inscripción activa en el club 4 - Basketball)
---    → Al iniciar sesión se redirige automáticamente a su Dashboard.
+--    → Al iniciar sesión se redirige automáticamente a su Panel.
 INSERT INTO usuarios (nombre_completo, correo_institucional, password_hash, id_rol)
 VALUES (
   'María Fernanda López García',

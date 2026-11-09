@@ -57,7 +57,7 @@ test('el PDF incluye la pregunta seleccionada y permite textos que ocupan varias
 });
 
 test('la evolución conserva meses con sólo postulaciones o sólo inscripciones y los ordena', () => {
-  const reporte = crearReportePDF({ ...datos, dashboardData: { postulacionesPorMes: [{ clave: '2026-11', total: 4 }], inscripcionesPorMes: [{ clave: '2026-10', total: 2 }] } }, 'postulaciones');
+  const reporte = crearReportePDF({ ...datos, panelData: { postulacionesPorMes: [{ clave: '2026-11', total: 4 }], inscripcionesPorMes: [{ clave: '2026-10', total: 2 }] } }, 'postulaciones');
   assert.deepEqual(reporte.tablas[0].filas, [['2026-10', '0', '2'], ['2026-11', '4', '0']]);
 });
 

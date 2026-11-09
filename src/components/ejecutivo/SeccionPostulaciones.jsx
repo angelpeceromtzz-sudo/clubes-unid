@@ -1,5 +1,5 @@
 import { useTheme } from '../../contexts/ThemeContext';
-import { formatearEntero } from '../../utils/formatoDashboard';
+import { formatearEntero } from '../../utils/formatoPanel';
 import { GraficaBarrasAgrupadas } from './GraficaBarrasAgrupadas';
 import { ContenedorFiltros, Filtro } from './FiltroSeccion';
 
@@ -20,8 +20,8 @@ export function SeccionPostulaciones({ d }) {
   const { cardCls, modoOscuro } = useTheme();
 
   const evolucionMensual = combinarSeriesPorMes(
-    d.dashboardData?.postulacionesPorMes || [],
-    d.dashboardData?.inscripcionesPorMes || []
+    d.panelData?.postulacionesPorMes || [],
+    d.panelData?.inscripcionesPorMes || []
   );
 
   return (
@@ -68,7 +68,7 @@ export function SeccionPostulaciones({ d }) {
           <h3 className={`text-sm font-black uppercase tracking-wider mb-3 ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
             Solicitudes pendientes
           </h3>
-          <p className={`text-3xl font-black ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>{formatearEntero(d.dashboardData?.solicitudesPendientes)}</p>
+          <p className={`text-3xl font-black ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>{formatearEntero(d.panelData?.solicitudesPendientes)}</p>
           <p className={`text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
             Postulaciones en estado Pendiente o En revisión.
           </p>

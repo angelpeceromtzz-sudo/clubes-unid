@@ -42,7 +42,7 @@ export function usePanelRectoria() {
     setError('');
     try {
       const [datosStats, ocupacion, top] = await Promise.all([
-        api.get('/estadisticas/dashboard'),
+        api.get('/estadisticas/panel'),
         api.get('/estadisticas/ocupacion-clubes'),
         api.get('/estadisticas/top-clubes'),
       ]);

@@ -13,12 +13,12 @@ export function ModalVP({ modalVP, modoOscuro, tema, onClose, onConfirm }) {
             </span>
           </div>
           <h3 className={`text-lg font-bold ${tema.title}`}>
-            {modalVP.accion === 'asignar' ? 'Designar Vicepresidente' : 'Quitar Vicepresidente'}
+            {modalVP.accion === 'asignar' ? 'Designar Lider de Club' : 'Quitar Lider de Club'}
           </h3>
           <p className={`mt-2 text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-600'}`}>
             {modalVP.accion === 'asignar'
-              ? `¿Seguro que quieres designar a ${modalVP.usuario.nombre_completo} como Vicepresidente del club?`
-              : `¿Seguro que quieres quitar a ${modalVP.usuario.nombre_completo} como Vicepresidente?`}
+              ? `¿Seguro que quieres designar a ${modalVP.usuario.nombre_completo} como Lider de Club del club?`
+              : `¿Seguro que quieres quitar a ${modalVP.usuario.nombre_completo} como Lider de Club?`}
           </p>
         </div>
         <div className="flex gap-3 mt-6">

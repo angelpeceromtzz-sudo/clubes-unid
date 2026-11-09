@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test src/utils/otpAcceso.test.js src/utils/nombreOtp.test.js src/utils/reintentosHttp.test.js tests/graficas-dashboard.test.js tests/exportaciones-estadisticas.test.js",
+    "test": "node --test src/utils/otpAcceso.test.js src/utils/nombreOtp.test.js src/utils/reintentosHttp.test.js tests/graficas-panel.test.js tests/exportaciones-estadisticas.test.js",
     "test:calendario": "node --test tests/calendario.test.js backend/tests/calendario.test.js backend/tests/fechasCalendario.test.js",
     "test:mural": "node --test tests/mural.test.js backend/tests/mural.test.js",
     "test:permisos-horarios": "node --test backend/tests/pbi12-13.integration.test.js",

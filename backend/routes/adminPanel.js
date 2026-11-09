@@ -1,4 +1,4 @@
-/* Ruta del dashboard de admin: métricas agregadas, últimas inscripciones y tendencia. */
+/* Ruta del panel de admin: métricas agregadas, últimas inscripciones y tendencia. */
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
@@ -7,7 +7,7 @@ import { esIdEntero } from '../lib/validarId.js';
 
 const router = Router();
 
-router.get('/dashboard-data', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
+router.get('/panel-data', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id_club, id_periodo, carrera, estado } = req.query;
 
@@ -137,7 +137,7 @@ router.get('/dashboard-data', authenticate, requireRole(ROL_ADMIN, ROL_COORDINAC
       actualizado_en: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Error al obtener datos del dashboard admin:', err);
+    console.error('Error al obtener datos del panel admin:', err);
     res.status(500).json({ error: 'Error interno del servidor', estado: 'error' });
   }
 });

@@ -1,4 +1,4 @@
-/* Tabla compacta de las últimas 5 inscripciones en el dashboard de admin. */
+/* Tabla compacta de las últimas 5 inscripciones en el panel de admin. */
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { Icono } from '../ui/Icono';

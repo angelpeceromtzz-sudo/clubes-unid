@@ -106,14 +106,14 @@ export function crearReportePDF(d, tab, fecha = new Date()) {
     reporte.nota = 'La distribución por licenciatura incluye el conjunto de encuestas. El detalle por pregunta corresponde a la encuesta y pregunta seleccionadas. En opción múltiple los porcentajes pueden sumar más de 100%.';
   } else if (tab === 'postulaciones') {
     const meses = new Map();
-    for (const fila of d.dashboardData?.postulacionesPorMes || []) meses.set(fila.clave, [fila.clave, numero(fila.total), 0]);
-    for (const fila of d.dashboardData?.inscripcionesPorMes || []) {
+    for (const fila of d.panelData?.postulacionesPorMes || []) meses.set(fila.clave, [fila.clave, numero(fila.total), 0]);
+    for (const fila of d.panelData?.inscripcionesPorMes || []) {
       const mes = meses.get(fila.clave) || [fila.clave, 0, 0];
       mes[2] = numero(fila.total);
       meses.set(fila.clave, mes);
     }
     const filas = [...meses.values()].sort((a, b) => a[0].localeCompare(b[0]));
-    reporte.indicadores = [['Solicitudes pendientes', entero(d.dashboardData?.solicitudesPendientes)]];
+    reporte.indicadores = [['Solicitudes pendientes', entero(d.panelData?.solicitudesPendientes)]];
     reporte.tablas = [{ titulo: 'Evolución mensual', encabezados: ['Mes', 'Postulaciones', 'Altas de inscripción'], pesos: [2, 2, 2], filas: filas.map((fila) => [fila[0], entero(fila[1]), entero(fila[2])]) }];
     reporte.graficas = [{ titulo: 'Postulaciones por mes', filas: filas.map((fila) => ({ nombre: fila[0], valor: fila[1] })) }];
     reporte.nota = 'Últimos 6 meses, dentro del periodo seleccionado si lo hay. Pendientes: estados Pendiente o En revisión. Licenciatura y estado filtran postulaciones; las altas de inscripción se filtran por club y periodo.';

@@ -1,6 +1,6 @@
 import { TarjetaKPI } from './TarjetaKPI';
 import { useTheme } from '../../contexts/ThemeContext';
-import { formatearEntero, formatearPorcentaje } from '../../utils/formatoDashboard';
+import { formatearEntero, formatearPorcentaje } from '../../utils/formatoPanel';
 import { GraficaPastel } from './GraficaPastel';
 import { GraficaOcupacionApilada } from './GraficaOcupacionApilada';
 

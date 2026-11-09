@@ -1,4 +1,4 @@
-/* Feed compacto de las últimas noticias registradas en el dashboard de admin. */
+/* Feed compacto de las últimas noticias registradas en el panel de admin. */
 import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { Icono } from '../ui/Icono';

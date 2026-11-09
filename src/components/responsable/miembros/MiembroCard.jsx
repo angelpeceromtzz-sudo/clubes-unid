@@ -11,7 +11,7 @@ function RolTag({ tipo, club }) {
     tipo === 'presidente'
       ? etiquetaResponsable(club)
       : tipo === 'vicepresidente'
-        ? 'Vicepresidente'
+        ? 'Lider de Club'
         : 'Miembro';
   return (
     <span className={`ml-2 text-[10px] uppercase tracking-wider font-bold ${config[tipo]}`}>
@@ -46,7 +46,7 @@ export function MiembroCard({ miembro, club, esResponsableClub, tieneVP, asignan
             disabled={asignando === miembro.id_usuario}
             className={`max-sm:opacity-100 md:opacity-0 md:group-hover:opacity-100 text-xs sm:text-sm font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors cursor-pointer ${asignando === miembro.id_usuario ? 'opacity-50 cursor-not-allowed' : ''} ${esVicepresidente ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'}`}
           >
-            {asignando === miembro.id_usuario ? '...' : esVicepresidente ? 'Quitar Vicepresidente' : 'Hacer Vicepresidente'}
+            {asignando === miembro.id_usuario ? '...' : esVicepresidente ? 'Quitar Lider de Club' : 'Hacer Lider de Club'}
           </button>
         )}
         {!esResponsableClubDelClub && (

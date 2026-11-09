@@ -110,13 +110,13 @@ Desde el menú de usuario (esquina superior derecha), selecciona **"Cerrar Sesi�
 - **Categorías** — Filtrar clubes por "Todos", "Deportes", "Cultura", "Tecnología".
 - **Estado** — Píldoras para filtrar: "Todos", "Abiertos", "Próximos", "Cerrados".
 - **Campana** — Notificaciones (si hay sesión iniciada). Polling cada 30s.
-- **Icono de cuadrícula** — Ir al dashboard (si hay sesión).
-- **Menú de usuario** — Dashboard / Ayuda / Cerrar sesión.
+- **Icono de cuadrícula** — Ir al panel (si hay sesión).
+- **Menú de usuario** — Panel / Ayuda / Cerrar sesión.
 
 ### Navegación inferior (móvil)
 - **Inicio** — Volver al catálogo.
 - **Mi Club** — Acceso directo al panel del alumno (si tiene inscripción activa).
-- **Perfil / Iniciar Sesión** — Acceso al dashboard o al login.
+- **Perfil / Iniciar Sesión** — Acceso al panel o al login.
 
 ### Splash Screen
 Al cargar la aplicación, se muestra una pantalla de presentación mientras se inicializan la autenticación y los datos.
@@ -214,7 +214,7 @@ consultas privadas no se almacenan en caché (`Cache-Control: private, no-store`
 
 ## 7. Panel del Alumno
 
-Ruta: `/dashboard`
+Ruta: `/panel`
 
 ### Vista "Mi Club" (si es miembro)
 - **Banner de bienvenida** con el nombre del club (descartable).
@@ -231,13 +231,13 @@ Ruta: `/dashboard`
 - **Cancelar postulación:** El alumno puede retirar su solicitud si está en revisión, preseleccionado, convocado u oferta enviada.
 
 ### Redirección automática
-Si el usuario tiene rol Presidente, Vicepresidente, Admin o Rectoría, es redirigido automáticamente a su dashboard correspondiente.
+Si el usuario tiene rol Presidente, Vicepresidente, Admin o Rectoría, es redirigido automáticamente a su panel correspondiente.
 
 ---
 
 ## 8. Panel del Presidente / Vicepresidente
 
-Ruta: `/presidente/dashboard`
+Ruta: `/presidente/panel`
 
 ### Mi Club
 - **Información del club:** Datos generales.
@@ -272,9 +272,9 @@ Ruta: `/presidente/dashboard`
 
 ## 9. Panel del Administrador
 
-Ruta: `/admin/dashboard`
+Ruta: `/admin/panel`
 
-### Resumen / Dashboard
+### Resumen / Panel
 - Tarjetas con totales: **Alumnos**, **Clubes Activos**, **Inscripciones Activas**.
 - Gráfica de inscripciones por mes.
 - Clubes más populares.
@@ -318,9 +318,9 @@ Ruta: `/admin/dashboard`
 
 ## 10. Panel de Rectoría
 
-Ruta: `/rectoria/dashboard`
+Ruta: `/rectoria/panel`
 
-### Dashboard (Resumen)
+### Panel (Resumen)
 - **Tarjetas de estadísticas:** Totales del sistema (alumnos, inscritos, clubes, % ocupación).
 - **Barras de ocupación:** Porcentaje de ocupación por club con código de colores:
   - Verde (< 50%), Ámbar (50-79%), Rojo (≥ 80%).
@@ -496,7 +496,7 @@ clubes-unid/
 ### Estadísticas (Rectoría)
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| GET | `/api/estadisticas/dashboard` | Estadísticas generales |
+| GET | `/api/estadisticas/panel` | Estadísticas generales |
 | GET | `/api/estadisticas/ocupacion-clubes` | Ocupación por club |
 | GET | `/api/estadisticas/top-clubes` | Clubes con más miembros |
 | GET | `/api/estadisticas/clubes-detalle` | Detalle de todos los clubes |
@@ -515,7 +515,7 @@ clubes-unid/
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | POST | `/api/admin/asignar-alumno` | Asignar alumno a club |
-| GET | `/api/admin/dashboard-data` | Datos del dashboard admin |
+| GET | `/api/admin/panel-data` | Datos del panel admin |
 
 ### Diapositivas Hero
 | Método | Ruta | Descripción |

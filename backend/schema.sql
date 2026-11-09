@@ -502,7 +502,7 @@ CREATE INDEX IF NOT EXISTS idx_fechas_calendario_inicio ON fechas_calendario(fec
 --   published Publicada                 rejected   Rechazada (con motivo)
 --
 -- `publicada` se conserva como columna ESPEJO (`publicada = status='published'`)
--- para no romper a los lectores actuales: dashboard, `/eventos`,
+-- para no romper a los lectores actuales: panel, `/eventos`,
 -- `intereses_eventos` y cualquier query que todavía compare esa bandera.
 --
 -- Idempotente y seguro de re-ejecutar: el backfill sólo corre la PRIMERA vez,

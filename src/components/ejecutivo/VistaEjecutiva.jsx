@@ -10,7 +10,7 @@ import { SeccionClubes } from './SeccionClubes';
 import { SeccionAsistencia } from './SeccionAsistencia';
 import { SeccionEncuestas } from './SeccionEncuestas';
 import { SeccionPostulaciones } from './SeccionPostulaciones';
-import { formatearFecha } from '../../utils/formatoDashboard';
+import { formatearFecha } from '../../utils/formatoPanel';
 import { crearReportePDF, nombreArchivoReporte, TITULOS_REPORTE } from './exportaciones.utils';
 
 export function VistaEjecutiva({ d }) {
