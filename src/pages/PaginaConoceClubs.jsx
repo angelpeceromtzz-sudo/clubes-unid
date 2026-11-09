@@ -25,17 +25,14 @@ import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
 import { PiePagina } from '../components/layout/PiePagina';
-import { BotonEncuesta } from '../components/landing/BotonEncuesta';
 import {
   LANDING,
-  hayEncuesta,
-  ENCUESTA_SLUG,
 } from '../config/landing';
 
 const CONTENEDOR = 'w-full px-6 sm:px-8 lg:px-12 xl:px-16';
 const CATEGORIA_ORDEN = ['Deportes', 'Cultura', 'Tecnología'];
 const PROPUESTAS_VISIBLES = 6;
-const ENCUESTA_META_RESPUESTAS = 180;
+
 
 // Foco visible compartido: anillo Ã¡mbar sobre superficies; en botones Ã¡mbar
 // sÃ³lidos el anillo va con offset del mismo Ã¡mbar para leerse sobre cualquier
@@ -287,32 +284,13 @@ export default function PaginaConoceClubs({ onLoginClick }) {
     };
   }, []);
 
-  const encuestaActiva = hayEncuesta();
-  const [respuestasEncuesta, setRespuestasEncuesta] = useState(null);
-  const [errorRespuestasEncuesta, setErrorRespuestasEncuesta] = useState(false);
 
-  useEffect(() => {
-    if (!hayEncuesta()) return;
-    let cancelado = false;
-    api
-      .obtenerResumenPublico(ENCUESTA_SLUG)
-      .then((data) => {
-        if (!cancelado) setRespuestasEncuesta(Number(data?.total_respuestas) || 0);
-      })
-      .catch(() => {
-        if (!cancelado) setErrorRespuestasEncuesta(true);
-      });
-    return () => {
-      cancelado = true;
-    };
-  }, []);
 
   // Hero: kicker + imagen vertical + tÃ­tulo + intro + cuadro Lobos Rojos.
   // Una sola imagen configurable en landing.js. Sin imagen (o si falla al
   // cargar) se conserva el fallback de gradiente + panel de identidad.
 
   const bandaConcepto = modoOscuro ? 'bg-[#0e162c]' : 'bg-white';
-  const bandaEncuesta = modoOscuro ? 'bg-[#18223f]' : 'bg-[#0e162c]';
   const tituloSeccion = `text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight ${tema.title}`;
 
 
@@ -644,92 +622,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
         </div>
       </section>
 
-      {/* D. Encuesta: sigue de inmediato a las propuestas para que sea la
-          acciÃ³n evidente tras explorar. Banda invertida con el propÃ³sito, la
-          aclaraciÃ³n y el acceso; mantiene el estado honesto mientras no
-          exista destino. */}
-      <section
-        id="encuesta"
-        aria-labelledby="titulo-encuesta"
-        className={`scroll-mt-8 ${bandaEncuesta}`}
-      >
-        <div className={`${CONTENEDOR} py-12 sm:py-16 lg:py-20`}>
-          <div className="max-w-6xl mx-auto grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-12 lg:items-center">
-            <div className="min-w-0">
-              <h2 id="titulo-encuesta" className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white text-balance">
-                {LANDING.encuesta.titulo}
-              </h2>
-              <p className="mt-3 text-sm sm:text-base leading-relaxed text-slate-300 max-w-2xl">
-                {LANDING.encuesta.subtitulo}
-              </p>
-              <p className="mt-4 text-xs sm:text-sm leading-relaxed max-w-xl font-medium text-amber-300">
-                {LANDING.encuesta.aclaracion}
-              </p>
-              {hayEncuesta() && (
-                <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 max-w-xl">
-                  {errorRespuestasEncuesta ? (
-                    <p className="text-xs leading-relaxed text-slate-300">
-                      No se pudo cargar el progreso de respuestas.
-                    </p>
-                  ) : respuestasEncuesta === null ? (
-                    <p className="text-xs leading-relaxed text-slate-300">Cargando progreso…</p>
-                  ) : (
-                    <>
-                      <p className="text-sm font-bold text-white">
-                        {respuestasEncuesta} de {ENCUESTA_META_RESPUESTAS} respuestas
-                      </p>
-                      <p className="mt-1 text-xs font-medium text-amber-300">
-                        {respuestasEncuesta >= ENCUESTA_META_RESPUESTAS
-                          ? '¡Meta alcanzada! Gracias por participar'
-                          : `Ya alcanzamos el ${Math.min(100, Math.round((respuestasEncuesta / ENCUESTA_META_RESPUESTAS) * 100))}% de nuestra meta`}
-                      </p>
-                      <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full bg-amber-400 transition-all"
-                          style={{ width: `${Math.min(100, (respuestasEncuesta / ENCUESTA_META_RESPUESTAS) * 100)}%` }}
-                          role="progressbar"
-                          aria-valuenow={Math.min(100, Math.round((respuestasEncuesta / ENCUESTA_META_RESPUESTAS) * 100))}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-label="Progreso de respuestas de la encuesta"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-                <BotonEncuesta grande fondoPanel className="w-full sm:w-auto" />
-                {!encuestaActiva && (
-                  <p className="flex items-start gap-2 text-xs leading-relaxed text-slate-300 max-w-sm">
-                    <span aria-hidden="true" className="shrink-0 mt-px">
-                      <Icono nombre="info" strokeWidth={2} className="h-4 w-4 text-amber-300" />
-                    </span>
-                    {LANDING.encuesta.sinDestino}
-                  </p>
-                )}
-              </div>
-            </div>
 
-            {/* MÃ³vil: rejilla 2Ã—2 para que las cuatro pills queden
-                parejas (con flex-wrap, una quedaba huÃ©rfana debajo); en
-                sm+ conserva la composiciÃ³n existente. */}
-            <ul className="grid grid-cols-2 gap-2 sm:gap-3 lg:gap-4">
-              {LANDING.encuesta.propositos.map((p) => (
-                <li
-                  key={p.etiqueta}
-                  className="sm:rounded-xl sm:border sm:border-white/10 sm:bg-white/5 sm:p-4 sm:flex sm:flex-col sm:gap-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5"
-                >
-                  <span aria-hidden="true" className="sm:mb-0">
-                    <Icono nombre={p.icono} strokeWidth={2} className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
-                  </span>
-                  <span className="text-xs sm:text-sm font-bold text-white">{p.etiqueta}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
 
       {/* Pista de scroll (solo mÃ³vil): flecha fija al fondo que invita a
           continuar cuando el usuario se queda quieto cerca del inicio; se
