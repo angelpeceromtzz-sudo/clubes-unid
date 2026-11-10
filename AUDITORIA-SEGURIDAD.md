@@ -702,3 +702,20 @@ Alcance ejecutado en `fix/seguridad-fase1` (sin commits), hallazgo por hallazgo,
 4. **Revisar el estado de la BD de Render** (columna `fecha` en `horarios_club`, aplicación de `seed.sql`) para concretar H11/H17.
 5. **Confirmar la regla del rol 4 en notificaciones** (§8.2). ~~H2 (revocación JWT)~~, ~~H4 (TLS)~~ y ~~H5a/H8 (rate limiting)~~ — **hechos en la Fase 1** (§8.6, §8.7 y §8.8).
 6. **Verificar H4 en el despliegue:** al desplegar la Fase 1, ajustar `DATABASE_URL` en Render según los pasos de §8.7 (quitar `sslmode` de la cadena, reiniciar y ejecutar una consulta inocua con `SELECT 1`); si el proveedor usa CA propia, declarar `DB_SSL_CA_FILE`. Hasta entonces H4 está corregido solo a nivel de código y pruebas locales.
+
+---
+
+## 10. Fase 3 / T-034 — cierre de pendientes de código
+
+Implementado en la rama `fix/T-034-cerrar-pendientes-seguridad` (código únicamente).
+
+### Cambios principales
+- CORS: origen no permitido responde 403 (no 500); métodos y headers acotados; documentación del origen de producción en `.env.example`.
+- Cabeceras: HSTS condicional a HTTPS, CSP por ruta (cerrada en API, relajada en asistencia); frontend en Vercel con HSTS y CSP en modo report-only, `X-Frame-Options: DENY`.
+- Rate limiting: nuevo `limitadorEscritura` (60/min por usuario) montado en `/api` para operaciones de escritura.
+- Sesiones: advertencia de secreto corto en arranque; límite de longitud de contraseña en login; decisión H9 documentada (sin migración a cookies).
+- Validación: `validarParamsEnteros` en calendario; modo estricto opcional para `imagen_portada` (env `IMAGEN_PORTADA_STRICT`).
+- Secretos: `lib/secretos.js` verifica arranque (fail-closed para JWT/OTP, advertencias en producción); `docs/SEGURIDAD-OPERACION.md` con checklist operativa.
+
+### Pendientes operativos restantes
+Ver `docs/SEGURIDAD-OPERACION.md` (rotación de secretos, `NODE_ENV`, install command, TLS, cabeceras, BD).

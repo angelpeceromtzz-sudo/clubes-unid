@@ -25,10 +25,23 @@ export function esUrlMapsValida(valor) {
 // Campo opcional: vacío se convierte en null al guardar. Límite = VARCHAR(255)
 // de clubes.imagen_portada. Acepta además /uploads/ (almacenamiento local
 // heredado que el frontend resuelve contra el backend).
+// Modo estricto opcional (env IMAGEN_PORTADA_STRICT=1): además del esquema,
+// exige host de Cloudinary o ruta /uploads/, para evitar imágenes remotas
+// arbitrarias (tracking/píxeles) en páginas públicas. Por defecto se mantiene
+// el comportamiento permisivo para no romper portadas existentes. (T-034)
+const ESTRICTO_PORTADA = process.env.IMAGEN_PORTADA_STRICT === '1';
+
 export function esImagenPortadaValida(valor) {
   if (valor === undefined || valor === null || valor === '') return true;
   if (typeof valor !== 'string') return false;
   if (valor.length > 255) return false;
   if (valor.startsWith('/uploads/')) return true;
-  return esHttpUrl(valor);
+  if (!esHttpUrl(valor)) return false;
+  if (!ESTRICTO_PORTADA) return true;
+  try {
+    const host = new URL(valor).hostname.toLowerCase();
+    return host === 'cloudinary.com' || host.endsWith('.cloudinary.com') || host === 'res.cloudinary.com';
+  } catch {
+    return false;
+  }
 }

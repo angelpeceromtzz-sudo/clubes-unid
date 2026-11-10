@@ -8,6 +8,9 @@ if (!JWT_SECRET) {
   console.error('FATAL: JWT_SECRET no está definido en las variables de entorno');
   process.exit(1);
 }
+if (JWT_SECRET.length < 32) {
+  console.warn('ADVERTENCIA: JWT_SECRET tiene menos de 32 caracteres; rota a un valor más largo en producción.');
+}
 
 export async function authenticate(req, res, next) {
   const header = req.headers.authorization;

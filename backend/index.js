@@ -31,9 +31,10 @@ import catalogosRoutes from './routes/catalogos.js';
 import encuestasRoutes from './routes/encuestas.js';
 import diapositivasHeroRoutes from './routes/diapositivasHero.js';
 import noticiasRoutes from './routes/noticias.js';
-import { limitadorGlobal } from './lib/rateLimits.js';
+import { limitadorGlobal, limitadorEscritura } from './lib/rateLimits.js';
 import { cabecerasSeguridad } from './lib/securityHeaders.js';
 import { manejadorErroresGlobal } from './lib/errorHandler.js';
+import { verificarSecretosArranque } from './lib/secretos.js';
 import { mailer } from './lib/mailer.js';
 import { registrarConfiguracionOtp } from './lib/otpDiagnostico.js';
 import asistenciaRoutes from './routes/asistencia.js';
@@ -57,13 +58,19 @@ app.use(cabecerasSeguridad);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite peticiones sin origin (como Postman) o si está en la lista
+    // Permite peticiones sin origin (como Postman/curl) o si está en la lista.
+    // Un origen no permitido se rechaza con 403 (no 500) para no filtrar
+    // detalles ni generar ruido en el manejador global de errores.
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('No permitido por CORS'));
+      const error = new Error('No permitido por CORS');
+      error.status = 403;
+      callback(error);
     }
   },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   // El frontend (otro origen) necesita leer estos encabezados para respetar
   // el cooldown real que impone express-rate-limit en un 429.
   exposedHeaders: ['Retry-After', 'RateLimit', 'RateLimit-Reset', 'X-RateLimit-Reset'],
@@ -73,6 +80,9 @@ app.use(cors({
 // las rutas /api. Va después de CORS (los OPTIONS de preflight los responde
 // CORS) y antes de express.json para frenar también el costo de parseo.
 app.use('/api', limitadorGlobal);
+// Cobertura adicional de escrituras por usuario (T-034): red de seguridad para
+// los endpoints administrativos que antes solo tenían el global por IP.
+app.use('/api', limitadorEscritura);
 
 app.use(express.json());
 
@@ -134,6 +144,8 @@ app.use(manejadorErroresGlobal);
 //
 // Por eso se comprueba que el servidor quedó escuchando de verdad y se
 // informa con claridad en cualquiera de los dos casos.
+verificarSecretosArranque();
+
 const servidor = app.listen(PORT, () => {
   // Si otro proceso tiene el puerto, `listening` es false y `address()` es
   // null: el callback corrió, pero no hay socket.
