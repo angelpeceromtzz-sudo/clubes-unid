@@ -532,3 +532,11 @@ html.landing-scroll-smooth {
 /* Icono de calendario ambar en inputs de fecha */
 .date-amber::-webkit-calendar-picker-indicator { filter: invert(60%) sepia(100%) saturate(400%) hue-rotate(350deg) brightness(1.1); cursor: pointer; }
 
+/* Evita que las imágenes se puedan arrastrar (nativo del navegador). */
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+

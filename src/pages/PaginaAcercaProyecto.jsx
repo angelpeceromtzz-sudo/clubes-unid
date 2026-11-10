@@ -52,7 +52,7 @@ function PerfilPersona({ persona, className = '' }) {
     <li className={`grid sm:row-span-6 sm:grid-rows-subgrid w-full lg:col-span-2 justify-items-center text-center px-4 py-6 min-w-0 gap-y-2.5 ${className}`}>
       <div className="row-start-1">
         {conFoto ? (
-          <img
+          <img draggable={false}
             src={persona.foto}
             alt={`Foto de ${persona.nombre}`}
             loading="lazy"
@@ -237,7 +237,7 @@ export default function PaginaAcercaProyecto() {
                     modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-100'
                   }`}
                 >
-                  <img
+                  <img draggable={false}
                     src={ACERCA.comoNacio.imagen.src}
                     alt={ACERCA.comoNacio.imagen.alt}
                     loading="lazy"
@@ -285,7 +285,7 @@ export default function PaginaAcercaProyecto() {
                     modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-100'
                   }`}
                 >
-                  <img
+                  <img draggable={false}
                     src={ACERCA.paraQuien.imagen.src}
                     alt={ACERCA.paraQuien.imagen.alt}
                     loading="lazy"

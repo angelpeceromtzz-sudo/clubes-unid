@@ -23,7 +23,7 @@ export function TablaDiapositivasDesktop({ diapositivas, modoOscuro, tableBg, th
                 <td className={`px-5 py-4  font-mono text-xs ${tdCls}`}>{d.id_diapositiva}</td>
                 <td className="px-5 py-4 ">
                   <div className="w-16 h-10 rounded-lg overflow-hidden bg-slate-800/30">
-                    <img src={obtenerUrlImagen(d.url_imagen)} alt={d.titulo} className="w-full h-full object-cover" />
+                    <img draggable={false} src={obtenerUrlImagen(d.url_imagen)} alt={d.titulo} className="w-full h-full object-cover" />
                   </div>
                   {d.url_imagen_movil && (
                     <span className="mt-1 inline-block text-[9px] uppercase tracking-wider font-bold text-amber-400">Con imagen móvil</span>

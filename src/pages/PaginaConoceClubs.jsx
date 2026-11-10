@@ -65,7 +65,7 @@ function TarjetaPropuesta({ club }) {
     >
       <div className={`h-40 sm:h-44 overflow-hidden ${modoOscuro ? 'bg-slate-900' : 'bg-slate-100'}`}>
         {mostrarImagen ? (
-          <img
+          <img draggable={false}
             src={imagen}
             alt=""
             loading="lazy"
@@ -470,7 +470,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
               </p>
             </div>
             <div className="overflow-hidden rounded-2xl">
-              <img src="/campus/para-quien.jpeg" alt="Cultura y experiencia UNID Campeche" className="h-64 w-full object-cover" />
+              <img draggable={false} src="/campus/para-quien.jpeg" alt="Cultura y experiencia UNID Campeche" className="h-64 w-full object-cover" />
             </div>
           </div>
         </div>
@@ -511,7 +511,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
         <div className={`${CONTENEDOR} py-12 sm:py-16`}>
           <div className="max-w-6xl mx-auto" data-reveal>
             <div className="mt-8 flex justify-center">
-              <img
+              <img draggable={false}
                 src="/personas/rector-campeche.png"
                 alt="Foto de David Antonio Chacón González"
                 loading="lazy"

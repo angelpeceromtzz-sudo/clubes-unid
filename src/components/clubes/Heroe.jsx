@@ -222,7 +222,7 @@ export function Heroe({ onReady }) {
                 aria-label={`Diapositiva ${index + 1} de ${total}`}
                 className={`relative shrink-0 snap-center w-full aspect-[4/5] rounded-t-2xl overflow-hidden ${clsFondoPagina}`}
               >
-                <img
+                <img draggable={false}
                   src={obtenerUrlImagen(slide.url_imagen_movil || slide.url_imagen)}
                   alt=""
                   aria-hidden="true"
@@ -301,7 +301,7 @@ export function Heroe({ onReady }) {
                */
               <picture>
                 <source media="(min-width: 1024px)" srcSet={obtenerUrlImagen(slide.url_imagen)} />
-                <img
+                <img draggable={false}
                   src={obtenerUrlImagen(slide.url_imagen_movil)}
                   alt=""
                   aria-hidden="true"

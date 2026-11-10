@@ -20,7 +20,7 @@ function Miniatura({ url, titulo }) {
       </div>
     );
   }
-  return <img src={url} alt={titulo} className="h-16 w-16 shrink-0 rounded-lg object-cover" />;
+  return <img draggable={false} src={url} alt={titulo} className="h-16 w-16 shrink-0 rounded-lg object-cover" />;
 }
 
 export function SeccionMuralAdmin() {
@@ -208,7 +208,7 @@ export function SeccionMuralAdmin() {
               {errorRevision && <p role="alert" className="mb-4 text-sm text-red-500">{errorRevision}</p>}
               <div className="space-y-4">
                 {revisando.url_imagen && (
-                  <img src={revisando.url_imagen} alt={revisando.titulo} className="w-full max-h-64 rounded-xl object-contain" />
+                  <img draggable={false} src={revisando.url_imagen} alt={revisando.titulo} className="w-full max-h-64 rounded-xl object-contain" />
                 )}
                 <div>
                   <p className={`text-xs font-bold uppercase ${tema.subtitle}`}>Título</p>

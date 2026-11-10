@@ -13,7 +13,7 @@ export function TarjetasNoticiasMobile({ noticias, modoOscuro, tdTitle, tdCls, i
           <div className="flex items-start gap-3 mb-2">
             {n.url_imagen ? (
               <div className="w-14 h-10 rounded-lg overflow-hidden bg-slate-800/30 shrink-0">
-                <img src={obtenerUrlImagen(n.url_imagen)} alt={n.titulo} className="w-full h-full object-cover" />
+                <img draggable={false} src={obtenerUrlImagen(n.url_imagen)} alt={n.titulo} className="w-full h-full object-cover" />
               </div>
             ) : (
               <div className={`w-14 h-10 rounded-lg flex items-center justify-center shrink-0 ${modoOscuro ? 'bg-slate-800/40 text-slate-600' : 'bg-slate-100 text-slate-300'}`}>

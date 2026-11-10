@@ -143,7 +143,7 @@ export default function PaginaExperienciaEstudiantil() {
                 aria-label={`${index + 1} de ${SLIDES.length}`}
               >
                 {esMovil || slide.displayMode !== 'contained' ? (
-                  <img
+                  <img draggable={false}
                     src={slide.imagen}
                     alt={slide.titulo}
                     className="absolute inset-0 h-full w-full object-cover"
@@ -151,14 +151,14 @@ export default function PaginaExperienciaEstudiantil() {
                   />
                 ) : (
                   <>
-                    <img
+                    <img draggable={false}
                       src={slide.imagen}
                       alt=""
                       aria-hidden="true"
                       className="absolute inset-0 h-full w-full object-cover brightness-50 blur-sm scale-105"
                       style={{ objectPosition: slide.objectPosition || 'center center' }}
                     />
-                    <img
+                    <img draggable={false}
                       src={slide.imagen}
                       alt={slide.titulo}
                       className="absolute inset-0 h-full w-full object-contain"

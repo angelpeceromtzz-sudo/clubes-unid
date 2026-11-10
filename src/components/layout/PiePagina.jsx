@@ -11,8 +11,8 @@ export function PiePagina() {
 
           <div className="space-y-4 flex flex-col items-center text-center sm:items-start sm:text-left md:items-center md:text-center lg:items-start lg:text-left">
             <div className="flex flex-col sm:flex-row items-center gap-3 lg:gap-0">
-              <img src="/branding/lobounid.png" alt="Lobo UNID" className="h-10 w-auto object-contain" />
-              <img src={modoOscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'} alt="Clubs UNID" className="h-10 w-auto object-contain" />
+              <img draggable={false} src="/branding/lobounid.png" alt="Lobo UNID" className="h-10 w-auto object-contain" />
+              <img draggable={false} src={modoOscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'} alt="Clubs UNID" className="h-10 w-auto object-contain" />
             </div>
             <p className={`text-sm leading-relaxed ${tema.subtitle} max-w-xs text-center sm:text-left md:text-center lg:text-left`}>
               Descubre, participa y lidera en los clubes universitarios UNID. Forma parte de la manada.

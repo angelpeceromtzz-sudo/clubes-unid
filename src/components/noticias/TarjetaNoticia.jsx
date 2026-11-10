@@ -36,7 +36,7 @@ export function TarjetaNoticia({ noticia, interesado = false, interesReciente = 
     >
       {noticia.url_imagen && (
         <div className="w-full h-52 sm:h-72 overflow-hidden">
-          <img
+          <img draggable={false}
             src={obtenerUrlImagen(noticia.url_imagen)}
             alt={noticia.titulo}
             className="w-full h-full object-cover"

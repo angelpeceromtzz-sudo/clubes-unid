@@ -53,7 +53,7 @@ export function SubirImagen({ label, urlImagen, onUpload, onRemove, modoOscuro, 
       )}
       {urlImagen && (
         <div className="relative w-full h-32 rounded-lg overflow-hidden mt-2">
-          <img src={obtenerUrlImagen(urlImagen)} alt="Vista previa" className="w-full h-full object-cover" />
+          <img draggable={false} src={obtenerUrlImagen(urlImagen)} alt="Vista previa" className="w-full h-full object-cover" />
         </div>
       )}
     </div>

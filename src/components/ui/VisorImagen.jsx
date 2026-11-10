@@ -75,7 +75,7 @@ export function VisorImagen({ abierto, src, alt = '', titulo = '', onClose }) {
         onClick={(evento) => evento.stopPropagation()}
       >
         <div className="relative w-fit max-w-full">
-          <img
+          <img draggable={false}
             src={src}
             alt={alt || titulo}
             className="max-h-[75vh] w-auto max-w-full rounded-lg object-contain shadow-2xl sm:max-h-[80vh]"

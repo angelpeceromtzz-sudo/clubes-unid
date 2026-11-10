@@ -31,7 +31,7 @@ export default function PaginaSelectorCampus() {
             to="/campus/campeche"
             className="group relative block overflow-hidden rounded-[2rem] border border-slate-700/60 min-h-[520px]"
           >
-            <img
+            <img draggable={false}
               src="/campus/unid-campeche.jpeg"
               alt="Campus Campeche"
               className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"

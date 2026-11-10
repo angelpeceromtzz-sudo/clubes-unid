@@ -17,7 +17,7 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
     <div className={`rounded-2xl overflow-hidden border ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
       <div className={`grid grid-cols-1 md:grid-cols-2 ${c.bg}`}>
         <div className="overflow-hidden h-64 md:h-[460px] md:self-start">
-          <img
+          <img draggable={false}
             src={obtenerUrlImagen(club.imagen_portada || club.imagen)}
             alt={club.nombre_club}
             className={`w-full h-full object-cover ${esProximamente ? 'opacity-60' : ''}`}

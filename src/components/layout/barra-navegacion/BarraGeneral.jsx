@@ -26,8 +26,8 @@ export function BarraGeneral({ onLoginClick, splashActivo = false, flotante = fa
       }`}>
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:max-w-none lg:mx-0 lg:px-12 xl:px-16 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center shrink-0" aria-label="Clubs UNID">
-          <img src="/branding/lobounid.png" alt="Lobo UNID" id="navbar-logo" className={`h-8 sm:h-10 w-auto object-contain self-center transition-opacity duration-200 ${splashActivo ? 'opacity-0' : 'opacity-100'}`} />
-          <img src={oscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'} alt="Clubs UNID" className="h-9 sm:h-12 w-auto object-contain self-center -ml-1 sm:ml-0" />
+          <img draggable={false} src="/branding/lobounid.png" alt="Lobo UNID" id="navbar-logo" className={`h-8 sm:h-10 w-auto object-contain self-center transition-opacity duration-200 ${splashActivo ? 'opacity-0' : 'opacity-100'}`} />
+          <img draggable={false} src={oscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'} alt="Clubs UNID" className="h-9 sm:h-12 w-auto object-contain self-center -ml-1 sm:ml-0" />
         </Link>
 
         <nav className={`hidden md:flex items-center gap-5 text-sm font-bold ${flotante && modoOscuro && !scrolled ? 'text-white' : ''}`}>

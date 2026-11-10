@@ -11,6 +11,19 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { PanelNavProvider } from './contexts/PanelNavContext';
 import App from './App.jsx';
 
+// Evita que cualquier imagen pueda arrastrarse de forma nativa en el navegador.
+if (typeof document !== 'undefined') {
+  document.addEventListener(
+    'dragstart',
+    (evento) => {
+      if (evento.target && evento.target.tagName === 'IMG') {
+        evento.preventDefault();
+      }
+    },
+    true,
+  );
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <MsalProvider instance={msalInstance}>

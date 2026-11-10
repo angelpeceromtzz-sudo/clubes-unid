@@ -70,8 +70,8 @@ export function BarraNavegacion({
               </div>
             ) : (
               <div className="flex items-center shrink-0 cursor-pointer" onClick={onLogoClick} aria-label="Clubs UNID">
-                <img src="/branding/lobounid.png" alt="Lobo UNID" className="h-8 sm:h-10 w-auto object-contain self-center" />
-                <img src="/branding/clubs-unid.png" alt="Clubs UNID" className="h-9 sm:h-12 w-auto object-contain self-center -ml-1 sm:ml-0" />
+                <img draggable={false} src="/branding/lobounid.png" alt="Lobo UNID" className="h-8 sm:h-10 w-auto object-contain self-center" />
+                <img draggable={false} src="/branding/clubs-unid.png" alt="Clubs UNID" className="h-9 sm:h-12 w-auto object-contain self-center -ml-1 sm:ml-0" />
               </div>
             )}
             {mostrarNoticias && user && (

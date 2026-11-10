@@ -459,7 +459,7 @@ export function ModalActualizaciones({ onLoginClick }) {
         }`}
       >
         {urlImagen && (
-          <img
+          <img draggable={false}
             src={urlImagen}
             alt=""
             aria-hidden="true"
@@ -518,7 +518,7 @@ export function ModalActualizaciones({ onLoginClick }) {
         className={`block w-full overflow-hidden rounded-xl border-2 text-left transition-transform duration-200 active:scale-[0.99] ${cat.borde} ${tm.superficie}`}
       >
         {urlImagen ? (
-          <img src={urlImagen} alt="" aria-hidden="true" className="h-48 w-full object-cover" />
+          <img draggable={false} src={urlImagen} alt="" aria-hidden="true" className="h-48 w-full object-cover" />
         ) : (
           <div className={`flex h-48 w-full items-center justify-center ${tm.gradienteBanner}`}>
             <Icono nombre="newspaper" className={`h-10 w-10 ${tm.iconoVacio}`} strokeWidth={1.5} />
@@ -583,7 +583,7 @@ export function ModalActualizaciones({ onLoginClick }) {
           )}
         </div>
         {urlImagen ? (
-          <img
+          <img draggable={false}
             src={urlImagen}
             alt=""
             aria-hidden="true"
@@ -736,7 +736,7 @@ export function ModalActualizaciones({ onLoginClick }) {
                   }}
                 />
                 {obtenerUrlImagen(noticia.url_imagen) && (
-                  <img
+                  <img draggable={false}
                     src={obtenerUrlImagen(noticia.url_imagen)}
                     alt=""
                     aria-hidden="true"
@@ -832,7 +832,7 @@ export function ModalActualizaciones({ onLoginClick }) {
               }}
             />
             {obtenerUrlImagen(noticiaMobile.url_imagen) && (
-              <img
+              <img draggable={false}
                 src={obtenerUrlImagen(noticiaMobile.url_imagen)}
                 alt=""
                 aria-hidden="true"

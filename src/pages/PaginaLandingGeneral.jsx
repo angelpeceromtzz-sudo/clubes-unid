@@ -109,7 +109,7 @@ export default function PaginaLandingGeneral() {
                 key={experiencia.titulo}
                 className="group relative min-h-[420px] overflow-hidden rounded-[2rem] transition duration-300 hover:scale-[1.02]"
               >
-                <img
+                <img draggable={false}
                   src={experiencia.imagen}
                   alt={experiencia.titulo}
                   className="absolute inset-0 h-full w-full object-cover transition duration-700"
@@ -155,7 +155,7 @@ export default function PaginaLandingGeneral() {
               to="/campus/campeche"
               className="group relative block overflow-hidden rounded-[2rem] border border-slate-700/60"
             >
-            <img
+            <img draggable={false}
               src="/campus/unid-campeche.jpeg"
               alt="Campus Campeche"
               className="h-[520px] w-full object-cover transition duration-700"

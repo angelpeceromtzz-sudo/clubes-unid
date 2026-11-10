@@ -53,7 +53,7 @@ export function ModalNoticias() {
         titulo={destacada.titulo}
         className="group relative mt-4 block h-52 w-full max-w-full cursor-zoom-in overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 sm:h-64"
       >
-        <img
+        <img draggable={false}
           src={urlImagen}
           alt={destacada.titulo}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
