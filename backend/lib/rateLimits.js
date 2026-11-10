@@ -27,6 +27,7 @@ export const UMBRALES = {
   uploadMinuto: enteroPositivo(process.env.RATE_LIMIT_UPLOAD_MINUTO, 30),
   notificacionesMinuto: enteroPositivo(process.env.RATE_LIMIT_NOTIFICACIONES_MINUTO, 30),
   lecturasPesadasMinuto: enteroPositivo(process.env.RATE_LIMIT_LECTURAS_MINUTO, 60),
+  escrituraMinuto: enteroPositivo(process.env.RATE_LIMIT_ESCRITURA_MINUTO, 60),
 };
 
 const MENSAJE_429 =
@@ -185,4 +186,17 @@ export const limitadorLecturasPesadas = crearLimitador({
   windowMs: 60 * 1000,
   limit: UMBRALES.lecturasPesadasMinuto,
   keyGenerator: claveUsuario,
+});
+
+// Limitador genérico para escrituras administrativas que antes solo dependían
+// del global (T-034). Se monta tras authenticate para usar la identidad
+// revalidada (H2).
+export const limitadorEscritura = crearLimitador({
+  identifier: 'escritura-usuario',
+  windowMs: 60 * 1000,
+  limit: UMBRALES.escrituraMinuto,
+  keyGenerator: claveUsuario,
+  // Solo se aplica a operaciones de escritura; las lecturas ya tienen el
+  // global y, en su caso, limitadores específicos (lecturas pesadas).
+  skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
 });

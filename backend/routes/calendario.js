@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { validarParamsEnteros } from '../lib/validarId.js';
 import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { errorProgramacionEvento } from '../lib/fechasEvento.js';
 
 const router = Router();
+validarParamsEnteros(router);
 const TIPOS_FECHA = ['examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite'];
 const CAMPOS = `id_fecha, titulo, tipo_fecha, fecha_inicio::text AS fecha_inicio,
                 fecha_fin::text AS fecha_fin, nota, url_imagen, publicada, mostrar_en_mural, id_autor,

@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 
 process.env.JWT_SECRET = 'secreto-de-prueba-ficticio-solo-para-tests';
 process.env.DB_PASSWORD = 'ficticio';
+process.env.ADMIN_SECRET = 'secreto-admin-ficticio-solo-para-tests';
 
 const { esUrlMapsValida, esImagenPortadaValida } = await import('../lib/validarUrl.js');
 const { default: express } = await import('express');
@@ -211,6 +212,7 @@ const clubValido = {
   cupo_maximo: 20,
   participacion: 'mixta',
   niveles: [1],
+  password: process.env.ADMIN_SECRET,
 };
 
 test('POST /clubes: rechaza javascript: en imagen_portada con 400', async () => {

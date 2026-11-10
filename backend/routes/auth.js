@@ -29,6 +29,10 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
     if (!correo || !contrasena) {
       return res.status(400).json({ error: 'Correo y contraseña son obligatorios' });
     }
+    // T-034: evita hashes costosos (bcrypt) con entradas enormes.
+    if (typeof contrasena !== 'string' || contrasena.length > 128) {
+      return res.status(400).json({ error: 'Credenciales inválidas' });
+    }
 
     // El correo se normaliza antes de comparar: en la base está en minúsculas
     // y el alumno lo escribe como le da la gana.
