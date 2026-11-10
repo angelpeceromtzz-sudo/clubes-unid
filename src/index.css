@@ -5,6 +5,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 .scrollbar-amber::-webkit-scrollbar {
   width: 6px;
 }
@@ -111,7 +115,9 @@ html.landing-scroll-smooth {
   #lista-asistencia-print {
     display: block !important;
   }
-  body {
+  html,
+  body,
+  #root {
     background: white !important;
     color: black !important;
   }
@@ -429,6 +435,8 @@ html.landing-scroll-smooth {
 }
 
 :root {
+  --page-background: #f8fafc;
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -464,6 +472,8 @@ html.landing-scroll-smooth {
 }
 
 .dark {
+  --page-background: #0b111e;
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -502,10 +512,21 @@ html.landing-scroll-smooth {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
   }
   html {
     @apply font-sans;
+  }
+  /* Safari muestra el lienzo del documento al rebotar en los extremos. */
+  html,
+  body,
+  #root {
+    background-color: var(--page-background);
+  }
+  body,
+  #root {
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 }
 /* Icono de calendario ambar en inputs de fecha */

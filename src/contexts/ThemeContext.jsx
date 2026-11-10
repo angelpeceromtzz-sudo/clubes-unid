@@ -4,16 +4,18 @@ const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
   const [modoOscuro, setModoOscuro] = useState(() => {
-    const guardado = localStorage.getItem('theme');
-    return guardado !== null ? guardado === 'dark' : true;
+    return document.documentElement.classList.contains('dark');
   });
 
   useEffect(() => {
-    localStorage.setItem('theme', modoOscuro ? 'dark' : 'light');
-    if (modoOscuro) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    const temaActual = modoOscuro ? 'dark' : 'light';
+    document.documentElement.classList.toggle('dark', modoOscuro);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', modoOscuro ? '#0b111e' : '#f8fafc');
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', temaActual);
+    try {
+      localStorage.setItem('theme', temaActual);
+    } catch {
+      // El tema puede cambiar aunque el navegador no permita guardarlo.
     }
   }, [modoOscuro]);
 
