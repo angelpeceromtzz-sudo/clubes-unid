@@ -19,6 +19,7 @@ import { SeccionCalendarioAdmin } from '../components/admin/secciones/SeccionCal
 import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdmin';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
+import { SeccionExpediente } from '../components/expediente/SeccionExpediente';
 
 export function PanelRectoria() {
   const { tema } = useTheme();
@@ -79,6 +80,8 @@ export function PanelRectoria() {
              lectura completa: lista, resultados, vista previa y enlace público. */
           <SeccionEncuestas d={d} />
         )}
+
+        {d.vistaActiva === 'expediente' && <SeccionExpediente />}
 
         {d.vistaActiva === 'actividad' && (
           <TablaActividad />
