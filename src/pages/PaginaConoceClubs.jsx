@@ -16,6 +16,7 @@
    se activan con ENCUESTA_SLUG en src/config/landing.js. Se monta fuera
    del layout del sistema (ver App.jsx) con su propia barra. */
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { api } from '../services/api';
 import { obtenerUrlImagen } from '../utils/imagen';
@@ -170,7 +171,7 @@ function OrdenarClubes(clubes) {
 
 
 
-export default function PaginaConoceClubs({ onLoginClick }) {
+export default function PaginaConoceClubs() {
   const { tema, modoOscuro } = useTheme();
   const [clubes, setClubes] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -346,7 +347,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
 
   return (
     <main className={`${tema.bg} ${tema.text} overflow-x-hidden`}>
-      <BarraGeneral onLoginClick={onLoginClick} />
+      <BarraGeneral ctaPortal={{ texto: 'Entrar al Portal', href: '/campus/campeche/portal' }} ocultarMenuMovil flotante />
 
       {/* A. Presentacion: hero-carrusel de Campus Campeche */}
       <section
@@ -366,14 +367,15 @@ export default function PaginaConoceClubs({ onLoginClick }) {
             style={{ backgroundImage: "url('/campus/campus-campeche.png')" }}
             aria-hidden="true"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0b111e] via-[#0b111e]/75 to-[#0b111e]/40" aria-hidden="true" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-transparent to-transparent" aria-hidden="true" />
+          <div className={`absolute inset-0 bg-gradient-to-r ${modoOscuro ? 'from-[#0b111e]/30 via-[#0b111e]/15' : 'from-[#0b111e]/15 via-[#0b111e]/5'} to-transparent`} aria-hidden="true" />
+          <div className={`absolute inset-y-0 left-0 ${modoOscuro ? 'w-1/3' : 'w-[60%]'} bg-gradient-to-r ${modoOscuro ? 'from-[#0b111e]/50' : 'from-[#0b111e]/85'} to-transparent`} aria-hidden="true" />
+          <div className={`absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t ${modoOscuro ? 'from-[#0e162c]' : 'from-white'} via-transparent to-transparent`} aria-hidden="true" />
           <div className="relative px-6 sm:px-8 py-20 flex items-center min-h-[88vh]">
             <div className="max-w-xl space-y-5">
               <p className="text-xs uppercase tracking-[0.3em] font-black text-amber-400">
                 Iniciativa estudiantil
               </p>
-              <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-[0.92] text-balance">
+              <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-[0.92] text-balance text-white">
                 Tu universidad.
                 <span className="block text-amber-400">Tus pasiones.</span>
                 <span className="block">Tu comunidad.</span>
@@ -381,9 +383,15 @@ export default function PaginaConoceClubs({ onLoginClick }) {
               <p className="text-sm uppercase tracking-[0.25em] font-bold text-amber-300">
                 DESCUBRE · PARTICIPA · CONECTA
               </p>
-              <p className="text-base leading-relaxed text-slate-300">
+              <p className={`text-base leading-relaxed ${modoOscuro ? 'text-amber-300' : 'text-amber-300 [-webkit-text-stroke:0.25px_#000]'}`}>
                 UNID Campus Campeche reune experiencias extracurriculares para que cada estudiante encuentre un espacio para participar, aprender y crecer.
               </p>
+              <Link
+                to="/campus/campeche/portal"
+                className="inline-flex items-center justify-center px-7 py-4 rounded-full bg-amber-400 text-[#0e162c] font-black text-base shadow-2xl shadow-amber-400/25 hover:bg-amber-300 transition"
+              >
+                Entrar al portal
+              </Link>
             </div>
           </div>
         </div>
@@ -403,14 +411,15 @@ export default function PaginaConoceClubs({ onLoginClick }) {
                 style={{ backgroundImage: `url('${slide.imagen}')` }}
                 aria-hidden="true"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0b111e] via-[#0b111e]/70 to-[#0b111e]/20" aria-hidden="true" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-transparent to-transparent" aria-hidden="true" />
+              <div className={`absolute inset-0 bg-gradient-to-r ${modoOscuro ? 'from-[#0b111e]/30 via-[#0b111e]/15' : 'from-[#0b111e]/15 via-[#0b111e]/5'} to-transparent`} aria-hidden="true" />
+              <div className={`absolute inset-y-0 left-0 ${modoOscuro ? 'w-1/3' : 'w-[60%]'} bg-gradient-to-r ${modoOscuro ? 'from-[#0b111e]/50' : 'from-[#0b111e]/85'} to-transparent`} aria-hidden="true" />
+              <div className={`absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t ${modoOscuro ? 'from-[#0e162c]' : 'from-white'} via-transparent to-transparent`} aria-hidden="true" />
               <div className="relative px-6 sm:px-8 lg:px-12 xl:px-16 py-20 flex items-center min-h-[88vh]">
                 <div className="max-w-3xl space-y-5">
                   <p className="text-xs sm:text-sm uppercase tracking-[0.3em] font-black text-amber-400">
                     {slide.kicker}
                   </p>
-                  <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[0.92] text-balance">
+                  <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[0.92] text-balance text-white">
                     {slide.titulo.map((linea, i) => (
                       <span key={i} className={i === 1 ? 'block text-amber-400' : 'block'}>
                         {linea}
@@ -420,7 +429,7 @@ export default function PaginaConoceClubs({ onLoginClick }) {
                   <p className="text-sm uppercase tracking-[0.25em] font-bold text-amber-300">
                     {slide.linea}
                   </p>
-                   <p className="text-base sm:text-lg leading-relaxed max-w-xl text-slate-300">
+                   <p className={`text-base sm:text-lg leading-relaxed max-w-xl ${modoOscuro ? 'text-amber-300' : 'text-amber-300 [-webkit-text-stroke:0.25px_#000]'}`}>
                      {slide.descripcion}
                    </p>
                  </div>

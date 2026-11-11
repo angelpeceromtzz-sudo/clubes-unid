@@ -50,11 +50,11 @@ export default function PaginaLandingGeneral() {
           aria-hidden="true"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-r from-[#0b111e]/45 via-[#0b111e]/30 to-transparent"
+          className="absolute inset-0 bg-gradient-to-r from-[#0b111e]/30 via-[#0b111e]/15 to-transparent"
           aria-hidden="true"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-transparent to-transparent"
+          className={`absolute inset-0 bg-gradient-to-t ${oscuro ? 'from-[#0b111e]' : 'from-slate-50'} via-transparent to-transparent`}
           aria-hidden="true"
         />
 
@@ -65,13 +65,13 @@ export default function PaginaLandingGeneral() {
             </p>
             <h1
               id="hero-general"
-              className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.9] whitespace-nowrap"
+              className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[0.9] whitespace-nowrap text-white"
             >
               Tu universidad.
               <span className="block text-amber-400 whitespace-nowrap">Tus pasiones.</span>
               <span className="block whitespace-nowrap">Tu comunidad.</span>
             </h1>
-            <p className={`text-base sm:text-lg leading-relaxed max-w-xl ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className="text-base sm:text-lg leading-relaxed max-w-xl text-slate-300">
               Un espacio para vivir experiencias fuera del aula y formar parte de la vida universitaria.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -83,7 +83,7 @@ export default function PaginaLandingGeneral() {
               </Link>
               <Link
                 to="/conocenos"
-                className={`inline-flex items-center justify-center px-7 py-4 rounded-full border font-black text-base transition ${oscuro ? 'border-slate-500 hover:border-amber-400/70' : 'border-slate-300 hover:border-amber-500/70'}`}
+                className="inline-flex items-center justify-center px-7 py-4 rounded-full border border-white/70 bg-[#0b111e]/50 backdrop-blur-sm text-white font-black text-base transition hover:border-amber-400 hover:text-amber-400"
               >
                 Conócenos
               </Link>
@@ -114,10 +114,9 @@ export default function PaginaLandingGeneral() {
                   alt={experiencia.titulo}
                   className="absolute inset-0 h-full w-full object-cover transition duration-700"
                 />
-                <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/55 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e]/85 via-[#0b111e]/25 to-transparent" />
                 <div className="relative h-full flex flex-col justify-end p-6 sm:p-8">
-                  <h3 className="text-2xl font-black">{experiencia.titulo}</h3>
+                  <h3 className="text-2xl font-black text-white">{experiencia.titulo}</h3>
                   <p className="mt-2 text-sm sm:text-base text-slate-200 max-w-xs">
                     {experiencia.texto}
                   </p>
@@ -160,9 +159,9 @@ export default function PaginaLandingGeneral() {
               alt="Campus Campeche"
               className="h-[520px] w-full object-cover transition duration-700"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e] via-[#0b111e]/45 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0b111e]/85 via-[#0b111e]/25 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6">
-              <h3 className="text-xl max-[375px]:text-lg sm:text-2xl font-black">Campus Campeche</h3>
+              <h3 className="text-xl max-[375px]:text-lg sm:text-2xl font-black text-white">Campus Campeche</h3>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <p className="text-xs max-[375px]:text-[11px] sm:text-sm text-slate-200">
                   Clubes, noticias, calendario y portal estudiantil.

@@ -185,7 +185,7 @@ function App() {
           {esLegal && <Route path="/terminos" element={<PaginaTerminosCondiciones />} />}
           {esLegal && <Route path="/privacidad" element={<PaginaAvisoPrivacidad />} />}
           {esLegal && <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />}
-          {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs onLoginClick={() => setShowLogin(true)} />} />}
+          {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs />} />}
         </Routes>
         {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} />}
       </>
