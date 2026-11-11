@@ -50,7 +50,7 @@ export default function PaginaLandingGeneral() {
           aria-hidden="true"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-r from-[#0b111e]/30 via-[#0b111e]/15 to-transparent"
+          className="absolute inset-0 bg-gradient-to-r from-[#0b111e]/85 via-[#0b111e]/50 to-transparent"
           aria-hidden="true"
         />
         <div
@@ -71,7 +71,7 @@ export default function PaginaLandingGeneral() {
               <span className="block text-amber-400 whitespace-nowrap">Tus pasiones.</span>
               <span className="block whitespace-nowrap">Tu comunidad.</span>
             </h1>
-            <p className="text-base sm:text-lg leading-relaxed max-w-xl text-slate-300">
+            <p className={`text-base sm:text-lg leading-relaxed max-w-xl ${oscuro ? 'text-white' : 'text-amber-400'}`}>
               Un espacio para vivir experiencias fuera del aula y formar parte de la vida universitaria.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2">

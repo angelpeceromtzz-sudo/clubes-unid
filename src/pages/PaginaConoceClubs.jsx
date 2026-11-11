@@ -347,7 +347,7 @@ export default function PaginaConoceClubs() {
 
   return (
     <main className={`${tema.bg} ${tema.text} overflow-x-hidden`}>
-      <BarraGeneral ctaPortal={{ texto: 'Entrar al Portal', href: '/campus/campeche/portal' }} ocultarMenuMovil flotante />
+      <BarraGeneral ctaPortal={{ texto: 'Entrar al Portal', href: '/campus/campeche/portal' }} flotante />
 
       {/* A. Presentacion: hero-carrusel de Campus Campeche */}
       <section
@@ -368,7 +368,8 @@ export default function PaginaConoceClubs() {
             aria-hidden="true"
           />
           <div className={`absolute inset-0 bg-gradient-to-r ${modoOscuro ? 'from-[#0b111e]/30 via-[#0b111e]/15' : 'from-[#0b111e]/15 via-[#0b111e]/5'} to-transparent`} aria-hidden="true" />
-          <div className={`absolute inset-y-0 left-0 ${modoOscuro ? 'w-1/3' : 'w-[60%]'} bg-gradient-to-r ${modoOscuro ? 'from-[#0b111e]/50' : 'from-[#0b111e]/85'} to-transparent`} aria-hidden="true" />
+          <div className="absolute inset-y-0 left-0 w-[90%] bg-gradient-to-r from-[#0b111e]/60 to-transparent" aria-hidden="true" />
+          <div className="absolute inset-y-0 right-0 w-[60%] bg-gradient-to-l from-[#0b111e]/60 to-transparent" aria-hidden="true" />
           <div className={`absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t ${modoOscuro ? 'from-[#0e162c]' : 'from-white'} via-transparent to-transparent`} aria-hidden="true" />
           <div className="relative px-6 sm:px-8 py-20 flex items-center min-h-[88vh]">
             <div className="max-w-xl space-y-5">
@@ -383,12 +384,12 @@ export default function PaginaConoceClubs() {
               <p className="text-sm uppercase tracking-[0.25em] font-bold text-amber-300">
                 DESCUBRE · PARTICIPA · CONECTA
               </p>
-              <p className={`text-base leading-relaxed ${modoOscuro ? 'text-amber-300' : 'text-amber-300 [-webkit-text-stroke:0.25px_#000]'}`}>
+              <p className={`text-base leading-relaxed ${modoOscuro ? 'text-slate-200' : 'text-amber-300 [-webkit-text-stroke:0.25px_#000]'}`}>
                 UNID Campus Campeche reune experiencias extracurriculares para que cada estudiante encuentre un espacio para participar, aprender y crecer.
               </p>
               <Link
                 to="/campus/campeche/portal"
-                className="inline-flex items-center justify-center px-7 py-4 rounded-full bg-amber-400 text-[#0e162c] font-black text-base shadow-2xl shadow-amber-400/25 hover:bg-amber-300 transition"
+                className="flex w-full items-center justify-center px-7 py-4 rounded-full bg-amber-400 text-[#0e162c] font-black text-base shadow-2xl shadow-amber-400/25 hover:bg-amber-300 transition"
               >
                 Entrar al portal
               </Link>
@@ -412,7 +413,7 @@ export default function PaginaConoceClubs() {
                 aria-hidden="true"
               />
               <div className={`absolute inset-0 bg-gradient-to-r ${modoOscuro ? 'from-[#0b111e]/30 via-[#0b111e]/15' : 'from-[#0b111e]/15 via-[#0b111e]/5'} to-transparent`} aria-hidden="true" />
-              <div className={`absolute inset-y-0 left-0 ${modoOscuro ? 'w-1/3' : 'w-[60%]'} bg-gradient-to-r ${modoOscuro ? 'from-[#0b111e]/50' : 'from-[#0b111e]/85'} to-transparent`} aria-hidden="true" />
+              <div className={`absolute inset-y-0 left-0 ${modoOscuro ? 'w-1/2' : 'w-[75%]'} bg-gradient-to-r ${modoOscuro ? 'from-[#0b111e]/50' : 'from-[#0b111e]/85'} to-transparent`} aria-hidden="true" />
               <div className={`absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t ${modoOscuro ? 'from-[#0e162c]' : 'from-white'} via-transparent to-transparent`} aria-hidden="true" />
               <div className="relative px-6 sm:px-8 lg:px-12 xl:px-16 py-20 flex items-center min-h-[88vh]">
                 <div className="max-w-3xl space-y-5">
@@ -429,7 +430,7 @@ export default function PaginaConoceClubs() {
                   <p className="text-sm uppercase tracking-[0.25em] font-bold text-amber-300">
                     {slide.linea}
                   </p>
-                   <p className={`text-base sm:text-lg leading-relaxed max-w-xl ${modoOscuro ? 'text-amber-300' : 'text-amber-300 [-webkit-text-stroke:0.25px_#000]'}`}>
+                   <p className={`text-base sm:text-lg leading-relaxed max-w-xl ${modoOscuro ? 'text-slate-200' : 'text-amber-300 [-webkit-text-stroke:0.25px_#000]'}`}>
                      {slide.descripcion}
                    </p>
                  </div>

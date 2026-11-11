@@ -1,6 +1,6 @@
 /* Punto de entrada principal. Renderiza la barra de navegación, las rutas (inicio, panel por rol) y el modal de inicio de sesión. */
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate, matchPath } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
 import { usePanelNav } from './contexts/PanelNavContext';
 import { useNoticias } from './contexts/NoticiasContext';
@@ -67,6 +67,32 @@ function ScrollAlInicio() {
   }, [pathname]);
   return null;
 }
+
+const RUTAS_CONOCIDAS = [
+  '/',
+  '/conocenos',
+  '/acerca-del-proyecto',
+  '/conoce-clubs',
+  '/campus',
+  '/campus/campeche',
+  '/campus/campeche/portal',
+  '/campus/campeche/portal/club/:id',
+  '/campus/campeche/portal/responsable-de-club/panel',
+  '/campus/campeche/coordinacion/panel',
+  '/encuesta/:slug',
+  '/oferta',
+  '/experiencia-estudiantil',
+  '/terminos',
+  '/privacidad',
+  '/reportar-problemas',
+  '/noticias',
+  '/eventos',
+  '/calendario',
+  '/panel',
+  '/admin/panel',
+  '/rectoria/panel',
+  '/mural/panel',
+];
 
 function App() {
   const { estaAutenticado, authReady, esAdmin, esCoordinacion, esResponsableClub, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
@@ -153,6 +179,18 @@ function App() {
         />
         <Route path="*" element={<PaginaNoEncontrada />} />
       </Routes>
+    );
+  }
+
+  // Una URL que no coincide con ninguna ruta declarada se muestra sin navbar,
+  // sin navegación inferior ni pie: solo la página 404.
+  const esRutaConocida = RUTAS_CONOCIDAS.some((ruta) => matchPath({ path: ruta, end: true }, location.pathname));
+  if (!esRutaConocida) {
+    return (
+      <>
+        <ScrollAlInicio />
+        <PaginaNoEncontrada />
+      </>
     );
   }
 
