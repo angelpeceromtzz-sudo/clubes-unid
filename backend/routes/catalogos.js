@@ -9,6 +9,7 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
+import { cargarCatalogoIntereses } from '../lib/preferencias.js';
 
 const router = Router();
 
@@ -48,6 +49,29 @@ router.get('/licenciaturas', async (req, res) => {
 router.post('/licenciaturas/cache', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), (req, res) => {
   cacheLicenciaturas = null;
   res.json({ ok: true });
+});
+
+// Catálogo del onboarding de preferencias. Solo nombres y estructura, sin datos
+// personales. Mismo criterio de caché corta que licenciaturas.
+let cacheIntereses = null;
+let cacheInteresesEn = 0;
+
+router.get('/intereses', async (req, res) => {
+  const ahora = Date.now();
+
+  if (cacheIntereses && ahora - cacheInteresesEn < TTL_CACHE_MS) {
+    return res.json(cacheIntereses);
+  }
+
+  try {
+    const catalogo = await cargarCatalogoIntereses(pool);
+    cacheIntereses = catalogo;
+    cacheInteresesEn = ahora;
+    res.json(catalogo);
+  } catch (err) {
+    console.error('Error al listar intereses:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 });
 
 export default router;

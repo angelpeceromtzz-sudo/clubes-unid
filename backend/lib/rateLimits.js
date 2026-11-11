@@ -27,6 +27,7 @@ export const UMBRALES = {
   uploadMinuto: enteroPositivo(process.env.RATE_LIMIT_UPLOAD_MINUTO, 30),
   notificacionesMinuto: enteroPositivo(process.env.RATE_LIMIT_NOTIFICACIONES_MINUTO, 30),
   lecturasPesadasMinuto: enteroPositivo(process.env.RATE_LIMIT_LECTURAS_MINUTO, 60),
+  preferenciasMinuto: enteroPositivo(process.env.RATE_LIMIT_PREFERENCIAS_MINUTO, 20),
 };
 
 const MENSAJE_429 =
@@ -184,5 +185,12 @@ export const limitadorLecturasPesadas = crearLimitador({
   identifier: 'lecturas-pesadas-usuario',
   windowMs: 60 * 1000,
   limit: UMBRALES.lecturasPesadasMinuto,
+  keyGenerator: claveUsuario,
+});
+
+export const limitadorPreferencias = crearLimitador({
+  identifier: 'preferencias-usuario',
+  windowMs: 60 * 1000,
+  limit: UMBRALES.preferenciasMinuto,
   keyGenerator: claveUsuario,
 });
