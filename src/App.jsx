@@ -28,6 +28,7 @@ import PaginaOferta from './pages/PaginaOferta';
 import PaginaTerminosCondiciones from './pages/PaginaTerminosCondiciones';
 import PaginaAvisoPrivacidad from './pages/PaginaAvisoPrivacidad';
 import PaginaReportarProblemas from './pages/PaginaReportarProblemas';
+import PaginaPreguntasFrecuentes from './pages/PaginaPreguntasFrecuentes';
 import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import PaginaEncuesta from './pages/PaginaEncuesta';
@@ -85,6 +86,7 @@ const RUTAS_CONOCIDAS = [
   '/terminos',
   '/privacidad',
   '/reportar-problemas',
+  '/preguntas-frecuentes',
   '/noticias',
   '/eventos',
   '/calendario',
@@ -142,9 +144,10 @@ function App() {
   const esOferta = location.pathname === '/oferta';
   const esExperienciaEstudiantil = location.pathname === '/experiencia-estudiantil';
   const esLegal = ['/terminos', '/privacidad', '/reportar-problemas'].includes(location.pathname);
+  const esPreguntasFrecuentes = location.pathname === '/preguntas-frecuentes';
   const esLandingCampeche = location.pathname === '/campus/campeche';
   const esAcercaProyecto = location.pathname === '/acerca-del-proyecto';
-  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esOferta || esExperienciaEstudiantil || esLandingCampeche || esAcercaProyecto || esLegal;
+  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esOferta || esExperienciaEstudiantil || esLandingCampeche || esAcercaProyecto || esLegal || esPreguntasFrecuentes;
 
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
@@ -223,6 +226,7 @@ function App() {
           {esLegal && <Route path="/terminos" element={<PaginaTerminosCondiciones />} />}
           {esLegal && <Route path="/privacidad" element={<PaginaAvisoPrivacidad />} />}
           {esLegal && <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />}
+          {esPreguntasFrecuentes && <Route path="/preguntas-frecuentes" element={<PaginaPreguntasFrecuentes />} />}
           {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs />} />}
         </Routes>
         {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} />}
@@ -316,6 +320,7 @@ return (
         <Route path="/terminos" element={<PaginaTerminosCondiciones />} />
         <Route path="/privacidad" element={<PaginaAvisoPrivacidad />} />
         <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />
+        <Route path="/preguntas-frecuentes" element={<PaginaPreguntasFrecuentes />} />
         <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />
         <Route path="/campus/campeche/portal/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
