@@ -3,6 +3,32 @@ import { useTheme } from '../contexts/ThemeContext';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
 import { PiePagina } from '../components/layout/PiePagina';
 
+const CAMPUS_POR_ESTADO = [
+  { estado: 'Aguascalientes', campuses: ['Campus Aguascalientes'] },
+  { estado: 'Baja California', campuses: ['Campus Ensenada', 'Campus Tijuana'] },
+  { estado: 'Campeche', campuses: ['Campus Campeche', 'Campus Ciudad del Carmen'] },
+  { estado: 'Chiapas', campuses: ['Campus Tapachula'] },
+  { estado: 'Ciudad de México', campuses: ['Campus Ciudad de México'] },
+  { estado: 'Coahuila', campuses: ['Campus Saltillo'] },
+  { estado: 'Durango', campuses: ['Campus Durango', 'Campus Gómez Palacio'] },
+  { estado: 'Estado de México', campuses: ['Campus Tejupilco', 'Campus Tlalnepantla'] },
+  { estado: 'Guerrero', campuses: ['Campus Acapulco'] },
+  { estado: 'Hidalgo', campuses: ['Campus Pachuca', 'Campus Tula'] },
+  { estado: 'Jalisco', campuses: ['Campus Ocotlán', 'Campus Tepatitlán'] },
+  { estado: 'Michoacán', campuses: ['Campus Cotija', 'Campus Uruapan', 'Campus Ocolusen', 'Campus Sahuayo'] },
+  { estado: 'Nuevo León', campuses: ['Campus Monterrey'] },
+  { estado: 'Oaxaca', campuses: ['Campus Juchitán', 'Campus Tuxtepec'] },
+  { estado: 'Puebla', campuses: ['Campus Atlixco', 'Campus Tehuacán'] },
+  { estado: 'Quintana Roo', campuses: ['Campus Cancún', 'Campus Playa del Carmen', 'Campus Chetumal', 'Campus Cozumel'] },
+  { estado: 'San Luis Potosí', campuses: ['Campus San Luis Potosí'] },
+  { estado: 'Sonora', campuses: ['Campus Hermosillo', 'Campus Ciudad Obregón'] },
+  { estado: 'Tabasco', campuses: ['Campus Villahermosa'] },
+  { estado: 'Tamaulipas', campuses: ['Campus Tampico'] },
+  { estado: 'Veracruz', campuses: ['Campus Tuxpan'] },
+  { estado: 'Yucatán', campuses: ['Campus Tizimín', 'Campus Mérida Vista Alegre'] },
+  { estado: 'Zacatecas', campuses: ['Campus Zacatecas', 'Campus Fresnillo'] },
+];
+
 export default function PaginaSelectorCampus() {
   const { modoOscuro } = useTheme();
   const oscuro = modoOscuro;
@@ -59,6 +85,62 @@ export default function PaginaSelectorCampus() {
           </p>
         </div>
       </section>
+
+      <section className="px-6 sm:px-8 lg:px-12 xl:px-16 py-12 sm:py-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="max-w-3xl mx-auto text-center mb-8">
+            <p className="text-xs uppercase tracking-[0.25em] font-black text-amber-400 mb-3">
+              Todos los campus
+            </p>
+            <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-balance">
+              Conoce nuestra red de campus
+            </h2>
+            <p className={`mt-4 text-sm sm:text-base ${oscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+              Campus Campeche es el único disponible por ahora. El resto se irán activando próximamente.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {CAMPUS_POR_ESTADO.map((grupo) => (
+              <article
+                key={grupo.estado}
+                className={`rounded-3xl border p-5 sm:p-6 ${oscuro ? 'border-slate-700/60 bg-[#0e162c]/40' : 'border-slate-200 bg-white'}`}
+              >
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-amber-400 mb-3">
+                  {grupo.estado}
+                </h3>
+                <ul className="space-y-2">
+                  {grupo.campuses.map((nombre) => {
+                    const activo = nombre === 'Campus Campeche';
+                    return (
+                      <li key={nombre}>
+                        {activo ? (
+                          <Link
+                            to="/campus/campeche"
+                            className={`flex items-center justify-between gap-2 rounded-2xl px-3 py-2 text-sm font-bold transition ${oscuro ? 'bg-amber-400/15 text-amber-300 hover:bg-amber-400/25' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
+                          >
+                            <span>{nombre}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Disponible</span>
+                          </Link>
+                        ) : (
+                          <span
+                            aria-disabled="true"
+                            className={`flex items-center justify-between gap-2 rounded-2xl px-3 py-2 text-sm font-medium cursor-not-allowed select-none ${oscuro ? 'bg-slate-800/60 text-slate-500' : 'bg-slate-100 text-slate-400'}`}
+                          >
+                            <span>{nombre}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Próximamente</span>
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <PiePagina />
     </main>
   );
