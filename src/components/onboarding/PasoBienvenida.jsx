@@ -8,9 +8,13 @@ export function PasoBienvenida({ onComenzar, ocupado = false, error = '' }) {
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <span className={`flex h-16 w-16 items-center justify-center rounded-full ${modoOscuro ? 'bg-amber-400/15 text-amber-400' : 'bg-amber-100 text-amber-600'}`}>
-          <Icono nombre="sparkles" className="h-8 w-8" />
-        </span>
+        <img
+          src="/branding/lobounid.png"
+          alt=""
+          aria-hidden="true"
+          className="h-[120px] w-[120px] object-contain sm:h-[130px] sm:w-[130px]"
+          draggable={false}
+        />
         <h2 id="titulo-paso" tabIndex={-1} className={`mt-6 text-2xl font-black tracking-tight outline-none sm:text-3xl ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
           ¡Bienvenido a Clubs UNID!
         </h2>
