@@ -42,10 +42,13 @@ export function ContenedorOnboarding({ progreso = null, pie = null, children }) 
       <header className="shrink-0">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className={`text-2xl font-extrabold leading-tight tracking-[-0.02em] sm:text-3xl ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>
-              Clubs UNID
-            </h1>
-            <p className={`text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Tu experiencia universitaria</p>
+            <img
+              src={modoOscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'}
+              alt="Clubs UNID"
+              className="h-8 w-auto max-w-[180px] object-contain sm:h-10"
+              draggable={false}
+            />
+            <p className={`mt-1 text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Tu experiencia universitaria</p>
           </div>
           {progreso && (
             <p className={`text-xs font-bold ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
