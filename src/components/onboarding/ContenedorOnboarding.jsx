@@ -45,10 +45,10 @@ export function ContenedorOnboarding({ progreso = null, pie = null, children }) 
             <img
               src={modoOscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'}
               alt="Clubs UNID"
-              className="h-12 w-auto max-w-[160px] object-contain sm:h-14"
+              className="h-14 w-auto max-w-[200px] object-contain sm:h-16"
               draggable={false}
             />
-            <p className={`mt-0.5 ml-1.5 text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Tu experiencia universitaria</p>
+            <p className={`-mt-2 ml-1.5 text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Tu experiencia universitaria</p>
           </div>
           {progreso && (
             <p className={`text-xs font-bold ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
