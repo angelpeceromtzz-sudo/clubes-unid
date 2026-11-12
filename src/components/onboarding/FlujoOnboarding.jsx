@@ -225,10 +225,12 @@ export function FlujoOnboarding({ onCompletar }) {
         </div>
       )}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <BotonAccion variant="outline" onClick={atras} disabled={ocupado} className="w-full sm:w-auto">
-          <Icono nombre="arrow-left" className="h-4 w-4" />
-          Atrás
-        </BotonAccion>
+        {paso !== 1 && (
+          <BotonAccion variant="outline" onClick={atras} disabled={ocupado} className="w-full sm:w-auto">
+            <Icono nombre="arrow-left" className="h-4 w-4" />
+            Atrás
+          </BotonAccion>
+        )}
         <BotonAccion onClick={continuar} disabled={ocupado || (paso === 1 && respuestas.categorias.length === 0)} aria-busy={ocupado} className="w-full sm:w-auto">
           {paso === TOTAL_PASOS_ONBOARDING ? (
             ocupado ? (
