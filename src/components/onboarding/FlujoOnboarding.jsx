@@ -22,6 +22,7 @@ import {
   alternarElemento,
   construirPayload,
   errorPropuesta,
+  pasoEsValido,
   respuestasIniciales,
 } from '../../utils/onboardingReglas';
 
@@ -109,8 +110,12 @@ export function FlujoOnboarding({ onCompletar }) {
         return;
       }
     }
-    if (paso === 1 && respuestas.categorias.length === 0) {
-      setAviso('Selecciona al menos una categoría para continuar.');
+    if (!pasoEsValido(paso, respuestas)) {
+      if (paso === 1) setAviso('Selecciona al menos una categoría para continuar.');
+      else if (paso === 2) setAviso('Selecciona al menos una actividad o propón una nueva.');
+      else if (paso === 3) setAviso('Selecciona al menos una motivación para continuar.');
+      else if (paso === 4) setAviso('Selecciona una opción para continuar.');
+      else if (paso === 5) setAviso('Indica si quieres recibir correos opcionales.');
       return;
     }
     if (paso === TOTAL_PASOS_ONBOARDING) {
@@ -205,7 +210,12 @@ export function FlujoOnboarding({ onCompletar }) {
     contenido = (
       <PasoCorreo
         correo={respuestas.correo}
-        onCambiarActivo={(activo) => setRespuestas((actual) => ({ ...actual, correo: { ...actual.correo, activo } }))}
+        onCambiarDecision={(decision) =>
+          setRespuestas((actual) => ({
+            ...actual,
+            correo: { ...actual.correo, decision, activo: decision === 'aceptar' },
+          }))
+        }
         onAlternarTipo={(tipo) =>
           setRespuestas((actual) => ({
             ...actual,
@@ -231,7 +241,7 @@ export function FlujoOnboarding({ onCompletar }) {
             Atrás
           </BotonAccion>
         )}
-        <BotonAccion onClick={continuar} disabled={ocupado || (paso === 1 && respuestas.categorias.length === 0)} aria-busy={ocupado} className="w-full sm:w-auto">
+        <BotonAccion onClick={continuar} disabled={ocupado || !pasoEsValido(paso, respuestas) || (paso === 2 && Boolean(errorPropuesta(respuestas.propuesta)))} aria-busy={ocupado} className="w-full sm:w-auto">
           {paso === TOTAL_PASOS_ONBOARDING ? (
             ocupado ? (
               <>

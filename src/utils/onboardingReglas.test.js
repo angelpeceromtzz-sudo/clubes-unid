@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   actividadesDeCategorias,
@@ -7,6 +7,7 @@ import {
   construirPayload,
   correoInicial,
   errorPropuesta,
+  pasoEsValido,
   respuestasIniciales,
   TIPOS_CORREO,
 } from './onboardingReglas.js';
@@ -89,4 +90,37 @@ test('construirPayload omite la propuesta vacía y limpia la no vacía', () => {
 
 test('construirPayload usa null cuando no se responde el género', () => {
   assert.equal(construirPayload(respuestasIniciales(), 'onboarding').genero, null);
+});
+
+describe('pasoEsValido', () => {
+  test('paso 1 exige al menos una categoría', () => {
+    assert.equal(pasoEsValido(1, respuestasIniciales()), false);
+    assert.equal(pasoEsValido(1, { ...respuestasIniciales(), categorias: [1] }), true);
+  });
+
+  test('paso 2 acepta actividad o propuesta válida, rechaza vacío', () => {
+    const vacio = respuestasIniciales();
+    assert.equal(pasoEsValido(2, vacio), false);
+    assert.equal(pasoEsValido(2, { ...vacio, actividades: [10] }), true);
+    assert.equal(pasoEsValido(2, { ...vacio, propuesta: 'Club de robótica' }), true);
+    assert.equal(pasoEsValido(2, { ...vacio, propuesta: 'ab' }), false);
+  });
+
+  test('paso 3 exige al menos una motivación', () => {
+    assert.equal(pasoEsValido(3, respuestasIniciales()), false);
+    assert.equal(pasoEsValido(3, { ...respuestasIniciales(), motivaciones: [1] }), true);
+  });
+
+  test('paso 4 exige una selección explícita, incluido prefiero no responder', () => {
+    assert.equal(pasoEsValido(4, respuestasIniciales()), false);
+    assert.equal(pasoEsValido(4, { ...respuestasIniciales(), genero: 'prefiero_no_responder' }), true);
+    assert.equal(pasoEsValido(4, { ...respuestasIniciales(), genero: 'mujer' }), true);
+  });
+
+  test('paso 5 exige una decisión explícita sobre los correos', () => {
+    const inicial = respuestasIniciales();
+    assert.equal(pasoEsValido(5, inicial), false);
+    assert.equal(pasoEsValido(5, { ...inicial, correo: { ...inicial.correo, decision: 'aceptar' } }), true);
+    assert.equal(pasoEsValido(5, { ...inicial, correo: { ...inicial.correo, decision: 'rechazar' } }), true);
+  });
 });

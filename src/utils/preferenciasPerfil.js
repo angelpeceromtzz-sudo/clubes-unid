@@ -12,7 +12,10 @@ export function adaptarPreferenciasServidor(datos, actividadesCatalogo = []) {
     actividades,
     motivaciones: [...(datos?.motivaciones ?? [])],
     genero: datos?.genero ?? null,
-    correo: datos?.correo ?? { activo: false, frecuencia: 'inmediata', tipos: {} },
+    correo: {
+      ...(datos?.correo ?? { activo: false, frecuencia: 'inmediata', tipos: {} }),
+      decision: (datos?.correo?.activo === true) ? 'aceptar' : 'rechazar',
+    },
     propuesta: '',
   };
 }

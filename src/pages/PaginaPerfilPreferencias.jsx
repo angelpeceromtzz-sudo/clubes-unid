@@ -177,7 +177,7 @@ export default function PaginaPerfilPreferencias() {
             <PasoGenero valor={respuestas.genero} onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, genero: valor }))} />
             <PasoCorreo
               correo={respuestas.correo}
-              onCambiarActivo={(activo) => setRespuestas((actual) => ({ ...actual, correo: { ...actual.correo, activo } }))}
+              onCambiarDecision={(decision) => setRespuestas((actual) => ({ ...actual, correo: { ...actual.correo, decision, activo: decision === 'aceptar' } }))}
               onAlternarTipo={(tipo) => setRespuestas((actual) => ({ ...actual, correo: { ...actual.correo, tipos: { ...actual.correo.tipos, [tipo]: !actual.correo.tipos[tipo] } } }))}
               onCambiarFrecuencia={(frecuencia) => setRespuestas((actual) => ({ ...actual, correo: { ...actual.correo, frecuencia } }))}
             />

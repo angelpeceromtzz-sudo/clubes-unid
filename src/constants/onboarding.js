@@ -40,6 +40,11 @@ export const FRECUENCIAS_ONBOARDING = Object.freeze([
   { valor: 'semanal', etiqueta: 'Resumen semanal' },
 ]);
 
+export const DECISIONES_CORREO_ONBOARDING = Object.freeze([
+  { valor: 'aceptar', etiqueta: 'Sí, quiero recibir novedades por correo' },
+  { valor: 'rechazar', etiqueta: 'No, no quiero recibir correos opcionales' },
+]);
+
 export const TIPOS_CORREO_ONBOARDING = Object.freeze([
   {
     id: 'clubes_convocatorias',

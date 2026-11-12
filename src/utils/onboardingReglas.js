@@ -18,6 +18,7 @@ export const FRECUENCIAS_CORREO = Object.freeze(['inmediata', 'diaria', 'semanal
 
 export function correoInicial() {
   return {
+    decision: null,
     activo: false,
     frecuencia: 'inmediata',
     tipos: Object.fromEntries(TIPOS_CORREO.map((tipo) => [tipo, false])),
@@ -57,6 +58,23 @@ export function errorPropuesta(texto) {
   return null;
 }
 
+// Indica si un paso del onboarding tiene una respuesta válida. Se usa tanto
+// para deshabilitar el botón Continuar como para validar antes de avanzar.
+export function pasoEsValido(paso, respuestas) {
+  if (!respuestas) return false;
+  if (paso === 1) return Array.isArray(respuestas.categorias) && respuestas.categorias.length > 0;
+  if (paso === 2) {
+    const tieneActividad = Array.isArray(respuestas.actividades) && respuestas.actividades.length > 0;
+    const propuesta = typeof respuestas.propuesta === 'string' ? respuestas.propuesta.trim() : '';
+    const propuestaValida = propuesta !== '' && errorPropuesta(propuesta) === null;
+    return tieneActividad || propuestaValida;
+  }
+  if (paso === 3) return Array.isArray(respuestas.motivaciones) && respuestas.motivaciones.length > 0;
+  if (paso === 4) return respuestas.genero !== null && respuestas.genero !== undefined;
+  if (paso === 5) return respuestas.correo?.decision === 'aceptar' || respuestas.correo?.decision === 'rechazar';
+  return true;
+}
+
 export function alternarElemento(lista, id) {
   return lista.includes(id) ? lista.filter((item) => item !== id) : [...lista, id];
 }
@@ -94,7 +112,7 @@ export function construirPayload(respuestas, origen) {
     motivaciones: [...respuestas.motivaciones],
     genero: respuestas.genero ?? null,
     correo: {
-      activo: respuestas.correo.activo === true,
+      activo: respuestas.correo.decision === 'aceptar',
       frecuencia: respuestas.correo.frecuencia,
       tipos: Object.fromEntries(TIPOS_CORREO.map((tipo) => [tipo, respuestas.correo.tipos[tipo] === true])),
     },
