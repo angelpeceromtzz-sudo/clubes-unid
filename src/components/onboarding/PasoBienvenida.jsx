@@ -7,7 +7,7 @@ export function PasoBienvenida({ onComenzar, ocupado = false, error = '' }) {
   const { modoOscuro } = useTheme();
   return (
     <div className="flex min-h-full flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
+      <div className="flex flex-1 -translate-y-5 flex-col items-center justify-center text-center sm:-translate-y-6">
         <img
           src="/branding/lobounid.png"
           alt=""
