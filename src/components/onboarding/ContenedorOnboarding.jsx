@@ -59,7 +59,7 @@ export function ContenedorOnboarding({ progreso = null, pie = null, children }) 
         {progreso && <BarraProgreso actual={progreso} />}
       </header>
 
-      <div className="mt-6 flex-1 overflow-y-auto">{children}</div>
+      <div className="scrollbar-amber mt-6 flex-1 overflow-y-auto">{children}</div>
 
       {pie && (
         <footer className={`mt-6 shrink-0 border-t pt-6 ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
