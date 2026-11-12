@@ -288,7 +288,7 @@ return (
 
       {onboardingAbiertoEfectivo && (
         <div className="fixed inset-0 z-[1000] flex items-stretch justify-center overflow-y-auto bg-slate-50 dark:bg-[#0b111e] p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-          <div className="flex min-h-[100dvh] w-full items-center justify-center px-4 py-6 sm:px-6">
+          <div className="flex min-h-[100dvh] w-full flex-col px-4 py-6 sm:px-6">
             <FlujoOnboarding
               onCompletar={() => {
                 marcarCompletadoOnboarding();

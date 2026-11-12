@@ -1,5 +1,5 @@
 /* Marco visual del onboarding: encabezado de marca, indicador "N de 5",
-   barra de progreso de cinco segmentos y pie de navegación. */
+   barra de progreso de cinco segmentos y pie de navegaciÃ³n. */
 import { useTheme } from '../../contexts/ThemeContext';
 import { TOTAL_PASOS_ONBOARDING } from '../../constants/onboarding';
 
@@ -37,9 +37,9 @@ export function ContenedorOnboarding({ progreso = null, pie = null, children }) 
   return (
     <section
       aria-label="Personaliza tu experiencia en Clubs UNID"
-      className={`mx-auto w-full max-w-xl rounded-3xl p-5 sm:p-8 ${marco}`}
+      className={`mx-auto flex w-full max-w-xl flex-1 flex-col rounded-3xl p-5 sm:p-8 ${marco}`}
     >
-      <header>
+      <header className="shrink-0">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-400">
@@ -59,10 +59,10 @@ export function ContenedorOnboarding({ progreso = null, pie = null, children }) 
         {progreso && <BarraProgreso actual={progreso} />}
       </header>
 
-      <div className="mt-6">{children}</div>
+      <div className="mt-6 flex-1 overflow-y-auto">{children}</div>
 
       {pie && (
-        <footer className={`mt-8 border-t pt-6 ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
+        <footer className={`mt-6 shrink-0 border-t pt-6 ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
           {pie}
         </footer>
       )}
