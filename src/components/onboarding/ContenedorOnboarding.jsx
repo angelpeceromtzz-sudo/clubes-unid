@@ -48,7 +48,7 @@ export function ContenedorOnboarding({ progreso = null, pie = null, children }) 
               className="h-[68px] w-auto max-w-[340px] object-contain sm:h-[68px]"
               draggable={false}
             />
-            <p className={`mt-0.5 text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Tu experiencia universitaria</p>
+            <p className={`mt-0.5 ml-1.5 text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Tu experiencia universitaria</p>
           </div>
           {progreso && (
             <p className={`text-xs font-bold ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
