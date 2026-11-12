@@ -8,7 +8,7 @@ import {
   Palmtree, Pencil, Plus, QrCode, Search, Send, SquarePen, Star, Sun, Trash2,
   TriangleAlert, Trophy, UserRound, UsersRound, Video, X, Zap, Clock3,
   Activity, Cpu, HandHeart, Heart, HeartHandshake, Loader, Mail, Palette,
-  RefreshCw, ShieldCheck, Sparkles, Square, SquareCheckBig,
+  RefreshCw, Save, ShieldCheck, Sparkles, Square, SquareCheckBig,
 } from 'lucide-react';
 
 // Mantiene los nombres usados por la aplicación con iconos oficiales de Lucide.
@@ -23,7 +23,7 @@ const ICONOS = {
   menu: Menu, login: LogIn, file: FileText, 'alert-triangle': TriangleAlert,
   upload: CloudUpload, zap: Zap, headphones: Headphones, lightbulb: Lightbulb,
   'map-pin': MapPin, info: Info, image: Image, 'help-circle': CircleHelp, eye: Eye,
-  'eye-off': EyeOff, send: Send, link: Link2, 'chart-bar': ChartColumn,
+  'eye-off': EyeOff, send: Send, link: Link2, 'chart-bar': ChartColumn, save: Save,
   'dots-horizontal': Ellipsis, 'chevron-down': ChevronDown, 'chevron-up': ChevronUp,
   'alert-circle': CircleAlert, 'x-circle': CircleX, star: Star, filter: Funnel,
   newspaper: Newspaper, book: BookOpen, 'clipboard-pen': ClipboardPenLine,
