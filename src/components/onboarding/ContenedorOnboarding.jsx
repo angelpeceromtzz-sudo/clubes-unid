@@ -45,7 +45,7 @@ export function ContenedorOnboarding({ progreso = null, pie = null, children }) 
             <img
               src={modoOscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'}
               alt="Clubs UNID"
-              className="h-8 w-auto max-w-[180px] object-contain sm:h-10"
+              className="h-16 w-auto max-w-[360px] object-contain sm:h-20"
               draggable={false}
             />
             <p className={`mt-1 text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Tu experiencia universitaria</p>
