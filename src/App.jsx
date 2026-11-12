@@ -101,6 +101,15 @@ function App() {
     setOnboardingDescartado(false);
   }, [usuario?.id_usuario]);
 
+  useEffect(() => {
+    if (!onboardingAbiertoEfectivo) return;
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = anterior;
+    };
+  }, [onboardingAbiertoEfectivo]);
+
   // El estado del onboarding es derivado de `debeAbrirOnboarding`; no se
   // sincroniza con setState dentro de un effect. La condición se calcula
   // directamente en el render para evitar cascadas de render.
@@ -265,8 +274,8 @@ return (
         />
       )}
 
-      {estaAutenticado && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
-      {estaAutenticado && <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />}
+      {!onboardingAbiertoEfectivo && estaAutenticado && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
+      {!onboardingAbiertoEfectivo && estaAutenticado && <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />}
 
       <ModalConfirmacion
         show={confirmarLogout}
@@ -284,8 +293,8 @@ return (
       )}
 
       {onboardingAbiertoEfectivo && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
-          <div className="flex min-h-full items-center justify-center">
+        <div className="fixed inset-0 z-[1000] flex items-stretch justify-center overflow-y-auto bg-slate-50 dark:bg-[#0b111e] p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          <div className="flex min-h-[100dvh] w-full items-center justify-center px-4 py-6 sm:px-6">
             <FlujoOnboarding
               onCompletar={() => {
                 marcarCompletadoOnboarding();
@@ -364,12 +373,14 @@ return (
         <Route path="*" element={<PaginaNoEncontrada />} />
       </Routes>
 
-      <NavegacionInferiorMovil
-        estaAutenticado={estaAutenticado}
-        tieneInscripcionActiva={tieneInscripcionActiva}
-        onLoginClick={() => setShowLogin(true)}
-        onInicioClick={irACatalogo}
-      />
+      {!onboardingAbiertoEfectivo && (
+        <NavegacionInferiorMovil
+          estaAutenticado={estaAutenticado}
+          tieneInscripcionActiva={tieneInscripcionActiva}
+          onLoginClick={() => setShowLogin(true)}
+          onInicioClick={irACatalogo}
+        />
+      )}
       {location.pathname === '/campus/campeche/portal' && <PiePagina />}
     </div>
   );

@@ -36,6 +36,7 @@ export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [errorPropuestaTexto, setErrorPropuestaTexto] = useState('');
+  const [haComenzado, setHaComenzado] = useState(false);
   const [resumen, setResumen] = useState(null);
   const enCurso = useRef(false);
 
@@ -50,6 +51,7 @@ export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
   }, [paso, estado]);
 
   function irA(siguiente) {
+    if (siguiente === 'bienvenida' && haComenzado) return;
     setAviso('');
     setError('');
     setErrorPropuestaTexto('');
@@ -123,6 +125,10 @@ export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
         return;
       }
     }
+    if (paso === 1 && respuestas.categorias.length === 0) {
+      setAviso('Selecciona al menos una categoría para continuar.');
+      return;
+    }
     if (paso === TOTAL_PASOS_ONBOARDING) {
       guardar();
       return;
@@ -131,6 +137,7 @@ export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
   }
 
   function atras() {
+    if (paso === 1 && haComenzado) return;
     irA(paso === 1 ? 'bienvenida' : paso - 1);
   }
 
@@ -145,7 +152,7 @@ export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
   if (paso === 'bienvenida') {
     return (
       <ContenedorOnboarding>
-        <PasoBienvenida onComenzar={() => irA(1)} onOmitir={omitir} ocupado={ocupado} error={error} />
+        <PasoBienvenida onComenzar={() => { setHaComenzado(true); irA(1); }} onOmitir={omitir} ocupado={ocupado} error={error} />
       </ContenedorOnboarding>
     );
   }
@@ -242,7 +249,7 @@ export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
           <Icono nombre="arrow-left" className="h-4 w-4" />
           Atrás
         </BotonAccion>
-        <BotonAccion onClick={continuar} disabled={ocupado} aria-busy={ocupado} className="w-full sm:w-auto">
+        <BotonAccion onClick={continuar} disabled={ocupado || (paso === 1 && respuestas.categorias.length === 0)} aria-busy={ocupado} className="w-full sm:w-auto">
           {paso === TOTAL_PASOS_ONBOARDING ? (
             ocupado ? (
               <>

@@ -1,7 +1,6 @@
 /* Marco visual del onboarding: encabezado de marca, indicador "N de 5",
    barra de progreso de cinco segmentos y pie de navegación. */
 import { useTheme } from '../../contexts/ThemeContext';
-import { Icono } from '../ui/Icono';
 import { TOTAL_PASOS_ONBOARDING } from '../../constants/onboarding';
 
 function BarraProgreso({ actual }) {
@@ -32,19 +31,19 @@ function BarraProgreso({ actual }) {
 export function ContenedorOnboarding({ progreso = null, pie = null, children }) {
   const { modoOscuro } = useTheme();
   const marco = modoOscuro
-    ? 'bg-[#0b111e] border-slate-800 text-slate-200'
-    : 'bg-white border-slate-200 text-slate-800 shadow-sm';
+    ? 'bg-[#0b111e] text-slate-200'
+    : 'bg-white text-slate-800';
 
   return (
     <section
       aria-label="Personaliza tu experiencia en Clubs UNID"
-      className={`mx-auto w-full max-w-xl rounded-3xl border p-5 sm:p-8 ${marco}`}
+      className={`mx-auto w-full max-w-xl rounded-3xl p-5 sm:p-8 ${marco}`}
     >
       <header>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-[#0e162c]">
-              <Icono nombre="graduation-cap" className="h-6 w-6" />
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-400">
+              <img src="/branding/lobounid.png" alt="Clubs UNID" className="h-8 w-8 object-contain" draggable={false} />
             </span>
             <div>
               <p className={`text-base font-black leading-tight ${modoOscuro ? 'text-white' : 'text-slate-900'}`}>Clubs UNID</p>
