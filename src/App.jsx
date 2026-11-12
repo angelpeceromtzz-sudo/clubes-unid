@@ -80,7 +80,7 @@ function App() {
   const location = useLocation();
   const clubesLoading = false;
   const { redirigirPostLogin } = useAuthRedirect();
-  const { estado: estadoOnboarding, esAlumno: esAlumnoOnboarding, marcarCompletado: marcarCompletadoOnboarding, marcarOmitido: marcarOmitidoOnboarding } = useEstadoOnboarding(usuario);
+  const { estado: estadoOnboarding, esAlumno: esAlumnoOnboarding, marcarCompletado: marcarCompletadoOnboarding } = useEstadoOnboarding(usuario);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [confirmarLogout, setConfirmarLogout] = useState(false);
@@ -88,18 +88,12 @@ function App() {
   const [heroVisible, setHeroVisible] = useState(true);
   const [splashDone, setSplashDone] = useState(false);
   const [onboardingAbierto, setOnboardingAbierto] = useState(false);
-  const [onboardingDescartado, setOnboardingDescartado] = useState(false);
 
   const debeAbrirOnboarding =
-    authReady && estaAutenticado && esAlumnoOnboarding && estadoOnboarding === 'pendiente' && !onboardingAbierto && !onboardingDescartado;
+    authReady && estaAutenticado && esAlumnoOnboarding && estadoOnboarding === 'pendiente' && !onboardingAbierto;
 
   const onboardingAbiertoEfectivo =
     onboardingAbierto || debeAbrirOnboarding;
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOnboardingDescartado(false);
-  }, [usuario?.id_usuario]);
 
   useEffect(() => {
     if (!onboardingAbiertoEfectivo) return;
@@ -298,14 +292,6 @@ return (
             <FlujoOnboarding
               onCompletar={() => {
                 marcarCompletadoOnboarding();
-                setOnboardingAbierto(false);
-              }}
-              onOmitir={() => {
-                marcarOmitidoOnboarding();
-                setOnboardingAbierto(false);
-              }}
-              onSalir={() => {
-                setOnboardingDescartado(true);
                 setOnboardingAbierto(false);
               }}
             />

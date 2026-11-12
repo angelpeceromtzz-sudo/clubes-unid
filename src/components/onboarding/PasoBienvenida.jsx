@@ -3,7 +3,7 @@ import { Icono } from '../ui/Icono';
 import { Alerta } from '../ui/Alerta';
 import { BotonAccion } from '../ui/BotonAccion';
 
-export function PasoBienvenida({ onComenzar, onOmitir, ocupado = false, error = '' }) {
+export function PasoBienvenida({ onComenzar, ocupado = false, error = '' }) {
   const { modoOscuro } = useTheme();
   return (
     <div className="text-center">
@@ -26,20 +26,11 @@ export function PasoBienvenida({ onComenzar, onOmitir, ocupado = false, error = 
         </div>
       )}
 
-      <div className="mt-8 flex flex-col items-center gap-4">
+      <div className="mt-8 flex justify-center">
         <BotonAccion size="lg" onClick={onComenzar} disabled={ocupado} className="w-full sm:w-auto sm:min-w-64">
           Comenzar
           <Icono nombre="arrow-right" className="h-4 w-4" />
         </BotonAccion>
-        <button
-          type="button"
-          onClick={onOmitir}
-          disabled={ocupado}
-          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 disabled:opacity-50 ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}
-        >
-          {ocupado && <Icono nombre="loader" className="h-4 w-4 motion-safe:animate-spin" />}
-          Explorar sin personalizar
-        </button>
       </div>
     </div>
   );

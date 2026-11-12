@@ -28,7 +28,7 @@ import {
 const MENSAJE_GUARDADO = 'No se pudieron guardar tus preferencias. Tus respuestas se conservan; puedes intentarlo de nuevo.';
 const MENSAJE_CATALOGO = 'No pudimos cargar las opciones del onboarding.';
 
-export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
+export function FlujoOnboarding({ onCompletar }) {
   const { estado, catalogo, reintentar } = useCatalogoIntereses();
   const [paso, setPaso] = useState('bienvenida');
   const [respuestas, setRespuestas] = useState(respuestasIniciales);
@@ -101,22 +101,6 @@ export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
     }
   }
 
-  async function omitir() {
-    if (enCurso.current) return;
-    enCurso.current = true;
-    setOcupado(true);
-    setError('');
-    try {
-      await api.omitirOnboarding();
-      onOmitir?.();
-    } catch (err) {
-      setError(err.message || 'No se pudo registrar tu decisión. Puedes intentarlo de nuevo.');
-    } finally {
-      enCurso.current = false;
-      setOcupado(false);
-    }
-  }
-
   function continuar() {
     if (paso === 2) {
       const mensaje = errorPropuesta(respuestas.propuesta);
@@ -152,7 +136,7 @@ export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
   if (paso === 'bienvenida') {
     return (
       <ContenedorOnboarding>
-        <PasoBienvenida onComenzar={() => { setHaComenzado(true); irA(1); }} onOmitir={omitir} ocupado={ocupado} error={error} />
+        <PasoBienvenida onComenzar={() => { setHaComenzado(true); irA(1); }} ocupado={ocupado} error={error} />
       </ContenedorOnboarding>
     );
   }
@@ -174,14 +158,10 @@ export function FlujoOnboarding({ onCompletar, onOmitir, onSalir }) {
         <div role="alert">
           <Alerta tipo="error" mensaje={MENSAJE_CATALOGO} />
         </div>
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+        <div className="mt-6 flex justify-center">
           <BotonAccion variant="outline" onClick={reintentar} className="w-full sm:w-auto">
             <Icono nombre="refresh-cw" className="h-4 w-4" />
             Reintentar
-          </BotonAccion>
-          <BotonAccion onClick={onSalir} className="w-full sm:w-auto">
-            Continuar a Clubs UNID
-            <Icono nombre="arrow-right" className="h-4 w-4" />
           </BotonAccion>
         </div>
       </ContenedorOnboarding>
