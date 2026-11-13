@@ -28,6 +28,7 @@ export const UMBRALES = {
   notificacionesMinuto: enteroPositivo(process.env.RATE_LIMIT_NOTIFICACIONES_MINUTO, 30),
   lecturasPesadasMinuto: enteroPositivo(process.env.RATE_LIMIT_LECTURAS_MINUTO, 60),
   escrituraMinuto: enteroPositivo(process.env.RATE_LIMIT_ESCRITURA_MINUTO, 60),
+  preferenciasMinuto: enteroPositivo(process.env.RATE_LIMIT_PREFERENCIAS_MINUTO, 20),
 };
 
 const MENSAJE_429 =
@@ -199,4 +200,11 @@ export const limitadorEscritura = crearLimitador({
   // Solo se aplica a operaciones de escritura; las lecturas ya tienen el
   // global y, en su caso, limitadores específicos (lecturas pesadas).
   skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
+});
+
+export const limitadorPreferencias = crearLimitador({
+  identifier: 'preferencias-usuario',
+  windowMs: 60 * 1000,
+  limit: UMBRALES.preferenciasMinuto,
+  keyGenerator: claveUsuario,
 });

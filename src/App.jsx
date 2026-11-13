@@ -29,10 +29,13 @@ import PaginaTerminosCondiciones from './pages/PaginaTerminosCondiciones';
 import PaginaAvisoPrivacidad from './pages/PaginaAvisoPrivacidad';
 import PaginaReportarProblemas from './pages/PaginaReportarProblemas';
 import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
+import PaginaPerfilPreferencias from './pages/PaginaPerfilPreferencias';
+import { FlujoOnboarding } from './components/onboarding/FlujoOnboarding';
 import { DetalleClub } from './components/clubes/DetalleClub';
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
+import { useEstadoOnboarding } from './hooks/useEstadoOnboarding';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { NAVBAR_HEIGHT, NAVBAR_HEIGHT_LOGO } from './constants/limites';
 
@@ -77,12 +80,33 @@ function App() {
   const location = useLocation();
   const clubesLoading = false;
   const { redirigirPostLogin } = useAuthRedirect();
+  const { estado: estadoOnboarding, esAlumno: esAlumnoOnboarding, marcarCompletado: marcarCompletadoOnboarding } = useEstadoOnboarding(usuario);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [confirmarLogout, setConfirmarLogout] = useState(false);
   const [catalogoKey] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
   const [splashDone, setSplashDone] = useState(false);
+  const [onboardingAbierto, setOnboardingAbierto] = useState(false);
+
+  const debeAbrirOnboarding =
+    authReady && estaAutenticado && esAlumnoOnboarding && estadoOnboarding === 'pendiente' && !onboardingAbierto;
+
+  const onboardingAbiertoEfectivo =
+    onboardingAbierto || debeAbrirOnboarding;
+
+  useEffect(() => {
+    if (!onboardingAbiertoEfectivo) return;
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = anterior;
+    };
+  }, [onboardingAbiertoEfectivo]);
+
+  // El estado del onboarding es derivado de `debeAbrirOnboarding`; no se
+  // sincroniza con setState dentro de un effect. La condición se calcula
+  // directamente en el render para evitar cascadas de render.
 
   const handleScrollChange = useCallback((isScrolled) => {
     setHeroVisible(!isScrolled);
@@ -118,7 +142,7 @@ function App() {
   const esLegal = ['/terminos', '/privacidad', '/reportar-problemas'].includes(location.pathname);
   const esLandingCampeche = location.pathname === '/campus/campeche';
   const esAcercaProyecto = location.pathname === '/acerca-del-proyecto';
-  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esOferta || esExperienciaEstudiantil || esLandingCampeche || esAcercaProyecto || esLegal;
+  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esOferta || esExperienciaEstudiantil || esLandingCampeche || esAcercaProyecto || esLegal || onboardingAbierto;
 
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
@@ -244,8 +268,8 @@ return (
         />
       )}
 
-      {estaAutenticado && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
-      {estaAutenticado && <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />}
+      {!onboardingAbiertoEfectivo && estaAutenticado && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
+      {!onboardingAbiertoEfectivo && estaAutenticado && <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />}
 
       <ModalConfirmacion
         show={confirmarLogout}
@@ -260,6 +284,19 @@ return (
 
       {showLogin && (
         <ModalInicioSesion onClose={handleLoginSuccess} />
+      )}
+
+      {onboardingAbiertoEfectivo && (
+        <div className="scrollbar-amber fixed inset-0 z-[1000] flex items-stretch justify-center overflow-y-auto bg-slate-50 dark:bg-[#0b111e] p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          <div className="flex min-h-[100dvh] w-full flex-col px-4 py-6 sm:px-6">
+            <FlujoOnboarding
+              onCompletar={() => {
+                marcarCompletadoOnboarding();
+                setOnboardingAbierto(false);
+              }}
+            />
+          </div>
+        </div>
       )}
 
       <Routes>
@@ -279,7 +316,11 @@ return (
         <Route path="/privacidad" element={<PaginaAvisoPrivacidad />} />
         <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />
         <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />
-        <Route path="/campus/campeche/portal/club/:id" element={
+        <Route path="/perfil/preferencias" element={
+          <RutaProtegida requiereAlumno>
+            <PaginaPerfilPreferencias />
+          </RutaProtegida>
+        } />        <Route path="/campus/campeche/portal/club/:id" element={
           <DetalleClub onLoginClick={() => setShowLogin(true)} />
         } />
         <Route path="/panel" element={
@@ -318,12 +359,14 @@ return (
         <Route path="*" element={<PaginaNoEncontrada />} />
       </Routes>
 
-      <NavegacionInferiorMovil
-        estaAutenticado={estaAutenticado}
-        tieneInscripcionActiva={tieneInscripcionActiva}
-        onLoginClick={() => setShowLogin(true)}
-        onInicioClick={irACatalogo}
-      />
+      {!onboardingAbiertoEfectivo && (
+        <NavegacionInferiorMovil
+          estaAutenticado={estaAutenticado}
+          tieneInscripcionActiva={tieneInscripcionActiva}
+          onLoginClick={() => setShowLogin(true)}
+          onInicioClick={irACatalogo}
+        />
+      )}
       {location.pathname === '/campus/campeche/portal' && <PiePagina />}
     </div>
   );
