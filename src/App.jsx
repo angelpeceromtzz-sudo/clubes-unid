@@ -25,11 +25,15 @@ import PaginaAcercaProyecto from './pages/PaginaAcercaProyecto';
 import PaginaLandingGeneral from './pages/PaginaLandingGeneral';
 import PaginaSelectorCampus from './pages/PaginaSelectorCampus';
 import PaginaOferta from './pages/PaginaOferta';
+import { PaginaActividades, MisActividades } from './pages/PaginaActividades';
+import { DetalleActividad } from './pages/DetalleActividad';
+import { GestionActividades } from './pages/GestionActividades';
 import PaginaTerminosCondiciones from './pages/PaginaTerminosCondiciones';
 import PaginaAvisoPrivacidad from './pages/PaginaAvisoPrivacidad';
 import PaginaReportarProblemas from './pages/PaginaReportarProblemas';
 import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
-import { DetalleClub } from './components/clubes/DetalleClub';
+import { RutaClubActividad } from './components/actividades/RutaClubActividad';
+import { abrirPanelResponsable } from './services/panelResponsable';
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
@@ -95,7 +99,7 @@ function App() {
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
-    if (!actualizacionesAbiertas && location.pathname !== '/noticias' && location.pathname !== '/calendario') redirigirPostLogin();
+    if (!actualizacionesAbiertas && location.pathname !== '/noticias' && location.pathname !== '/calendario' && !location.pathname.startsWith('/actividades')) redirigirPostLogin();
   }, [redirigirPostLogin, location.pathname, actualizacionesAbiertas]);
 
    function handleLogout() {
@@ -198,7 +202,7 @@ function App() {
     } else if (esAdmin) {
       navigate('/admin/panel');
     } else if (esResponsableClub) {
-      navigate('/campus/campeche/portal/responsable-de-club/panel');
+      abrirPanelResponsable(navigate);
     } else if (esRectoria) {
       navigate('/rectoria/panel');
     } else if (esResponsableMural) {
@@ -263,6 +267,10 @@ return (
       )}
 
       <Routes>
+        <Route path="/actividades" element={<PaginaActividades />} />
+        <Route path="/actividades/mis-registros" element={<MisActividades onLoginClick={() => setShowLogin(true)} />} />
+        <Route path="/actividades/gestion" element={<GestionActividades onLoginClick={() => setShowLogin(true)} />} />
+        <Route path="/actividades/:slug" element={<DetalleActividad onLoginClick={() => setShowLogin(true)} />} />
         <Route path="/campus/campeche/portal" element={
           <PaginaInicio key={catalogoKey} />
         } />
@@ -280,7 +288,7 @@ return (
         <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />
         <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />
         <Route path="/campus/campeche/portal/club/:id" element={
-          <DetalleClub onLoginClick={() => setShowLogin(true)} />
+          <RutaClubActividad onLoginClick={() => setShowLogin(true)} />
         } />
         <Route path="/panel" element={
           <RutaProtegida>

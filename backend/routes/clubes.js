@@ -5,21 +5,12 @@ import { authenticate, requireRole, requireClubLeader } from '../middleware/auth
 import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { registrarActividadClub } from '../lib/clubActivity.js';
-import { eliminarImagenCloudinary } from '../lib/eliminarImagenCloudinary.js';
-import { esImagenPortadaValida } from '../lib/validarUrl.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
+import { esImagenPortadaValida } from '../lib/validarUrl.js';
 
 import convocatoriasInscripcion from './convocatoriasInscripcion.js';
+import routerCatalogo from './actividades.js';
 
-const CUPOS_CLUB_VALIDOS = [10, 15, 20, 25, 30, 40, 50];
-
-
-function tieneCaracteresNoPermitidos(texto) {
-  if (texto === null || texto === undefined) return false;
-  const valor = String(texto).trim();
-  if (valor === '') return false;
-  return !/^[\p{L}\p{N}\s.,;:!?¿¡()\-'"\/#&]+$/u.test(valor);
-}
 const router = Router();
 router.use('/:id/convocatoria', convocatoriasInscripcion);
 
@@ -52,7 +43,7 @@ router.get('/', async (req, res) => {
               ) AS cupo_actual
        FROM clubes_con_estado c
        JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
-       WHERE c.id_estatus_club <> 3
+       WHERE c.id_estatus_club <> 3 AND c.estado_publicacion='publicada'
        ORDER BY c.id_club`
     );
 
@@ -132,7 +123,7 @@ router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_
               c.nombre_club,
               u.nombre_completo AS actor_nombre
        FROM actividad_clubes a
-       LEFT JOIN clubes c ON c.id_club = a.id_club
+       LEFT JOIN clubes_operativos c ON c.id_club = a.id_club
        LEFT JOIN usuarios u ON u.id_usuario = a.id_actor
        ${filtrosSql}
        ORDER BY a.fecha_creacion DESC
@@ -166,7 +157,7 @@ router.get('/actividad/filtros', authenticate, requireRole(ROL_ADMIN, ROL_RECTOR
     const clubes = await pool.query(
       `SELECT DISTINCT c.id_club AS id, c.nombre_club AS nombre
        FROM actividad_clubes a
-       JOIN clubes c ON c.id_club = a.id_club
+       JOIN clubes_operativos c ON c.id_club = a.id_club
        WHERE a.id_club IS NOT NULL
        ORDER BY c.nombre_club ASC`
     );
@@ -189,6 +180,7 @@ router.get('/admin', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), asy
     const result = await pool.query(
       `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
               c.cupo_maximo, c.id_responsable_club, c.participacion, c.lugar_actividades,
+              c.estado_publicacion, c.estado_propuesta, c.propuesta,
               p.nombre_completo AS presidente_nombre,
               c.imagen_portada,
               c.id_estatus_club, e.nombre_estatus as estatus,
@@ -267,7 +259,7 @@ router.get('/:id', async (req, res) => {
        FROM clubes_con_estado c
        JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
        LEFT JOIN usuarios p ON p.id_usuario = c.id_responsable_club
-       WHERE c.id_club = $1`,
+       WHERE c.id_club = $1 AND c.estado_publicacion='publicada' AND c.id_estatus_club<>3`,
       [id]
     );
 
@@ -308,7 +300,7 @@ router.put('/:id/estatus', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION
 
 
     const result = await pool.query(
-      `UPDATE clubes SET id_estatus_club = $1 WHERE id_club = $2
+      `UPDATE clubes_operativos SET id_estatus_club = $1 WHERE id_club = $2
        RETURNING id_club, nombre_club, id_estatus_club`,
       [id_estatus_club, id]
     );
@@ -364,232 +356,19 @@ router.get('/:id/miembros', authenticate, async (req, res) => {
   }
 });
 
-// Crea un nuevo club (solo admin)
-router.post('/', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles, lugar_actividades, password } = req.body;
-
-    const ADMIN_SECRET = process.env.ADMIN_SECRET;
-    if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
-      return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
-    }
-
-    if (!nombre_club || !descripcion || !categoria || !cupo_maximo) {
-      return res.status(400).json({ error: 'Nombre, descripción, categoría y cupo máximo son obligatorios' });
-    }
-
-    const cupoNumero = Number(cupo_maximo);
-    if (!Number.isInteger(cupoNumero) || !CUPOS_CLUB_VALIDOS.includes(cupoNumero)) {
-      return res.status(400).json({ error: 'Cupo máximo inválido' });
-    }
-
-    if (tieneCaracteresNoPermitidos(nombre_club)) {
-      return res.status(400).json({ error: 'El nombre del club no permite emojis ni caracteres especiales' });
-    }
-    if (descripcion && tieneCaracteresNoPermitidos(descripcion)) {
-      return res.status(400).json({ error: 'La descripción no permite emojis ni caracteres especiales' });
-    }
-    if (lugar_actividades && tieneCaracteresNoPermitidos(lugar_actividades)) {
-      return res.status(400).json({ error: 'El lugar de actividades no permite emojis ni caracteres especiales' });
-    }
-
-    if (tieneCaracteresNoPermitidos(nombre_club)) {
-      return res.status(400).json({ error: 'El nombre del club no permite emojis ni caracteres especiales' });
-    }
-    if (descripcion && tieneCaracteresNoPermitidos(descripcion)) {
-      return res.status(400).json({ error: 'La descripción no permite emojis ni caracteres especiales' });
-    }
-    if (lugar_actividades && tieneCaracteresNoPermitidos(lugar_actividades)) {
-      return res.status(400).json({ error: 'El lugar de actividades no permite emojis ni caracteres especiales' });
-    }
-
-    const PARTICIPACION_VALIDA = ['masculina', 'femenina', 'mixta'];
-    if (!participacion || !PARTICIPACION_VALIDA.includes(participacion)) {
-      return res.status(400).json({ error: 'Participación inválida' });
-    }
-
-    if (!Array.isArray(niveles) || niveles.length === 0 || !niveles.every((n) => [1, 2, 3].includes(Number(n)))) {
-      return res.status(400).json({ error: 'Debes seleccionar al menos un nivel válido' });
-    }
-
-    // H10: la portada se renderiza en <img> de páginas públicas; solo http(s)
-    // o rutas /uploads/ (consistencia con las imágenes de Cloudinary).
-    if (!esImagenPortadaValida(imagen_portada)) {
-      return res.status(400).json({ error: 'La imagen de portada debe ser una URL http(s) válida o una ruta /uploads/' });
-    }
-
-    await client.query('BEGIN');
-
-    const result = await client.query(
-      `INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion, lugar_actividades)
-       VALUES ($1, $2, $3, $4, 2, $5, $6, $7)
-       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion, lugar_actividades`,
-      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, participacion, lugar_actividades || null],
-    );
-
-    for (const idNivel of niveles) {
-      await client.query(
-        'INSERT INTO clubes_niveles (id_club, id_nivel) VALUES ($1, $2)',
-        [result.rows[0].id_club, Number(idNivel)]
-      );
-    }
-
-    await client.query('COMMIT');
-
-    registrarHistorial({
-      idAdmin: req.user.id,
-      adminNombre: req.user.nombre_completo,
-      accion: 'crear_club',
-      descripcion: `${req.user.nombre_completo} creó el club "${nombre_club}"`,
-      entidadTipo: 'club',
-      entidadId: result.rows[0].id_club,
-      detalles: { nombre_club, categoria, cupo_maximo, participacion, niveles },
-    });
-
-    res.status(201).json({
-      ...result.rows[0],
-      estatus: 'activo',
-      cupo_actual: 0,
-      niveles: niveles.map((idNivel) => ({ id_nivel: Number(idNivel) })),
-    });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error al crear club:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  } finally {
-    client.release();
-  }
-});
-
-// Actualiza los datos de un club (solo admin)
-router.put('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const { id } = req.params;
-    const { nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, participacion, niveles, lugar_actividades } = req.body;
-
-    if (!nombre_club || !descripcion || !categoria || !cupo_maximo) {
-      return res.status(400).json({ error: 'Nombre, descripción, categoría y cupo máximo son obligatorios' });
-    }
-
-    const cupoNumero = Number(cupo_maximo);
-    if (!Number.isInteger(cupoNumero) || !CUPOS_CLUB_VALIDOS.includes(cupoNumero)) {
-      return res.status(400).json({ error: 'Cupo máximo inválido' });
-    }
-
-    if (tieneCaracteresNoPermitidos(nombre_club)) {
-      return res.status(400).json({ error: 'El nombre del club no permite emojis ni caracteres especiales' });
-    }
-    if (descripcion && tieneCaracteresNoPermitidos(descripcion)) {
-      return res.status(400).json({ error: 'La descripción no permite emojis ni caracteres especiales' });
-    }
-    if (lugar_actividades && tieneCaracteresNoPermitidos(lugar_actividades)) {
-      return res.status(400).json({ error: 'El lugar de actividades no permite emojis ni caracteres especiales' });
-    }
-
-    if (tieneCaracteresNoPermitidos(nombre_club)) {
-      return res.status(400).json({ error: 'El nombre del club no permite emojis ni caracteres especiales' });
-    }
-    if (descripcion && tieneCaracteresNoPermitidos(descripcion)) {
-      return res.status(400).json({ error: 'La descripción no permite emojis ni caracteres especiales' });
-    }
-    if (lugar_actividades && tieneCaracteresNoPermitidos(lugar_actividades)) {
-      return res.status(400).json({ error: 'El lugar de actividades no permite emojis ni caracteres especiales' });
-    }
-
-    const PARTICIPACION_VALIDA = ['masculina', 'femenina', 'mixta'];
-    if (!participacion || !PARTICIPACION_VALIDA.includes(participacion)) {
-      return res.status(400).json({ error: 'Participación inválida' });
-    }
-
-    if (!Array.isArray(niveles) || niveles.length === 0 || !niveles.every((n) => [1, 2, 3].includes(Number(n)))) {
-      return res.status(400).json({ error: 'Debes seleccionar al menos un nivel válido' });
-    }
-
-    // H10: la portada se renderiza en <img> de páginas públicas; solo http(s)
-    // o rutas /uploads/ (consistencia con las imágenes de Cloudinary).
-    if (!esImagenPortadaValida(imagen_portada)) {
-      return res.status(400).json({ error: 'La imagen de portada debe ser una URL http(s) válida o una ruta /uploads/' });
-    }
-
-    await client.query('BEGIN');
-
-    // Portada anterior: necesaria para la limpieza de Cloudinary solo si el
-    // UPDATE la reemplaza (se guarda el estado previo antes de tocar la fila).
-    const previo = await client.query(
-      'SELECT imagen_portada FROM clubes WHERE id_club = $1',
-      [id]
-    );
-    const urlPortadaAnterior = previo.rows[0]?.imagen_portada || null;
-
-    const result = await client.query(
-      `UPDATE clubes
-       SET nombre_club = $1, descripcion = $2, categoria = $3, cupo_maximo = $4,
-           imagen_portada = COALESCE($5, imagen_portada), participacion = $6,
-           lugar_actividades = $8
-       WHERE id_club = $7
-       RETURNING id_club, nombre_club, descripcion, categoria, cupo_maximo, id_estatus_club, imagen_portada, participacion, lugar_actividades`,
-      [nombre_club, descripcion, categoria, parseInt(cupo_maximo, 10), imagen_portada || null, participacion, id, lugar_actividades || null],
-    );
-
-    if (result.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Club no encontrado' });
-    }
-
-    await client.query('DELETE FROM clubes_niveles WHERE id_club = $1', [id]);
-    for (const idNivel of niveles) {
-      await client.query(
-        'INSERT INTO clubes_niveles (id_club, id_nivel) VALUES ($1, $2)',
-        [id, Number(idNivel)]
-      );
-    }
-
-    await client.query('COMMIT');
-
-    // Limpieza de Cloudinary: recién tras el COMMIT (si la transacción falló,
-    // el recurso anterior se conserva). Solo si la portada cambió y ninguna
-    // otra club sigue refiriendo el mismo recurso por identidad de public_id.
-    const urlPortadaNueva = result.rows[0]?.imagen_portada || null;
-    if (urlPortadaAnterior && urlPortadaNueva && urlPortadaAnterior !== urlPortadaNueva) {
-      const refs = await pool.query(
-        'SELECT imagen_portada FROM clubes WHERE imagen_portada IS NOT NULL AND id_club <> $1',
-        [id]
-      );
-      await eliminarImagenCloudinary(urlPortadaAnterior, {
-        candidatas: refs.rows.map((f) => f.imagen_portada),
-      });
-    }
-
-    const estatusResult = await pool.query(
-      'SELECT nombre_estatus FROM cat_estatus_clubes WHERE id_estatus_club = $1',
-      [result.rows[0].id_estatus_club],
-    );
-
-    registrarHistorial({
-      idAdmin: req.user.id,
-      adminNombre: req.user.nombre_completo,
-      accion: 'actualizar_club',
-      descripcion: `${req.user.nombre_completo} actualizó los datos del club ID ${id}`,
-      entidadTipo: 'club',
-      entidadId: parseInt(id),
-      detalles: { nombre_club, categoria, cupo_maximo, participacion, niveles },
-    });
-
-    res.json({
-      ...result.rows[0],
-      estatus: estatusResult.rows[0]?.nombre_estatus || 'activo',
-      niveles: niveles.map((idNivel) => ({ id_nivel: Number(idNivel) })),
-    });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error al actualizar club:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  } finally {
-    client.release();
-  }
-});
+// Compatibilidad: las escrituras anteriores usan la misma validación y revisión.
+function guardarClubCatalogo(req,res,next) {
+  const urlAnterior=req.url;
+  const datos=req.body;
+  if(!esImagenPortadaValida(datos.imagen_portada)) return res.status(400).json({error:'La imagen de portada debe ser una dirección HTTP o HTTPS válida o una ruta /uploads/'});
+  req.body={...datos,tipo:'club',nombre:datos.nombre_club,url_imagen:datos.imagen_portada};
+  req.url='/gestion/actividades'+(req.params.id ? '/'+req.params.id : '');
+  const responder=res.json;
+  res.json=function(datos){res.json=responder;return this.json(datos?.id_actividad ? {...datos,nombre_club:datos.nombre,imagen_portada:datos.url_imagen} : datos);};
+  routerCatalogo(req,res,(error)=>{req.url=urlAnterior;res.json=responder;next(error);});
+}
+router.post('/',authenticate,requireRole(ROL_ADMIN,ROL_COORDINACION),guardarClubCatalogo);
+router.put('/:id',authenticate,requireRole(ROL_ADMIN,ROL_COORDINACION),guardarClubCatalogo);
 
 // Admin puede cerrar una convocatoria publicada.
 router.post('/:id/cerrar-convocatoria', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
@@ -597,13 +376,13 @@ router.post('/:id/cerrar-convocatoria', authenticate, requireRole(ROL_ADMIN, ROL
     const { id } = req.params;
 
     const club = await pool.query(
-      'SELECT nombre_club FROM clubes WHERE id_club = $1',
+      'SELECT nombre_club FROM clubes_operativos WHERE id_club = $1',
       [id],
     );
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
 
     await pool.query(
-      'UPDATE clubes SET cerrada_manualmente = TRUE WHERE id_club = $1',
+      'UPDATE clubes_operativos SET cerrada_manualmente = TRUE WHERE id_club = $1',
       [id],
     );
 
@@ -639,7 +418,7 @@ router.put('/:id/vicepresidente', authenticate, requireRole(2), async (req, res)
     const { id_usuario } = req.body;
 
     const club = await pool.query(
-      'SELECT id_club, id_vicepresidente FROM clubes WHERE id_club = $1 AND id_responsable_club = $2',
+      'SELECT id_club, id_vicepresidente FROM clubes_operativos WHERE id_club = $1 AND id_responsable_club = $2',
       [id, req.user.id]
     );
     if (club.rows.length === 0) {
@@ -657,7 +436,7 @@ router.put('/:id/vicepresidente', authenticate, requireRole(2), async (req, res)
     }
 
     const result = await pool.query(
-      `UPDATE clubes SET id_vicepresidente = $1 WHERE id_club = $2
+      `UPDATE clubes_operativos SET id_vicepresidente = $1 WHERE id_club = $2
        RETURNING id_club, id_vicepresidente`,
       [id_usuario || null, id]
     );

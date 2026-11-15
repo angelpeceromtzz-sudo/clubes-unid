@@ -9,7 +9,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
   const { modoOscuro } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { esAdmin, esResponsableClub, esResponsableMural } = useAutenticacion();
+  const { esAdmin, esResponsableClub, esResponsableMural, esRectoria } = useAutenticacion();
 
   const [mostrarNav, setMostrarNav] = useState(true);
   const ultimoScrollY = useRef(0);
@@ -32,6 +32,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
 
   function irPanel() {
     if (esAdmin) navigate('/admin/panel');
+    else if (esRectoria) navigate('/rectoria/panel');
     else if (esResponsableClub) navigate('/campus/campeche/portal/responsable-de-club/panel');
     else if (esResponsableMural) navigate('/mural/panel');
     else navigate('/panel');
@@ -57,7 +58,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
             className={`flex flex-col items-center gap-0.5 transition-colors duration-200 cursor-pointer ${enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
           >
             <Icono nombre="clipboard" strokeWidth={2} className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Mi Club</span>
+            <span className="text-[10px] font-medium">Mi panel</span>
           </button>
         )}
 
@@ -71,7 +72,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
             ) : (
               <Icono nombre="logout" strokeWidth={2} className="h-5 w-5" />
             )}
-            <span className="text-[10px] font-medium">{estaAutenticado ? (esAdmin || esResponsableClub || esResponsableMural ? 'Panel' : 'Mis Postulaciones') : 'Iniciar Sesión'}</span>
+            <span className="text-[10px] font-medium">{estaAutenticado ? 'Mi panel' : 'Iniciar Sesión'}</span>
           </button>
         )}
       </div>

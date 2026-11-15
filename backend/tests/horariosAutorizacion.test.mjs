@@ -28,7 +28,7 @@ function responder(sql, params = []) {
     return fila ? { rows: [fila], rowCount: 1 } : { rows: [], rowCount: 0 };
   }
 
-  if (/SELECT id_responsable_club, id_vicepresidente FROM clubes WHERE id_club = \$1/.test(texto)) {
+  if (/SELECT id_responsable_club, id_vicepresidente FROM clubes_operativos WHERE id_club = \$1/.test(texto)) {
     const clubes = {
       5: { id_responsable_club: 100, id_vicepresidente: null },
       9: { id_responsable_club: 200, id_vicepresidente: null },
@@ -42,7 +42,7 @@ function responder(sql, params = []) {
     return { rows: [], rowCount: 0 };
   }
 
-  if (/SELECT id_club FROM clubes WHERE id_club = \$1 AND \(id_responsable_club/.test(texto)) {
+  if (/SELECT id_club FROM clubes_operativos WHERE id_club = \$1 AND \(id_responsable_club/.test(texto)) {
     const [idClub, idUsuario] = params.map(Number);
     const lideres = { '5:100': true, '9:200': true };
     return lideres[`${idClub}:${idUsuario}`]

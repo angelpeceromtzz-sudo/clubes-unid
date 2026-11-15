@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Icono } from '../../ui/Icono';
 
-const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología"];
+const CATEGORIAS = ["Todos", "Deportes", "Cultura", "Tecnología", "Actividades"];
 
 export function DesplegableCategoria({ categoriaActiva, setCategoriaActiva, setMenuCategoria, esMobile, dropdownPos }) {
   const { tema } = useTheme();
@@ -14,7 +14,9 @@ export function DesplegableCategoria({ categoriaActiva, setCategoriaActiva, setM
     >
       {CATEGORIAS.map((cat) => (
         <button
+          type="button"
           key={cat}
+          aria-pressed={categoriaActiva === cat}
           onClick={() => { setCategoriaActiva(cat); setMenuCategoria(false); }}
           className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg mx-1 cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center justify-between`}
           style={{ width: 'calc(100% - 8px)' }}

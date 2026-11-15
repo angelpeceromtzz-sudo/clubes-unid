@@ -26,7 +26,8 @@ before(async () => {
     CREATE TABLE usuarios (id_usuario INT PRIMARY KEY, id_rol INT NOT NULL, nombre_completo TEXT NOT NULL, deleted_at TIMESTAMPTZ, institutional_id TEXT);
     CREATE TABLE clubes (id_club INT PRIMARY KEY, nombre_club TEXT NOT NULL, id_responsable_club INT, id_vicepresidente INT,
       fecha_apertura_programada TIMESTAMPTZ, fecha_limite_cierre TIMESTAMPTZ, max_postulaciones INT,
-      cerrada_manualmente BOOLEAN DEFAULT FALSE, postulaciones_actuales INT DEFAULT 0, id_estatus_club INT NOT NULL DEFAULT 1);
+      cerrada_manualmente BOOLEAN DEFAULT FALSE, postulaciones_actuales INT DEFAULT 0, id_estatus_club INT NOT NULL DEFAULT 1,
+      tipo TEXT NOT NULL DEFAULT 'club',estado_publicacion TEXT NOT NULL DEFAULT 'publicada');
     CREATE TABLE cat_licenciaturas (id_licenciatura INT PRIMARY KEY, nombre TEXT NOT NULL);
     CREATE TABLE inscripciones (id_inscripcion SERIAL PRIMARY KEY, id_usuario INT NOT NULL, id_club INT NOT NULL, id_estatus_inscripcion INT DEFAULT 1);
     CREATE VIEW clubes_con_estado AS SELECT c.*, 'cerrado'::text AS estado_calculado, 0 AS formularios_recibidos FROM clubes c;
@@ -50,9 +51,10 @@ before(async () => {
   const sql = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
   const marcador = '-- PBI-13: horarios oficiales y propuestas revisadas por Coordinación (admin).';
   assert.ok(sql.includes(marcador));
-  const migracion = sql.slice(sql.indexOf(marcador));
+  const migracion = sql.slice(sql.indexOf(marcador),sql.indexOf('-- CATALOGO UNIFICADO:'));
   await testPool.query(migracion);
   await testPool.query(migracion); // Debe poder reiniciarse el backend sin duplicar ni borrar datos.
+  await testPool.query("CREATE VIEW clubes_operativos AS SELECT * FROM clubes WHERE tipo='club' WITH LOCAL CHECK OPTION");
   await testPool.query("INSERT INTO espacios_club(id_espacio,nombre) VALUES (1,'Cancha principal'),(2,'Salón cultural'); SELECT setval(pg_get_serial_sequence('espacios_club','id_espacio'),3,false)");
   pool.query = (...args) => testPool.query(...args);
   pool.connect = (...args) => testPool.connect(...args);
@@ -74,7 +76,7 @@ after(async () => {
 beforeEach(async () => {
   await testPool.query(`TRUNCATE horarios_club, solicitudes_horario, historial_solicitudes_horario, notificaciones,
     formularios, convocatorias, inscripciones, actividad_clubes, historial_admin RESTART IDENTITY CASCADE;
-    UPDATE clubes SET version_horario = 0, fecha_apertura_programada = NULL, fecha_limite_cierre = NULL, cerrada_manualmente = FALSE,
+    UPDATE clubes_operativos SET version_horario = 0, fecha_apertura_programada = NULL, fecha_limite_cierre = NULL, cerrada_manualmente = FALSE,
       max_postulaciones = NULL, postulaciones_actuales = 0, id_convocatoria_inscripcion_actual = NULL, id_estatus_club = 1;
     DELETE FROM convocatorias_inscripcion;
     DELETE FROM solicitudes_convocatoria`);
@@ -161,7 +163,7 @@ async function vencerInscripcion(id) {
 }
 
 async function asegurarCiclo(club = 1) {
-  const actual = await testPool.query('SELECT id_convocatoria_inscripcion_actual FROM clubes WHERE id_club = $1', [club]);
+  const actual = await testPool.query('SELECT id_convocatoria_inscripcion_actual FROM clubes_operativos WHERE id_club = $1', [club]);
   if (actual.rows[0]?.id_convocatoria_inscripcion_actual) return actual.rows[0].id_convocatoria_inscripcion_actual;
   const ciclo = await testPool.query(
     `INSERT INTO convocatorias_inscripcion
@@ -171,7 +173,7 @@ async function asegurarCiclo(club = 1) {
     [club],
   );
   const id = ciclo.rows[0].id_convocatoria_inscripcion;
-  await testPool.query('UPDATE clubes SET id_convocatoria_inscripcion_actual = $1 WHERE id_club = $2', [id, club]);
+  await testPool.query('UPDATE clubes_operativos SET id_convocatoria_inscripcion_actual = $1 WHERE id_club = $2', [id, club]);
   return id;
 }
 
@@ -364,7 +366,7 @@ test('PBI-12: la ruta antigua de estatus no permite convocar sin aprobación', a
 
 test('BUG-03: un club no activo no crea convocatorias ni acepta postulaciones', async () => {
   for (const estatus of [2, 3]) {
-    await testPool.query('UPDATE clubes SET id_estatus_club=$1 WHERE id_club=1', [estatus]);
+    await testPool.query('UPDATE clubes_operativos SET id_estatus_club=$1 WHERE id_club=1', [estatus]);
     const propuesta = await enviar('PUT', '/clubes/1/convocatoria', configConv, 2);
     assert.equal(propuesta.status, 409);
     assert.match(propuesta.datos.error, /no está activo/);
@@ -391,14 +393,14 @@ test('BUG-03: un club no activo no crea convocatorias ni acepta postulaciones', 
 
 test('BUG-03: admin no aprueba una solicitud de un club inactivo, pero sí puede devolverla', async () => {
   const s = (await enviar('PUT', '/clubes/1/convocatoria', configConv, 2)).datos.solicitud;
-  await testPool.query('UPDATE clubes SET id_estatus_club=3 WHERE id_club=1');
+  await testPool.query('UPDATE clubes_operativos SET id_estatus_club=3 WHERE id_club=1');
 
   const aprobacion = await enviar('POST', '/clubes/1/convocatoria/revision', { accion: 'aprobar', id_solicitud: s.id_solicitud });
   assert.equal(aprobacion.status, 409);
   assert.match(aprobacion.datos.error, /no está activo/);
   const pendiente = (await testPool.query('SELECT estado FROM solicitudes_convocatoria WHERE id_solicitud=$1', [s.id_solicitud])).rows[0];
   assert.equal(pendiente.estado, 'pendiente');
-  assert.equal((await testPool.query('SELECT max_postulaciones FROM clubes WHERE id_club=1')).rows[0].max_postulaciones, null);
+  assert.equal((await testPool.query('SELECT max_postulaciones FROM clubes_operativos WHERE id_club=1')).rows[0].max_postulaciones, null);
   assert.equal(Number((await testPool.query("SELECT COUNT(*) FROM notificaciones WHERE titulo='Convocatoria aprobada'")).rows[0].count), 0);
 
   const rechazo = await enviar('POST', '/clubes/1/convocatoria/revision', { accion: 'rechazar', id_solicitud: s.id_solicitud, observaciones: 'Corregir' });
@@ -412,7 +414,7 @@ test('BUG-03: bloques existentes se ocultan y bloquean hasta reactivar el club',
   const id = (await testPool.query('SELECT id_convocatoria FROM convocatorias')).rows[0].id_convocatoria;
   assert.equal((await enviar('PUT', `/convocatorias/${id}`, { fecha: '2099-01-20', hora: '10:00', lugar: 'Cancha' }, 2)).status, 200);
 
-  await testPool.query('UPDATE clubes SET id_estatus_club=3 WHERE id_club=1');
+  await testPool.query('UPDATE clubes_operativos SET id_estatus_club=3 WHERE id_club=1');
   assert.deepEqual((await enviar('GET', '/convocatorias/1', null, 2)).datos, []);
   assert.equal((await enviar('PUT', `/convocatorias/${id}`, { lugar: 'Otro' }, 2)).status, 409);
   assert.equal((await enviar('POST', `/convocatorias/${id}/solicitar-revision`, {}, 2)).status, 409);
@@ -422,7 +424,7 @@ test('BUG-03: bloques existentes se ocultan y bloquean hasta reactivar el club',
   assert.equal(bloque.estado_revision, 'preparacion');
   assert.equal(Number((await testPool.query("SELECT COUNT(*) FROM notificaciones WHERE audiencia='alumnos'")).rows[0].count), 0);
 
-  await testPool.query('UPDATE clubes SET id_estatus_club=1 WHERE id_club=1');
+  await testPool.query('UPDATE clubes_operativos SET id_estatus_club=1 WHERE id_club=1');
   assert.equal((await enviar('PUT', `/convocatorias/${id}`, { lugar: 'Cancha' }, 2)).status, 200);
   assert.equal((await enviar('POST', `/convocatorias/${id}/solicitar-revision`, {}, 2)).status, 200);
   assert.equal((await enviar('POST', `/convocatorias/${id}/enviar`, {})).status, 200);

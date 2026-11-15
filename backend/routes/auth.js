@@ -336,10 +336,10 @@ router.get('/me', authenticate, async (req, res) => {
               cv.id_vicepresidente
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
-       LEFT JOIN clubes cp ON cp.id_responsable_club = u.id_usuario
-       LEFT JOIN clubes cv ON cv.id_vicepresidente = u.id_usuario AND cp.id_club IS NULL
+       LEFT JOIN clubes_operativos cp ON cp.id_responsable_club = u.id_usuario AND cp.id_estatus_club<>3 AND cp.estado_publicacion<>'archivada'
+       LEFT JOIN clubes_operativos cv ON cv.id_vicepresidente = u.id_usuario AND cp.id_club IS NULL
        LEFT JOIN inscripciones i ON i.id_usuario = u.id_usuario AND i.id_estatus_inscripcion = 1
-       LEFT JOIN clubes c ON c.id_club = i.id_club
+       LEFT JOIN clubes_operativos c ON c.id_club = i.id_club
        WHERE u.id_usuario = $1`,
       [req.user.id],
     );

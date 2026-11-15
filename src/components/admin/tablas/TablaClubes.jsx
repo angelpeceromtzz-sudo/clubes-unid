@@ -6,6 +6,7 @@ export function TablaClubes({
   clubes,
   onStatusChange,
   onEditar,
+  onPublicacion,
   currentUser,
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls, tema } = useTheme();
@@ -55,12 +56,14 @@ export function TablaClubes({
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => onEditar(c)}
-                        className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1"
+                        disabled={['pendiente','archivada'].includes(c.estado_publicacion) || c.estado_propuesta==='pendiente'}
+                        className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                         title="Editar club"
                       >
                         <Icono nombre="edit" strokeWidth={2} className="h-4 w-4" />
                         Editar
                       </button>
+                      {onPublicacion && <button type="button" onClick={() => onPublicacion(c)} className="text-xs font-bold text-amber-600 dark:text-amber-400 px-2 py-1.5 rounded-lg border border-amber-400/30 cursor-pointer">Publicación</button>}
                       <button
                         onClick={() => onStatusChange(c.id_club, 3)}
                         className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1.5 rounded-lg border border-red-400/30 bg-red-400/10 cursor-pointer active:scale-95 flex items-center gap-1"
@@ -102,12 +105,14 @@ export function TablaClubes({
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => onEditar(c)}
-                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1"
+                disabled={['pendiente','archivada'].includes(c.estado_publicacion) || c.estado_propuesta==='pendiente'}
+                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 cursor-pointer active:scale-95 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Editar club"
               >
                 <Icono nombre="edit" strokeWidth={2} className="h-4 w-4" />
                 Editar
               </button>
+              {onPublicacion && <button type="button" onClick={() => onPublicacion(c)} className="text-xs font-bold text-amber-600 dark:text-amber-400 px-2 py-1.5 rounded-lg border border-amber-400/30 cursor-pointer">Publicación</button>}
               <button
                 onClick={() => onStatusChange(c.id_club, 3)}
                 className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1.5 rounded-lg border border-red-400/30 bg-red-400/10 cursor-pointer active:scale-95"

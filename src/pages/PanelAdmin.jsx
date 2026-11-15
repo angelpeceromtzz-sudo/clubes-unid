@@ -28,6 +28,7 @@ import { Spinner } from '../components/ui/Spinner';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { formatearNombre } from '../utils/formato';
+import { SeccionGestionClubs } from '../components/actividades/SeccionGestionClubs';
 
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
@@ -59,6 +60,11 @@ export function PanelAdmin() {
           </div>
 
           <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
+          {d.vistaActiva === 'clubes' && <SeccionGestionClubs onVolver={d.refetchClubes}>
+            {(onPublicacion) => <SeccionClubesAdmin d={d} onPublicacion={onPublicacion}/>}
+          </SeccionGestionClubs>}
+
+
 
           {d.vistaActiva === 'resumen' && (
             <VistaEjecutiva d={ejecutivo} />
@@ -66,7 +72,6 @@ export function PanelAdmin() {
 
           {d.vistaActiva === 'usuarios' && <SeccionUsuarios d={d} />}
 
-          {d.vistaActiva === 'clubes' && <SeccionClubesAdmin d={d} />}
 
           {d.vistaActiva === 'anuncios' && (
             <SeccionAnuncios clubes={d.clubes} onSuccess={() => {
@@ -158,7 +163,7 @@ export function PanelAdmin() {
           />
 
           <ModalConfirmacion
-            show={!!d.pendienteConfirmacionClub}
+            show={!!d.pendienteConfirmacionClub && d.pendienteConfirmacionClub.tipo === 'baja'}
             titulo="Dar de baja club"
             mensaje="¿Estás seguro de dar de baja este club? Los miembros serán notificados."
             textoConfirmar="Dar de Baja"

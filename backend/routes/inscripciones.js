@@ -18,7 +18,7 @@ router.get('/activa', authenticate, async (req, res) => {
               c.id_estatus_club, e.nombre_estatus as estatus_club,
               c.fecha_creacion
        FROM inscripciones i
-       JOIN clubes c ON c.id_club = i.id_club
+       JOIN clubes_operativos c ON c.id_club = i.id_club
        JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
        WHERE i.id_usuario = $1 AND i.id_estatus_inscripcion = 1
        LIMIT 1`,
@@ -50,7 +50,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const clubResult = await pool.query(
-      'SELECT cupo_maximo FROM clubes WHERE id_club = $1 AND id_estatus_club = 1',
+      "SELECT cupo_maximo FROM clubes_operativos WHERE id_club = $1 AND id_estatus_club = 1 AND estado_publicacion='publicada'",
       [id_club]
     );
 
@@ -109,7 +109,7 @@ router.delete('/:userId', authenticate, async (req, res) => {
     if (!esAdmin) {
       // Verificar que el usuario pertenezca al club del presidente/vicepresidente
       const clubDelLeader = await pool.query(
-        `SELECT id_club FROM clubes WHERE id_responsable_club = $1 OR id_vicepresidente = $1`,
+        `SELECT id_club FROM clubes_operativos WHERE id_responsable_club = $1 OR id_vicepresidente = $1`,
         [req.user.id]
       );
 

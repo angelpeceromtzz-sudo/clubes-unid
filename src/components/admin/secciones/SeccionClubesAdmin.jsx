@@ -2,7 +2,7 @@ import { TablaClubes } from '../tablas/TablaClubes';
 import { BotonAccion } from '../../ui/BotonAccion';
 import { Icono } from '../../ui/Icono';
 
-export function SeccionClubesAdmin({ d }) {
+export function SeccionClubesAdmin({ d, onPublicacion }) {
   return (
     <div>
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -17,7 +17,7 @@ export function SeccionClubesAdmin({ d }) {
             value={d.busquedaClubes}
             onChange={(e) => d.setBusquedaClubes(e.target.value)}
             placeholder="Buscar club por nombre o categoría..."
-            className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-400/50 ${
+            className={`w-full h-11 pl-10 pr-4 py-2.5 rounded-lg border text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-400/50 ${
               d.isDark
                 ? 'bg-[#0e162c] border-slate-700 text-slate-200 placeholder-slate-500'
                 : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
@@ -26,17 +26,17 @@ export function SeccionClubesAdmin({ d }) {
         </div>
         <BotonAccion
           onClick={d.abrirModalCrear}
-          className="flex-1 sm:flex-none shrink-0"
+          className="h-11 flex-1 sm:flex-none shrink-0 !rounded-lg"
         >
           <Icono nombre="plus" strokeWidth={2} className="h-4 w-4" />
-          Crear Club
+          Crear club
         </BotonAccion>
       </div>
       <TablaClubes
         clubes={d.clubesFiltrados}
         onStatusChange={d.handleStatusChange}
         onEditar={d.abrirModalEditar}
-        onCrear={d.abrirModalCrear}
+        onPublicacion={onPublicacion}
         currentUser={d.user}
       />
     </div>

@@ -39,7 +39,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const clubResult = await pool.query(
-      'SELECT id_responsable_club, id_vicepresidente FROM clubes WHERE id_club = $1',
+      'SELECT id_responsable_club, id_vicepresidente FROM clubes_operativos WHERE id_club = $1',
       [id_club]
     );
 
@@ -87,7 +87,7 @@ router.delete('/:id', authenticate, async (req, res) => {
     const { id } = req.params;
 
     const avisoResult = await pool.query(
-      'SELECT a.*, c.id_responsable_club, c.id_vicepresidente FROM avisos_clubes a JOIN clubes c ON c.id_club = a.id_club WHERE a.id_aviso = $1',
+      'SELECT a.*, c.id_responsable_club, c.id_vicepresidente FROM avisos_clubes a JOIN clubes_operativos c ON c.id_club = a.id_club WHERE a.id_aviso = $1',
       [id]
     );
 

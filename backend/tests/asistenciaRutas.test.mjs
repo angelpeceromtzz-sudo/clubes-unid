@@ -304,17 +304,17 @@ async function responder(sql, params = []) {
     return { rows: [{ ok: true }], rowCount: 1 };
   }
 
-  if (/SELECT id_responsable_club FROM clubes WHERE id_club = \$1/.test(q)) {
+  if (/SELECT id_responsable_club FROM clubes_operativos WHERE id_club = \$1/.test(q)) {
     const c = CLUBES.get(parseInt(params[0], 10));
     return { rows: c ? [{ id_responsable_club: c.id_responsable_club }] : [], rowCount: 0 };
   }
 
-  if (/SELECT id_club FROM clubes WHERE id_responsable_club = \$1/.test(q)) {
+  if (/SELECT id_club FROM clubes_operativos WHERE id_responsable_club = \$1/.test(q)) {
     const club = [...CLUBES.values()].find((c) => c.id_responsable_club === params[0]);
     return { rows: club ? [{ id_club: club.id_club }] : [], rowCount: 0 };
   }
 
-  if (/SELECT id_club FROM clubes WHERE id_club = \$1/.test(q)) {
+  if (/SELECT id_club FROM clubes_operativos WHERE id_club = \$1/.test(q)) {
     const c = CLUBES.get(parseInt(params[0], 10));
     return { rows: c ? [{ id_club: c.id_club }] : [], rowCount: 0 };
   }

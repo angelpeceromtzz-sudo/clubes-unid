@@ -10,10 +10,12 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
   const [cerrados, setCerrados] = useState(() => new Set());
   const [sidebarAbierto, setSidebarAbierto] = useState(true);
 
-  const tieneAdmin = elementosNav.some((i) => i.key === 'gestion-clubes');
+  const tieneAdmin = elementosNav.some((i) => i.key === 'usuarios');
   const itemUsuarios = elementosNav.find((i) => i.key === 'usuarios');
   const itemGestionClubes = elementosNav.find((i) => i.key === 'gestion-clubes');
   const itemResumen = elementosNav.find((i) => i.key === 'resumen');
+  const itemActividades = elementosNav.find((i) => i.key === 'mis-actividades');
+  const itemPrincipal = elementosNav.find((i) => !i.children && i.key !== 'mis-actividades');
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -129,7 +131,7 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
             {sidebarAbierto ? 'Cerrar' : 'Abrir'}
           </button>
           {sidebarAbierto && (
-            <nav className="pt-2 px-3 space-y-1">
+            <nav aria-label="Menú del panel" className="pt-2 px-3 space-y-1">
               {tieneAdmin && (
                  <>
                    <div className={`px-4 py-2 text-xs font-black uppercase tracking-wider ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -173,6 +175,10 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
       </div>
 
       <main className="flex-1 p-4 md:p-8 overflow-auto">
+        {itemActividades && <nav aria-label="Secciones de mi panel" className="md:hidden flex flex-wrap gap-2 mb-6">
+          <button type="button" aria-pressed={!['mis-actividades','clubes'].includes(vistaActiva)} onClick={() => onVistaChange(itemPrincipal.key)} className="rounded-full border border-slate-400/30 px-4 py-2 text-xs font-semibold">Mi panel</button>
+          {itemActividades && <button type="button" aria-pressed={vistaActiva === 'mis-actividades'} onClick={() => onVistaChange('mis-actividades')} className={'rounded-full border px-4 py-2 text-xs font-semibold ' + (vistaActiva === 'mis-actividades' ? 'border-amber-400 bg-amber-400/15 text-amber-600 dark:text-amber-300' : 'border-slate-400/30')}>Mis actividades</button>}
+        </nav>}
         {children}
       </main>
     </div>

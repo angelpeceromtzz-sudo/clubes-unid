@@ -802,7 +802,7 @@ async function exigirClubParametro(req, res) {
     res.status(400).json({ error: 'ID de club inválido' });
     return null;
   }
-  const club = await pool.query('SELECT id_club FROM clubes WHERE id_club = $1', [parseInt(idClub, 10)]);
+  const club = await pool.query('SELECT id_club FROM clubes_operativos WHERE id_club = $1', [parseInt(idClub, 10)]);
   if (club.rows.length === 0) {
     res.status(404).json({ error: 'Club no encontrado' });
     return null;

@@ -14,6 +14,7 @@ import { EventosClub } from './sections/EventosClub';
 import { ModalidadClub } from './sections/ModalidadClub';
 import { InfoAdicionalClub } from './sections/InfoAdicionalClub';
 import { PiePagina } from '../layout/PiePagina';
+import { ComunidadClub } from '../actividades/ComunidadClub';
 
 export function DetalleClub({ onLoginClick }) {
   const { id } = useParams();
@@ -114,6 +115,7 @@ export function DetalleClub({ onLoginClick }) {
         <InfoAdicionalClub club={club} modoOscuro={modoOscuro} />
 
         <RequisitosFAQClub modoOscuro={modoOscuro} />
+        <ComunidadClub club={club} onLoginClick={onLoginClick}/>
       </div>
 
       {mostrarFormulario && (

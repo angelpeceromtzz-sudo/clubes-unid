@@ -67,6 +67,7 @@ export function usePanelAdmin(usuario) {
     filtrados: usuarios.usuariosFiltrados,
     usuariosFiltrados: usuarios.usuariosFiltrados,
     clubesFiltrados: clubes.clubesFiltrados,
+    refetchClubes: clubes.refetchClubes,
     historial: historial.historial,
     historialLoading: historial.historialLoading,
     historialFiltros: historial.filtros,

@@ -1,6 +1,7 @@
 import { useTheme } from '../contexts/ThemeContext';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
 import { PiePagina } from '../components/layout/PiePagina';
+import { CatalogoActividades } from '../components/actividades/ActividadUI';
 
 export default function PaginaOferta() {
   const { modoOscuro } = useTheme();
@@ -21,7 +22,7 @@ export default function PaginaOferta() {
         <div className="relative w-full px-6 sm:px-8 lg:px-12 xl:px-16 py-20">
           <div className="max-w-3xl space-y-6">
             <p className="text-xs sm:text-sm uppercase tracking-[0.3em] font-black text-amber-400">
-              Actividad destacada
+              Oferta universitaria
             </p>
             <h1 id="hero-oferta" className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[0.92] text-balance">
               InterUNID
@@ -41,11 +42,9 @@ export default function PaginaOferta() {
 
       <section className="px-6 sm:px-8 lg:px-12 xl:px-16 pb-16 sm:pb-24">
         <div className="max-w-6xl mx-auto">
-          <div className={`rounded-[2rem] border border-dashed p-6 sm:p-8 ${oscuro ? 'border-slate-700/60 bg-[#0e162c]/40' : 'border-slate-300 bg-slate-100'}`}>
-            <h2 className="text-2xl font-black">Más actividades</h2>
-            <p className={`mt-3 text-sm leading-relaxed ${oscuro ? 'text-slate-400' : 'text-slate-600'}`}>
-               Estructura preparada para integrar nuevas actividades.
-            </p>
+          <div className="space-y-10">
+            <CatalogoActividades soloDestacadas />
+            <section className="space-y-6"><h2 className="text-2xl font-black">Clubes y actividades</h2><p className={oscuro ? 'text-slate-400' : 'text-slate-600'}>Conoce nuestra oferta y consulta las opciones para participar.</p><CatalogoActividades enOferta /></section>
           </div>
         </div>
       </section>

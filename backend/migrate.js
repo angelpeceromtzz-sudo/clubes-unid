@@ -16,13 +16,17 @@ export async function migrate() {
   }
 
   const sql = fs.readFileSync(schemaPath, 'utf8');
+  const client = await pool.connect();
 
   try {
-    await pool.query(sql);
+    await client.query(sql);
     console.log('[migrate] schema.sql ejecutado correctamente.');
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('[migrate] Error al ejecutar schema.sql:', err.message);
     throw err;
+  } finally {
+    client.release();
   }
 }
 

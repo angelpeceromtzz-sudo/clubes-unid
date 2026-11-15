@@ -32,7 +32,7 @@ router.post('/asignar-alumno', authenticate, requireRole(ROL_ADMIN, ROL_COORDINA
     }
 
     const clubResult = await pool.query(
-      'SELECT id_club, nombre_club, cupo_maximo FROM clubes WHERE id_club = $1 AND id_estatus_club = 1',
+      'SELECT id_club, nombre_club, cupo_maximo FROM clubes_operativos WHERE id_club = $1 AND id_estatus_club = 1',
       [id_club]
     );
 
@@ -43,7 +43,7 @@ router.post('/asignar-alumno', authenticate, requireRole(ROL_ADMIN, ROL_COORDINA
     const club = clubResult.rows[0];
 
     const activaResult = await pool.query(
-      'SELECT i.id_inscripcion, c.nombre_club as club_anterior FROM inscripciones i LEFT JOIN clubes c ON c.id_club = i.id_club WHERE i.id_usuario = $1 AND i.id_estatus_inscripcion = 1 LIMIT 1',
+      'SELECT i.id_inscripcion, c.nombre_club as club_anterior FROM inscripciones i LEFT JOIN clubes_operativos c ON c.id_club = i.id_club WHERE i.id_usuario = $1 AND i.id_estatus_inscripcion = 1 LIMIT 1',
       [id_usuario]
     );
 

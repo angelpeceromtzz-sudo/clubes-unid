@@ -19,7 +19,7 @@ router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
     const formulario = await pool.query(
       `SELECT f.*, c.nombre_club
        FROM formularios f
-       JOIN clubes c ON c.id_club = f.id_club
+       JOIN clubes_operativos c ON c.id_club = f.id_club
        WHERE f.id_formulario = $1 AND f.id_alumno = $2`,
       [id, req.user.id],
     );
@@ -92,7 +92,7 @@ router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
           );
 
           const clubInfo = await client.query(
-            'SELECT id_responsable_club, nombre_club FROM clubes WHERE id_club = $1',
+            'SELECT id_responsable_club, nombre_club FROM clubes_operativos WHERE id_club = $1',
             [otra.id_club],
           );
           if (clubInfo.rows.length > 0) {
@@ -142,7 +142,7 @@ router.put('/:id/respuesta', authenticate, requireRole(1), async (req, res) => {
         );
 
         const clubPres = await client.query(
-          'SELECT id_responsable_club FROM clubes WHERE id_club = $1',
+          'SELECT id_responsable_club FROM clubes_operativos WHERE id_club = $1',
           [form.id_club],
         );
         if (clubPres.rows.length > 0) {

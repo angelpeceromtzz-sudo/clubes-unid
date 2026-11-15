@@ -21,7 +21,7 @@ router.get('/', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINAC
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
        LEFT JOIN inscripciones i ON i.id_usuario = u.id_usuario AND i.id_estatus_inscripcion = 1
-       LEFT JOIN clubes c ON c.id_club = i.id_club
+       LEFT JOIN clubes_operativos c ON c.id_club = i.id_club
        WHERE u.deleted_at IS NULL
        ORDER BY u.id_usuario`
     );
@@ -92,7 +92,7 @@ router.put('/:id/rol', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), a
     // Si el usuario deja de ser presidente, limpiar su relación con el club
     if (targetUser.rows[0].id_rol === 2 && id_rol !== 2) {
       await pool.query(
-        'UPDATE clubes SET id_responsable_club = NULL WHERE id_responsable_club = $1',
+        'UPDATE clubes_operativos SET id_responsable_club = NULL WHERE id_responsable_club = $1',
         [id],
       );
       await pool.query(
@@ -181,7 +181,7 @@ router.put('/:id/asignar-club', authenticate, requireRole(ROL_ADMIN, ROL_COORDIN
 
     if (id_club) {
       const clubRes = await client.query(
-        'SELECT id_club, nombre_club, id_responsable_club FROM clubes WHERE id_club = $1',
+        'SELECT id_club, nombre_club, id_responsable_club FROM clubes_operativos WHERE id_club = $1',
         [id_club],
       );
 
@@ -200,13 +200,13 @@ router.put('/:id/asignar-club', authenticate, requireRole(ROL_ADMIN, ROL_COORDIN
       }
 
       const previosRes = await client.query(
-        'SELECT id_club FROM clubes WHERE id_responsable_club = $1',
+        'SELECT id_club FROM clubes_operativos WHERE id_responsable_club = $1',
         [userId],
       );
       const teniaOtroClub = previosRes.rows.some((c) => Number(c.id_club) !== Number(id_club));
 
       await client.query(
-        'UPDATE clubes SET id_responsable_club = NULL WHERE id_responsable_club = $1 AND id_club <> $2',
+        'UPDATE clubes_operativos SET id_responsable_club = NULL WHERE id_responsable_club = $1 AND id_club <> $2',
         [userId, id_club],
       );
 
@@ -218,7 +218,7 @@ router.put('/:id/asignar-club', authenticate, requireRole(ROL_ADMIN, ROL_COORDIN
       }
 
       await client.query(
-        'UPDATE clubes SET id_responsable_club = $1 WHERE id_club = $2',
+        'UPDATE clubes_operativos SET id_responsable_club = $1 WHERE id_club = $2',
         [userId, id_club],
       );
 
@@ -243,7 +243,7 @@ router.put('/:id/asignar-club', authenticate, requireRole(ROL_ADMIN, ROL_COORDIN
       return res.json({ message: 'Responsabilidad asignada correctamente', nombre_club: club.nombre_club });
     }
 
-    await client.query('UPDATE clubes SET id_responsable_club = NULL WHERE id_responsable_club = $1', [userId]);
+    await client.query('UPDATE clubes_operativos SET id_responsable_club = NULL WHERE id_responsable_club = $1', [userId]);
 
     if (usuario.id_rol === ROL_RESPONSABLE_CLUB) {
       await client.query(
@@ -379,7 +379,7 @@ router.delete('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), as
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional, u.deleted_at, u.id_rol,
               c.nombre_club
        FROM usuarios u
-       LEFT JOIN clubes c ON c.id_responsable_club = u.id_usuario
+       LEFT JOIN clubes_operativos c ON c.id_responsable_club = u.id_usuario
        WHERE u.id_usuario = $1`,
       [id],
     );
@@ -411,11 +411,11 @@ router.delete('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), as
       [id],
     );
     await client.query(
-      `UPDATE clubes SET id_responsable_club = NULL WHERE id_responsable_club = $1`,
+      `UPDATE clubes_operativos SET id_responsable_club = NULL WHERE id_responsable_club = $1`,
       [id],
     );
     await client.query(
-      `UPDATE clubes SET id_vicepresidente = NULL WHERE id_vicepresidente = $1`,
+      `UPDATE clubes_operativos SET id_vicepresidente = NULL WHERE id_vicepresidente = $1`,
       [id],
     );
 

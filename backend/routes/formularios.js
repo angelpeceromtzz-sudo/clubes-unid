@@ -38,7 +38,7 @@ router.get('/debug-postulaciones', authenticate, requireRole(ROL_ADMIN, ROL_COOR
                c.nombre_club, c.categoria,
                c.imagen_portada
         FROM formularios f
-        JOIN clubes c ON c.id_club = f.id_club
+        JOIN clubes_operativos c ON c.id_club = f.id_club
         LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
         ORDER BY f.id_alumno, f.fecha_envio DESC`
     );
@@ -60,7 +60,7 @@ router.get('/', authenticate, requireRole(1), async (req, res) => {
     const result = await pool.query(
       `SELECT DISTINCT f.id_club
        FROM formularios f
-       JOIN clubes c ON c.id_club = f.id_club
+       JOIN clubes_operativos c ON c.id_club = f.id_club
        WHERE f.id_alumno = $1
          AND f.id_convocatoria_inscripcion = c.id_convocatoria_inscripcion_actual`,
       [req.user.id],
@@ -103,7 +103,7 @@ router.get('/mis-postulaciones', authenticate, requireRole(1), async (req, res) 
                  'fecha_cambio', hp.fecha_cambio
                ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
        FROM formularios f
-       JOIN clubes c ON c.id_club = f.id_club
+       JOIN clubes_operativos c ON c.id_club = f.id_club
        LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
        WHERE f.id_alumno = $1
        ORDER BY f.fecha_envio DESC`,
@@ -174,7 +174,7 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
 
       // Validaciones iniciales fuera de la transacción (no requieren lock)
       const existente = await pool.query(
-        'SELECT id_club, id_estatus_club FROM clubes WHERE id_club = $1',
+        "SELECT id_club, id_estatus_club FROM clubes_operativos WHERE id_club = $1 AND estado_publicacion='publicada'",
         [id_club],
       );
       if (existente.rows.length === 0) {
@@ -191,7 +191,7 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
         `SELECT fecha_apertura_programada, fecha_limite_cierre,
                 max_postulaciones, postulaciones_actuales,
                 cerrada_manualmente, id_convocatoria_inscripcion_actual
-         FROM clubes WHERE id_club = $1 FOR UPDATE`,
+         FROM clubes_operativos WHERE id_club = $1 FOR UPDATE`,
         [id_club],
       );
       const club = clubRow.rows[0];
@@ -281,7 +281,7 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       );
 
       await client.query(
-        `UPDATE clubes SET postulaciones_actuales = postulaciones_actuales + 1 WHERE id_club = $1`,
+        `UPDATE clubes_operativos SET postulaciones_actuales = postulaciones_actuales + 1 WHERE id_club = $1`,
         [id_club],
       );
 
@@ -309,7 +309,7 @@ router.get('/pendientes/:id_club', authenticate, requireClubLeader, async (req, 
     const { id_club } = req.params;
 
     const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1',
+      'SELECT id_club FROM clubes_operativos WHERE id_club = $1',
       [id_club],
     );
 
@@ -328,7 +328,7 @@ f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
                  'fecha_cambio', hp.fecha_cambio
                ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
        FROM formularios f
-       JOIN clubes c ON c.id_club = f.id_club
+       JOIN clubes_operativos c ON c.id_club = f.id_club
        LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
        WHERE f.id_club = $1
          AND f.id_convocatoria_inscripcion = c.id_convocatoria_inscripcion_actual
@@ -351,7 +351,7 @@ router.get('/todos/:id_club', authenticate, requireClubLeader, async (req, res) 
     const { id_club } = req.params;
 
     const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1',
+      'SELECT id_club FROM clubes_operativos WHERE id_club = $1',
       [id_club],
     );
 
@@ -404,7 +404,7 @@ router.put('/:id/estatus', authenticate, requireRole(2, 5), async (req, res) => 
             'fecha_cambio', hp.fecha_cambio
           ) ORDER BY hp.fecha_cambio ASC) FROM historial_postulacion hp WHERE hp.id_formulario = f.id_formulario) AS historial
        FROM formularios f
-       JOIN clubes c ON c.id_club = f.id_club
+       JOIN clubes_operativos c ON c.id_club = f.id_club
        LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
        WHERE f.id_formulario = $1`,
       [id],
@@ -417,7 +417,7 @@ router.put('/:id/estatus', authenticate, requireRole(2, 5), async (req, res) => 
     const form = formulario.rows[0];
 
     const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
+      'SELECT id_club FROM clubes_operativos WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
       [form.id_club, req.user.id]
     );
     if (club.rows.length === 0) {
@@ -513,7 +513,7 @@ router.put('/:id/bloque', authenticate, requireRole(2, 5), async (req, res) => {
 
     const form = formulario.rows[0];
     const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
+      'SELECT id_club FROM clubes_operativos WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
       [form.id_club, req.user.id]
     );
     if (club.rows.length === 0) {
@@ -543,7 +543,7 @@ router.post('/seleccionar', authenticate, requireRole(2, 5), async (req, res) =>
 
     const club = await pool.query(
       `SELECT id_club, nombre_club, id_convocatoria_inscripcion_actual
-       FROM clubes WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)`,
+       FROM clubes_operativos WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)`,
       [id_club, req.user.id],
     );
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
@@ -605,7 +605,7 @@ router.get('/ofertas/:id_club', authenticate, requireClubLeader, async (req, res
     const { id_club } = req.params;
 
     const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1',
+      'SELECT id_club FROM clubes_operativos WHERE id_club = $1',
       [id_club],
     );
 

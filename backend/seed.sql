@@ -38,7 +38,7 @@
 
 INSERT INTO cat_roles (nombre_rol) VALUES
     ('alumno'),
-    ('presidente'),
+    ('responsable_club'),
     ('admin'),
     ('rectoria'),
     ('responsable_mural')
@@ -84,7 +84,7 @@ SELECT v.nombre_completo, v.correo, '$2a$10$MSw0tpLhjgT8ZXXAiI/b9OhZK/rpKHkO6Sdf
 FROM (VALUES
   ('Luis Miguel Hernández Pérez',   'alumno.libre@unid.mx',    'alumno'),
   ('María Fernanda López García',   'alumno.inscrito@unid.mx', 'alumno'),
-  ('Carlos Alberto Méndez Rivas',   'presidente@unid.mx',      'presidente'),
+  ('Carlos Alberto Méndez Rivas',   'presidente@unid.mx',      'responsable_club'),
   ('Ana Sofía Ramírez Domínguez',   'admin@unid.mx',           'admin'),
   ('Roberto Carlos Mendoza Lopez',  'rectoria@unid.mx',        'rectoria'),
   ('Diana Laura Ortiz Castillo',    'mural@unid.mx',           'responsable_mural')
@@ -98,8 +98,9 @@ WHERE x.id_usuario IS NULL;
 -- ============================================================
 -- El estatus se resuelve por nombre, no por ID.
 
-INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, id_estatus_club, participacion)
-SELECT v.nombre_club, v.descripcion, v.categoria, v.cupo_maximo, v.imagen_portada, e.id_estatus_club, v.participacion
+INSERT INTO clubes (nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, id_estatus_club, participacion,estado_publicacion)
+SELECT v.nombre_club, v.descripcion, v.categoria, v.cupo_maximo, v.imagen_portada, e.id_estatus_club, v.participacion,
+       CASE WHEN v.estatus='inactivo' THEN 'archivada' ELSE 'publicada' END
 FROM (VALUES
   ('Equipo de Voleibol',                     'Entrenamientos tácticos, fundamentos de voleo, remate y preparación para torneos interuniversitarios.',      'Deportes',   40, 'https://images.unsplash.com/photo-1553005746-9245ba190489?q=80&w=1170&auto=format&fit=crop', 'activo',     'mixta'),
   ('Taller de Dibujo y Pintura Analítica',   'Desarrollo de técnicas artísticas básicas y avanzadas: uso de carboncillo, óleo, acuarela y composición visual.', 'Cultura',    20, 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=600&auto=format&fit=crop', 'activo',     'mixta'),
@@ -112,7 +113,7 @@ FROM (VALUES
   ('Club de Literatura y Escritura Creativa','Espacio para amantes de la literatura, donde se realizan lecturas, análisis de obras y talleres de escritura creativa.', 'Cultura', 20, 'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=600&auto=format&fit=crop', 'inactivo', 'mixta')
 ) AS v(nombre_club, descripcion, categoria, cupo_maximo, imagen_portada, estatus, participacion)
 JOIN cat_estatus_clubes e ON e.nombre_estatus = v.estatus
-LEFT JOIN clubes c ON c.nombre_club = v.nombre_club
+LEFT JOIN clubes c ON c.nombre_club = v.nombre_club AND c.tipo='club'
 WHERE c.id_club IS NULL;
 
 -- Niveles aceptados por club (club y nivel por nombre)
@@ -130,7 +131,7 @@ FROM (VALUES
   ('Club de Literatura y Escritura Creativa', 'principiante'), ('Club de Literatura y Escritura Creativa', 'intermedio'), ('Club de Literatura y Escritura Creativa', 'avanzado'),
   ('Equipo de Porristas', 'principiante'), ('Equipo de Porristas', 'intermedio')
 ) AS v(club, nivel)
-JOIN clubes c ON c.nombre_club = v.club
+JOIN clubes c ON c.nombre_club = v.club AND c.tipo='club'
 JOIN cat_niveles n ON n.nombre_nivel = v.nivel
 ON CONFLICT DO NOTHING;
 
@@ -139,6 +140,7 @@ UPDATE clubes cl
 SET id_responsable_club = u.id_usuario
 FROM usuarios u
 WHERE cl.nombre_club = 'Equipo de Basketball'
+  AND cl.tipo='club'
   AND u.correo_institucional = 'presidente@unid.mx'
   AND cl.id_responsable_club IS NULL;
 
@@ -153,7 +155,7 @@ FROM (VALUES
   ('presidente@unid.mx',      'Equipo de Basketball')
 ) AS v(correo, club)
 JOIN usuarios u ON u.correo_institucional = v.correo
-JOIN clubes c ON c.nombre_club = v.club
+JOIN clubes c ON c.nombre_club = v.club AND c.tipo='club'
 JOIN cat_estatus_inscripciones e ON e.nombre_estatus = 'activo'
 WHERE NOT EXISTS (
   SELECT 1 FROM inscripciones i
@@ -172,7 +174,7 @@ FROM (VALUES
   ('Confirmación para torneo',
    'Necesito que todos confirmen su asistencia al torneo del próximo mes a más tardar el viernes. Pasen conmigo a firmar la hoja de inscripción.')
 ) AS v(titulo, contenido)
-JOIN clubes c ON c.nombre_club = 'Equipo de Basketball'
+JOIN clubes c ON c.nombre_club = 'Equipo de Basketball' AND c.tipo='club'
 JOIN usuarios u ON u.correo_institucional = 'presidente@unid.mx'
 WHERE NOT EXISTS (
   SELECT 1 FROM avisos_clubes a
@@ -215,7 +217,7 @@ FROM (VALUES
   ('alumno.voleibol5@unid.mx', 'UNID-2026-005', 'Licenciatura en Diseño Gráfico Digital',                            3, '555-100-0005', 'Me gustaría representar a la universidad en competencias y crecer como jugadora.', 'Jugué en el equipo estatal juvenil durante 3 años')
 ) AS m(correo, matricula, licenciatura, cuatrimestre, telefono, motivo, experiencia)
 JOIN usuarios u ON u.correo_institucional = m.correo
-JOIN clubes cl ON cl.nombre_club = 'Equipo de Voleibol'
+JOIN clubes cl ON cl.nombre_club = 'Equipo de Voleibol' AND cl.tipo='club'
 JOIN cat_licenciaturas l ON l.nombre = m.licenciatura
 WHERE NOT EXISTS (
   SELECT 1 FROM formularios f WHERE f.id_alumno = u.id_usuario AND f.id_club = cl.id_club
@@ -228,7 +230,7 @@ SET postulaciones_actuales = (
   WHERE f.id_club = clubes.id_club
     AND f.status NOT IN ('Rechazado', 'Miembro oficial')
 )
-WHERE nombre_club = 'Equipo de Voleibol';
+WHERE tipo='club' AND nombre_club = 'Equipo de Voleibol';
 
 -- ============================================================
 -- 7. ENCUESTAS (PBI-10)

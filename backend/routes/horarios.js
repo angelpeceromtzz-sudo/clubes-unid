@@ -7,7 +7,7 @@ import { validarPropuesta, limpiarDetalle, conflictosPropuesta } from '../lib/pr
 const router = Router();
 const CAMPOS = `s.*, s.vigencia_inicio::text AS vigencia_inicio, s.vigencia_fin::text AS vigencia_fin,
   c.nombre_club, u.nombre_completo AS solicitante_nombre`;
-const SELECTOR = `SELECT ${CAMPOS} FROM solicitudes_horario s JOIN clubes c ON c.id_club = s.id_club
+const SELECTOR = `SELECT ${CAMPOS} FROM solicitudes_horario s JOIN clubes_operativos c ON c.id_club = s.id_club
   JOIN usuarios u ON u.id_usuario = s.id_solicitante`;
 function fallo(status, message, extra = {}) { return Object.assign(new Error(message), { status, extra }); }
 function idValido(valor) { return /^\d+$/.test(String(valor)) && Number.isSafeInteger(Number(valor)) && Number(valor) > 0; }
@@ -18,7 +18,7 @@ async function transaccion(res, trabajo) {
   finally { client?.release(); }
 }
 async function presidente(client, req, idClub) {
-  const result = await client.query('SELECT id_club, id_responsable_club, version_horario FROM clubes WHERE id_club = $1', [idClub]);
+  const result = await client.query('SELECT id_club, id_responsable_club, version_horario FROM clubes_operativos WHERE id_club = $1', [idClub]);
   if (!result.rows.length) throw fallo(404, 'Club no encontrado');
   if (req.user.id_rol !== 2 || Number(result.rows[0].id_responsable_club) !== Number(req.user.id)) throw fallo(403, 'Solo el presidente de este club puede preparar y enviar propuestas');
   return result.rows[0];
@@ -132,7 +132,7 @@ router.post('/solicitudes/:id/revision', requireRole(ROL_ADMIN, ROL_COORDINACION
     const s = await obtener(client, req.params.id);
     if (s.estado !== 'pendiente') throw fallo(409, 'Esta propuesta ya fue revisada o retirada');
     if (accion === 'aprobar') {
-      const club = await client.query('SELECT version_horario FROM clubes WHERE id_club = $1 FOR UPDATE', [s.id_club]);
+      const club = await client.query('SELECT version_horario FROM clubes_operativos WHERE id_club = $1 FOR UPDATE', [s.id_club]);
       if (club.rows[0].version_horario !== s.version_base) throw fallo(409, 'La propuesta se basa en una versión anterior del horario');
       const { espacios } = await validarConflictos(client, s);
       await client.query('DELETE FROM horarios_club WHERE id_club = $1 AND vigencia_inicio >= $2::date', [s.id_club, s.vigencia_inicio]);
@@ -144,14 +144,14 @@ router.post('/solicitudes/:id/revision', requireRole(ROL_ADMIN, ROL_COORDINACION
         await client.query(`INSERT INTO horarios_club (id_club, dia_semana, hora_inicio, hora_fin, lugar, id_espacio, descripcion, vigencia_inicio, vigencia_fin, ubicacion_maps)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [s.id_club, h.dia_semana, h.hora_inicio, h.hora_fin, espacio.nombre, h.id_espacio, h.descripcion, s.vigencia_inicio, s.vigencia_fin, h.ubicacion_maps || '']);
       }
-      await client.query('UPDATE clubes SET version_horario = version_horario + 1 WHERE id_club = $1', [s.id_club]);
+      await client.query('UPDATE clubes_operativos SET version_horario = version_horario + 1 WHERE id_club = $1', [s.id_club]);
     }
     const estado = accion === 'aprobar' ? 'aprobado' : 'rechazado';
     const result = await client.query(`UPDATE solicitudes_horario SET estado = $1, id_revisor = $2, observaciones = $3,
       fecha_actualizacion = CURRENT_TIMESTAMP WHERE id_solicitud = $4 RETURNING *`, [estado, req.user.id, observaciones?.trim() || null, s.id_solicitud]);
     await historial(client, req, s, estado, observaciones?.trim());
     await client.query(`INSERT INTO notificaciones (id_emisor, titulo, mensaje, audiencia, id_club, id_destinatario)
-      SELECT $1, $2, $3, 'presidentes', id_club, id_responsable_club FROM clubes WHERE id_club = $4 AND id_responsable_club IS NOT NULL`,
+      SELECT $1, $2, $3, 'presidentes', id_club, id_responsable_club FROM clubes_operativos WHERE id_club = $4 AND id_responsable_club IS NOT NULL`,
     [req.user.id, `Horario ${estado}`, observaciones?.trim() || 'Coordinación VIVE aprobó el horario. Ya es visible para la comunidad.', s.id_club]);
     return result.rows[0];
   });

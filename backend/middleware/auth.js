@@ -98,7 +98,7 @@ export function requireClubLeader(req, res, next) {
   }
 
   pool.query(
-    'SELECT id_responsable_club, id_vicepresidente FROM clubes WHERE id_club = $1',
+    'SELECT id_responsable_club, id_vicepresidente FROM clubes_operativos WHERE id_club = $1',
     [clubId]
   ).then(({ rows }) => {
     if (rows.length === 0) {
@@ -140,7 +140,7 @@ export async function requireHorarioLeader(req, res, next) {
       return res.status(404).json({ error: 'Horario no encontrado' });
     }
     const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
+      'SELECT id_club FROM clubes_operativos WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
       [horario.rows[0].id_club, req.user.id]
     );
     if (club.rows.length === 0) {
@@ -170,7 +170,7 @@ export async function requireClubPresident(req, res, next) {
         return res.status(400).json({ error: 'id_club inválido' });
       }
       const club = await pool.query(
-        'SELECT id_responsable_club FROM clubes WHERE id_club = $1',
+        'SELECT id_responsable_club FROM clubes_operativos WHERE id_club = $1',
         [clubId]
       );
       if (club.rows.length === 0) {
@@ -184,7 +184,7 @@ export async function requireClubPresident(req, res, next) {
     }
 
     const propios = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_responsable_club = $1 ORDER BY id_club LIMIT 1',
+      'SELECT id_club FROM clubes_operativos WHERE id_responsable_club = $1 ORDER BY id_club LIMIT 1',
       [req.user.id]
     );
     if (propios.rows.length === 0) {
@@ -222,7 +222,7 @@ export async function requirePresidenteDeLaSesion(req, res, next) {
     }
 
     const club = await pool.query(
-      'SELECT id_responsable_club FROM clubes WHERE id_club = $1',
+      'SELECT id_responsable_club FROM clubes_operativos WHERE id_club = $1',
       [sesion.rows[0].id_club]
     );
     if (club.rows.length === 0) {
