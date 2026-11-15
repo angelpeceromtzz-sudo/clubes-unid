@@ -19,7 +19,8 @@ export function useActividadRecurso(ruta, identidad = 'publico', refrescar = fal
     const intervalo = refrescar ? window.setInterval(cargar, 60000) : null;
     const alVolver = () => { if (!document.hidden) cargar(); };
     if (refrescar) document.addEventListener('visibilitychange', alVolver);
-    return () => { activo = false; if (intervalo) window.clearInterval(intervalo); document.removeEventListener('visibilitychange', alVolver); };
+    if (refrescar) window.addEventListener('focus', alVolver);
+    return () => { activo = false; if (intervalo) window.clearInterval(intervalo); document.removeEventListener('visibilitychange', alVolver); window.removeEventListener('focus', alVolver); };
   }, [ruta, clave, refrescar]);
   const vigente = estado.clave === clave;
   return { datos: vigente ? estado.datos : null, error: vigente ? estado.error : '', cargando: Boolean(ruta && !vigente), recargar };

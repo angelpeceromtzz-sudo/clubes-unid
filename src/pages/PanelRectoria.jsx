@@ -20,9 +20,12 @@ import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdm
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
 import { SeccionGestionClubs } from '../components/actividades/SeccionGestionClubs';
+import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
+import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
 
 export function PanelRectoria() {
   const { tema } = useTheme();
+  const asignacion=useActividadesAsignadas();
   const d = usePanelRectoria();
   const ejecutivo = useVistaEjecutiva();
   const { setPanelNav } = usePanelNav();
@@ -53,9 +56,10 @@ export function PanelRectoria() {
 
         <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
 
-        {d.vistaActiva === 'resumen' && (
+        {d.vistaActiva === 'resumen' && <>
+          <TarjetasMiActividad asignacion={asignacion}/>
           <VistaEjecutiva d={ejecutivo} />
-        )}
+        </>}
         {d.vistaActiva === 'padron' && (
           <SeccionPadron
             padron={d.padron}

@@ -29,9 +29,12 @@ import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { formatearNombre } from '../utils/formato';
 import { SeccionGestionClubs } from '../components/actividades/SeccionGestionClubs';
+import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
+import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
 
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
+  const asignacion=useActividadesAsignadas();
   const d = usePanelAdmin(usuario);
   const ejecutivo = useVistaEjecutiva();
   const { setPanelNav } = usePanelNav();
@@ -66,9 +69,10 @@ export function PanelAdmin() {
 
 
 
-          {d.vistaActiva === 'resumen' && (
+          {d.vistaActiva === 'resumen' && <>
+            <TarjetasMiActividad asignacion={asignacion}/>
             <VistaEjecutiva d={ejecutivo} />
-          )}
+          </>}
 
           {d.vistaActiva === 'usuarios' && <SeccionUsuarios d={d} />}
 

@@ -1,5 +1,5 @@
 /* Panel del presidente de club: información del club y gestión completa de convocatorias. */
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { usePanelNav } from '../contexts/PanelNavContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
@@ -16,17 +16,23 @@ import { VistaAsistencia } from '../components/asistencia/VistaAsistencia';
 import { HorariosClub } from '../components/clubes/sections/HorariosClub';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
-import { GestionActividades } from './GestionActividades';
+import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
+import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
+import { useVistaPanel } from '../hooks/useVistaPanel';
 
 export function PanelResponsableClub() {
   const { usuario } = useAutenticacion();
   const d = usePanelResponsableClub(usuario);
+  const asignacion = useActividadesAsignadas();
+  const elementosNav = useMemo(()=>{
+    return !d.club ? ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item)=>item.key==='principal') : d.esResponsableClub ? ELEMENTOS_NAV_RESPONSABLE_CLUB : ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item)=>item.key!=='asistencia');
+  },[d.club,d.esResponsableClub]);
+  const [vistaVisible,setVistaActiva]=useVistaPanel(elementosNav,'principal');
   const { setPanelNav } = usePanelNav();
   useEffect(() => {
-    const itemsNav = !d.club ? ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item)=>['principal','gestion-clubes'].includes(item.key)) : d.esResponsableClub ? ELEMENTOS_NAV_RESPONSABLE_CLUB : ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item) => item.key !== 'asistencia');
-    setPanelNav({ itemsNav, onNavChange: d.setVistaActiva });
+    setPanelNav({ itemsNav:elementosNav, onNavChange:setVistaActiva });
     return () => setPanelNav({ itemsNav: [], onNavChange: null });
-  }, [setPanelNav, d.club, d.esResponsableClub, d.setVistaActiva]);
+  }, [setPanelNav,elementosNav,setVistaActiva]);
 
   if (d.loading) {
     return (
@@ -37,27 +43,20 @@ export function PanelResponsableClub() {
   }
 
   if (!d.club) {
-    return <RutaProtegida><NavegacionPanel elementosNav={ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item)=>['principal','gestion-clubes'].includes(item.key))} vistaActiva={d.vistaActiva} onVistaChange={d.setVistaActiva}>
+    return <RutaProtegida><NavegacionPanel elementosNav={elementosNav} vistaActiva={vistaVisible} onVistaChange={setVistaActiva}>
       <div className="mb-6"><EncabezadoPagina titulo="Mi panel" subtitulo={'Bienvenido, '+usuario.nombre_completo}/></div>
+      <TarjetasMiActividad asignacion={asignacion}/>
+      <p className="text-sm">Aún no tienes un club asignado.</p>
       {d.error && <p role="alert" className="mb-5 text-sm text-red-600 dark:text-red-400">No se pudo consultar el club: {d.error}</p>}
-      {d.vistaActiva==='clubes' ? <GestionActividades integrada/> : <p className="text-sm">Abre Gestión de Clubs → Clubs y actividades para administrar las actividades que organizas.</p>}
     </NavegacionPanel></RutaProtegida>;
   }
-
-  // Asistencia V1: disponible únicamente para el presidente (no vicepresidente).
-  const elementosNav = d.esResponsableClub
-    ? ELEMENTOS_NAV_RESPONSABLE_CLUB
-    : ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item) => item.key !== 'asistencia');
-
-  const vistaVisible =
-    d.vistaActiva === 'asistencia' && !d.esResponsableClub ? 'principal' : d.vistaActiva;
 
   return (
     <RutaProtegida>
       <NavegacionPanel
         elementosNav={elementosNav}
         vistaActiva={vistaVisible}
-        onVistaChange={d.setVistaActiva}
+        onVistaChange={setVistaActiva}
       >
         <div className="mb-6 md:mb-8">
             <EncabezadoPagina
@@ -68,8 +67,8 @@ export function PanelResponsableClub() {
 
 
 
-          {vistaVisible === 'clubes' && <GestionActividades integrada />}
-          {vistaVisible === 'principal' && (
+          {vistaVisible === 'principal' && <>
+            <TarjetasMiActividad asignacion={asignacion}/>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <InformacionClub club={d.club} />
@@ -79,7 +78,7 @@ export function PanelResponsableClub() {
                 <SeccionMiembros miembros={d.miembros} club={d.club} />
               </div>
             </div>
-          )}
+          </>}
 
           {vistaVisible === 'convocatorias' && (
             <VistaConvocatorias club={d.club} />

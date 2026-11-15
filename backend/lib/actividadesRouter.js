@@ -151,6 +151,40 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   router.use('/gestion', autenticar);
   router.use('/gestion', (req, res, next) => req.method === 'GET' ? next() : limitarEscritura(req, res, next));
 
+  router.get('/gestion/asignadas', async (req, res) => {
+    const { rows } = await db.query(`SELECT id_actividad,nombre,descripcion,categoria,estado,slug
+      FROM catalogo_recursos WHERE tipo='actividad' AND id_responsable=$1
+      ORDER BY nombre,id_actividad`, [req.user.id]);
+    res.json(rows);
+  });
+
+  async function actividadAsignada(req) {
+    if (!/^[1-9]\d*$/.test(req.params.idActividad) || !Number.isSafeInteger(Number(req.params.idActividad))) throw errorActividad('Actividad no válida');
+    const actividad = await obtenerActividad(db, req.params.idActividad);
+    if (actividad.tipo !== 'actividad' || actividad.id_responsable !== req.user.id) throw errorActividad('Esta actividad no está asignada a tu cuenta', 403);
+    return actividad;
+  }
+
+  router.get('/gestion/asignadas/:idActividad', async (req, res) => {
+    const actividad = await actividadAsignada(req);
+    actividad.responsable_nombre = (await db.query('SELECT nombre_completo FROM usuarios WHERE id_usuario=$1', [req.user.id])).rows[0]?.nombre_completo || null;
+    const ediciones = (await db.query('SELECT ' + SELECT_EDICION + DESDE_EDICION + 'WHERE e.id_actividad=$1 ORDER BY e.id_edicion DESC', [actividad.id_actividad])).rows;
+    res.json({ actividad, ediciones, puede_aprobar: aprueba(req.user) });
+  });
+
+  router.get('/gestion/asignadas/:idActividad/historial', async (req, res) => {
+    const actividad = await actividadAsignada(req);
+    const page = Number(req.query.page || 1);
+    if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger((page - 1) * 25)) throw errorActividad('Página no válida');
+    const total = (await db.query('SELECT COUNT(*)::int AS total FROM actividad_clubes WHERE id_club=$1', [actividad.id_actividad])).rows[0].total;
+    const eventos = (await db.query(`SELECT a.id_evento,a.tipo_evento,a.descripcion,a.fecha_creacion,
+      u.nombre_completo AS actor_nombre,e.nombre AS edicion_nombre
+      FROM actividad_clubes a LEFT JOIN usuarios u ON u.id_usuario=a.id_actor
+      LEFT JOIN actividades_ediciones e ON e.id_edicion=a.id_edicion
+      WHERE a.id_club=$1 ORDER BY a.fecha_creacion DESC,a.id_evento DESC LIMIT 25 OFFSET $2`, [actividad.id_actividad, (page - 1) * 25])).rows;
+    res.json({ eventos, page, total, totalPages: Math.max(1, Math.ceil(total / 25)) });
+  });
+
   router.get('/gestion', async (req, res) => {
     const actividades = (await db.query('SELECT a.*,u.nombre_completo AS responsable_nombre FROM catalogo_recursos a LEFT JOIN usuarios u ON u.id_usuario=a.id_responsable WHERE ($1::boolean OR a.id_responsable=$2 OR (a.id_responsable IS NULL AND a.id_autor=$2)) ORDER BY a.id_actividad', [supervisa(req.user), req.user.id])).rows;
     for (const actividad of actividades) actividad.niveles = (await db.query('SELECT id_nivel FROM clubes_niveles WHERE id_club=$1 ORDER BY id_nivel', [actividad.id_actividad])).rows.map((fila) => fila.id_nivel);
@@ -186,7 +220,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   });
 
   router.post('/gestion/actividades', async (req, res) => {
-    if (!ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol)) throw errorActividad('No tienes permiso para solicitar actividades', 403);
+    if (!ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol)) throw errorActividad('Solo Administración, Coordinación y Rectoría pueden crear actividades', 403);
     const datos = normalizarRecursoCatalogo(req.body);
     if (datos.tipo === 'club' && (![3,7].includes(req.user.id_rol) || !secretoAdmin || req.body.password !== secretoAdmin)) throw errorActividad('La creación de clubes requiere Coordinación y su contraseña de administración', 403);
     const resultado = await transaccion(async (cliente) => {

@@ -1,10 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ELEMENTOS_NAV_ADMIN, ELEMENTOS_NAV_RECTORIA, ELEMENTOS_NAV_COORDINACION, ELEMENTOS_NAV_ALUMNO, ELEMENTOS_NAV_RESPONSABLE_CLUB, ELEMENTOS_NAV_MURAL } from '../src/constants/navegacion.js';
 import { normalizarActividad, normalizarRecursoCatalogo, normalizarEdicionActividad, camposPlantillaActividad, validarPublicacionEdicion, validarRespuestasActividad, validarAportacionesActividad, esDestacadaActividad, estadoRegistroActividad, fechaActividad } from '../shared/actividades.js';
 
 const campos = camposPlantillaActividad('trineo').map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['CH', 'M', 'G'] } : campo);
 const edicion = { nombre: 'Edición de prueba', descripcion: '', lugar: 'Campus', fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', requiere_registro: true, campos_registro: campos, inscripcion_desde: '2026-11-01', inscripcion_hasta: '2026-12-04', destacable: true, destacada_desde: '2026-11-20', destacada_hasta: '2026-12-06', estado: 'publicada', inscripciones_habilitadas: true };
 const catalogo = [{ id_opcion: 1, nombre: 'Aportación de prueba', unidad: 'piezas', cantidad_minima: 2, activa: true }];
+
+test('Gestión de Clubs y su acceso al catálogo solo aparecen para Admin, Coordinación y Rectoría', () => {
+  const menus = new Map([[1, ELEMENTOS_NAV_ALUMNO], [2, ELEMENTOS_NAV_RESPONSABLE_CLUB], [3, ELEMENTOS_NAV_ADMIN], [4, ELEMENTOS_NAV_RECTORIA], [5, ELEMENTOS_NAV_ALUMNO], [6, ELEMENTOS_NAV_MURAL], [7, ELEMENTOS_NAV_COORDINACION]]);
+  for (const [rol, menu] of menus) {
+    const gestion = menu.find((item) => item.key === 'gestion-clubes');
+    assert.equal(Boolean(gestion), [3, 4, 7].includes(rol), 'Menú del rol ' + rol);
+    if (gestion) assert.ok(gestion.children.some((item) => item.key === 'clubes'));
+    else assert.ok(menu.every((item) => item.key !== 'clubes' && !item.children?.some((hijo) => hijo.key === 'clubes')));
+  }
+});
 
 test('las actividades generales no heredan requisitos específicos de Trineo', () => {
   const actividad = normalizarActividad({ nombre: 'Taller de arte', descripcion: 'Información del taller', categoria: 'Cultural', estado: 'publicada', plantilla: 'trineo' });

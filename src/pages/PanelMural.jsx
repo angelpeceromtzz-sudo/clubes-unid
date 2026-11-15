@@ -13,12 +13,14 @@ import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdm
 import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { Icono } from '../components/ui/Icono';
-import { GestionActividades } from './GestionActividades';
+import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
+import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
 
 export function PanelMural() {
   const { tema } = useTheme();
   const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
   const noticias = useAdminNoticias(setFeedback, setErrorFeedback);
+  const asignacion=useActividadesAsignadas();
   const [vistaActiva, setVistaActiva] = useVistaPanel(ELEMENTOS_NAV_MURAL, 'mural');
   const {setPanelNav}=usePanelNav();
   useEffect(()=>{
@@ -33,10 +35,7 @@ export function PanelMural() {
       onVistaChange={setVistaActiva}
     >
       <h1 className={`text-2xl font-black tracking-tight mb-2 ${tema.title}`}>Periódico Mural</h1>
-      {vistaActiva === 'clubes' && <GestionActividades integrada />}
-
-
-
+      {vistaActiva==='mural' && <TarjetasMiActividad asignacion={asignacion}/>}
       {vistaActiva === 'mural' && <div className={`mb-6 flex items-start gap-2 text-xs ${tema.subtitle}`}>
         <Icono nombre="info" strokeWidth={2} className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
         <p>

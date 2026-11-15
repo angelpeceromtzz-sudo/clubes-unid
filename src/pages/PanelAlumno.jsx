@@ -6,17 +6,17 @@ import { useTheme } from '../contexts/ThemeContext';
 import { usePanelNav } from '../contexts/PanelNavContext';
 import { useVistaPanel } from '../hooks/useVistaPanel';
 import { usePanelAlumno } from '../hooks/usePanelAlumno';
-import { useActividadRecurso } from '../hooks/useActividadRecurso';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
-import { ELEMENTOS_NAV_ALUMNO, GRUPO_GESTION_ACTIVIDADES } from '../constants/navegacion';
-import { GestionActividades } from './GestionActividades';
+import { ELEMENTOS_NAV_ALUMNO } from '../constants/navegacion';
 import { InformacionClub } from '../components/clubes/InformacionClub';
 import { HorariosClub } from '../components/clubes/sections/HorariosClub';
 import { SeccionAvisos } from '../components/responsable/secciones/SeccionAvisos';
 import { SeccionMiembros } from '../components/responsable/secciones/SeccionMiembros';
 import { SeccionPostulaciones } from '../components/responsable/secciones/SeccionPostulaciones';
 import { MisActividadesPanel } from '../components/actividades/MisActividadesPanel';
+import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
+import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
 import { Icono } from '../components/ui/Icono';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -35,13 +35,11 @@ export function PanelAlumno() {
   const {tema,modoOscuro}=useTheme();
   const {setPanelNav}=usePanelNav();
   const d=usePanelAlumno();
-  const {datos:organizacion}=useActividadRecurso(usuario?.id_rol===1 ? '/gestion' : null,usuario?.id_usuario || usuario?.id);
-  const organiza=Boolean(organizacion?.actividades.length) || usuario?.id_rol===5;
+  const asignacion=useActividadesAsignadas();
   const elementosNav=useMemo(()=>{
     const opciones=d.club ? ELEMENTOS_NAV_ALUMNO : NAV_SIN_CLUB;
-    const personales=usuario?.id_rol===1 ? opciones : opciones.filter((item)=>item.key!=='mis-actividades');
-    return organiza ? [...personales,GRUPO_GESTION_ACTIVIDADES] : personales;
-  },[d.club,usuario?.id_rol,organiza]);
+    return usuario?.id_rol===1 ? opciones : opciones.filter((item)=>item.key!=='mis-actividades');
+  },[d.club,usuario?.id_rol]);
   const [vistaAlumno,setVistaAlumno]=useVistaPanel(elementosNav,d.club ? 'mi-club' : 'postulaciones');
   const [dismissMiembroBanner,setDismissMiembroBanner]=useState(()=>{
     try{return localStorage.getItem('dismiss_miembro_banner')==='true';}catch{return false;}
@@ -65,8 +63,8 @@ export function PanelAlumno() {
   return <ErrorBoundary><RutaProtegida><NavegacionPanel elementosNav={elementosNav} vistaActiva={vistaAlumno} onVistaChange={setVistaAlumno}>
     <div className="mb-6 md:mb-8"><EncabezadoPagina titulo="Mi panel" subtitulo={'Bienvenido, '+(usuario?.nombre_completo || '')}/></div>
 
+    {['mi-club','postulaciones'].includes(vistaAlumno) && <TarjetasMiActividad asignacion={asignacion}/>}
     {vistaAlumno==='mis-actividades' && <MisActividadesPanel/>}
-    {vistaAlumno==='clubes' && organiza && <GestionActividades integrada/>}
     {vistaAlumno==='postulaciones' && <section className="space-y-5"><h2 className={'text-2xl font-bold '+tema.title}>Mis postulaciones</h2>
       {d.postulaciones.length ? <SeccionPostulaciones postulaciones={d.postulaciones} onPostulacionesChange={d.recargar}/> : <div className="rounded-2xl border border-slate-400/25 p-6 space-y-3"><p className={tema.subtitle}>No tienes una inscripción activa ni postulaciones a clubes.</p><Link to="/campus/campeche/portal" className="inline-block font-semibold text-amber-600 dark:text-amber-400 underline">Explorar clubes</Link></div>}
     </section>}

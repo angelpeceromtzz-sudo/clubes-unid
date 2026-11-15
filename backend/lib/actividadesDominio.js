@@ -1,5 +1,5 @@
 // Contrato compartido entre la API, los formularios y las pruebas del módulo.
-export const ROLES_CREAN_ACTIVIDADES = [2, 3, 4, 5, 6, 7];
+export const ROLES_CREAN_ACTIVIDADES = [3, 4, 7];
 export const ROLES_SUPERVISAN_ACTIVIDADES = [3, 4, 7];
 export const REACCIONES_ACTIVIDAD = ['like', 'love', 'clap'];
 export const ESTADOS_ACTIVIDAD = ['borrador', 'pendiente', 'publicada', 'rechazada', 'archivada'];

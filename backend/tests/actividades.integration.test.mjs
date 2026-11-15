@@ -37,6 +37,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     await bootstrap.query('SET search_path TO ' + esquema);
     await bootstrap.query(await readFile(new URL('../schema.sql', import.meta.url), 'utf8'));
     await bootstrap.query("INSERT INTO usuarios(id_usuario,nombre_completo,institutional_id,id_rol,correo_institucional) SELECT id,nombre,lpad(id::text,8,'0'),rol,'qa'||id||'@example.test' FROM (VALUES (1,'Alumno QA',1),(2,'Encargado QA',2),(3,'Admin QA',3),(4,'Rectoría QA',4),(7,'Coordinación QA',7),(11,'Alumno Once QA',1),(12,'Alumno Doce QA',1),(22,'Encargado asignado QA',1),(31,'Alumno legado QA',1),(32,'Rechazado legado QA',1)) AS actores(id,nombre,rol); INSERT INTO clubes (id_club,nombre_club,cupo_maximo,id_estatus_club,estado_publicacion) VALUES (101,'Club real QA',10,1,'publicada'),(8,'Trineo legado QA',10,1,'publicada'); INSERT INTO clubes_niveles(id_club,id_nivel) VALUES(101,1),(8,1); INSERT INTO inscripciones (id_usuario,id_club) VALUES (1,101),(31,8); INSERT INTO formularios (id_alumno,id_club,nombre_completo,matricula,id_licenciatura,cuatrimestre,telefono_contacto,motivo_ingreso,status) SELECT alumno,club,nombre,matricula,1,1,'0000000000','Prueba',estado FROM (VALUES (1,101,'Alumno QA','00000001','En revisión'),(1,101,'Alumno QA','00000001','Convocado'),(1,101,'Alumno QA','00000001','Preseleccionado'),(31,8,'Alumno legado QA','00000031','En revisión'),(32,8,'Rechazado legado QA','00000032','Rechazado')) AS f(alumno,club,nombre,matricula,estado);");
+    await bootstrap.query("INSERT INTO usuarios(id_usuario,nombre_completo,institutional_id,id_rol,correo_institucional) VALUES(5,'Vicepresidencia QA','00000005',5,'qa5@example.test'),(6,'Periódico Mural QA','00000006',6,'qa6@example.test')");
     await bootstrap.query("SELECT setval(pg_get_serial_sequence('clubes','id_club'),(SELECT MAX(id_club) FROM clubes))");
     await bootstrap.query(await readFile(new URL('../schema.sql', import.meta.url), 'utf8'));
     db = new pg.Pool({ connectionString, max: 8, options: '-c search_path=' + esquema });
@@ -80,8 +81,29 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     await enviar(1, 'POST', '/gestion/actividades', { nombre: 'Sin permiso' }, 403);
   });
 
+  test('solo Administración, Coordinación y Rectoría crean actividades y reciben ese permiso en el panel', async () => {
+    const datos = { nombre: 'Actividad de permisos QA', descripcion: 'Actividad para comprobar autorización', categoria: 'Servicio' };
+    const contar = async () => (await db.query('SELECT (SELECT COUNT(*)::int FROM clubes) AS recursos,(SELECT COUNT(*)::int FROM actividad_clubes) AS eventos')).rows[0];
+    const antes = await contar();
+    await enviar(null, 'POST', '/gestion/actividades', datos, 401);
+    for (const usuario of [1, 2, 5, 6, 22]) {
+      assert.equal((await enviar(usuario, 'GET', '/gestion')).puede_crear, false);
+      await enviar(usuario, 'POST', '/gestion/actividades', datos, 403);
+      await enviar(usuario, 'POST', '/gestion/actividades', {}, 403);
+    }
+    assert.deepEqual(await contar(), antes);
+    for (const usuario of [3, 4, 7]) {
+      assert.equal((await enviar(usuario, 'GET', '/gestion')).puede_crear, true);
+      const actividad = await enviar(usuario, 'POST', '/gestion/actividades', { ...datos, nombre: datos.nombre + ' ' + usuario }, 201);
+      assert.equal(actividad.tipo, 'actividad');
+      assert.equal(actividad.estado, 'borrador');
+      assert.equal(actividad.id_autor, usuario);
+    }
+  });
+
   test('crea actividades de cualquier tipo sin permitir publicar desde el formulario', async () => {
-    const actividad = await enviar(2, 'POST', '/gestion/actividades', { nombre: 'Taller QA', descripcion: 'Un taller de prueba', categoria: 'Cualquier categoría', estado: 'publicada', plantilla: 'trineo' }, 201);
+    const actividad = await enviar(3, 'POST', '/gestion/actividades', { nombre: 'Taller QA', descripcion: 'Un taller de prueba', categoria: 'Cualquier categoría', estado: 'publicada', plantilla: 'trineo' }, 201);
+    await enviar(7, 'PUT', '/gestion/actividades/' + actividad.id_actividad + '/responsable', { id_responsable: 2 });
     assert.equal(actividad.estado, 'borrador'); assert.equal(actividad.plantilla, 'general');
     await enviar(2, 'POST', '/gestion/actividades/' + actividad.id_actividad + '/revision', {});
     await enviar(7, 'POST', '/gestion/actividades/' + actividad.id_actividad + '/decision', { aprobar: true }, 403);
@@ -91,7 +113,8 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
   });
 
   test('guarda una edición con sus aportaciones desde el asistente y rechaza lotes incompletos',async()=>{
-    const actividad=await enviar(2,'POST','/gestion/actividades',{nombre:'Actividad del asistente QA',descripcion:'Prueba de guardado conjunto',categoria:'Servicio'},201);
+    const actividad=await enviar(7,'POST','/gestion/actividades',{nombre:'Actividad del asistente QA',descripcion:'Prueba de guardado conjunto',categoria:'Servicio'},201);
+    await enviar(7,'PUT','/gestion/actividades/'+actividad.id_actividad+'/responsable',{id_responsable:2});
     const ruta='/gestion/actividades/'+actividad.id_actividad+'/ediciones';
     const datos={...datosEdicion('trineo'),catalogo_aportaciones:[{nombre:'Kit QA',unidad:'piezas',cantidad_minima:2}]};
     const edicion=await enviar(2,'POST',ruta,datos,201);
@@ -154,6 +177,75 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     await publicar(2,'actividades',101);
     assert.equal((await db.query('SELECT nombre_club,cupo_maximo FROM clubes_operativos WHERE id_club=101')).rows[0].nombre_club,'Club real QA actualizado');
     assert.equal((await db.query('SELECT id_club FROM inscripciones WHERE id_usuario=1')).rows[0].id_club,101);
+  });
+
+  test('las actividades asignadas aparecen solo a su encargado y se retiran al reasignarlas', async () => {
+    const roles = (await db.query('SELECT id_usuario,id_rol FROM usuarios ORDER BY id_usuario')).rows;
+    const membresias = (await db.query('SELECT * FROM inscripciones ORDER BY id_inscripcion')).rows;
+    const actividad = await enviar(7, 'POST', '/gestion/actividades', { nombre: 'Actividad asignada QA', descripcion: 'Acceso personal del encargado', categoria: 'Servicio' }, 201);
+    const edicion = await enviar(7, 'POST', '/gestion/actividades/' + actividad.id_actividad + '/ediciones', datosEdicion('general'), 201);
+    await enviar(null, 'GET', '/gestion/asignadas', undefined, 401);
+    let anterior = null;
+    for (const usuario of [1, 2, 5, 6, 22]) {
+      await enviar(7, 'PUT', '/gestion/actividades/' + actividad.id_actividad + '/responsable', { id_responsable: usuario });
+      const asignadas = await enviar(usuario, 'GET', '/gestion/asignadas');
+      assert.ok(asignadas.some((item) => item.id_actividad === actividad.id_actividad));
+      assert.ok(asignadas.every((item) => item.id_actividad !== 101 && !('propuesta' in item) && !('id_autor' in item)));
+      assert.deepEqual(await enviar(usuario, 'GET', '/gestion/asignadas?id_usuario=7'), asignadas);
+      await enviar(usuario, 'GET', '/gestion/ediciones/' + edicion.id_edicion);
+      await enviar(usuario, 'POST', '/gestion/actividades', {}, 403);
+      assert.equal((await enviar(7, 'GET', '/gestion/asignadas')).some((item) => item.id_actividad === actividad.id_actividad), false);
+      if (anterior !== null) {
+        assert.equal((await enviar(anterior, 'GET', '/gestion/asignadas')).some((item) => item.id_actividad === actividad.id_actividad), false);
+        await enviar(anterior, 'GET', '/gestion/ediciones/' + edicion.id_edicion, undefined, 403);
+      }
+      anterior = usuario;
+    }
+    await enviar(7, 'PUT', '/gestion/actividades/' + actividad.id_actividad + '/responsable', { id_responsable: 7 });
+    assert.equal((await enviar(22, 'GET', '/gestion/asignadas')).some((item) => item.id_actividad === actividad.id_actividad), false);
+    assert.deepEqual((await db.query('SELECT id_usuario,id_rol FROM usuarios ORDER BY id_usuario')).rows, roles);
+    assert.deepEqual((await db.query('SELECT * FROM inscripciones ORDER BY id_inscripcion')).rows, membresias);
+  });
+
+  test('Mi actividad limita su detalle, ediciones e historial al encargado actual', async () => {
+    const crear = (nombre) => enviar(7, 'POST', '/gestion/actividades', { nombre, descripcion: 'Panel personal QA', categoria: 'Servicio' }, 201);
+    const propia = await crear('Mi actividad propia QA');
+    const ajena = await crear('Mi actividad ajena QA');
+    const edicion = await enviar(7, 'POST', '/gestion/actividades/' + propia.id_actividad + '/ediciones', { ...datosEdicion('general'), nombre: 'Edición propia QA' }, 201);
+    await enviar(7, 'POST', '/gestion/actividades/' + ajena.id_actividad + '/ediciones', datosEdicion('general'), 201);
+    await enviar(7, 'PUT', '/gestion/actividades/' + propia.id_actividad + '/responsable', { id_responsable: 2 });
+    await enviar(7, 'PUT', '/gestion/actividades/' + ajena.id_actividad + '/responsable', { id_responsable: 22 });
+    const ruta = '/gestion/asignadas/' + propia.id_actividad;
+    await enviar(null, 'GET', ruta, undefined, 401);
+    for (const usuario of [1, 3, 4, 7, 22]) {
+      await enviar(usuario, 'GET', ruta, undefined, 403);
+      await enviar(usuario, 'GET', ruta + '/historial', undefined, 403);
+    }
+    await enviar(2, 'GET', '/gestion/asignadas/101', undefined, 403);
+    await enviar(2, 'GET', '/gestion/asignadas/invalida', undefined, 400);
+    const detalle = await enviar(2, 'GET', ruta);
+    assert.equal(detalle.actividad.id_actividad, propia.id_actividad);
+    assert.equal(detalle.actividad.responsable_nombre, 'Encargado QA');
+    assert.deepEqual(detalle.ediciones.map((item) => item.id_edicion), [edicion.id_edicion]);
+    assert.equal(detalle.puede_aprobar, false);
+    await db.query("INSERT INTO actividad_clubes(tipo_evento,id_club,id_edicion,id_actor,descripcion,origen) SELECT 'mi_actividad_qa',$1,$2,2,'Movimiento propio QA','catalogo' FROM generate_series(1,55)", [propia.id_actividad, edicion.id_edicion]);
+    await db.query("INSERT INTO actividad_clubes(tipo_evento,id_club,id_actor,descripcion,origen) SELECT 'mi_actividad_qa',$1,22,'Movimiento ajeno QA','catalogo' FROM generate_series(1,55)", [ajena.id_actividad]);
+    const primera = await enviar(2, 'GET', ruta + '/historial');
+    const segunda = await enviar(2, 'GET', ruta + '/historial?page=2&idActividad=' + ajena.id_actividad);
+    const total = (await db.query('SELECT COUNT(*)::int AS n FROM actividad_clubes WHERE id_club=$1', [propia.id_actividad])).rows[0].n;
+    assert.equal(primera.total, total);
+    assert.equal(primera.eventos.length, 25);
+    assert.equal(segunda.eventos.length, 25);
+    assert.equal(primera.totalPages, Math.ceil(total / 25));
+    assert.ok(primera.eventos.every((evento) => evento.descripcion === 'Movimiento propio QA' && evento.edicion_nombre === 'Edición propia QA' && !('detalles' in evento)));
+    assert.ok(segunda.eventos.every((evento) => !primera.eventos.some((otro) => otro.id_evento === evento.id_evento)));
+    for (const page of ['-1', '0', 'abc', '1.5', '9007199254740991']) await enviar(2, 'GET', ruta + '/historial?page=' + page, undefined, 400);
+    await enviar(7, 'PUT', '/gestion/actividades/' + propia.id_actividad + '/responsable', { id_responsable: 22 });
+    await enviar(2, 'GET', ruta, undefined, 403);
+    await enviar(2, 'GET', ruta + '/historial', undefined, 403);
+    assert.equal((await enviar(22, 'GET', ruta)).actividad.id_actividad, propia.id_actividad);
+    await enviar(7, 'PUT', '/gestion/actividades/' + propia.id_actividad + '/responsable', { id_responsable: 7 });
+    await enviar(7, 'PUT', '/gestion/actividades/' + ajena.id_actividad + '/responsable', { id_responsable: 7 });
   });
 
   test('asigna encargados y exige configuración completa antes de revisar', async () => {
@@ -319,7 +411,8 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
   });
 
   test('bitácora compartida: permisos, nombres de recursos y filtros reales', async () => {
-    const actividad = await enviar(2, 'POST', '/gestion/actividades', {nombre:'Actividad para bitácora',descripcion:'Registro de acciones QA',categoria:'Servicio'}, 201);
+    const actividad = await enviar(3, 'POST', '/gestion/actividades', {nombre:'Actividad para bitácora',descripcion:'Registro de acciones QA',categoria:'Servicio'}, 201);
+    await enviar(7,'PUT','/gestion/actividades/'+actividad.id_actividad+'/responsable',{id_responsable:2});
     const edicion = await enviar(2, 'POST', '/gestion/actividades/' + actividad.id_actividad + '/ediciones', datosEdicion('general'), 201);
     const consultar = (usuario, query = '') => fetch(base.replace('/api/actividades','/api/bitacora') + query, {headers: usuario ? {'x-usuario-qa':String(usuario)} : {}});
     for (const usuario of [null,1,2,22]) {
@@ -354,7 +447,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
   test('un fallo de bitácora revierte también la operación que debía registrar', async () => {
     await db.query("CREATE FUNCTION fn_fallo_bitacora_qa() RETURNS trigger AS $$ BEGIN IF NEW.tipo_evento='actividad_creada' THEN RAISE EXCEPTION 'Fallo de bitácora simulado'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql; CREATE TRIGGER trg_fallo_bitacora_qa BEFORE INSERT ON actividad_clubes FOR EACH ROW EXECUTE FUNCTION fn_fallo_bitacora_qa()");
     try {
-      await enviar(2,'POST','/gestion/actividades',{nombre:'No debe quedar guardada QA',descripcion:'Operación revertida',categoria:'Servicio'},500);
+      await enviar(3,'POST','/gestion/actividades',{nombre:'No debe quedar guardada QA',descripcion:'Operación revertida',categoria:'Servicio'},500);
       assert.equal((await db.query("SELECT COUNT(*)::int AS n FROM clubes WHERE nombre_club='No debe quedar guardada QA'")).rows[0].n,0);
     } finally {
       await db.query('DROP TRIGGER trg_fallo_bitacora_qa ON actividad_clubes; DROP FUNCTION fn_fallo_bitacora_qa()');
