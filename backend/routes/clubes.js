@@ -10,6 +10,7 @@ import { esImagenPortadaValida } from '../lib/validarUrl.js';
 
 import convocatoriasInscripcion from './convocatoriasInscripcion.js';
 import routerCatalogo from './actividades.js';
+import { crearRouterConsultaActividad } from '../lib/actividadConsultaRouter.js';
 
 const router = Router();
 router.use('/:id/convocatoria', convocatoriasInscripcion);
@@ -73,104 +74,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Actividad de clubes — log de eventos operativos (solo admin/rectoría)
-router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
-  try {
-    let page = parseInt(req.query.page, 10);
-    if (!Number.isFinite(page) || page < 1) page = 1;
-    const limit = 50;
-    const offset = (page - 1) * limit;
-
-    const { desde, hasta, actor, tipo, club } = req.query;
-
-    if (desde && (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || Number.isNaN(Date.parse(desde)))) {
-      return res.status(400).json({ error: 'La fecha "desde" no es válida' });
-    }
-    if (hasta && (!/^\d{4}-\d{2}-\d{2}$/.test(hasta) || Number.isNaN(Date.parse(hasta)))) {
-      return res.status(400).json({ error: 'La fecha "hasta" no es válida' });
-    }
-    if (desde && hasta && desde > hasta) {
-      return res.status(400).json({ error: 'El rango de fechas no es válido' });
-    }
-
-    const clubId = club ? parseInt(club, 10) : null;
-    if (club && (!Number.isFinite(clubId) || clubId <= 0)) {
-      return res.status(400).json({ error: 'El club no es válido' });
-    }
-
-    const filtrosSql = `
-      WHERE ($1::date IS NULL OR a.fecha_creacion >= $1::date)
-        AND ($2::date IS NULL OR a.fecha_creacion < ($2::date + INTERVAL '1 day'))
-        AND ($3::text IS NULL OR u.nombre_completo ILIKE '%' || $3 || '%')
-        AND ($4::text IS NULL OR a.tipo_evento = $4)
-        AND ($5::int IS NULL OR a.id_club = $5)
-    `;
-
-    const params = [desde || null, hasta || null, actor || null, tipo || null, clubId];
-
-    const countResult = await pool.query(
-      `SELECT COUNT(*)::int AS total
-       FROM actividad_clubes a
-       LEFT JOIN usuarios u ON u.id_usuario = a.id_actor
-       ${filtrosSql}`,
-      params
-    );
-    const total = countResult.rows[0].total;
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-
-    const result = await pool.query(
-      `SELECT a.id_evento, a.tipo_evento, a.descripcion, a.detalles, a.fecha_creacion,
-              c.nombre_club,
-              u.nombre_completo AS actor_nombre
-       FROM actividad_clubes a
-       LEFT JOIN clubes_operativos c ON c.id_club = a.id_club
-       LEFT JOIN usuarios u ON u.id_usuario = a.id_actor
-       ${filtrosSql}
-       ORDER BY a.fecha_creacion DESC
-       LIMIT $6 OFFSET $7`,
-      [...params, limit, offset]
-    );
-
-    res.json({ eventos: result.rows, page, totalPages, total });
-  } catch (err) {
-    console.error('Error al obtener actividad de clubes:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
-// Opciones de filtro para actividad de clubes: solo valores con registros.
-router.get('/actividad/filtros', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
-  try {
-    const actores = await pool.query(
-      `SELECT DISTINCT u.id_usuario AS id, u.nombre_completo AS nombre
-       FROM actividad_clubes a
-       JOIN usuarios u ON u.id_usuario = a.id_actor
-       WHERE a.id_actor IS NOT NULL
-       ORDER BY u.nombre_completo ASC`
-    );
-    const tipos = await pool.query(
-      `SELECT DISTINCT a.tipo_evento AS tipo
-       FROM actividad_clubes a
-       WHERE a.tipo_evento IS NOT NULL AND a.tipo_evento <> ''
-       ORDER BY a.tipo_evento ASC`
-    );
-    const clubes = await pool.query(
-      `SELECT DISTINCT c.id_club AS id, c.nombre_club AS nombre
-       FROM actividad_clubes a
-       JOIN clubes_operativos c ON c.id_club = a.id_club
-       WHERE a.id_club IS NOT NULL
-       ORDER BY c.nombre_club ASC`
-    );
-    res.json({
-      actores: actores.rows,
-      tipos: tipos.rows.map((r) => r.tipo),
-      clubes: clubes.rows,
-    });
-  } catch (err) {
-    console.error('Error al obtener filtros de actividad:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
+// Bitácora compartida de clubes y actividades, con los permisos existentes.
+router.use('/actividad', crearRouterConsultaActividad({ db: pool, autenticar: authenticate }));
 
 // Lista completa para el panel admin (H6): incluye estatus 3 y los campos de
 // presidente que el flujo de reasignación usa; requiere rol 3. El público usa

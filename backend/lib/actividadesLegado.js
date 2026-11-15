@@ -1,4 +1,5 @@
 import { errorActividad } from './actividadesDominio.js';
+import { registrarActividadCatalogo } from './actividadCatalogo.js';
 
 // Solo se aplica mediante una correspondencia explícita de IDs. La consulta
 // previa es de lectura y la transición completa es una sola transacción.
@@ -8,11 +9,11 @@ export async function migrarLegadoActividades(db, { idClub, idEdicion, aplicar =
   try {
     await cliente.query('BEGIN');
     const club = (await cliente.query('SELECT * FROM clubes WHERE id_club = $1 FOR UPDATE', [idClub])).rows[0];
-    const edicion = (await cliente.query('SELECT e.id_edicion, a.nombre, a.plantilla FROM actividades_ediciones e JOIN catalogo_recursos a ON a.id_actividad = e.id_actividad WHERE e.id_edicion = $1 FOR UPDATE OF a,e', [idEdicion])).rows[0];
+    const edicion = (await cliente.query('SELECT e.id_edicion,e.id_actividad AS id_club_destino,a.nombre,a.plantilla FROM actividades_ediciones e JOIN catalogo_recursos a ON a.id_actividad = e.id_actividad WHERE e.id_edicion = $1 FOR UPDATE OF a,e', [idEdicion])).rows[0];
     if (!club || !edicion) throw errorActividad('Club o edición no encontrados', 404);
     if(club.tipo!=='club') throw errorActividad('El origen del traslado debe ser un club');
     if (!['trineo', 'misiones'].includes(edicion.plantilla)) throw errorActividad('Selecciona una edición de Trineo o Misiones');
-    const anterior = (await cliente.query('SELECT id_edicion FROM actividades_legado_clubes WHERE id_club = $1', [idClub])).rows[0];
+    const anterior = (await cliente.query("SELECT id_edicion_destino AS id_edicion FROM migraciones_catalogo WHERE tipo='traslado_club' AND id_club_origen=$1", [idClub])).rows[0];
     if (anterior) {
       if (anterior.id_edicion !== idEdicion) throw errorActividad('Este club ya está vinculado a otra edición', 409);
       await cliente.query('ROLLBACK');
@@ -40,11 +41,11 @@ export async function migrarLegadoActividades(db, { idClub, idEdicion, aplicar =
     }
     // El respaldo de los estados anteriores permite auditar la transición;
     // las tablas originales y sus relaciones se conservan.
-    await cliente.query('INSERT INTO actividades_legado_clubes (id_club,id_edicion,resumen) VALUES ($1,$2,$3)', [idClub, idEdicion, JSON.stringify({ club, formularios, inscripciones, resultado })]);
+    await cliente.query("INSERT INTO migraciones_catalogo(tipo,id_club_origen,id_club_destino,id_edicion_destino,resumen) VALUES('traslado_club',$1,$2,$3,$4)", [idClub, edicion.id_club_destino, idEdicion, JSON.stringify({ club, formularios, inscripciones, resultado })]);
     await cliente.query("UPDATE formularios SET status = 'Rechazado', motivo_rechazo = 'Registro trasladado al apartado de actividades' WHERE id_club = $1 AND status NOT IN ('Miembro oficial','Rechazado')", [idClub]);
     await cliente.query('UPDATE inscripciones SET id_estatus_inscripcion = 2, fecha_baja = NOW() WHERE id_club = $1 AND id_estatus_inscripcion = 1', [idClub]);
     await cliente.query("UPDATE clubes SET id_estatus_club=3,estado_publicacion='archivada',cerrada_manualmente=TRUE,id_convocatoria_inscripcion_actual=NULL WHERE id_club=$1",[idClub]);
-    await cliente.query("INSERT INTO actividades_historial (id_usuario,accion,detalle) VALUES ($1,'legado_migrado',$2)",[idActor,JSON.stringify(resultado)]);
+    await registrarActividadCatalogo(cliente, {idActor,accion:'legado_migrado',detalle:resultado,idRecurso:edicion.id_club_destino,idEdicion});
     await cliente.query('COMMIT');
     return resultado;
   } catch (error) { await cliente.query('ROLLBACK'); throw error; } finally { cliente.release(); }

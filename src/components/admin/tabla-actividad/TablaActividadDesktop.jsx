@@ -1,9 +1,7 @@
 import { EventoIcon } from './EventoIcon';
-import { EVENTOS_CONFIG, DEFAULT_EVENTO, formatFecha } from '../../../constants/actividad';
+import { configEvento, formatFecha } from '../../../constants/actividad';
 
 export function TablaActividadDesktop({ eventos, modoOscuro, tableBg, thCls, tdCls, tdTitle }) {
-  const configEvento = (tipo) => EVENTOS_CONFIG[tipo] || DEFAULT_EVENTO;
-
   return (
     <div className={`${tableBg} rounded-2xl overflow-hidden hidden md:block`}>
       <div className="overflow-x-auto">
@@ -12,7 +10,7 @@ export function TablaActividadDesktop({ eventos, modoOscuro, tableBg, thCls, tdC
             <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
               <th className={`px-4 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Fecha</th>
               <th className={`px-4 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Tipo</th>
-              <th className={`px-4 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Club</th>
+              <th className={`px-4 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Club o actividad</th>
               <th className={`px-4 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Actor</th>
               <th className={`px-4 py-4  text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Descripcion</th>
             </tr>
@@ -29,7 +27,7 @@ export function TablaActividadDesktop({ eventos, modoOscuro, tableBg, thCls, tdC
                       {cfg.label}
                     </span>
                   </td>
-                  <td className={`px-4 py-3  font-medium ${tdTitle}`}>{e.nombre_club || 'Sistema'}</td>
+                  <td className={`px-4 py-3 font-medium ${tdTitle}`}><p>{e.nombre_club || (e.origen === 'catalogo' ? 'Registro anterior' : 'Sistema')}</p>{e.tipo_recurso && <p className={`text-xs ${tdCls}`}>{e.tipo_recurso === 'actividad' ? 'Actividad' : 'Club'}{e.edicion_nombre ? ' · ' + e.edicion_nombre : ''}</p>}</td>
                   <td className={`px-4 py-3  text-xs ${tdCls}`}>{e.actor_nombre || '-'}</td>
                   <td className={`px-4 py-3 text-xs ${tdCls} max-w-md break-words`}>{e.descripcion}</td>
                 </tr>

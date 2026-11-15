@@ -1577,12 +1577,54 @@ ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_revision CHECK (estado_propuesta 
 ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_datos_club;
 ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_datos_club CHECK (tipo <> 'club' OR (cupo_maximo IS NOT NULL AND cupo_maximo IN (10,15,20,25,30,40,50) AND participacion IS NOT NULL));
 
-CREATE TABLE IF NOT EXISTS catalogo_equivalencias_actividades (
-  id_actividad_anterior INT PRIMARY KEY,
-  id_club INT NOT NULL UNIQUE REFERENCES clubes(id_club) ON DELETE RESTRICT,
-  datos_originales JSONB NOT NULL,
-  migrado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS migraciones_catalogo (
+  id_migracion BIGSERIAL PRIMARY KEY,
+  tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('equivalencia_actividad','traslado_club')),
+  id_actividad_anterior INT,
+  id_club_origen INT REFERENCES clubes(id_club) ON DELETE RESTRICT,
+  id_club_destino INT NOT NULL REFERENCES clubes(id_club) ON DELETE RESTRICT,
+  id_edicion_destino INT,
+  datos_originales JSONB NOT NULL DEFAULT '{}'::jsonb,
+  resumen JSONB NOT NULL DEFAULT '{}'::jsonb,
+  migrado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (
+    (tipo='equivalencia_actividad' AND id_actividad_anterior IS NOT NULL AND id_club_origen IS NULL AND id_edicion_destino IS NULL)
+    OR (tipo='traslado_club' AND id_actividad_anterior IS NULL AND id_club_origen IS NOT NULL AND id_edicion_destino IS NOT NULL)
+  )
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uq_migracion_actividad_anterior ON migraciones_catalogo(id_actividad_anterior) WHERE tipo='equivalencia_actividad';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_migracion_actividad_destino ON migraciones_catalogo(id_club_destino) WHERE tipo='equivalencia_actividad';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_migracion_club_origen ON migraciones_catalogo(id_club_origen) WHERE tipo='traslado_club';
+CREATE OR REPLACE FUNCTION fn_migracion_catalogo_destino() RETURNS trigger AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM clubes WHERE id_club=NEW.id_club_destino AND tipo='actividad')
+    OR (NEW.tipo='traslado_club' AND NOT EXISTS(SELECT 1 FROM clubes WHERE id_club=NEW.id_club_origen AND tipo='club')) THEN
+  RAISE EXCEPTION 'Revisa el origen y el destino de la migración del catálogo' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_migracion_catalogo_destino ON migraciones_catalogo;
+CREATE TRIGGER trg_migracion_catalogo_destino BEFORE INSERT OR UPDATE ON migraciones_catalogo FOR EACH ROW EXECUTE FUNCTION fn_migracion_catalogo_destino();
+
+-- Incorpora las equivalencias de la versión con once tablas antes de retirarla.
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('catalogo_equivalencias_actividades') AND relkind='r') THEN
+  LOCK TABLE catalogo_equivalencias_actividades IN ACCESS EXCLUSIVE MODE;
+  INSERT INTO migraciones_catalogo(tipo,id_actividad_anterior,id_club_destino,datos_originales,migrado_en)
+   SELECT 'equivalencia_actividad',id_actividad_anterior,id_club,datos_originales,migrado_en FROM catalogo_equivalencias_actividades
+   ON CONFLICT DO NOTHING;
+  IF EXISTS(
+   SELECT 1 FROM catalogo_equivalencias_actividades a LEFT JOIN migraciones_catalogo m
+    ON m.tipo='equivalencia_actividad' AND m.id_actividad_anterior=a.id_actividad_anterior
+   WHERE m.id_migracion IS NULL OR m.id_club_destino IS DISTINCT FROM a.id_club
+    OR m.datos_originales IS DISTINCT FROM a.datos_originales OR m.migrado_en IS DISTINCT FROM a.migrado_en
+  ) THEN RAISE EXCEPTION 'Hay equivalencias incompatibles; la migración se revierte'; END IF;
+  DROP TABLE catalogo_equivalencias_actividades;
+ END IF;
+END $$;
+CREATE OR REPLACE VIEW catalogo_equivalencias_actividades AS
+ SELECT id_actividad_anterior,id_club_destino AS id_club,datos_originales,migrado_en
+ FROM migraciones_catalogo WHERE tipo='equivalencia_actividad';
 DO $$
 DECLARE secuencia TEXT; ultimo BIGINT; usado BOOLEAN; maximo BIGINT;
 BEGIN
@@ -1626,7 +1668,7 @@ DECLARE fila RECORD; nuevo_id INT; nueva_slug TEXT; restriccion RECORD; contador
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_class WHERE oid=to_regclass('actividades') AND relkind='r') THEN
     FOR fila IN SELECT * FROM actividades ORDER BY id_actividad LOOP
-      IF NOT EXISTS (SELECT 1 FROM catalogo_equivalencias_actividades WHERE id_actividad_anterior=fila.id_actividad) THEN
+      IF NOT EXISTS (SELECT 1 FROM migraciones_catalogo WHERE tipo='equivalencia_actividad' AND id_actividad_anterior=fila.id_actividad) THEN
         nueva_slug := fila.slug;
         contador:=0;
         WHILE EXISTS (SELECT 1 FROM clubes WHERE slug=nueva_slug) LOOP
@@ -1636,19 +1678,41 @@ BEGIN
         INSERT INTO clubes (nombre_club,descripcion,categoria,imagen_portada,tipo,slug,plantilla,estado_publicacion,mostrar_en_oferta,id_autor,id_responsable_club,propuesta,estado_propuesta,motivo_rechazo,actualizado_en,cupo_maximo,participacion)
         VALUES (fila.nombre,fila.descripcion,fila.categoria,fila.url_imagen,'actividad',nueva_slug,fila.plantilla,fila.estado,fila.mostrar_en_oferta,fila.id_autor,fila.id_responsable,fila.propuesta,fila.estado_propuesta,fila.motivo_rechazo,fila.actualizado_en,NULL,NULL)
         RETURNING id_club INTO nuevo_id;
-        INSERT INTO catalogo_equivalencias_actividades VALUES (fila.id_actividad,nuevo_id,to_jsonb(fila),NOW());
+        INSERT INTO migraciones_catalogo(tipo,id_actividad_anterior,id_club_destino,datos_originales) VALUES ('equivalencia_actividad',fila.id_actividad,nuevo_id,to_jsonb(fila));
       END IF;
     END LOOP;
     FOR restriccion IN SELECT conname FROM pg_constraint WHERE conrelid=to_regclass('actividades_ediciones') AND confrelid=to_regclass('actividades') LOOP
       EXECUTE format('ALTER TABLE actividades_ediciones DROP CONSTRAINT %I',restriccion.conname);
     END LOOP;
-    UPDATE actividades_ediciones e SET id_actividad=m.id_club FROM catalogo_equivalencias_actividades m WHERE e.id_actividad=m.id_actividad_anterior;
+    UPDATE actividades_ediciones e SET id_actividad=m.id_club_destino FROM migraciones_catalogo m WHERE m.tipo='equivalencia_actividad' AND e.id_actividad=m.id_actividad_anterior;
     ALTER TABLE actividades RENAME TO actividades_catalogo_anterior;
   END IF;
 END $$;
 ALTER TABLE actividades_ediciones DROP CONSTRAINT IF EXISTS fk_edicion_catalogo;
 ALTER TABLE actividades_ediciones ADD CONSTRAINT fk_edicion_catalogo FOREIGN KEY (id_actividad) REFERENCES clubes(id_club) ON DELETE RESTRICT;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_edicion_propietario ON actividades_ediciones(id_edicion,id_actividad);
+ALTER TABLE migraciones_catalogo DROP CONSTRAINT IF EXISTS fk_migracion_edicion;
+ALTER TABLE migraciones_catalogo ADD CONSTRAINT fk_migracion_edicion FOREIGN KEY(id_edicion_destino,id_club_destino) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT;
+
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('actividades_legado_clubes') AND relkind='r') THEN
+  LOCK TABLE actividades_legado_clubes IN ACCESS EXCLUSIVE MODE;
+  INSERT INTO migraciones_catalogo(tipo,id_club_origen,id_club_destino,id_edicion_destino,resumen,migrado_en)
+   SELECT 'traslado_club',l.id_club,e.id_actividad,l.id_edicion,l.resumen,l.migrado_en
+   FROM actividades_legado_clubes l JOIN actividades_ediciones e ON e.id_edicion=l.id_edicion
+   ON CONFLICT DO NOTHING;
+  IF EXISTS(
+   SELECT 1 FROM actividades_legado_clubes l LEFT JOIN migraciones_catalogo m
+    ON m.tipo='traslado_club' AND m.id_club_origen=l.id_club
+   WHERE m.id_migracion IS NULL OR m.id_edicion_destino IS DISTINCT FROM l.id_edicion
+    OR m.resumen IS DISTINCT FROM l.resumen OR m.migrado_en IS DISTINCT FROM l.migrado_en
+  ) THEN RAISE EXCEPTION 'Hay traslados incompatibles; la migración se revierte'; END IF;
+  DROP TABLE actividades_legado_clubes;
+ END IF;
+END $$;
+CREATE OR REPLACE VIEW actividades_legado_clubes AS
+ SELECT id_club_origen AS id_club,id_edicion_destino AS id_edicion,resumen,migrado_en
+ FROM migraciones_catalogo WHERE tipo='traslado_club';
 
 CREATE OR REPLACE VIEW catalogo_recursos AS
 SELECT id_club AS id_actividad,id_club,tipo,slug,nombre_club AS nombre,descripcion,categoria,
@@ -1710,28 +1774,6 @@ CREATE TABLE IF NOT EXISTS actividades_aportaciones (
   UNIQUE (id_registro, id_opcion)
 );
 
-CREATE TABLE IF NOT EXISTS actividades_reacciones (
-  id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
-  id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-  reaccion VARCHAR(10) NOT NULL CHECK (reaccion IN ('like','love','clap')),
-  PRIMARY KEY (id_edicion, id_usuario)
-);
-
-CREATE TABLE IF NOT EXISTS actividades_historial (
-  id SERIAL PRIMARY KEY,
-  id_usuario INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
-  accion VARCHAR(80) NOT NULL,
-  detalle JSONB NOT NULL DEFAULT '{}'::jsonb,
-  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS actividades_legado_clubes (
-  id_club INT PRIMARY KEY REFERENCES clubes(id_club) ON DELETE RESTRICT,
-  id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
-  resumen JSONB NOT NULL,
-  migrado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 CREATE INDEX IF NOT EXISTS idx_actividades_ediciones_actividad ON actividades_ediciones(id_actividad);
 CREATE INDEX IF NOT EXISTS idx_actividades_registros_usuario ON actividades_registros(id_usuario);
 CREATE INDEX IF NOT EXISTS idx_actividades_aportes_edicion ON actividades_aportes_catalogo(id_edicion);
@@ -1782,12 +1824,114 @@ CREATE OR REPLACE VIEW actividades_fotos AS
  FROM publicaciones_imagenes i JOIN publicaciones_oferta p ON p.id_publicacion=i.id_publicacion;
 CREATE INDEX IF NOT EXISTS idx_publicaciones_oferta_dueno ON publicaciones_oferta(id_club,id_edicion,creado_en DESC);
 CREATE INDEX IF NOT EXISTS idx_publicaciones_imagenes_publicacion ON publicaciones_imagenes(id_publicacion,estado,orden);
-CREATE TABLE IF NOT EXISTS clubes_reacciones (
+CREATE TABLE IF NOT EXISTS reacciones_catalogo (
+ id_reaccion BIGSERIAL PRIMARY KEY,
  id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE RESTRICT,
+ id_edicion INT,
  id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
  reaccion VARCHAR(10) NOT NULL CHECK (reaccion IN ('like','love','clap')),
- PRIMARY KEY(id_club,id_usuario)
+ FOREIGN KEY(id_edicion,id_club) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reaccion_club_usuario ON reacciones_catalogo(id_club,id_usuario) WHERE id_edicion IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reaccion_edicion_usuario ON reacciones_catalogo(id_edicion,id_usuario) WHERE id_edicion IS NOT NULL;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('actividades_reacciones') AND relkind='r') THEN
+  LOCK TABLE actividades_reacciones IN ACCESS EXCLUSIVE MODE;
+  INSERT INTO reacciones_catalogo(id_club,id_edicion,id_usuario,reaccion)
+   SELECT e.id_actividad,r.id_edicion,r.id_usuario,r.reaccion FROM actividades_reacciones r JOIN actividades_ediciones e USING(id_edicion)
+   ON CONFLICT DO NOTHING;
+  IF EXISTS(
+   SELECT 1 FROM actividades_reacciones a LEFT JOIN reacciones_catalogo r
+    ON r.id_edicion=a.id_edicion AND r.id_usuario=a.id_usuario
+   WHERE r.id_reaccion IS NULL OR r.reaccion IS DISTINCT FROM a.reaccion
+  ) THEN RAISE EXCEPTION 'Hay reacciones de edición incompatibles; la migración se revierte'; END IF;
+  DROP TABLE actividades_reacciones;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('clubes_reacciones') AND relkind='r') THEN
+  LOCK TABLE clubes_reacciones IN ACCESS EXCLUSIVE MODE;
+  INSERT INTO reacciones_catalogo(id_club,id_usuario,reaccion)
+   SELECT id_club,id_usuario,reaccion FROM clubes_reacciones ON CONFLICT DO NOTHING;
+  IF EXISTS(
+   SELECT 1 FROM clubes_reacciones a LEFT JOIN reacciones_catalogo r
+    ON r.id_club=a.id_club AND r.id_usuario=a.id_usuario AND r.id_edicion IS NULL
+   WHERE r.id_reaccion IS NULL OR r.reaccion IS DISTINCT FROM a.reaccion
+  ) THEN RAISE EXCEPTION 'Hay reacciones de club incompatibles; la migración se revierte'; END IF;
+  DROP TABLE clubes_reacciones;
+ END IF;
+END $$;
+CREATE OR REPLACE VIEW actividades_reacciones AS
+ SELECT id_edicion,id_usuario,reaccion FROM reacciones_catalogo WHERE id_edicion IS NOT NULL;
+CREATE OR REPLACE VIEW clubes_reacciones AS
+ SELECT id_club,id_usuario,reaccion FROM reacciones_catalogo WHERE id_edicion IS NULL;
+
+-- La bitácora existente también recibe las acciones del catálogo y las ediciones.
+DO $$ BEGIN
+ IF (SELECT character_maximum_length FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='actividad_clubes' AND column_name='tipo_evento') IS DISTINCT FROM 80 THEN
+  ALTER TABLE actividad_clubes ALTER COLUMN tipo_evento TYPE VARCHAR(80);
+ END IF;
+END $$;
+ALTER TABLE actividad_clubes ADD COLUMN IF NOT EXISTS id_edicion INT;
+ALTER TABLE actividad_clubes ADD COLUMN IF NOT EXISTS origen VARCHAR(20) NOT NULL DEFAULT 'club';
+ALTER TABLE actividad_clubes ADD COLUMN IF NOT EXISTS id_historial_actividad_anterior INT;
+ALTER TABLE actividad_clubes DROP CONSTRAINT IF EXISTS chk_actividad_origen;
+ALTER TABLE actividad_clubes ADD CONSTRAINT chk_actividad_origen CHECK(origen IN ('club','catalogo'));
+ALTER TABLE actividad_clubes DROP CONSTRAINT IF EXISTS chk_actividad_edicion;
+ALTER TABLE actividad_clubes ADD CONSTRAINT chk_actividad_edicion CHECK(id_edicion IS NULL OR id_club IS NOT NULL);
+ALTER TABLE actividad_clubes DROP CONSTRAINT IF EXISTS fk_actividad_edicion;
+ALTER TABLE actividad_clubes ADD CONSTRAINT fk_actividad_edicion FOREIGN KEY(id_edicion,id_club) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT;
+DO $$
+DECLARE restriccion RECORD;
+BEGIN
+ FOR restriccion IN SELECT conname FROM pg_constraint
+  WHERE conrelid=to_regclass('actividad_clubes') AND contype='f' AND confrelid=to_regclass('usuarios')
+    AND conkey=ARRAY[(SELECT attnum FROM pg_attribute WHERE attrelid=to_regclass('actividad_clubes') AND attname='id_actor')]::smallint[]
+ LOOP EXECUTE format('ALTER TABLE actividad_clubes DROP CONSTRAINT %I',restriccion.conname); END LOOP;
+ ALTER TABLE actividad_clubes ADD CONSTRAINT fk_actividad_actor FOREIGN KEY(id_actor) REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_actividad_historial_anterior ON actividad_clubes(id_historial_actividad_anterior) WHERE id_historial_actividad_anterior IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_actividad_clubes_edicion ON actividad_clubes(id_edicion);
+DO $$
+DECLARE fila RECORD; destino INT; edicion INT; referencia INT;
+BEGIN
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('actividades_historial') AND relkind='r') THEN
+  LOCK TABLE actividades_historial IN ACCESS EXCLUSIVE MODE;
+  FOR fila IN SELECT * FROM actividades_historial ORDER BY id LOOP
+   destino:=NULL; edicion:=NULL;
+   -- Las referencias a hijos mantienen su identidad aunque cambie el ID del catálogo.
+   BEGIN
+    SELECT e.id_edicion,e.id_actividad INTO edicion,destino FROM actividades_ediciones e
+    WHERE e.id_edicion=COALESCE(
+     (fila.detalle->>'id_edicion')::int,
+     (SELECT id_edicion FROM actividades_registros WHERE id_registro=(fila.detalle->>'id_registro')::int),
+     (SELECT id_edicion FROM actividades_aportes_catalogo WHERE id_opcion=(fila.detalle->>'id_opcion')::int),
+     (SELECT r.id_edicion FROM actividades_aportaciones a JOIN actividades_registros r USING(id_registro) WHERE a.id_aportacion=(fila.detalle->>'id_aportacion')::int),
+     (SELECT id_edicion FROM actividades_fotos WHERE id_foto=(fila.detalle->>'id_foto')::int)
+    );
+    IF destino IS NULL THEN
+     referencia:=COALESCE((fila.detalle->>'id_actividad')::int,(fila.detalle->>'id_club')::int,
+      (SELECT id_club FROM actividades_fotos WHERE id_foto=(fila.detalle->>'id_foto')::int));
+     SELECT id_club_destino INTO destino FROM migraciones_catalogo
+      WHERE tipo='equivalencia_actividad' AND id_actividad_anterior=referencia AND fila.creado_en<=migrado_en;
+     IF destino IS NULL THEN SELECT id_club INTO destino FROM clubes WHERE id_club=referencia; END IF;
+    END IF;
+   EXCEPTION WHEN invalid_text_representation OR numeric_value_out_of_range THEN destino:=NULL; edicion:=NULL;
+   END;
+   INSERT INTO actividad_clubes(tipo_evento,id_club,id_edicion,id_actor,descripcion,detalles,fecha_creacion,origen,id_historial_actividad_anterior)
+    VALUES(fila.accion,destino,edicion,fila.id_usuario,'Acción anterior: '||replace(fila.accion,'_',' '),fila.detalle,fila.creado_en,'catalogo',fila.id)
+    ON CONFLICT DO NOTHING;
+   IF NOT EXISTS(SELECT 1 FROM actividad_clubes WHERE id_historial_actividad_anterior=fila.id
+     AND tipo_evento=fila.accion AND id_actor IS NOT DISTINCT FROM fila.id_usuario
+     AND detalles IS NOT DISTINCT FROM fila.detalle AND fecha_creacion=fila.creado_en) THEN
+    RAISE EXCEPTION 'Hay entradas de historial incompatibles; la migración se revierte';
+   END IF;
+  END LOOP;
+  DROP TABLE actividades_historial;
+ END IF;
+END $$;
+CREATE OR REPLACE VIEW actividades_historial AS
+ SELECT id_evento AS id,id_actor AS id_usuario,tipo_evento AS accion,COALESCE(detalles,'{}'::jsonb) AS detalle,
+        fecha_creacion AS creado_en,id_historial_actividad_anterior AS id_anterior
+ FROM actividad_clubes WHERE origen='catalogo';
 
 -- Las restricciones se aplican también a llamadas directas y conservan los estados históricos cerrados.
 CREATE OR REPLACE FUNCTION fn_catalogo_destino_club() RETURNS trigger AS $$
@@ -1802,7 +1946,7 @@ END $$ LANGUAGE plpgsql;
 DO $$
 DECLARE tabla TEXT;
 BEGIN
- FOREACH tabla IN ARRAY ARRAY['inscripciones','formularios','horarios_club','convocatorias','convocatorias_inscripcion','solicitudes_horario','solicitudes_convocatoria','clubes_niveles','clubes_reacciones'] LOOP
+ FOREACH tabla IN ARRAY ARRAY['inscripciones','formularios','horarios_club','convocatorias','convocatorias_inscripcion','solicitudes_horario','solicitudes_convocatoria','clubes_niveles'] LOOP
    IF to_regclass(tabla) IS NOT NULL THEN
      EXECUTE format('DROP TRIGGER IF EXISTS trg_catalogo_solo_club ON %I',tabla);
      EXECUTE format('CREATE TRIGGER trg_catalogo_solo_club BEFORE INSERT OR UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION fn_catalogo_destino_club()',tabla);
@@ -1838,6 +1982,8 @@ BEGIN
 END $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_publicacion_destino ON publicaciones_oferta;
 CREATE TRIGGER trg_publicacion_destino BEFORE INSERT OR UPDATE ON publicaciones_oferta FOR EACH ROW EXECUTE FUNCTION fn_publicacion_destino();
+DROP TRIGGER IF EXISTS trg_reaccion_destino ON reacciones_catalogo;
+CREATE TRIGGER trg_reaccion_destino BEFORE INSERT OR UPDATE ON reacciones_catalogo FOR EACH ROW EXECUTE FUNCTION fn_publicacion_destino();
 
 -- Impide que el catálogo retirado vuelva a ser una fuente de escritura.
 CREATE OR REPLACE FUNCTION fn_catalogo_anterior_lectura() RETURNS trigger AS $$
@@ -1850,6 +1996,14 @@ DO $$ BEGIN
 END $$;
 DROP TRIGGER IF EXISTS trg_actividades_compat_lectura ON actividades;
 CREATE TRIGGER trg_actividades_compat_lectura INSTEAD OF INSERT OR UPDATE OR DELETE ON actividades FOR EACH ROW EXECUTE FUNCTION fn_catalogo_anterior_lectura();
+DO $$
+DECLARE vista TEXT;
+BEGIN
+ FOREACH vista IN ARRAY ARRAY['catalogo_equivalencias_actividades','actividades_legado_clubes','actividades_reacciones','clubes_reacciones','actividades_historial'] LOOP
+  EXECUTE format('DROP TRIGGER IF EXISTS trg_compat_catalogo_lectura ON %I',vista);
+  EXECUTE format('CREATE TRIGGER trg_compat_catalogo_lectura INSTEAD OF INSERT OR UPDATE OR DELETE ON %I FOR EACH ROW EXECUTE FUNCTION fn_catalogo_anterior_lectura()',vista);
+ END LOOP;
+END $$;
 CREATE OR REPLACE FUNCTION fn_catalogo_slug() RETURNS trigger AS $$
 DECLARE base TEXT; contador INT:=0;
 BEGIN

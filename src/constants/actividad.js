@@ -1,3 +1,5 @@
+import { ETIQUETAS_ACTIVIDAD_CATALOGO } from '../../shared/actividades';
+
 export const EVENTOS_CONFIG = {
   convocatoria_solicitada: { label: 'Convocatoria Solicitada', badge: 'bg-cyan-500/15 text-cyan-400', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
   convocatoria_rechazada: { label: 'Convocatoria Rechazada', badge: 'bg-red-500/15 text-red-400', icon: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' },
@@ -11,6 +13,10 @@ export const EVENTOS_CONFIG = {
 };
 
 export const DEFAULT_EVENTO = { label: 'Evento desconocido', badge: 'bg-slate-500/15 text-slate-400', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' };
+
+export function configEvento(tipo) {
+  return EVENTOS_CONFIG[tipo] || (ETIQUETAS_ACTIVIDAD_CATALOGO[tipo] ? { ...DEFAULT_EVENTO, label: ETIQUETAS_ACTIVIDAD_CATALOGO[tipo] } : DEFAULT_EVENTO);
+}
 
 export function formatFecha(fecha) {
   return new Date(fecha).toLocaleString('es-MX', {

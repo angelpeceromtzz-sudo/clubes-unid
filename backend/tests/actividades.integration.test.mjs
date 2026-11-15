@@ -6,6 +6,7 @@ import express from 'express';
 import pg from 'pg';
 import { crearRouterActividades } from '../lib/actividadesRouter.js';
 import { migrarLegadoActividades } from '../lib/actividadesLegado.js';
+import { crearRouterConsultaActividad } from '../lib/actividadConsultaRouter.js';
 import { camposPlantillaActividad } from '../../shared/actividades.js';
 
 // Únicamente una conexión de pruebas explícita. No importa db.js ni lee .env.
@@ -54,6 +55,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     };
     const app = express();
     app.use(express.json());
+    app.use('/api/bitacora', crearRouterConsultaActividad({db,autenticar}));
     app.use('/api/actividades', crearRouterActividades({ db, autenticar, hoy: () => '2026-11-14', subirImagen, secretoAdmin: 'qa-secret', limpiarImagenes: async (archivos) => limpiadas.push(...archivos) }));
     servidor = app.listen(0, '127.0.0.1');
     await new Promise((resolve) => servidor.once('listening', resolve));
@@ -314,6 +316,49 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     assert.equal((await migrarLegadoActividades(db, { idClub: 8, idEdicion: edicionTrineo, aplicar: true })).ya_migrado, true);
     const enlace = await enviar(null, 'GET', '/legado/club/8');
     assert.equal(enlace.slug, 'trineo-de-los-suenos');
+  });
+
+  test('bitácora compartida: permisos, nombres de recursos y filtros reales', async () => {
+    const actividad = await enviar(2, 'POST', '/gestion/actividades', {nombre:'Actividad para bitácora',descripcion:'Registro de acciones QA',categoria:'Servicio'}, 201);
+    const edicion = await enviar(2, 'POST', '/gestion/actividades/' + actividad.id_actividad + '/ediciones', datosEdicion('general'), 201);
+    const consultar = (usuario, query = '') => fetch(base.replace('/api/actividades','/api/bitacora') + query, {headers: usuario ? {'x-usuario-qa':String(usuario)} : {}});
+    for (const usuario of [null,1,2,22]) {
+      const respuesta = await consultar(usuario);
+      assert.equal(respuesta.status, usuario ? 403 : 401);
+      assert.match(respuesta.headers.get('cache-control'), /private, no-store/);
+    }
+    for (const usuario of [3,4,7]) assert.equal((await consultar(usuario)).status,200);
+    const filtro = '?recurso=actividad&club=' + actividad.id_actividad + '&tipo=edicion_creada&actor=Encargado';
+    const filtrados = await (await consultar(4,filtro)).json();
+    assert.equal(filtrados.total,1);
+    assert.equal(filtrados.eventos[0].id_edicion,edicion.id_edicion);
+    assert.equal(filtrados.eventos[0].tipo_recurso,'actividad');
+    assert.equal(filtrados.eventos[0].nombre_club,'Actividad para bitácora');
+    assert.equal(filtrados.eventos[0].edicion_nombre,'Edición QA');
+    assert.equal(filtrados.eventos[0].actor_nombre,'Encargado QA');
+    assert.match(filtrados.eventos[0].descripcion,/Edición creada/);
+    const clubes = await (await consultar(3,'?recurso=club')).json();
+    assert.ok(clubes.eventos.length>0 && clubes.eventos.every((evento)=>evento.tipo_recurso==='club'));
+    const filtros = await (await consultar(4,'/filtros')).json();
+    assert.ok(filtros.clubes.some((recurso)=>recurso.id===actividad.id_actividad && recurso.tipo==='actividad'));
+    assert.ok(filtros.tipos.includes('edicion_creada'));
+    for (const query of ['?recurso=otro','?club=2x','?desde=2026-02-31','?desde=2026-12-01&hasta=2026-11-01']) assert.equal((await consultar(4,query)).status,400);
+    await db.query("INSERT INTO actividad_clubes(tipo_evento,id_club,id_actor,descripcion) SELECT 'paginacion_qa',101,2,'Evento de paginación' FROM generate_series(1,55)");
+    const primera = await (await consultar(4,'?tipo=paginacion_qa&page=1')).json();
+    const segunda = await (await consultar(4,'?tipo=paginacion_qa&page=2')).json();
+    assert.equal(primera.total,55); assert.equal(primera.eventos.length,50);
+    assert.equal(segunda.totalPages,2); assert.equal(segunda.eventos.length,5);
+    assert.ok(segunda.eventos.every((evento)=>!primera.eventos.some((otro)=>otro.id_evento===evento.id_evento)));
+  });
+
+  test('un fallo de bitácora revierte también la operación que debía registrar', async () => {
+    await db.query("CREATE FUNCTION fn_fallo_bitacora_qa() RETURNS trigger AS $$ BEGIN IF NEW.tipo_evento='actividad_creada' THEN RAISE EXCEPTION 'Fallo de bitácora simulado'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql; CREATE TRIGGER trg_fallo_bitacora_qa BEFORE INSERT ON actividad_clubes FOR EACH ROW EXECUTE FUNCTION fn_fallo_bitacora_qa()");
+    try {
+      await enviar(2,'POST','/gestion/actividades',{nombre:'No debe quedar guardada QA',descripcion:'Operación revertida',categoria:'Servicio'},500);
+      assert.equal((await db.query("SELECT COUNT(*)::int AS n FROM clubes WHERE nombre_club='No debe quedar guardada QA'")).rows[0].n,0);
+    } finally {
+      await db.query('DROP TRIGGER trg_fallo_bitacora_qa ON actividad_clubes; DROP FUNCTION fn_fallo_bitacora_qa()');
+    }
   });
 
   test('archivar oculta la edición y conserva los registros privados', async () => {

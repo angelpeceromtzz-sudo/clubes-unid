@@ -59,7 +59,7 @@ function responder(sql, params = []) {
   }
 
   if (/FROM actividad_clubes a/.test(texto)) {
-    const [desde, hasta, actor, tipo, club, limit, offset] = params;
+    const [desde, hasta, actor, tipo, club, _recurso, limit, offset] = params;
     let rows = [...actividadRows];
     if (desde) rows = rows.filter((r) => r.fecha_creacion >= new Date(desde));
     if (hasta) {

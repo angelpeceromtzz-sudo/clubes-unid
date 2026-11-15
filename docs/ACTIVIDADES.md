@@ -17,6 +17,8 @@ Los clubes conservan su límite de un responsable por club y un club por respons
 
 ## Estructura de datos
 
+La [guía de estudio de la base de datos](GUIA-BASE-DATOS-CLUBS-ACTIVIDADES.md) explica el antes y después, las relaciones, los estados y las reglas con ejemplos. Incluye [consultas de práctica de solo lectura](sql/estudiar-catalogo.sql).
+
 `clubes` es la única tabla principal del catálogo. `tipo` distingue `club` de `actividad`; `estado_publicacion` controla borrador, revisión, publicación y archivo. El estado operativo del club se conserva separado. No se decide el tipo a partir del nombre.
 
 | Información | Almacenamiento y uso |
@@ -28,9 +30,23 @@ Los clubes conservan su límite de un responsable por club y un club por respons
 | Publicación con una descripción y varias fotos | `publicaciones_oferta` y `publicaciones_imagenes`, compartidas |
 | Reacciones | Una por cuenta y club, o una por cuenta y edición |
 
+La estructura compacta añade **ocho tablas físicas** al proyecto: `actividades_ediciones`, `actividades_registros`, `actividades_aportes_catalogo`, `actividades_aportaciones`, `publicaciones_oferta`, `publicaciones_imagenes`, `reacciones_catalogo` y `migraciones_catalogo`. Se amplían las tablas existentes `clubes` y `actividad_clubes`.
+
+`reacciones_catalogo` reúne las reacciones de ambos tipos. Para clubes, `id_edicion` queda vacío; para actividades, identifica una edición de esa misma actividad. Dos índices únicos parciales mantienen una reacción por cuenta y destino. `migraciones_catalogo.tipo` distingue las equivalencias de IDs (`equivalencia_actividad`) de los traslados explícitos desde clubes (`traslado_club`); cada caso tiene sus campos y restricciones.
+
 `catalogo_recursos` es una vista de la tabla principal que adapta los nombres del módulo; no duplica el catálogo. `clubes_operativos` y `clubes_con_estado` restringen los procesos anteriores a registros de tipo club. La vista `actividades` ofrece consulta compatible, y la tabla anterior queda como `actividades_catalogo_anterior`, sin escrituras operativas. Las fotos anteriores se consultan por una vista compatible sobre las publicaciones compartidas.
 
-Los IDs existentes de clubes se conservan. Los IDs de actividades anteriores se traducen mediante `catalogo_equivalencias_actividades`, sin reutilizar IDs de clubes aunque coincidan. Sus ediciones conservan su propio ID, y con él sus asistentes, aportaciones y reacciones. Se conservan los IDs, descripciones, fechas y estados de todas las fotos. Si una dirección ya pertenece a un club, la actividad importada recibe un sufijo identificable y la correspondencia conserva el dato original.
+Los IDs existentes de clubes se conservan. Los IDs de actividades anteriores se traducen mediante `migraciones_catalogo`, sin reutilizar IDs de clubes aunque coincidan. Sus ediciones conservan su propio ID, y con él sus asistentes, aportaciones y reacciones. Se conservan los IDs, descripciones, fechas y estados de todas las fotos. Si una dirección ya pertenece a un club, la actividad importada recibe un sufijo identificable y la correspondencia conserva el dato original.
+
+Los nombres anteriores `actividades_reacciones`, `clubes_reacciones`, `catalogo_equivalencias_actividades`, `actividades_legado_clubes` y `actividades_historial` quedan como vistas de solo consulta. La aplicación escribe en las tablas compartidas. Al actualizar la versión de once tablas, se comprueba la copia antes de retirar cada tabla sustituida; una incompatibilidad revierte la transacción.
+
+## Bitácora compartida
+
+**Gestión de Clubs → Bitácora de clubs y actividades** permite a Administración, Rectoría y Coordinación consultar las acciones de ambos tipos, con filtros por tipo de recurso, autor, acción y club o actividad. Cada entrada muestra fecha, actor, descripción y edición cuando corresponde. Los alumnos y responsables no tienen acceso a esta consulta.
+
+La tabla existente `actividad_clubes` recibe también las acciones del catálogo mediante `origen = 'catalogo'`. Añade `id_edicion` y una referencia al ID del historial anterior. Las operaciones del módulo y su entrada de bitácora se confirman en la misma transacción: si falla el registro del historial, se revierte la operación. El historial administrativo general del proyecto continúa en su apartado propio.
+
+Las entradas importadas conservan actor, acción, detalle JSONB y fecha. Obtienen un `id_evento` común para evitar colisiones con la bitácora de clubes; el ID anterior queda en `id_historial_actividad_anterior` y en `actividades_historial.id_anterior`. Si una referencia histórica no puede resolverse, se conserva el evento sin inventarle un destino. La eliminación física de una cuenta deja el actor vacío y conserva el evento.
 
 ## Preparar la base
 
@@ -40,11 +56,11 @@ Los IDs existentes de clubes se conservan. Los IDs de actividades anteriores se 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/schema.sql
 ```
 
-El comando manual existente `node backend/migrate.js` aplica ese mismo archivo. No hace falta ejecutar después las migraciones de actividades. En una base vacía crea directamente el catálogo final y las publicaciones compartidas, sin crear un catálogo anterior de respaldo. En una base del proyecto que todavía tiene el módulo separado, reconoce sus tablas y conserva los IDs, fotos y registros al unificar. Se verificó su repetición con datos existentes, sin duplicar registros ni sobrescribir las descripciones de las actividades.
+El comando manual existente `node backend/migrate.js` aplica ese mismo archivo. No hace falta ejecutar después las migraciones de actividades. En una base vacía crea directamente las ocho tablas finales, sin crear un catálogo anterior de respaldo. Reconoce tanto el módulo separado como la versión unificada de once tablas y conserva sus datos al actualizar. Se verificó su repetición con datos existentes, sin duplicar registros ni sobrescribir las descripciones de las actividades.
 
 Para una base compartida, revisar el esquema y probar sobre una copia con respaldo antes de aplicarlo; el archivo también contiene la estructura de los demás módulos y bloquea escrituras mientras realiza cambios. El arranque de Express sigue sin ejecutarlo automáticamente. La versión nueva de la aplicación requiere terminar esta actualización antes de recibir tráfico.
 
-Las migraciones anteriores se conservan como alternativa para actualizar exclusivamente el módulo en instalaciones anteriores: `migrate-actividades.sql` y después `migrate-catalogo-unificado.sql` si aún no existía; solo la segunda si ya había actividades. Esta alternativa no se combina con la instalación mediante el esquema consolidado. Después de unificar, no se repiten las migraciones retiradas `migrate-actividades.sql` ni `migrate-actividades-galeria.sql`.
+Las migraciones se conservan como alternativa para actualizar exclusivamente el módulo: `migrate-actividades.sql` y después `migrate-catalogo-unificado.sql` si aún no existía; solo la segunda si ya había actividades o la versión unificada de once tablas. La segunda incluye la compactación actual. Esta alternativa no se combina con la instalación mediante el esquema consolidado. Después de unificar, no se repiten las migraciones retiradas `migrate-actividades.sql` ni `migrate-actividades-galeria.sql`.
 
 La instalación incorpora únicamente las descripciones e imágenes informativas existentes de Trineo y Misiones. No crea cuentas, ediciones, fechas, aportaciones, mínimos, tallas ni responsables ficticios. La configuración operativa posterior se hace desde el panel: tipo al crear, información, cupo y niveles de clubes, responsables, ediciones, preguntas, tallas, aportaciones, fechas y destacados. Los registros existentes conservan su tipo; el traslado revisado atiende los eventos registrados anteriormente como clubes.
 
@@ -98,7 +114,7 @@ Tras revisar esa correspondencia, agregar `--aplicar`:
 node backend/scripts/migrar-actividades-legado.mjs --club ID_CLUB --edicion ID_EDICION --aplicar
 ```
 
-Toda la transición es una transacción. Conserva los datos y estados originales en la correspondencia de legado y mantiene las tablas originales. Importa integrantes activos y solicitudes no rechazadas como `pendiente_completar`; el alumno debe completar los datos nuevos y, en Trineo, su aportación para confirmar. No convierte solicitudes rechazadas en asistentes. Las cuentas sin matrícula o desactivadas conservan su historial sin recibir una inscripción inventada.
+Toda la transición es una transacción. Conserva los datos y estados originales en `migraciones_catalogo` con `tipo = 'traslado_club'` y mantiene las tablas originales de participantes. Importa integrantes activos y solicitudes no rechazadas como `pendiente_completar`; el alumno debe completar los datos nuevos y, en Trineo, su aportación para confirmar. No convierte solicitudes rechazadas en asistentes. Las cuentas sin matrícula o desactivadas conservan su historial sin recibir una inscripción inventada.
 
 Al aplicar, el club anterior queda inactivo y cerrado, sus membresías activas pasan a baja y se cierran las solicitudes pendientes. Se libera su vínculo con la convocatoria actual para que no siga ocupando postulaciones. No se tocan otros clubes. Los enlaces antiguos al detalle del club redirigen a la edición publicada. Una segunda aplicación de la misma correspondencia no duplica registros; una correspondencia diferente para el mismo club se rechaza.
 
@@ -115,3 +131,5 @@ npm run test:actividades
 Las pruebas de dominio funcionan sin base de datos. Las pruebas de API, migración y transición requieren `ACTIVIDADES_TEST_DATABASE_URL` apuntando explícitamente a una base de pruebas. Crean un esquema aleatorio con el esquema real y lo eliminan al terminar; no leen `backend/.env`. La API se prueba preparando la base únicamente con `schema.sql`. Se comprueba la instalación desde cero, la carga opcional del seed local, la repetición de ambos y la actualización de datos anteriores tanto mediante el esquema completo como con la migración específica. Cubren ambos tipos, permisos, restricciones entre procesos, galería compartida, registros, concurrencia, privacidad, aprobación, snapshots, recepción/cancelación de aportaciones, destacados, archivo e importación de legado. La prueba de actualización verifica además IDs que colisionan, secuencias adelantadas, conservación de fotos antiguas, asistentes y aportaciones recibidas, una sola fuente operativa y una segunda aplicación sin duplicados.
 
 La implementación y las verificaciones locales no aplican migraciones ni trasladan registros en una base compartida. Su activación requiere actualizar esa base y desplegar las dos partes de la aplicación.
+
+`catalogoCompacto.integration.test.mjs` verifica las ocho tablas físicas, las cinco vistas compatibles, los destinos y duplicados de reacciones, la conservación de la bitácora al retirar un actor y la actualización desde once tablas mediante ambos procedimientos. También se prueban los permisos y filtros de la bitácora y la reversión de una operación si falla su registro.

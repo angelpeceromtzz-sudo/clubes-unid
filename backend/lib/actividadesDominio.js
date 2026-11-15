@@ -4,6 +4,38 @@ export const ROLES_SUPERVISAN_ACTIVIDADES = [3, 4, 7];
 export const REACCIONES_ACTIVIDAD = ['like', 'love', 'clap'];
 export const ESTADOS_ACTIVIDAD = ['borrador', 'pendiente', 'publicada', 'rechazada', 'archivada'];
 
+export const ETIQUETAS_ACTIVIDAD_CATALOGO = {
+  actividad_creada: 'Registro del catálogo creado',
+  encargado_asignado: 'Responsable asignado',
+  edicion_creada: 'Edición creada',
+  actividad_editada: 'Información general editada',
+  edicion_editada: 'Edición editada',
+  actividad_enviada_revision: 'Información general enviada a revisión',
+  edicion_enviada_revision: 'Edición enviada a revisión',
+  actividad_retirada_revision: 'Información general retirada de revisión',
+  edicion_retirada_revision: 'Edición retirada de revisión',
+  actividad_publicada: 'Información general aprobada y publicada',
+  edicion_publicada: 'Edición aprobada y publicada',
+  actividad_rechazada: 'Cambios solicitados en la información general',
+  edicion_rechazada: 'Cambios solicitados en la edición',
+  actividad_archivada: 'Publicación archivada',
+  edicion_archivada: 'Edición archivada',
+  actividad_restaurada: 'Publicación restaurada como borrador',
+  edicion_restaurada: 'Edición restaurada como borrador',
+  inscripciones_actualizadas: 'Disponibilidad de inscripciones actualizada',
+  opcion_aportacion_creada: 'Opción de aportación creada',
+  catalogo_actualizado: 'Opción de aportación actualizada',
+  aportacion_recibida: 'Recepción de aportación confirmada',
+  portada_actualizada: 'Imagen de presentación actualizada',
+  fotos_agregadas: 'Fotografías agregadas',
+  foto_publicada: 'Fotografía aprobada',
+  foto_rechazada: 'Fotografía rechazada',
+  foto_eliminada: 'Fotografía retirada',
+  registro_confirmado: 'Inscripción confirmada',
+  registro_cancelado: 'Inscripción cancelada',
+  legado_migrado: 'Participantes de un club anterior trasladados',
+};
+
 export function errorActividad(mensaje, status = 400) {
   return Object.assign(new Error(mensaje), { status });
 }

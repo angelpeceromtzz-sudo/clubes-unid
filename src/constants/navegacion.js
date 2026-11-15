@@ -20,7 +20,7 @@ export const ELEMENTOS_NAV_ADMIN = [
       ENTRADA_CATALOGO,
       { key: 'convocatorias', label: 'Convocatorias VIVE', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
       { key: 'horarios', label: 'Aprobación de horarios', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-{ key: 'actividad', label: 'Actividad de Clubes', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+{ key: 'actividad', label: 'Bitácora de clubs y actividades', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
     ],
   },
   { key: 'diapositivas', label: 'Banner Principal', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
@@ -48,7 +48,7 @@ export const ELEMENTOS_NAV_RECTORIA = [
   { key: 'calendario', label: 'Calendario académico', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
   { key: 'mural', label: 'Mural digital', icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4' },
   { key: 'noticias', label: 'Noticias', icon: 'M12 7.5H13.5M12 10.5H13.5M6 13.5H13.5M6 16.5H13.5M16.5 7.5H19.875C20.4963 7.5 21 8.00368 21 8.625V18C21 19.2426 19.9926 20.25 18.75 20.25M16.5 7.5V18C16.5 19.2426 17.5074 20.25 18.75 20.25M16.5 7.5V4.875C16.5 4.25368 15.9963 3.75 15.375 3.75H4.125C3.50368 3.75 3 4.25368 3 4.875V18C3 19.2426 4.00736 20.25 5.25 20.25H18.75M6 7.5H9V10.5H6V7.5Z' },
-  { key: 'actividad', label: 'Historial de Acciones', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+  { key: 'actividad', label: 'Bitácora de clubs y actividades', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
 ];
 
 // Panel del responsable: edición del mural digital y redacción de noticias.

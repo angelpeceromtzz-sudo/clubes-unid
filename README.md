@@ -8,11 +8,15 @@ El módulo general de `/actividades` permite solicitar actividades de cualquier 
 
 El catálogo comparte la tabla principal `clubes`, con `tipo` para distinguir clubes y actividades. La gestión común está en `/actividades/gestion`: creación, información de Oferta, responsables, revisión y fotos. Miembros y convocatorias de clubes siguen separados de las ediciones y registros de actividades. Trineo y Misiones exigen edad y talla; Trineo también exige una aportación. Las ediciones, sus formularios y los periodos de destacados se configuran desde el panel.
 
+La extensión añade **ocho tablas físicas**: cuatro para ediciones, registros y aportaciones, dos para publicaciones e imágenes, `reacciones_catalogo` y `migraciones_catalogo`. Reutiliza `actividad_clubes` como bitácora de clubes y actividades, consultable por Administración, Rectoría y Coordinación. La actualización incorpora las once tablas de la versión anterior conservando sus datos; los cinco nombres retirados quedan como vistas de consulta.
+
 Toda esta extensión está consolidada en `backend/schema.sql`, junto con el resto de la estructura del proyecto. Una instalación nueva requiere únicamente ese archivo para habilitar clubes, actividades, ediciones, registros, aportaciones, fotos y reacciones; también incorpora las versiones anteriores del módulo conservando IDs e historial. El comando manual `node backend/migrate.js` aplica el esquema completo en una transacción. No se ejecuta al arrancar el servicio ni inventa fechas, encargados, tallas, mínimos o inscripciones. Consultar la preparación y las alternativas para bases existentes en [docs/ACTIVIDADES.md](docs/ACTIVIDADES.md).
 
 La transición de registros antiguos es una operación separada con vista previa, correspondencia explícita de IDs y conservación de estados anteriores. Véase [operación y transición de actividades](docs/ACTIVIDADES.md).
 
 Clubes y actividades comparten publicaciones con una descripción y hasta diez imágenes, vista previa, aprobación y visor. La migración de unificación incorpora las fotos antiguas y retira la clasificación antes/después. `npm run test:actividades` verifica el módulo y la migración; la integración requiere una base explícita de pruebas mediante `ACTIVIDADES_TEST_DATABASE_URL`.
+
+Para estudiar el cambio de la base de datos, consulta la [guía con diagrama, ejemplos y preguntas de repaso](docs/GUIA-BASE-DATOS-CLUBS-ACTIVIDADES.md) y las [consultas SQL de solo lectura](docs/sql/estudiar-catalogo.sql).
 
 ---
 

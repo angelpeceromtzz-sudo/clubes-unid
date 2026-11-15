@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { guardarPublicacionFotos } from './mediosOferta.js';
 import { migrarLegadoActividades } from './actividadesLegado.js';
+import { registrarActividadCatalogo } from './actividadCatalogo.js';
 import {
   ROLES_CREAN_ACTIVIDADES, ROLES_SUPERVISAN_ACTIVIDADES, REACCIONES_ACTIVIDAD,
   errorActividad, textoActividad, normalizarRecursoCatalogo, normalizarEdicionActividad,
@@ -68,7 +69,7 @@ async function guardarColumnas(db, tabla, idCampo, id, datos) {
 }
 
 async function auditar(db, usuario, accion, detalle) {
-  await db.query('INSERT INTO actividades_historial (id_usuario, accion, detalle) VALUES ($1,$2,$3)', [usuario.id, accion, JSON.stringify(detalle)]);
+  await registrarActividadCatalogo(db, { idActor: usuario.id, accion, detalle });
 }
 
 export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secretoAdmin, limpiarImagenes = async () => {}, limitarEscritura = (_req, _res, next) => next(), limitarSubida = (_req, _res, next) => next() }) {
@@ -112,7 +113,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     for (const edicion of ediciones) {
       const catalogo = await catalogoEdicion(db, edicion.id_edicion);
       const fotos = (await db.query("SELECT id_foto, url_imagen, pie, creado_en FROM actividades_fotos WHERE id_edicion = $1 AND estado = 'publicada' ORDER BY creado_en DESC, id_foto DESC", [edicion.id_edicion])).rows;
-      const reacciones = (await db.query('SELECT reaccion, COUNT(*)::int AS total FROM actividades_reacciones WHERE id_edicion = $1 GROUP BY reaccion', [edicion.id_edicion])).rows;
+      const reacciones = (await db.query('SELECT reaccion, COUNT(*)::int AS total FROM reacciones_catalogo WHERE id_edicion = $1 GROUP BY reaccion', [edicion.id_edicion])).rows;
       resultado.push({ ...edicionPublica(edicion, hoy()), catalogo: catalogo.filter((opcion) => opcion.activa), fotos, reacciones });
     }
     const fotos = rows[0].tipo === 'club' ? (await db.query("SELECT id_foto,url_imagen,pie,creado_en FROM actividades_fotos WHERE id_club=$1 AND id_edicion IS NULL AND estado='publicada' ORDER BY creado_en DESC,id_foto DESC", [rows[0].id_club])).rows : [];
@@ -120,7 +121,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   });
 
   router.get('/legado/club/:idClub', async (req, res) => {
-    const { rows } = await db.query("SELECT a.slug,e.id_edicion FROM actividades_legado_clubes l JOIN actividades_ediciones e ON e.id_edicion=l.id_edicion JOIN catalogo_recursos a ON a.id_actividad=e.id_actividad WHERE l.id_club=$1 AND a.estado='publicada' AND e.estado='publicada'", [req.params.idClub]);
+    const { rows } = await db.query("SELECT a.slug,e.id_edicion FROM migraciones_catalogo l JOIN actividades_ediciones e ON e.id_edicion=l.id_edicion_destino JOIN catalogo_recursos a ON a.id_actividad=e.id_actividad WHERE l.tipo='traslado_club' AND l.id_club_origen=$1 AND a.estado='publicada' AND e.estado='publicada'", [req.params.idClub]);
     res.json(rows[0] || null);
   });
 
@@ -128,22 +129,22 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const club=await obtenerActividad(db,req.params.idClub);
     if(club.tipo!=='club' || club.estado!=='publicada' || club.id_estatus_club===3) throw errorActividad('Club no disponible',404);
     const fotos=(await db.query("SELECT id_foto,url_imagen,pie,creado_en FROM actividades_fotos WHERE id_club=$1 AND id_edicion IS NULL AND estado='publicada' ORDER BY creado_en DESC,id_foto DESC",[club.id_club])).rows;
-    const reacciones=(await db.query('SELECT reaccion,COUNT(*)::int AS total FROM clubes_reacciones WHERE id_club=$1 GROUP BY reaccion',[club.id_club])).rows;
+    const reacciones=(await db.query('SELECT reaccion,COUNT(*)::int AS total FROM reacciones_catalogo WHERE id_club=$1 AND id_edicion IS NULL GROUP BY reaccion',[club.id_club])).rows;
     res.json({fotos,reacciones});
   });
   router.get('/clubes/:idClub/mi-reaccion',autenticar,async(req,res)=>{
     const club=await obtenerActividad(db,req.params.idClub);
     if(club.tipo!=='club' || club.estado!=='publicada' || club.id_estatus_club===3) throw errorActividad('Club no disponible',404);
-    res.json({reaccion:(await db.query('SELECT reaccion FROM clubes_reacciones WHERE id_club=$1 AND id_usuario=$2',[club.id_club,req.user.id])).rows[0]?.reaccion || null});
+    res.json({reaccion:(await db.query('SELECT reaccion FROM reacciones_catalogo WHERE id_club=$1 AND id_usuario=$2 AND id_edicion IS NULL',[club.id_club,req.user.id])).rows[0]?.reaccion || null});
   });
   router.put('/clubes/:idClub/reaccion',autenticar,limitarEscritura,async(req,res)=>{
     if(req.body.reaccion!=null && !REACCIONES_ACTIVIDAD.includes(req.body.reaccion)) throw errorActividad('Reacción no válida');
     res.json(await transaccion(async(cliente)=>{
       const club=await obtenerActividad(cliente,req.params.idClub,true);
       if(club.tipo!=='club' || club.estado!=='publicada' || club.id_estatus_club===3) throw errorActividad('Club no disponible',404);
-      if(req.body.reaccion) await cliente.query('INSERT INTO clubes_reacciones(id_club,id_usuario,reaccion) VALUES($1,$2,$3) ON CONFLICT(id_club,id_usuario) DO UPDATE SET reaccion=EXCLUDED.reaccion',[club.id_club,req.user.id,req.body.reaccion]);
-      else await cliente.query('DELETE FROM clubes_reacciones WHERE id_club=$1 AND id_usuario=$2',[club.id_club,req.user.id]);
-      return {reaccion:req.body.reaccion || null,totales:(await cliente.query('SELECT reaccion,COUNT(*)::int AS total FROM clubes_reacciones WHERE id_club=$1 GROUP BY reaccion',[club.id_club])).rows};
+      if(req.body.reaccion) await cliente.query('INSERT INTO reacciones_catalogo(id_club,id_usuario,reaccion) VALUES($1,$2,$3) ON CONFLICT(id_club,id_usuario) WHERE id_edicion IS NULL DO UPDATE SET reaccion=EXCLUDED.reaccion',[club.id_club,req.user.id,req.body.reaccion]);
+      else await cliente.query('DELETE FROM reacciones_catalogo WHERE id_club=$1 AND id_usuario=$2 AND id_edicion IS NULL',[club.id_club,req.user.id]);
+      return {reaccion:req.body.reaccion || null,totales:(await cliente.query('SELECT reaccion,COUNT(*)::int AS total FROM reacciones_catalogo WHERE id_club=$1 AND id_edicion IS NULL GROUP BY reaccion',[club.id_club])).rows};
     }));
   });
 
@@ -479,7 +480,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     comprobarPublica(edicion);
     const registro = (await db.query('SELECT * FROM actividades_registros WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id])).rows[0] || null;
     if (registro) registro.aportaciones = await aportesRegistro(db, registro.id_registro);
-    const reaccion = (await db.query('SELECT reaccion FROM actividades_reacciones WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id])).rows[0]?.reaccion || null;
+    const reaccion = (await db.query('SELECT reaccion FROM reacciones_catalogo WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id])).rows[0]?.reaccion || null;
     res.json({ registro, reaccion });
   });
 
@@ -532,9 +533,9 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     res.json(await transaccion(async (cliente) => {
       const edicion = await obtenerEdicion(cliente, req.params.idEdicion, true);
       comprobarPublica(edicion);
-      if (req.body.reaccion) await cliente.query('INSERT INTO actividades_reacciones (id_edicion,id_usuario,reaccion) VALUES ($1,$2,$3) ON CONFLICT (id_edicion,id_usuario) DO UPDATE SET reaccion = EXCLUDED.reaccion', [edicion.id_edicion, req.user.id, req.body.reaccion]);
-      else await cliente.query('DELETE FROM actividades_reacciones WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id]);
-      return { reaccion: req.body.reaccion || null, totales: (await cliente.query('SELECT reaccion, COUNT(*)::int AS total FROM actividades_reacciones WHERE id_edicion = $1 GROUP BY reaccion', [edicion.id_edicion])).rows };
+      if (req.body.reaccion) await cliente.query('INSERT INTO reacciones_catalogo (id_club,id_edicion,id_usuario,reaccion) VALUES ($1,$2,$3,$4) ON CONFLICT (id_edicion,id_usuario) WHERE id_edicion IS NOT NULL DO UPDATE SET reaccion = EXCLUDED.reaccion', [edicion.id_actividad, edicion.id_edicion, req.user.id, req.body.reaccion]);
+      else await cliente.query('DELETE FROM reacciones_catalogo WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id]);
+      return { reaccion: req.body.reaccion || null, totales: (await cliente.query('SELECT reaccion, COUNT(*)::int AS total FROM reacciones_catalogo WHERE id_edicion = $1 GROUP BY reaccion', [edicion.id_edicion])).rows };
     }));
   });
 
