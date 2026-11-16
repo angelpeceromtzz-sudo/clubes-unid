@@ -77,19 +77,19 @@ function responderCliente(sql, params = []) {
     return u ? { rows: [u], rowCount: 1 } : { rows: [], rowCount: 0 };
   }
 
-  if (/SELECT id_club, nombre_club, id_responsable_club FROM clubes WHERE id_club = \$1/.test(texto)) {
+  if (/SELECT id_club, nombre_club, id_responsable_club FROM clubes_operativos WHERE id_club = \$1/.test(texto)) {
     const c = clubes[params[0]];
     return c ? { rows: [c], rowCount: 1 } : { rows: [], rowCount: 0 };
   }
 
-  if (/SELECT id_club FROM clubes WHERE id_responsable_club = \$1/.test(texto)) {
+  if (/SELECT id_club FROM clubes_operativos WHERE id_responsable_club = \$1/.test(texto)) {
     const ids = Object.values(clubes)
       .filter((c) => c.id_responsable_club === params[0])
       .map((c) => ({ id_club: c.id_club }));
     return { rows: ids, rowCount: ids.length };
   }
 
-  if (/UPDATE clubes SET id_responsable_club = NULL WHERE id_responsable_club = \$1 AND id_club <> \$2/.test(texto)) {
+  if (/UPDATE clubes_operativos SET id_responsable_club = NULL WHERE id_responsable_club = \$1 AND id_club <> \$2/.test(texto)) {
     for (const c of Object.values(clubes)) {
       if (c.id_responsable_club === params[0] && Number(c.id_club) !== Number(params[1])) c.id_responsable_club = null;
     }
@@ -101,13 +101,13 @@ function responderCliente(sql, params = []) {
     return { rows: [], rowCount: 1 };
   }
 
-  if (/UPDATE clubes SET id_responsable_club = \$1 WHERE id_club = \$2/.test(texto)) {
+  if (/UPDATE clubes_operativos SET id_responsable_club = \$1 WHERE id_club = \$2/.test(texto)) {
     if (fallarAsignacion) throw new Error('fallo simulado');
     clubes[params[1]].id_responsable_club = params[0];
     return { rows: [], rowCount: 1 };
   }
 
-  if (/UPDATE clubes SET id_responsable_club = NULL WHERE id_responsable_club = \$1/.test(texto)) {
+  if (/UPDATE clubes_operativos SET id_responsable_club = NULL WHERE id_responsable_club = \$1/.test(texto)) {
     for (const c of Object.values(clubes)) {
       if (c.id_responsable_club === params[0]) c.id_responsable_club = null;
     }

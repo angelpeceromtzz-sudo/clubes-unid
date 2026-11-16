@@ -143,6 +143,7 @@ const qs = params.toString();
     ocupacionClubes,
     topClubes,
     clubesDetalle,
+    recargarClubes: cargarClubes,
     padron,
     asistencia,
     cargando,

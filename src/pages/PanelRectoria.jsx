@@ -19,9 +19,13 @@ import { SeccionCalendarioAdmin } from '../components/admin/secciones/SeccionCal
 import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdmin';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
+import { SeccionGestionClubs } from '../components/actividades/SeccionGestionClubs';
+import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
+import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
 
 export function PanelRectoria() {
   const { tema } = useTheme();
+  const asignacion=useActividadesAsignadas();
   const d = usePanelRectoria();
   const ejecutivo = useVistaEjecutiva();
   const { setPanelNav } = usePanelNav();
@@ -38,6 +42,11 @@ export function PanelRectoria() {
         onVistaChange={d.setVistaActiva}
       >
       <h1 className={`text-2xl font-black tracking-tight mb-6 ${tema.title}`}>Panel de Rectoría</h1>
+      {d.vistaActiva === 'clubes' && <SeccionGestionClubs onVolver={d.recargarClubes}>
+        {(onPublicacion) => <SeccionClubes clubesDetalle={d.clubesDetalle} cargando={d.cargando} onPublicacion={onPublicacion}/>}
+      </SeccionGestionClubs>}
+
+
 
         {d.error && (
           <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
@@ -47,12 +56,10 @@ export function PanelRectoria() {
 
         <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
 
-        {d.vistaActiva === 'resumen' && (
+        {d.vistaActiva === 'resumen' && <>
+          <TarjetasMiActividad asignacion={asignacion}/>
           <VistaEjecutiva d={ejecutivo} />
-        )}
-        {d.vistaActiva === 'clubes' && (
-          <SeccionClubes clubesDetalle={d.clubesDetalle} cargando={d.cargando} />
-        )}
+        </>}
         {d.vistaActiva === 'padron' && (
           <SeccionPadron
             padron={d.padron}

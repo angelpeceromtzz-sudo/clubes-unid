@@ -1,6 +1,8 @@
 /* Panel del responsable: administra el mural digital y redacta noticias
    que pasan por el flujo de aprobación de rectoría. */
+import { useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePanelNav } from '../contexts/PanelNavContext';
 import { useFeedback } from '../hooks/useFeedback';
 import { useAdminNoticias } from '../hooks/useAdminNoticias';
 import { useVistaPanel } from '../hooks/useVistaPanel';
@@ -11,12 +13,20 @@ import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdm
 import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { Icono } from '../components/ui/Icono';
+import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
+import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
 
 export function PanelMural() {
   const { tema } = useTheme();
   const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
   const noticias = useAdminNoticias(setFeedback, setErrorFeedback);
+  const asignacion=useActividadesAsignadas();
   const [vistaActiva, setVistaActiva] = useVistaPanel(ELEMENTOS_NAV_MURAL, 'mural');
+  const {setPanelNav}=usePanelNav();
+  useEffect(()=>{
+    setPanelNav({itemsNav:ELEMENTOS_NAV_MURAL,onNavChange:setVistaActiva});
+    return ()=>setPanelNav({itemsNav:[],onNavChange:null});
+  },[setPanelNav,setVistaActiva]);
 
   return (
     <NavegacionPanel
@@ -25,7 +35,7 @@ export function PanelMural() {
       onVistaChange={setVistaActiva}
     >
       <h1 className={`text-2xl font-black tracking-tight mb-2 ${tema.title}`}>Periódico Mural</h1>
-
+      {vistaActiva==='mural' && <TarjetasMiActividad asignacion={asignacion}/>}
       {vistaActiva === 'mural' && <div className={`mb-6 flex items-start gap-2 text-xs ${tema.subtitle}`}>
         <Icono nombre="info" strokeWidth={2} className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
         <p>

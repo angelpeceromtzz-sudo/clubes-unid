@@ -23,6 +23,8 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
     <div className="relative flex items-center" ref={dropdownRef}>
       {user && user.nombre_completo && (
         <button
+          aria-label="Menú de usuario"
+          aria-expanded={menuAbierto}
           onClick={() => setMenuAbierto((prev) => !prev)}
           className="hidden md:flex items-center gap-2 cursor-pointer"
         >
@@ -53,6 +55,8 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
             onClick={() => setMenuAbierto(false)}
           />
           <div
+            role="navigation"
+            aria-label="Menú de usuario"
             className={`fixed ${ocultarHamburguesa ? 'left-0' : 'right-0'} top-0 z-50 w-[70vw] max-h-[90dvh] overflow-y-scroll overflow-x-hidden overscroll-contain border shadow-2xl py-2 px-1 md:absolute md:left-auto md:right-0 md:top-12 md:w-72 md:h-auto md:max-h-none md:overflow-visible transition-colors duration-300 ${tema.dropdownBg} ${tema.dropdownBorder}`}
             style={{ animation: 'dropdownIn 0.2s ease-out', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', scrollbarColor: '#fbbf24 transparent', scrollbarWidth: 'thin' }}
             onWheel={(e) => e.stopPropagation()}
@@ -73,7 +77,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
                   </div>
                 </div>
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
-                {!itemsNav.some((i) => i.key === 'gestion-clubes') && (
+                {!itemsNav.some((i) => i.key === 'usuarios') && (
                   <button
                     onClick={() => { onPanelClick(); setMenuAbierto(false); }}
                     className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
@@ -85,13 +89,13 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
                 {itemsNav.length > 0 && (
                   <div className="md:hidden">
                     <div className={`h-px ${tema.headerBorder} mx-3`} />
-                    {itemsNav.filter((item) => item.key !== 'resumen').map((item) => {
+                    {itemsNav.filter((item) => !['resumen','mis-actividades','actividades'].includes(item.key)).map((item) => {
                     if (item.key === 'usuarios') return null;
-                    if (item.key === 'gestion-clubes') {
+                    if (item.children) {
                       const itemUsuarios = itemsNav.find((i) => i.key === 'usuarios');
                       return (
                         <div key={item.key}>
-                          <div className={`px-4 py-2 text-xs font-black uppercase tracking-wider ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
+                          {itemUsuarios && <><div className={`px-4 py-2 text-xs font-black uppercase tracking-wider ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
                             ADMINISTRAR
                           </div>
                           <button
@@ -111,9 +115,10 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
                               </svg>
                               {itemUsuarios.label}
                             </button>
-                          )}
+                          )}</>}
                           <button
                             type="button"
+                            aria-expanded={gruposAbiertos.has(item.key)}
                             onClick={() => setGruposAbiertos((prev) => {
                               const siguiente = new Set(prev);
                               if (siguiente.has(item.key)) siguiente.delete(item.key);
@@ -122,7 +127,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
                             })}
                             className={`w-full flex items-center justify-between px-4 py-2 text-sm font-medium ${tema.dropdownItem} ${tema.text}`}
                           >
-                            <span>Gestor de Clubs</span>
+                            <span>{item.label}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform ${gruposAbiertos.has(item.key) ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                             </svg>

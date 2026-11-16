@@ -124,7 +124,7 @@ router.get('/panel', async (req, res) => {
         WHERE i.id_estatus_inscripcion = 1 AND u.id_rol = 1
           AND ($1::int IS NULL OR i.id_club = $1)
       `, [f.id_club]),
-      pool.query('SELECT COUNT(*)::int AS total FROM clubes WHERE id_estatus_club = 1'),
+      pool.query('SELECT COUNT(*)::int AS total FROM clubes_operativos WHERE id_estatus_club = 1'),
       pool.query(`
         SELECT COALESCE(json_agg(json_build_object('status', status, 'total', cnt)), '[]'::json) AS datos
         FROM (
@@ -138,7 +138,7 @@ router.get('/panel', async (req, res) => {
         SELECT
           COALESCE(SUM(c.cupo_maximo)::int, 0) AS cupo_total,
           COALESCE(SUM(sub.ocupado)::int, 0) AS ocupado_total
-        FROM clubes c
+        FROM clubes_operativos c
         LEFT JOIN (
           SELECT i.id_club, COUNT(*)::int AS ocupado
           FROM inscripciones i
@@ -197,7 +197,7 @@ router.get('/ocupacion-clubes', async (req, res) => {
           JOIN usuarios u ON u.id_usuario = i.id_usuario
           ${whereI}
         ), 0) AS cupo_ocupado
-      FROM clubes c
+      FROM clubes_operativos c
       ${whereC}
       ORDER BY c.nombre_club
     `, params);
@@ -235,7 +235,7 @@ router.get('/top-clubes', async (req, res) => {
           JOIN usuarios u ON u.id_usuario = i.id_usuario
           ${whereI}
         ), 0) AS total_integrantes
-      FROM clubes c
+      FROM clubes_operativos c
       ${whereC}
       ORDER BY total_integrantes DESC
       LIMIT 10
@@ -263,7 +263,7 @@ router.get('/clubes-detalle', async (req, res) => {
             AND i.id_estatus_inscripcion = 1
             AND us.id_rol = 1
         ), 0) AS cupo_ocupado
-      FROM clubes c
+      FROM clubes_operativos c
       JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
       LEFT JOIN usuarios u ON u.id_usuario = c.id_responsable_club
       ORDER BY c.nombre_club
@@ -285,7 +285,7 @@ router.get('/padron', async (req, res) => {
         f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
         f.status, f.bloque_asignado
       FROM formularios f
-      JOIN clubes c ON c.id_club = f.id_club
+      JOIN clubes_operativos c ON c.id_club = f.id_club
       LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
       WHERE 1=1
     `;
@@ -334,7 +334,7 @@ router.get('/asistencia-ejecutiva', async (req, res) => {
         COUNT(*)::int AS total
       FROM sesiones s
       JOIN asistencias a ON a.id_sesion = s.id_sesion
-      JOIN clubes c ON c.id_club = s.id_club
+      JOIN clubes_operativos c ON c.id_club = s.id_club
       WHERE s.estado = 'completada'
     `;
     const params = [];
@@ -434,7 +434,7 @@ router.get('/ejecutivo/exportar', async (req, res) => {
     };
 
     const [clubFiltro, periodoFiltro, licenciaturaFiltro] = await Promise.all([
-      f.id_club ? pool.query('SELECT nombre_club FROM clubes WHERE id_club = $1', [f.id_club]) : null,
+      f.id_club ? pool.query('SELECT nombre_club FROM clubes_operativos WHERE id_club = $1', [f.id_club]) : null,
       f.id_periodo ? pool.query('SELECT nombre, fecha_inicio, fecha_fin FROM periodos_actividad WHERE id_periodo = $1', [f.id_periodo]) : null,
       f.carrera ? pool.query('SELECT nombre FROM cat_licenciaturas WHERE id_licenciatura = $1', [f.carrera]) : null,
     ]);
@@ -481,12 +481,12 @@ router.get('/ejecutivo/exportar', async (req, res) => {
         WHERE i.id_estatus_inscripcion = 1 AND u.id_rol = 1
         ${f.id_club ? 'AND i.id_club = $1' : ''}
       `, f.id_club ? [f.id_club] : []),
-      pool.query('SELECT COUNT(*)::int AS total FROM clubes WHERE id_estatus_club = 1'),
+      pool.query('SELECT COUNT(*)::int AS total FROM clubes_operativos WHERE id_estatus_club = 1'),
       pool.query(`
         SELECT
           COALESCE(SUM(c.cupo_maximo)::int, 0) AS cupo_total,
           COALESCE(SUM(sub.ocupado)::int, 0) AS ocupado_total
-        FROM clubes c
+        FROM clubes_operativos c
         LEFT JOIN (
           SELECT i.id_club, COUNT(*)::int AS ocupado
           FROM inscripciones i
@@ -512,7 +512,7 @@ router.get('/ejecutivo/exportar', async (req, res) => {
           COUNT(*)::int AS total
         FROM sesiones s
         JOIN asistencias a ON a.id_sesion = s.id_sesion
-        JOIN clubes c ON c.id_club = s.id_club
+        JOIN clubes_operativos c ON c.id_club = s.id_club
         WHERE s.estado = 'completada'
           ${f.id_club ? 'AND s.id_club = $1' : ''}
           ${f.id_periodo ? 'AND s.id_periodo = $' + (f.id_club ? 2 : 1) : ''}
@@ -567,7 +567,7 @@ router.get('/ejecutivo/exportar', async (req, res) => {
             JOIN usuarios u ON u.id_usuario = i.id_usuario
             WHERE i.id_club = c.id_club AND i.id_estatus_inscripcion = 1 AND u.id_rol = 1
           ), 0) AS cupo_ocupado
-        FROM clubes c
+        FROM clubes_operativos c
         WHERE c.id_estatus_club = 1
           ${f.id_club ? 'AND c.id_club = $1' : ''}
         ORDER BY c.nombre_club

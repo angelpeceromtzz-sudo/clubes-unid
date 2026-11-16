@@ -30,7 +30,7 @@ export async function conflictosPropuesta(client, propuesta) {
   const conflictos = [];
   for (const h of propuesta.detalle) {
     const resultado = await client.query(`SELECT h.id_club, c.nombre_club, h.lugar, h.dia_semana,
-      h.hora_inicio, h.hora_fin FROM horarios_club h JOIN clubes c ON c.id_club = h.id_club
+      h.hora_inicio, h.hora_fin FROM horarios_club h JOIN clubes_operativos c ON c.id_club = h.id_club
       WHERE h.id_club <> $1 AND h.id_espacio = $2 AND h.dia_semana = $3
       AND h.hora_inicio < $5::time AND h.hora_fin > $4::time
       AND COALESCE(h.vigencia_inicio, '-infinity'::date) <= COALESCE($7::date, 'infinity'::date)

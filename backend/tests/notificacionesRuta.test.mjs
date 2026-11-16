@@ -45,7 +45,7 @@ pool.query = async (sql, params = []) => {
     const fila = USUARIOS_ACTIVOS.get(params[0]) ?? null;
     return { rows: fila ? [fila] : [], rowCount: fila ? 1 : 0 };
   }
-  if (/FROM clubes WHERE id_club/.test(texto)) {
+  if (/FROM clubes_operativos WHERE id_club/.test(texto)) {
     const row = params[0] === CLUB_PROPIO.id_club ? CLUB_PROPIO
       : params[0] === CLUB_OTRO.id_club ? CLUB_OTRO
       : null;

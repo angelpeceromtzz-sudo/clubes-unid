@@ -45,6 +45,7 @@ export const clubService = {
     if (filtros.actor) params.set('actor', filtros.actor);
     if (filtros.tipo) params.set('tipo', filtros.tipo);
     if (filtros.club) params.set('club', filtros.club);
+    if (filtros.recurso) params.set('recurso', filtros.recurso);
     return request(`/clubes/actividad?${params.toString()}`);
   },
 

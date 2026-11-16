@@ -32,6 +32,7 @@ export function BarraGeneral({ onLoginClick, splashActivo = false, flotante = fa
 
         <nav className={`hidden md:flex items-center gap-5 text-sm font-bold ${flotante && modoOscuro && !scrolled ? 'text-white' : ''}`}>
           <Link to="/oferta" className="hover:text-amber-400 transition">Oferta</Link>
+          <Link to="/actividades" className="hover:text-amber-400 transition">Actividades</Link>
           <Link to="/experiencia-estudiantil" className="hover:text-amber-400 transition">Experiencia Estudiantil</Link>
           <Link to="/campus" className="hover:text-amber-400 transition">Campus</Link>
           <Link to="/conocenos" className="hover:text-amber-400 transition">Conócenos</Link>

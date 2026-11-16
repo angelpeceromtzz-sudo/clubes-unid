@@ -8,7 +8,8 @@ export function useVistaPanel(elementos, vistaInicial = 'resumen') {
   const [parametros, setParametros] = useSearchParams();
   const solicitada = parametros.get('seccion');
   const elementosPlanos = aplanarElementos(elementos);
-  const vista = elementosPlanos.some((item) => item.key === solicitada) ? solicitada : vistaInicial;
+  const equivalente = solicitada === 'actividades' && elementosPlanos.some((item) => item.key === 'clubes') ? 'clubes' : solicitada;
+  const vista = elementosPlanos.some((item) => item.key === equivalente) ? equivalente : vistaInicial;
   const cambiar = useCallback((nueva) => {
     setParametros((actuales) => {
       const siguientes = new URLSearchParams(actuales);

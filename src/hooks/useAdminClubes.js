@@ -82,14 +82,14 @@ export function useAdminClubes(setFeedback, setErrorFeedback, currentUser) {
 
   const abrirModalEditar = useCallback((club) => {
     setFormularioClub({
-      nombre_club: club.nombre_club,
-      descripcion: club.descripcion || '',
-      categoria: club.categoria,
-      cupo_maximo: String(club.cupo_maximo),
-      imagen_portada: club.imagen_portada || '',
-      participacion: club.participacion || '',
-      niveles: (club.niveles || []).map((n) => n.id_nivel),
-      lugar_actividades: club.lugar_actividades || '',
+      nombre_club: club.propuesta?.nombre ?? club.nombre_club,
+      descripcion: club.propuesta?.descripcion ?? club.descripcion ?? '',
+      categoria: club.propuesta?.categoria ?? club.categoria,
+      cupo_maximo: String(club.propuesta?.cupo_maximo ?? club.cupo_maximo),
+      imagen_portada: club.propuesta?.url_imagen ?? club.imagen_portada ?? '',
+      participacion: club.propuesta?.participacion ?? club.participacion ?? '',
+      niveles: club.propuesta?.niveles ?? (club.niveles || []).map((n) => n.id_nivel),
+      lugar_actividades: club.propuesta?.lugar_actividades ?? club.lugar_actividades ?? '',
     });
     setEditandoClub(club);
     setErrorModal('');
@@ -146,7 +146,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback, currentUser) {
         lugar_actividades: formularioClub.lugar_actividades || null,
         password,
       });
-      setFeedback('Club creado correctamente');
+      setFeedback('Club guardado como borrador. Abre Publicación para enviarlo a revisión de Rectoría.');
       const actualizados = await api.getClubesAdmin();
       setClubes(actualizados);
       setMostrarModalCrear(false);
@@ -199,7 +199,7 @@ export function useAdminClubes(setFeedback, setErrorFeedback, currentUser) {
               niveles: formularioClub.niveles,
               lugar_actividades: formularioClub.lugar_actividades || null,
             });
-            setFeedback('Club actualizado correctamente');
+            setFeedback(p.club.estado_publicacion === 'publicada' ? 'Propuesta guardada. Abre Publicación para enviarla a revisión de Rectoría.' : 'Club guardado. Abre Publicación para consultar su revisión.');
             setMostrarModalCrear(false);
           } finally {
             setEnviando(false);

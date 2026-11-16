@@ -25,6 +25,7 @@ import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
 import { PiePagina } from '../components/layout/PiePagina';
+import { CatalogoActividades } from '../components/actividades/ActividadUI';
 import {
   LANDING,
 } from '../config/landing';
@@ -458,6 +459,9 @@ export default function PaginaConoceClubs({ onLoginClick }) {
           ›
         </button>
       </section>
+
+      {/* Actividades destacadas durante su periodo de promoción. */}
+      <section className={CONTENEDOR + ' py-10 empty:hidden'}><CatalogoActividades soloDestacadas /></section>
 
       {/* Cultura y Experiencia */}
       <section className={`scroll-mt-8 ${bandaConcepto}`}>

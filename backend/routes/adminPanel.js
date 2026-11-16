@@ -81,7 +81,7 @@ router.get('/panel-data', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION)
       pool.query(
         `SELECT f.nombre_completo, c.nombre_club, f.fecha_envio, f.status
          FROM formularios f
-         JOIN clubes c ON c.id_club = f.id_club
+         JOIN clubes_operativos c ON c.id_club = f.id_club
          ${whereFormularios ? 'WHERE ' + whereFormularios.replace(/^AND /, '') : ''}
          ORDER BY f.fecha_envio DESC
          LIMIT 5`,

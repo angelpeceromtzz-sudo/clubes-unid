@@ -32,7 +32,7 @@ const NOMBRES_BLOQUES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 router.get('/preview/:id_club', authenticate, requireClubReader, async (req, res) => {
   try {
     const { id_club } = req.params;
-    const club = await pool.query('SELECT id_club FROM clubes WHERE id_club = $1', [id_club]);
+    const club = await pool.query('SELECT id_club FROM clubes_operativos WHERE id_club = $1', [id_club]);
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
 
     const preseleccionados = await pool.query(
@@ -62,7 +62,7 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
     const club = await pool.query(
       `SELECT id_club, nombre_club, id_responsable_club, id_estatus_club,
               id_convocatoria_inscripcion_actual
-       FROM clubes WHERE id_club = $1 AND id_responsable_club = $2`,
+       FROM clubes_operativos WHERE id_club = $1 AND id_responsable_club = $2`,
       [id_club, req.user.id],
     );
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
@@ -100,7 +100,7 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
     try {
       await client.query('BEGIN');
       const clubBloqueado = (await client.query(
-        'SELECT id_estatus_club, id_convocatoria_inscripcion_actual FROM clubes WHERE id_club = $1 FOR UPDATE',
+        'SELECT id_estatus_club, id_convocatoria_inscripcion_actual FROM clubes_operativos WHERE id_club = $1 FOR UPDATE',
         [id_club],
       )).rows[0];
       if (!clubEstaActivo(clubBloqueado)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MENSAJE_CLUB_NO_ACTIVO }); }
@@ -181,7 +181,7 @@ router.post('/generar', authenticate, requireRole(2), async (req, res) => {
 router.get('/:id_club', authenticate, requireClubReader, async (req, res) => {
   try {
     const { id_club } = req.params;
-    const club = await pool.query('SELECT id_club, id_estatus_club FROM clubes WHERE id_club = $1', [id_club]);
+    const club = await pool.query('SELECT id_club, id_estatus_club FROM clubes_operativos WHERE id_club = $1', [id_club]);
     if (club.rows.length === 0) return res.status(404).json({ error: 'Club no encontrado' });
     if (!clubEstaActivo(club.rows[0])) return res.json([]);
     await vencerBloques(pool, id_club);
@@ -218,7 +218,7 @@ router.put('/:id', authenticate, requireRole(2), async (req, res) => {
 
     const conv = await pool.query(
       `SELECT c.*, cl.id_estatus_club FROM convocatorias c
-       JOIN clubes cl ON cl.id_club = c.id_club
+       JOIN clubes_operativos cl ON cl.id_club = c.id_club
        WHERE c.id_convocatoria = $1 AND cl.id_responsable_club = $2`,
       [id, req.user.id],
     );
@@ -240,7 +240,7 @@ router.put('/:id', authenticate, requireRole(2), async (req, res) => {
            hora = COALESCE($2, hora),
            lugar = COALESCE($3, lugar), estado_revision = 'preparacion', observaciones = NULL, id_revisor = NULL, fecha_revision = NULL
        WHERE id_convocatoria = $4 AND enviada = FALSE AND estado_revision IN ('preparacion','rechazado','vencido')
-         AND EXISTS (SELECT 1 FROM clubes cl WHERE cl.id_club = convocatorias.id_club AND cl.id_responsable_club = $5)
+         AND EXISTS (SELECT 1 FROM clubes_operativos cl WHERE cl.id_club = convocatorias.id_club AND cl.id_responsable_club = $5)
        RETURNING *, ((fecha + hora) AT TIME ZONE 'America/Mexico_City') AS fecha_evaluacion`,
       [fecha || null, hora || null, lugar || null, id, req.user.id],
     );
@@ -266,7 +266,7 @@ router.post('/:id/solicitar-revision', authenticate, requireRole(2), async (req,
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const c = (await client.query(`SELECT c.*, ${FECHA_EVALUACION_SQL} <= clock_timestamp() AS vencida, cl.id_responsable_club AS presidente_actual, cl.id_estatus_club FROM convocatorias c JOIN clubes cl ON cl.id_club=c.id_club WHERE c.id_convocatoria=$1 FOR UPDATE OF c, cl`, [req.params.id])).rows[0];
+    const c = (await client.query(`SELECT c.*, ${FECHA_EVALUACION_SQL} <= clock_timestamp() AS vencida, cl.id_responsable_club AS presidente_actual, cl.id_estatus_club FROM convocatorias c JOIN clubes_operativos cl ON cl.id_club=c.id_club WHERE c.id_convocatoria=$1 FOR UPDATE OF c, cl`, [req.params.id])).rows[0];
     if (!c || c.presidente_actual !== req.user.id) { await client.query('ROLLBACK'); return res.status(403).json({ error: 'Solo el presidente del club puede solicitar revisión' }); }
     if (!clubEstaActivo(c)) { await client.query('ROLLBACK'); return res.status(409).json({ error: MENSAJE_CLUB_NO_ACTIVO }); }
     if (c.enviada || !['preparacion','rechazado'].includes(c.estado_revision)) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'La convocatoria ya está en revisión o publicada' }); }
@@ -289,7 +289,7 @@ router.post('/:id/rechazar', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACI
     const result = await client.query("UPDATE convocatorias SET estado_revision='rechazado',observaciones=$1,id_revisor=$2,fecha_revision=NOW() WHERE id_convocatoria=$3 AND estado_revision='pendiente' AND enviada=FALSE RETURNING *", [observaciones, req.user.id, req.params.id]);
     if (!result.rows.length) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'La convocatoria no está pendiente de revisión' }); }
     const c = result.rows[0];
-    await client.query("INSERT INTO notificaciones(id_emisor,titulo,mensaje,audiencia,id_club,id_destinatario) SELECT $1,'Convocatoria por corregir',$2,'presidentes',id_club,id_responsable_club FROM clubes WHERE id_club=$3 AND id_responsable_club IS NOT NULL", [req.user.id, observaciones, c.id_club]);
+    await client.query("INSERT INTO notificaciones(id_emisor,titulo,mensaje,audiencia,id_club,id_destinatario) SELECT $1,'Convocatoria por corregir',$2,'presidentes',id_club,id_responsable_club FROM clubes_operativos WHERE id_club=$3 AND id_responsable_club IS NOT NULL", [req.user.id, observaciones, c.id_club]);
     await client.query('INSERT INTO actividad_clubes(tipo_evento,id_club,id_actor,descripcion,detalles) VALUES ($1,$2,$3,$4,$5)', ['convocatoria_rechazada', c.id_club, req.user.id, observaciones, JSON.stringify({ id_convocatoria: c.id_convocatoria })]);
     await client.query('COMMIT'); res.json(c);
   } catch (err) { await client.query('ROLLBACK').catch(() => {}); console.error(err); res.status(500).json({ error: 'No se pudo devolver la convocatoria' }); }
@@ -307,7 +307,7 @@ router.post('/:id/enviar', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION
     const conv = await client.query(
       `SELECT c.*, ${FECHA_EVALUACION_SQL} <= clock_timestamp() AS vencida, cl.nombre_club, cl.id_club, cl.id_estatus_club
        FROM convocatorias c
-       JOIN clubes cl ON cl.id_club = c.id_club
+       JOIN clubes_operativos cl ON cl.id_club = c.id_club
        WHERE c.id_convocatoria = $1 FOR UPDATE OF c, cl`,
       [id],
     );
@@ -386,7 +386,7 @@ router.get('/:id/asistencia', authenticate, requireRole(2, 3, 5), async (req, re
     const conv = await pool.query(
       `SELECT c.*, cl.nombre_club
        FROM convocatorias c
-       JOIN clubes cl ON cl.id_club = c.id_club
+       JOIN clubes_operativos cl ON cl.id_club = c.id_club
        WHERE c.id_convocatoria = $1 AND ($3::boolean OR cl.id_responsable_club = $2 OR cl.id_vicepresidente = $2)`,
       [id, req.user.id, req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION],
     );
@@ -419,7 +419,7 @@ router.post('/ofertas', authenticate, requireRole(2, 5), async (req, res) => {
     }
 
     const club = await pool.query(
-      'SELECT id_club, nombre_club FROM clubes WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
+      'SELECT id_club, nombre_club FROM clubes_operativos WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
       [id_club, req.user.id],
     );
     if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });

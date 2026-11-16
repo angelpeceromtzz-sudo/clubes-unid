@@ -35,15 +35,16 @@ export function ModalFormularioClub({
         <BotonCerrar onClick={onClose} />
       </div>
 
-      <form onSubmit={onSave} className="space-y-4">
-        <CampoTexto label="Nombre del Club" name="nombre_club" value={formClub.nombre_club} onChange={onFormChange} placeholder="Ej: Equipo de Voleibol" required maxLength={64} />
+      <form aria-label="Datos del club" onSubmit={onSave} className="space-y-4">
+        <CampoTexto label="Nombre del Club" name="nombre_club" value={formClub.nombre_club} onChange={onFormChange} placeholder="Ej: Equipo de Voleibol" required maxLength={160} />
 
-        <CampoTexto label="Descripción" name="descripcion" value={formClub.descripcion} onChange={onFormChange} placeholder="Describe el club y sus actividades..." type="textarea" required maxLength={300} />
+        <CampoTexto label="Descripción" name="descripcion" value={formClub.descripcion} onChange={onFormChange} placeholder="Describe el club y sus actividades..." type="textarea" required maxLength={5000} />
 
         <div>
           <label className={labelCls}>Categoría <span className="text-red-400">*</span></label>
           <select name="categoria" value={formClub.categoria} onChange={onFormChange} className={inputClasses}>
             <option value="" disabled>Selecciona una categoría</option>
+            {formClub.categoria && !['Deportes','Cultura','Tecnología'].includes(formClub.categoria) && <option value={formClub.categoria}>{formClub.categoria}</option>}
             <option value="Deportes">Deportes</option>
             <option value="Cultura">Cultura</option>
             <option value="Tecnología">Tecnología</option>

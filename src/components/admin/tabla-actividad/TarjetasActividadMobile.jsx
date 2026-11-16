@@ -1,9 +1,7 @@
-import { EVENTOS_CONFIG, DEFAULT_EVENTO, formatFecha } from '../../../constants/actividad';
+import { configEvento, formatFecha } from '../../../constants/actividad';
 import { EventoIcon } from './EventoIcon';
 
 export function TarjetasActividadMobile({ eventos, modoOscuro, tdCls, tdTitle }) {
-  const configEvento = (tipo) => EVENTOS_CONFIG[tipo] || DEFAULT_EVENTO;
-
   return (
     <div className="space-y-2 md:hidden">
       {eventos.map((e) => {
@@ -19,8 +17,8 @@ export function TarjetasActividadMobile({ eventos, modoOscuro, tdCls, tdTitle })
             </div>
             <p className={`text-sm mb-1 ${tdTitle}`}>{e.descripcion}</p>
             <p className={`text-[11px] ${tdCls}`}>
-              <span className={`font-medium ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Club:</span>{' '}
-              {e.nombre_club || 'Sistema'}
+              <span className={`font-medium ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>{e.tipo_recurso === 'actividad' ? 'Actividad:' : 'Club:'}</span>{' '}
+              {e.nombre_club || (e.origen === 'catalogo' ? 'Registro anterior' : 'Sistema')}
               {e.actor_nombre && (
                 <>
                   {' · '}
@@ -29,6 +27,7 @@ export function TarjetasActividadMobile({ eventos, modoOscuro, tdCls, tdTitle })
                 </>
               )}
             </p>
+            {e.edicion_nombre && <p className={`mt-1 text-xs ${tdCls}`}>Edición: {e.edicion_nombre}</p>}
           </div>
         );
       })}

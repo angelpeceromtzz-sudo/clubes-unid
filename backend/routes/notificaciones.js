@@ -20,7 +20,7 @@ router.get('/', authenticate, async (req, res) => {
     let clubIdAlumno = null;
 
     if (roleId === 2 || roleId === 5) {
-      const pres = await pool.query('SELECT id_club FROM clubes WHERE id_responsable_club = $1 OR id_vicepresidente = $1', [userId]);
+      const pres = await pool.query('SELECT id_club FROM clubes_operativos WHERE id_responsable_club = $1 OR id_vicepresidente = $1', [userId]);
       if (pres.rows.length > 0) clubIdPresidente = pres.rows[0].id_club;
     }
 
@@ -42,7 +42,7 @@ router.get('/', authenticate, async (req, res) => {
        FROM notificaciones n
        JOIN usuarios u ON u.id_usuario = n.id_emisor
        JOIN cat_roles r ON r.id_rol = u.id_rol
-       LEFT JOIN clubes c ON c.id_club = n.id_club
+       LEFT JOIN clubes_operativos c ON c.id_club = n.id_club
         LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
         LEFT JOIN notificaciones_eliminadas ne ON ne.id_notificacion = n.id_notificacion AND ne.id_usuario = $1
        WHERE ne.id_notificacion IS NULL
@@ -91,7 +91,7 @@ router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_
        FROM notificaciones n
        JOIN usuarios u ON u.id_usuario = n.id_emisor
        JOIN cat_roles r ON r.id_rol = u.id_rol
-       LEFT JOIN clubes c ON c.id_club = n.id_club
+       LEFT JOIN clubes_operativos c ON c.id_club = n.id_club
        LEFT JOIN usuarios dest ON dest.id_usuario = n.id_destinatario
        ORDER BY n.fecha_creacion DESC
        LIMIT $1 OFFSET $2`,
@@ -149,7 +149,7 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
     let clubRow = null;
     if (idClub !== null && idClub !== undefined) {
       const club = await pool.query(
-        'SELECT id_club, id_responsable_club, id_vicepresidente FROM clubes WHERE id_club = $1',
+        'SELECT id_club, id_responsable_club, id_vicepresidente FROM clubes_operativos WHERE id_club = $1',
         [idClub]
       );
       clubRow = club.rows[0] ?? null;
@@ -226,7 +226,7 @@ router.get('/mis-anuncios', authenticate, async (req, res) => {
               n.id_destinatario, n.fecha_creacion,
               c.nombre_club
        FROM notificaciones n
-       LEFT JOIN clubes c ON c.id_club = n.id_club
+       LEFT JOIN clubes_operativos c ON c.id_club = n.id_club
        WHERE n.id_emisor = $1
        ORDER BY n.fecha_creacion DESC
        LIMIT 50`,
@@ -321,7 +321,7 @@ router.post('/leer-todas', authenticate, async (req, res) => {
 
     let clubId = null;
     if (roleId === 2) {
-      const pres = await pool.query('SELECT id_club FROM clubes WHERE id_responsable_club = $1', [userId]);
+      const pres = await pool.query('SELECT id_club FROM clubes_operativos WHERE id_responsable_club = $1', [userId]);
       if (pres.rows.length > 0) clubId = pres.rows[0].id_club;
     }
     if (roleId === 1) {

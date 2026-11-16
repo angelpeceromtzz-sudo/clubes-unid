@@ -40,7 +40,7 @@ function responder(sql, params = []) {
   // liderazgo del club 5 para que la petición llegue al handler donde se
   // valida la URL. En PUT/DELETE ahora opera requireHorarioLeader, cuyo
   // stub de horario/club está más abajo.
-  if (/SELECT id_responsable_club, id_vicepresidente FROM clubes WHERE id_club = \$1/.test(texto)) {
+  if (/SELECT id_responsable_club, id_vicepresidente FROM clubes_operativos WHERE id_club = \$1/.test(texto)) {
     return { rows: [{ id_responsable_club: 100, id_vicepresidente: null }], rowCount: 1 };
   }
 
@@ -48,7 +48,7 @@ function responder(sql, params = []) {
   if (/SELECT id_club FROM horarios_club WHERE id_horario = \$1/.test(texto)) {
     return { rows: [{ id_club: 5 }], rowCount: 1 };
   }
-  if (/SELECT id_club FROM clubes WHERE id_club = \$1 AND \(id_responsable_club/.test(texto)) {
+  if (/SELECT id_club FROM clubes_operativos WHERE id_club = \$1 AND \(id_responsable_club/.test(texto)) {
     return { rows: [{ id_club: 5 }], rowCount: 1 };
   }
   if (/FROM horarios_club[\s\S]*hora_inicio < /.test(texto)) {
@@ -66,10 +66,16 @@ function responder(sql, params = []) {
   }
 
   // clubes: portada previa, actualización, niveles y estatus.
-  if (/SELECT imagen_portada FROM clubes WHERE id_club = \$1/.test(texto)) {
+  if (/INSERT INTO catalogo_recursos/.test(texto)) {
+    const columnas=texto.slice(texto.indexOf('(')+1,texto.indexOf(')')).split(',');
+    return {rows:[Object.fromEntries([['id_club',1],['id_actividad',1],['estado','borrador'],...columnas.map((columna,indice)=>[columna,params[indice]])])],rowCount:1};
+  }
+  if (/SELECT \* FROM catalogo_recursos WHERE/.test(texto)) return {rows:[{id_club:1,id_actividad:1,tipo:'club',nombre:'Club Ficticio',descripcion:'QA',categoria:'Deportes',cupo_maximo:20,participacion:'mixta',estado:'publicada'}],rowCount:1};
+  if (/SELECT id_nivel FROM clubes_niveles/.test(texto)) return {rows:[{id_nivel:1}],rowCount:1};
+  if (/SELECT imagen_portada FROM clubes_operativos WHERE id_club = \$1/.test(texto)) {
     return { rows: [{ imagen_portada: null }], rowCount: 1 };
   }
-  if (/UPDATE clubes[\s\S]RETURNING id_club/.test(texto)) {
+  if (/UPDATE clubes_operativos[\s\S]RETURNING id_club/.test(texto)) {
     const [nombre, desc, categoria, cupo, portada, participacion] = params;
     return {
       rows: [{
@@ -80,7 +86,7 @@ function responder(sql, params = []) {
       rowCount: 1,
     };
   }
-  if (/INSERT INTO clubes \(/.test(texto)) {
+  if (/INSERT INTO clubes_operativos \(/.test(texto)) {
     const [nombre, desc, categoria, cupo, portada, participacion] = params;
     return {
       rows: [{

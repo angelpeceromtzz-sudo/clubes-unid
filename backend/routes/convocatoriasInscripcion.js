@@ -51,7 +51,7 @@ router.get('/', authenticate, requireClubReader, async (req, res) => {
 
 // La propuesta se guarda aparte: nunca modifica las inscripciones publicadas.
 router.put('/', authenticate, requireRole(2), transaccion(async (req, client) => {
-  const club = (await client.query('SELECT * FROM clubes WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
+  const club = (await client.query('SELECT * FROM clubes_operativos WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
   if (!club) throw fallo(404, 'Club no encontrado');
   if (!clubEstaActivo(club)) throw fallo(409, MENSAJE_CLUB_NO_ACTIVO);
   if (club.id_responsable_club !== req.user.id) throw fallo(403, 'Solo el presidente de este club puede proponer la convocatoria');
@@ -80,7 +80,7 @@ router.post('/revision', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION),
   const observaciones = typeof req.body.observaciones === 'string' ? req.body.observaciones.trim() : '';
   if (!['aprobar', 'rechazar'].includes(accion) || !Number.isInteger(id_solicitud)) throw fallo(400, 'Selecciona la solicitud y una decisión válida');
   if (observaciones.length > 2000 || (accion === 'rechazar' && !observaciones)) throw fallo(400, 'Explica las correcciones necesarias, en hasta 2000 caracteres');
-  const club = (await client.query('SELECT * FROM clubes WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
+  const club = (await client.query('SELECT * FROM clubes_operativos WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
   if (!club) throw fallo(404, 'Club no encontrado');
   if (accion === 'aprobar' && !clubEstaActivo(club)) throw fallo(409, MENSAJE_CLUB_NO_ACTIVO);
   await vencerInscripciones(client, req.params.id);
@@ -128,7 +128,7 @@ router.post('/revision', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION),
     }
 
     await client.query(
-      `UPDATE clubes
+      `UPDATE clubes_operativos
        SET fecha_apertura_programada = $1, fecha_limite_cierre = $2, max_postulaciones = $3,
            id_convocatoria_inscripcion_actual = $4,
            postulaciones_actuales = (SELECT COUNT(*)::int FROM formularios WHERE id_convocatoria_inscripcion = $4),
