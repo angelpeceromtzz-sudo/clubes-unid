@@ -228,11 +228,15 @@ describe('espejo schema.sql ↔ migración', () => {
     const schema = readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
     const migracion = readFileSync(new URL('../migrations/migrate-onboarding-preferencias.sql', import.meta.url), 'utf8');
     const marcador = 'CREATE TABLE IF NOT EXISTS cat_categorias_interes';
-    const sqlEjecutable = (texto) => texto
-      .slice(texto.indexOf(marcador))
-      .split(/\r?\n/)
-      .filter((linea) => linea.trim() !== '' && !linea.trim().startsWith('--') && !['BEGIN;', 'COMMIT;'].includes(linea.trim()))
-      .join('\n');
+    const sqlEjecutable = (texto) => {
+      let bloque = texto.slice(texto.indexOf(marcador));
+      const fin = bloque.indexOf('CREATE TABLE IF NOT EXISTS reconocimientos_usuario');
+      if (fin > 0) bloque = bloque.slice(0, fin);
+      return bloque
+        .split(/\r?\n/)
+        .filter((linea) => linea.trim() !== '' && !linea.trim().startsWith('--') && !['BEGIN;', 'COMMIT;'].includes(linea.trim()))
+        .join('\n');
+    };
     assert.ok(schema.indexOf(marcador) > 0);
     assert.equal(sqlEjecutable(schema), sqlEjecutable(migracion));
   });

@@ -15,6 +15,7 @@ import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
 import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
 import { SeccionNoticias } from '../components/admin/seccion-noticias/SeccionNoticias';
+import { SeccionOtorgarReconocimientos } from '../components/admin/secciones/SeccionOtorgarReconocimientos';
 import { SeccionCalendarioAdmin } from '../components/admin/secciones/SeccionCalendarioAdmin';
 import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdmin';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
@@ -88,6 +89,8 @@ export function PanelRectoria() {
         {d.vistaActiva === 'noticias' && (
           <SeccionNoticias gestion={d.noticias} />
         )}
+
+        {d.vistaActiva === 'reconocimientos' && <SeccionOtorgarReconocimientos />}
 
         <ModalConfirmacion
           show={!!d.pendienteConfirmacionNoticia}

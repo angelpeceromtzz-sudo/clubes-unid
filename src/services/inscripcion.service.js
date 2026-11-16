@@ -34,4 +34,6 @@ export const inscripcionService = {
     }),
 
   getMisPostulaciones: () => request('/formularios/mis-postulaciones'),
+
+  getMisReconocimientos: () => request('/reconocimientos/mios'),
 };

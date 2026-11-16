@@ -19,6 +19,7 @@ export const ELEMENTOS_NAV_ADMIN = [
   { key: 'mural', label: 'Mural digital', icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4' },
   { key: 'noticias', label: 'Noticias', icon: 'M12 7.5H13.5M12 10.5H13.5M6 13.5H13.5M6 16.5H13.5M16.5 7.5H19.875C20.4963 7.5 21 8.00368 21 8.625V18C21 19.2426 19.9926 20.25 18.75 20.25M16.5 7.5V18C16.5 19.2426 17.5074 20.25 18.75 20.25M16.5 7.5V4.875C16.5 4.25368 15.9963 3.75 15.375 3.75H4.125C3.50368 3.75 3 4.25368 3 4.875V18C3 19.2426 4.00736 20.25 5.25 20.25H18.75M6 7.5H9V10.5H6V7.5Z' },
   { key: 'historial', label: 'Historial de Acciones', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { key: 'reconocimientos', label: 'Reconocimientos', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
 ];
 
 export const ELEMENTOS_NAV_RECTORIA = [
@@ -38,6 +39,7 @@ export const ELEMENTOS_NAV_RECTORIA = [
   { key: 'mural', label: 'Mural digital', icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4' },
   { key: 'noticias', label: 'Noticias', icon: 'M12 7.5H13.5M12 10.5H13.5M6 13.5H13.5M6 16.5H13.5M16.5 7.5H19.875C20.4963 7.5 21 8.00368 21 8.625V18C21 19.2426 19.9926 20.25 18.75 20.25M16.5 7.5V18C16.5 19.2426 17.5074 20.25 18.75 20.25M16.5 7.5V4.875C16.5 4.25368 15.9963 3.75 15.375 3.75H4.125C3.50368 3.75 3 4.25368 3 4.875V18C3 19.2426 4.00736 20.25 5.25 20.25H18.75M6 7.5H9V10.5H6V7.5Z' },
   { key: 'actividad', label: 'Historial de Acciones', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+  { key: 'reconocimientos', label: 'Reconocimientos', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
 ];
 
 // Panel del responsable: edición del mural digital y redacción de noticias.

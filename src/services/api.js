@@ -74,6 +74,7 @@ export const api = {
   reactivarUsuario: usuarioService.reactivarUsuario,
 
   getInscripcionActiva: inscripcionService.getInscripcionActiva,
+  getMisReconocimientos: inscripcionService.getMisReconocimientos,
   createInscripcion: inscripcionService.createInscripcion,
   removeFromClub: inscripcionService.removeFromClub,
   bajarMiembro: inscripcionService.bajarMiembro,
