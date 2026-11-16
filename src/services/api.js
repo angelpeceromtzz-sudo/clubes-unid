@@ -52,6 +52,7 @@ export const api = {
   getMe: autenticacionService.getMe,
 
   getClubes: clubService.getClubes,
+  getClubesSugeridos: clubService.getClubesSugeridos,
   getClubesAdmin: clubService.getClubesAdmin,
   getClub: clubService.getClub,
   createClub: clubService.createClub,

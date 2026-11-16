@@ -40,12 +40,33 @@ export function FlujoOnboarding({ onCompletar }) {
   const [errorPropuestaTexto, setErrorPropuestaTexto] = useState('');
   const [haComenzado, setHaComenzado] = useState(false);
   const [resumen, setResumen] = useState(null);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [clubesSugeridos, setClubesSugeridos] = useState({ sugeridos: [], alternativos: [] });
   const [licenciaturas, setLicenciaturas] = useState([]);
   const [periodoActivo, setPeriodoActivo] = useState(null);
   const [periodoCargando, setPeriodoCargando] = useState(true);
   const [periodoError, setPeriodoError] = useState('');
   const enCurso = useRef(false);
   const periodoRequestId = useRef(0);
+  const sugerenciasId = useRef(0);
+  const [cargandoSugerencias, setCargandoSugerencias] = useState(false);
+  const [errorSugerencias, setErrorSugerencias] = useState('');
+  const cargarSugerencias = useCallback(async () => {
+    const id = ++sugerenciasId.current;
+    setCargandoSugerencias(true);
+    setErrorSugerencias('');
+    try {
+      const resultado = await api.getClubesSugeridos();
+      if (id === sugerenciasId.current) setClubesSugeridos(resultado || { sugeridos: [], alternativos: [] });
+    } catch (err) {
+      if (id === sugerenciasId.current) {
+        setClubesSugeridos({ sugeridos: [], alternativos: [] });
+        setErrorSugerencias(err?.message || 'No se pudieron cargar las sugerencias.');
+      }
+    } finally {
+      if (id === sugerenciasId.current) setCargandoSugerencias(false);
+    }
+  }, []);
 
   const fetchPeriodo = useCallback(() => {
     const requestId = ++periodoRequestId.current;
@@ -82,6 +103,7 @@ export function FlujoOnboarding({ onCompletar }) {
     return () => {
       vigente = false;
       periodoRequestId.current += 1;
+      sugerenciasId.current += 1;
     };
   }, [fetchPeriodo]);
 
@@ -134,6 +156,7 @@ export function FlujoOnboarding({ onCompletar }) {
       const datos = await api.guardarPreferenciasOnboarding(construirPayload(respuestas, 'onboarding'));
       setResumen(construirResumen(datos));
       setPaso('confirmacion');
+      cargarSugerencias();
     } catch (err) {
       setError(err.message || MENSAJE_GUARDADO);
     } finally {
@@ -174,7 +197,7 @@ export function FlujoOnboarding({ onCompletar }) {
   if (paso === 'confirmacion' && resumen) {
     return (
       <ContenedorOnboarding>
-        <PasoConfirmacion resumen={resumen} onEntrar={onCompletar} />
+        <PasoConfirmacion resumen={resumen} clubes={clubesSugeridos} cargandoSugerencias={cargandoSugerencias} errorSugerencias={errorSugerencias} onReintentarSugerencias={cargarSugerencias} onEntrar={onCompletar} />
       </ContenedorOnboarding>
     );
   }
@@ -287,6 +310,27 @@ export function FlujoOnboarding({ onCompletar }) {
           <Alerta tipo="error" mensaje={error} />
         </div>
       )}
+      {paso === TOTAL_PASOS_ONBOARDING && (
+        <label className="mb-4 flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300">
+          <input
+            type="checkbox"
+            checked={aceptaTerminos}
+            onChange={(e) => setAceptaTerminos(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-amber-500"
+          />
+          <span>
+            Acepto los{' '}
+            <a href="/terminos" target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+              Términos y Condiciones
+            </a>{' '}
+            y el{' '}
+            <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+              Aviso de Privacidad
+            </a>
+            .
+          </span>
+        </label>
+      )}
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         {paso !== 1 && (
           <BotonAccion variant="outline" onClick={atras} disabled={ocupado} className="w-full sm:w-auto">
@@ -294,7 +338,7 @@ export function FlujoOnboarding({ onCompletar }) {
             Atrás
           </BotonAccion>
         )}
-        <BotonAccion onClick={continuar} disabled={ocupado || !pasoEsValido(paso, respuestas) || (paso === 2 && Boolean(errorPropuesta(respuestas.propuesta)))} aria-busy={ocupado} className="w-full sm:w-auto">
+        <BotonAccion onClick={continuar} disabled={ocupado || !pasoEsValido(paso, respuestas) || (paso === TOTAL_PASOS_ONBOARDING && !aceptaTerminos) || (paso === 2 && Boolean(errorPropuesta(respuestas.propuesta)))} aria-busy={ocupado} className="w-full sm:w-auto">
           {paso === TOTAL_PASOS_ONBOARDING ? (
             ocupado ? (
               <>

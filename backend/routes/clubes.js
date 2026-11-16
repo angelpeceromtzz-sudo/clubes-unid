@@ -240,6 +240,54 @@ router.get('/admin', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), asy
 });
 
 // Obtiene un club por ID con su cupo actual (público)
+// Clubes sugeridos para un alumno según sus preferencias de onboarding.
+router.get('/sugeridos', authenticate, async (req, res) => {
+  try {
+    const preferidos = (await pool.query(
+      `SELECT DISTINCT c.id_club, c.nombre_club, c.descripcion, c.categoria,
+              c.imagen_portada, c.id_estatus_club
+       FROM preferencias_usuario pu
+       JOIN usuario_categorias_interes uci ON uci.id_usuario = pu.id_usuario
+       JOIN cat_categorias_interes ci ON ci.id_categoria_interes = uci.id_categoria_interes
+       JOIN clubes c ON c.categoria = ci.categoria_club
+       JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
+       WHERE pu.id_usuario = $1
+         AND c.id_estatus_club <> 3
+       ORDER BY c.id_club
+       LIMIT 5`,
+      [req.user.id],
+    )).rows;
+
+    let alternativos = [];
+    if (preferidos.length < 5) {
+      const ids = preferidos.map((c) => c.id_club);
+      const params = [];
+      let whereExtra = '';
+      if (ids.length > 0) {
+        whereExtra = 'AND c.id_club <> ALL($1::int[])';
+        params.push(ids);
+      }
+      const limitPlaceholder = params.length > 0 ? '$2' : '$1';
+      alternativos = (await pool.query(
+        `SELECT c.id_club, c.nombre_club, c.descripcion, c.categoria,
+                c.imagen_portada, c.id_estatus_club
+         FROM clubes c
+         JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
+         WHERE c.id_estatus_club <> 3
+           ${whereExtra}
+         ORDER BY c.id_club
+         LIMIT ${limitPlaceholder}`,
+        [...params, 5 - preferidos.length],
+      )).rows;
+    }
+
+    res.json({ sugeridos: preferidos, alternativos });
+  } catch (err) {
+    console.error('Error al obtener clubes sugeridos:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;

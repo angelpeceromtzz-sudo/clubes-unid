@@ -3,6 +3,8 @@ import { request } from './api-core';
 export const clubService = {
   getClubes: () => request('/clubes'),
 
+  getClubesSugeridos: () => request('/clubes/sugeridos'),
+
   // Lista completa (todos los estatus + datos de presidente) — panel admin.
   getClubesAdmin: () => request('/clubes/admin'),
 
