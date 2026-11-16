@@ -185,20 +185,30 @@ export function validarPreferencias(body, indice) {
     throw new ErrorValidacion('La opción de género no es válida');
   }
 
-  const idLicenciatura = body.id_licenciatura;
-  if (!esEnteroPositivo(idLicenciatura)) {
+  const idLicenciatura = body.id_licenciatura ?? null;
+  if (idLicenciatura !== null) {
+    if (!esEnteroPositivo(idLicenciatura)) {
+      throw new ErrorValidacion('La licenciatura no es válida');
+    }
+    if (!indice.licenciaturas.has(idLicenciatura)) {
+      throw new ErrorValidacion('La licenciatura seleccionada no está disponible');
+    }
+  }
+  if (body.origen === 'onboarding' && idLicenciatura === null) {
     throw new ErrorValidacion('La licenciatura es obligatoria');
   }
-  if (!indice.licenciaturas.has(idLicenciatura)) {
-    throw new ErrorValidacion('La licenciatura seleccionada no está disponible');
-  }
 
-  const idPeriodoIngreso = body.id_periodo_ingreso;
-  if (!esEnteroPositivo(idPeriodoIngreso)) {
-    throw new ErrorValidacion('El periodo académico es obligatorio');
+  const idPeriodoIngreso = body.id_periodo_ingreso ?? null;
+  if (idPeriodoIngreso !== null) {
+    if (!esEnteroPositivo(idPeriodoIngreso)) {
+      throw new ErrorValidacion('El periodo académico no es válido');
+    }
+    if (!indice.periodoActivo || idPeriodoIngreso !== indice.periodoActivo.id) {
+      throw new ErrorValidacion('El periodo académico no es válido');
+    }
   }
-  if (!indice.periodoActivo || idPeriodoIngreso !== indice.periodoActivo.id) {
-    throw new ErrorValidacion('El periodo académico no es válido');
+  if (body.origen === 'onboarding' && idPeriodoIngreso === null) {
+    throw new ErrorValidacion('El periodo académico es obligatorio');
   }
 
   const correo = validarCorreo(body.correo);

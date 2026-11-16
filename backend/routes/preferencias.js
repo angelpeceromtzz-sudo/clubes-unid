@@ -114,6 +114,11 @@ async function guardarPreferencias(client, idUsuario, datos) {
     'SELECT * FROM preferencias_usuario WHERE id_usuario = $1 FOR UPDATE',
     [idUsuario],
   )).rows[0];
+  if (actual?.estado_onboarding === 'completado') {
+    datos.id_licenciatura = null;
+    datos.id_periodo_ingreso = null;
+    datos.origen = 'perfil';
+  }
   const correoAnterior = correoDesdeFila(actual);
 
   await reemplazarSeleccion(client, idUsuario, SELECCIONES[0], datos.categorias);
@@ -147,8 +152,8 @@ async function guardarPreferencias(client, idUsuario, datos) {
   await client.query(
     `UPDATE preferencias_usuario SET
        genero = $2,
-       id_licenciatura = $10,
-       id_periodo_ingreso = $11,
+       id_licenciatura = COALESCE($10, id_licenciatura),
+       id_periodo_ingreso = COALESCE($11, id_periodo_ingreso),
        estado_onboarding = 'completado',
        onboarding_completado_en = COALESCE(onboarding_completado_en, CURRENT_TIMESTAMP),
        correo_activo = $3,
@@ -204,8 +209,20 @@ router.put('/preferencias', authenticate, requireRole(ROL_ALUMNO), limitadorPref
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    const actual = (await client.query(
+      'SELECT * FROM preferencias_usuario WHERE id_usuario = $1 FOR UPDATE',
+      [req.user.id],
+    )).rows[0] ?? null;
+    const body = { ...req.body };
+    if (actual?.estado_onboarding === 'completado') {
+      body.origen = 'perfil';
+      delete body.id_licenciatura;
+      delete body.id_periodo_ingreso;
+    } else {
+      body.origen = 'onboarding';
+    }
     const catalogo = indexarCatalogo(await cargarCatalogoIntereses(client));
-    const datos = validarPreferencias(req.body, catalogo);
+    const datos = validarPreferencias(body, catalogo);
     const resultado = await guardarPreferencias(client, req.user.id, datos);
     await client.query('COMMIT');
     res.json(resultado);

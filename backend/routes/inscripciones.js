@@ -158,4 +158,26 @@ router.delete('/:userId', authenticate, async (req, res) => {
   }
 });
 
+// Lista todas las inscripciones registradas del alumno autenticado, con club y
+// estado original. No infiere periodos ni participación efectiva.
+router.get('/mias', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT i.id_inscripcion, i.id_club, i.fecha_inscripcion, i.fecha_baja,
+              i.id_estatus_inscripcion, e.nombre_estatus AS estatus_inscripcion,
+              c.nombre_club, c.categoria, c.imagen_portada
+       FROM inscripciones i
+       JOIN clubes c ON c.id_club = i.id_club
+       JOIN cat_estatus_inscripciones e ON e.id_estatus_inscripcion = i.id_estatus_inscripcion
+       WHERE i.id_usuario = $1
+       ORDER BY i.fecha_inscripcion DESC`,
+      [req.user.id],
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener inscripciones del alumno:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 export default router;

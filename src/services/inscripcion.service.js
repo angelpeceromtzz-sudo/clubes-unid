@@ -3,6 +3,8 @@ import { request } from './api-core';
 export const inscripcionService = {
   getInscripcionActiva: () => request('/inscripciones/activa'),
 
+  getMisInscripciones: () => request('/inscripciones/mias'),
+
   createInscripcion: (id_club) =>
     request('/inscripciones', {
       method: 'POST',
