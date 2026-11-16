@@ -13,7 +13,7 @@ function BarraProgreso({ actual }) {
       aria-valuemax={TOTAL_PASOS_ONBOARDING}
       aria-valuenow={actual}
       aria-valuetext={`Paso ${actual} de ${TOTAL_PASOS_ONBOARDING}`}
-      className="mt-4 grid grid-cols-5 gap-2"
+      className="mt-4 grid grid-cols-6 gap-2"
     >
       {Array.from({ length: TOTAL_PASOS_ONBOARDING }, (_, indice) => (
         <span
