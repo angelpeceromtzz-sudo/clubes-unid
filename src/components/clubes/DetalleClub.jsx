@@ -41,17 +41,33 @@ export function DetalleClub({ onLoginClick }) {
   const yaEnvio = clubesPostulados.includes(club?.id_club);
   const deshabilitado = (estado && estado !== 'abierto') || yaEnvio;
 
-  function formatearFecha(fechaIso) {
+  function formatearApertura(fechaIso) {
     if (!fechaIso) return '';
     const fecha = new Date(fechaIso);
-    return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (Number.isNaN(fecha.getTime())) return '';
+    const fechaTexto = fecha.toLocaleDateString('es-MX', {
+      timeZone: 'America/Mexico_City',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    const horaTexto = fecha.toLocaleTimeString('es-MX', {
+      timeZone: 'America/Mexico_City',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return `${fechaTexto} a las ${horaTexto}`;
   }
 
   function obtenerTextoBoton() {
     if (esProximamente) return null;
     if (esInactivo) return null;
     if (yaEnvio) return 'SOLICITUD ENVIADA';
-    if (estado === 'proximo') return `Abre el ${formatearFecha(club?.fecha_apertura_programada)}`;
+    if (estado === 'proximo') {
+      const apertura = formatearApertura(club?.fecha_apertura_programada);
+      return apertura ? `Abre el ${apertura}` : 'PRÓXIMAMENTE';
+    }
     if (estado === 'lleno') return 'CUPO LLENO';
     if (estado === 'cerrado') return 'CONVOCATORIA CERRADA';
     if (!estaAutenticado) return 'INICIA SESIÓN PARA INSCRIBIRTE';
