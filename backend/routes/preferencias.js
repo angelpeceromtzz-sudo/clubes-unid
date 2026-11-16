@@ -3,6 +3,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { resolverPeriodoVigente } from '../lib/periodos.js';
 import { ROL_ALUMNO } from '../constants/roles.js';
 import { limitadorPreferencias } from '../lib/rateLimits.js';
 import { CORREOS_NO_CONFIGURABLES, VERSION_AVISO_PUBLICADA } from '../lib/preferenciasCorreo.js';
@@ -27,7 +28,44 @@ const SELECCIONES = [
 ];
 
 async function leerPreferencias(db, idUsuario) {
-  const fila = (await db.query('SELECT * FROM preferencias_usuario WHERE id_usuario = $1', [idUsuario])).rows[0] ?? null;
+  const filaBase = (await db.query('SELECT * FROM preferencias_usuario WHERE id_usuario = $1', [idUsuario])).rows[0] ?? null;
+  let fila = filaBase;
+  if (fila) {
+    const lic = fila.id_licenciatura
+      ? (await db.query('SELECT nombre FROM cat_licenciaturas WHERE id_licenciatura = $1', [fila.id_licenciatura])).rows[0]
+      : null;
+    const perIngreso = fila.id_periodo_ingreso
+      ? (await db.query('SELECT nombre FROM periodos_actividad WHERE id_periodo = $1', [fila.id_periodo_ingreso])).rows[0]
+      : null;
+    const resolucionActual = await resolverPeriodoVigente(db);
+    if (resolucionActual.inconsistencia) {
+      const err = new Error('Configuracion de periodos inconsistente');
+      err.code = 'PERIODO_INCONSISTENTE';
+      err.candidatos = resolucionActual.candidatos;
+      throw err;
+    }
+    const perActual = resolucionActual.periodo ?? null;
+    fila = {
+      ...fila,
+      licenciatura_nombre: lic?.nombre ?? null,
+      periodo_ingreso_nombre: perIngreso?.nombre ?? null,
+      periodo_actual_id: perActual?.id_periodo ?? null,
+      periodo_actual_nombre: perActual?.nombre ?? null,
+    };
+  } else {
+    const resolucionActual = await resolverPeriodoVigente(db);
+    if (resolucionActual.inconsistencia) {
+      const err = new Error('Configuracion de periodos inconsistente');
+      err.code = 'PERIODO_INCONSISTENTE';
+      err.candidatos = resolucionActual.candidatos;
+      throw err;
+    }
+    const perActual = resolucionActual.periodo ?? null;
+    fila = {
+      periodo_actual_id: perActual?.id_periodo ?? null,
+      periodo_actual_nombre: perActual?.nombre ?? null,
+    };
+  }
   const categorias = (await db.query(
     'SELECT id_categoria_interes FROM usuario_categorias_interes WHERE id_usuario = $1 ORDER BY id_categoria_interes',
     [idUsuario],
@@ -109,6 +147,8 @@ async function guardarPreferencias(client, idUsuario, datos) {
   await client.query(
     `UPDATE preferencias_usuario SET
        genero = $2,
+       id_licenciatura = $10,
+       id_periodo_ingreso = $11,
        estado_onboarding = 'completado',
        onboarding_completado_en = COALESCE(onboarding_completado_en, CURRENT_TIMESTAMP),
        correo_activo = $3,
@@ -124,6 +164,7 @@ async function guardarPreferencias(client, idUsuario, datos) {
       idUsuario, datos.genero, correo.activo, correo.frecuencia,
       correo.tipos.clubes_convocatorias, correo.tipos.mis_clubes, correo.tipos.eventos,
       correo.tipos.noticias, correo.tipos.recordatorios,
+      datos.id_licenciatura, datos.id_periodo_ingreso,
     ],
   );
 
@@ -151,6 +192,9 @@ router.get('/preferencias', authenticate, requireRole(ROL_ALUMNO), async (req, r
   try {
     res.json(await respuestaPreferencias(pool, req.user.id));
   } catch (err) {
+    if (err && err.code === 'PERIODO_INCONSISTENTE') {
+      return res.status(409).json({ error: 'Configuracion de periodos inconsistente', candidatos: err.candidatos || [] });
+    }
     console.error('Error al leer preferencias:', { codigo: err.code, mensaje: err.message });
     res.status(500).json({ error: 'No se pudieron cargar tus preferencias' });
   }
@@ -168,6 +212,7 @@ router.put('/preferencias', authenticate, requireRole(ROL_ALUMNO), limitadorPref
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     if (err instanceof ErrorValidacion) return res.status(400).json({ error: err.message });
+    if (err && err.code === 'PERIODO_INCONSISTENTE') return res.status(409).json({ error: 'Configuracion de periodos inconsistente', candidatos: err.candidatos || [] });
     if (err.status && err.status < 500) return res.status(err.status).json({ error: err.message });
     console.error('Error al guardar preferencias:', { codigo: err.code, mensaje: err.message });
     res.status(500).json({ error: 'No se pudieron guardar tus preferencias. Puedes intentarlo de nuevo.' });
@@ -179,8 +224,15 @@ router.put('/preferencias', authenticate, requireRole(ROL_ALUMNO), limitadorPref
 // Omitir solo cambia un estado 'pendiente'. Si ya hay respuestas (completado) o
 // ya se omitió, la instrucción no altera nada.
 router.post('/preferencias/omitir', authenticate, requireRole(ROL_ALUMNO), limitadorPreferencias, async (req, res) => {
+  const client = await pool.connect();
   try {
-    await pool.query(
+    await client.query('BEGIN');
+    const resolucion = await resolverPeriodoVigente(client);
+    if (resolucion.inconsistencia) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Configuracion de periodos inconsistente', candidatos: resolucion.candidatos || [] });
+    }
+    await client.query(
       `INSERT INTO preferencias_usuario (id_usuario, estado_onboarding, onboarding_omitido_en)
        VALUES ($1, 'omitido', CURRENT_TIMESTAMP)
        ON CONFLICT (id_usuario) DO UPDATE SET
@@ -190,10 +242,18 @@ router.post('/preferencias/omitir', authenticate, requireRole(ROL_ALUMNO), limit
        WHERE preferencias_usuario.estado_onboarding = 'pendiente'`,
       [req.user.id],
     );
-    res.json(await respuestaPreferencias(pool, req.user.id));
+    const resultado = await respuestaPreferencias(client, req.user.id);
+    await client.query('COMMIT');
+    res.json(resultado);
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (err && err.code === 'PERIODO_INCONSISTENTE') {
+      return res.status(409).json({ error: 'Configuracion de periodos inconsistente', candidatos: err.candidatos || [] });
+    }
     console.error('Error al omitir onboarding:', { codigo: err.code, mensaje: err.message });
     res.status(500).json({ error: 'No se pudo registrar la decisión. Puedes intentarlo de nuevo.' });
+  } finally {
+    client.release();
   }
 });
 

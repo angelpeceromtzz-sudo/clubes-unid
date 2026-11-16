@@ -1,6 +1,7 @@
 // Validación y lógica pura del onboarding de preferencias. Sin acceso a base
 // de datos: las rutas cargan el catálogo y ejecutan las escrituras.
 import { TIPOS_CORREO_OPCIONAL, FRECUENCIAS_CORREO } from './preferenciasCorreo.js';
+import { resolverPeriodoVigente } from './periodos.js';
 
 export const GENEROS = Object.freeze(['mujer', 'hombre', 'otra_identidad', 'prefiero_no_responder']);
 export const ORIGENES = Object.freeze(['onboarding', 'perfil']);
@@ -48,11 +49,13 @@ export function normalizarPropuesta(entrada) {
 }
 
 // Recibe el catálogo ya filtrado a registros activos (ver cargarCatalogoIntereses).
-export function indexarCatalogo({ categorias, actividades, motivaciones }) {
+export function indexarCatalogo({ categorias, actividades, motivaciones, licenciaturas, periodoActivo }) {
   return {
     categorias: new Map(categorias.map((c) => [c.id, c])),
     actividades: new Map(actividades.map((a) => [a.id, a])),
     motivaciones: new Set(motivaciones.map((m) => m.id)),
+    licenciaturas: new Set((licenciaturas ?? []).map((l) => l.id)),
+    periodoActivo: periodoActivo ?? null,
   };
 }
 
@@ -76,10 +79,27 @@ export async function cargarCatalogoIntereses(db) {
      WHERE activo
      ORDER BY orden, nombre`,
   );
+  const licenciaturas = await db.query(
+    `SELECT id_licenciatura AS id, nombre
+     FROM cat_licenciaturas
+     ORDER BY nombre`,
+  );
+  const resolucionPeriodo = await resolverPeriodoVigente(db);
+  if (resolucionPeriodo.inconsistencia) {
+    const err = new Error('Configuracion de periodos inconsistente');
+    err.code = 'PERIODO_INCONSISTENTE';
+    err.candidatos = resolucionPeriodo.candidatos;
+    throw err;
+  }
+  const periodoActivo = resolucionPeriodo.periodo ?? null;
   return {
     categorias: categorias.rows,
     actividades: actividades.rows,
     motivaciones: motivaciones.rows,
+    licenciaturas: licenciaturas.rows,
+    periodoActivo: periodoActivo
+      ? { id: periodoActivo.id_periodo, nombre: periodoActivo.nombre, fecha_inicio: periodoActivo.fecha_inicio, fecha_fin: periodoActivo.fecha_fin }
+      : null,
   };
 }
 
@@ -165,6 +185,22 @@ export function validarPreferencias(body, indice) {
     throw new ErrorValidacion('La opción de género no es válida');
   }
 
+  const idLicenciatura = body.id_licenciatura;
+  if (!esEnteroPositivo(idLicenciatura)) {
+    throw new ErrorValidacion('La licenciatura es obligatoria');
+  }
+  if (!indice.licenciaturas.has(idLicenciatura)) {
+    throw new ErrorValidacion('La licenciatura seleccionada no está disponible');
+  }
+
+  const idPeriodoIngreso = body.id_periodo_ingreso;
+  if (!esEnteroPositivo(idPeriodoIngreso)) {
+    throw new ErrorValidacion('El periodo académico es obligatorio');
+  }
+  if (!indice.periodoActivo || idPeriodoIngreso !== indice.periodoActivo.id) {
+    throw new ErrorValidacion('El periodo académico no es válido');
+  }
+
   const correo = validarCorreo(body.correo);
 
   const propuestasEntrada = body.propuestas ?? [];
@@ -185,6 +221,8 @@ export function validarPreferencias(body, indice) {
     actividades,
     motivaciones,
     genero,
+    id_licenciatura: idLicenciatura,
+    id_periodo_ingreso: idPeriodoIngreso,
     correo,
     propuestas,
   };
@@ -246,6 +284,12 @@ export function serializarPreferencias({ fila, categorias, actividades, motivaci
   return {
     estado_onboarding: fila?.estado_onboarding ?? 'pendiente',
     genero: fila?.genero ?? null,
+    id_licenciatura: fila?.id_licenciatura ?? null,
+    licenciatura_nombre: fila?.licenciatura_nombre ?? null,
+    id_periodo_ingreso: fila?.id_periodo_ingreso ?? null,
+    periodo_ingreso_nombre: fila?.periodo_ingreso_nombre ?? null,
+    periodo_actual_id: fila?.periodo_actual_id ?? null,
+    periodo_actual_nombre: fila?.periodo_actual_nombre ?? null,
     categorias,
     actividades,
     motivaciones,

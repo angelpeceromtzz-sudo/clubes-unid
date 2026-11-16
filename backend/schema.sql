@@ -1018,11 +1018,25 @@ CREATE TABLE IF NOT EXISTS periodos_actividad (
     fecha_fin DATE NOT NULL,
     activo BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT uq_periodos_fechas UNIQUE (fecha_inicio, fecha_fin)
+    CONSTRAINT uq_periodos_fechas UNIQUE (fecha_inicio, fecha_fin),
+    CONSTRAINT chk_periodo_fechas_validas CHECK (fecha_fin >= fecha_inicio)
 );
 
 CREATE INDEX IF NOT EXISTS idx_periodos_actividad_fechas
     ON periodos_actividad (fecha_inicio, fecha_fin);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'excl_periodos_sin_solapamiento'
+      AND conrelid = 'periodos_actividad'::regclass
+  ) THEN
+    ALTER TABLE periodos_actividad
+      ADD CONSTRAINT excl_periodos_sin_solapamiento
+      EXCLUDE USING gist (daterange(fecha_inicio, fecha_fin, '[]') WITH &&);
+  END IF;
+END $$;
 
 -- 2. Sesiones: instancias concretas derivadas de horarios_club
 --    ON DELETE RESTRICT preserva el historial (no se borran en cascada).
@@ -1601,6 +1615,8 @@ CREATE TABLE IF NOT EXISTS preferencias_usuario (
     id_usuario                  INT PRIMARY KEY REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
     estado_onboarding           VARCHAR(20) NOT NULL DEFAULT 'pendiente',
     genero                      VARCHAR(30),
+    id_licenciatura             INT REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE SET NULL,
+    id_periodo_ingreso          INT REFERENCES periodos_actividad(id_periodo) ON DELETE SET NULL,
     correo_activo               BOOLEAN NOT NULL DEFAULT FALSE,
     correo_frecuencia           VARCHAR(20) NOT NULL DEFAULT 'inmediata',
     correo_clubes_convocatorias BOOLEAN NOT NULL DEFAULT FALSE,

@@ -24,6 +24,8 @@ const catalogo = indexarCatalogo({
     { id: 40, id_categoria: 4, nombre: 'Programación' },
   ],
   motivaciones: [{ id: 1, codigo: 'amistades' }, { id: 4, codigo: 'talentos' }],
+  licenciaturas: [{ id: 1, nombre: 'Ingeniería' }],
+  periodoActivo: { id: 1, nombre: 'Sep-Dic' },
 });
 
 const tiposTodosFalse = Object.fromEntries(TIPOS_CORREO_OPCIONAL.map((t) => [t, false]));
@@ -36,6 +38,8 @@ function cuerpoValido(sobrescribir = {}) {
     actividades: [10, 40],
     motivaciones: [1, 4],
     genero: 'prefiero_no_responder',
+    id_licenciatura: 1,
+    id_periodo_ingreso: 1,
     correo: correoInactivo,
     propuestas: [],
     ...sobrescribir,

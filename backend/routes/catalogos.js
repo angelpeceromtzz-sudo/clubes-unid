@@ -10,6 +10,7 @@ import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { cargarCatalogoIntereses } from '../lib/preferencias.js';
+import { resolverPeriodoVigente } from '../lib/periodos.js';
 
 const router = Router();
 
@@ -52,23 +53,42 @@ router.post('/licenciaturas/cache', authenticate, requireRole(ROL_ADMIN, ROL_COO
 });
 
 // Catálogo del onboarding de preferencias. Solo nombres y estructura, sin datos
-// personales. Mismo criterio de caché corta que licenciaturas.
+// personales. El catálogo estable se cachea; el periodo vigente se resuelve
+// en cada petición para no ocultar cambios ni inconsistencias.
 let cacheIntereses = null;
 let cacheInteresesEn = 0;
 
 router.get('/intereses', async (req, res) => {
   const ahora = Date.now();
 
-  if (cacheIntereses && ahora - cacheInteresesEn < TTL_CACHE_MS) {
-    return res.json(cacheIntereses);
+  let catalogoEstable = cacheIntereses;
+  if (!catalogoEstable || ahora - cacheInteresesEn >= TTL_CACHE_MS) {
+    try {
+      const completo = await cargarCatalogoIntereses(pool);
+      const { periodoActivo, ...estable } = completo;
+      catalogoEstable = estable;
+      cacheIntereses = estable;
+      cacheInteresesEn = ahora;
+    } catch (err) {
+      if (err && err.code === 'PERIODO_INCONSISTENTE') {
+        return res.status(409).json({ error: 'Configuracion de periodos inconsistente', candidatos: err.candidatos || [] });
+      }
+      console.error('Error al listar intereses:', err);
+      return res.status(500).json({ error: 'Error interno del servidor' });
+    }
   }
 
   try {
-    const catalogo = await cargarCatalogoIntereses(pool);
-    cacheIntereses = catalogo;
-    cacheInteresesEn = ahora;
+    const resolucion = await resolverPeriodoVigente(pool);
+    if (resolucion.inconsistencia) {
+      return res.status(409).json({ error: 'Configuracion de periodos inconsistente', candidatos: resolucion.candidatos || [] });
+    }
+    const catalogo = { ...catalogoEstable, periodoActivo: resolucion.periodo ? { id: resolucion.periodo.id_periodo, nombre: resolucion.periodo.nombre, fecha_inicio: resolucion.periodo.fecha_inicio, fecha_fin: resolucion.periodo.fecha_fin } : null };
     res.json(catalogo);
   } catch (err) {
+    if (err && err.code === 'PERIODO_INCONSISTENTE') {
+      return res.status(409).json({ error: 'Configuracion de periodos inconsistente', candidatos: err.candidatos || [] });
+    }
     console.error('Error al listar intereses:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }

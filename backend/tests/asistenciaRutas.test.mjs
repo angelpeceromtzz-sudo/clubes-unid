@@ -319,8 +319,12 @@ async function responder(sql, params = []) {
     return { rows: c ? [{ id_club: c.id_club }] : [], rowCount: 0 };
   }
 
-  if (/SELECT id_periodo FROM periodos_actividad WHERE activo = TRUE/.test(q)) {
-    return { rows: PERIODO_ACTIVO ? [{ id_periodo: PERIODO_ACTIVO }] : [], rowCount: 0 };
+  if (/CURRENT_TIMESTAMP AT TIME ZONE 'America\/Mexico_City'/.test(q)) {
+    return { rows: [{ hoy: HOY }], rowCount: 1 };
+  }
+
+  if (/FROM periodos_actividad/.test(q) && /fecha_inicio <=/.test(q)) {
+    return { rows: PERIODO_ACTIVO ? [{ id_periodo: PERIODO_ACTIVO, nombre: 'Periodo', fecha_inicio: '2026-01-01', fecha_fin: '2026-12-31', activo: true }] : [], rowCount: 0 };
   }
 
   return { rows: [], rowCount: 0 };

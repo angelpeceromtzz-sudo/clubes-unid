@@ -33,6 +33,8 @@ export function respuestasIniciales() {
     genero: null,
     correo: correoInicial(),
     propuesta: '',
+    licenciatura: null,
+    periodo: null,
   };
 }
 
@@ -72,6 +74,7 @@ export function pasoEsValido(paso, respuestas) {
   if (paso === 3) return Array.isArray(respuestas.motivaciones) && respuestas.motivaciones.length > 0;
   if (paso === 4) return respuestas.genero !== null && respuestas.genero !== undefined;
   if (paso === 5) return respuestas.correo?.decision === 'aceptar' || respuestas.correo?.decision === 'rechazar';
+  if (paso === 6) return respuestas.licenciatura !== null && respuestas.periodo !== null;
   return true;
 }
 
@@ -111,6 +114,8 @@ export function construirPayload(respuestas, origen) {
     actividades: [...respuestas.actividades],
     motivaciones: [...respuestas.motivaciones],
     genero: respuestas.genero ?? null,
+    id_licenciatura: respuestas.licenciatura ?? null,
+    id_periodo_ingreso: respuestas.periodo ?? null,
     correo: {
       activo: respuestas.correo.decision === 'aceptar',
       frecuencia: respuestas.correo.frecuencia,

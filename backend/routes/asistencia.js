@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireClubPresident, requirePresidenteDeLaSesion, requireAdminOrRectoria } from '../middleware/auth.js';
 import { esIdEntero } from '../lib/validarId.js';
+import { fechaInstitucionalHoy, resolverPeriodoVigente } from '../lib/periodos.js';
 import {
   getFechaInstitucional,
   aFechaISO,
@@ -397,11 +398,17 @@ async function calcularEstadisticasIntegrante(idClub, idPeriodo, idUsuario) {
 // GET /api/asistencia/periodo/activo — periodo de actividad vigente
 router.get('/periodo/activo', authenticate, async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT id_periodo, nombre, fecha_inicio, fecha_fin, activo FROM periodos_actividad WHERE activo = TRUE LIMIT 1'
-    );
-    res.json(result.rows[0] || null);
+    const hoy = await fechaInstitucionalHoy(pool);
+    const resolucion = await resolverPeriodoVigente(pool, hoy);
+    if (resolucion.inconsistencia) {
+      return res.status(409).json({
+        error: 'Configuración de periodos inconsistente: varios periodos coinciden con la fecha institucional',
+        candidatos: resolucion.candidatos,
+      });
+    }
+    res.json(resolucion.periodo || null);
   } catch (err) {
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al obtener periodo activo:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -443,6 +450,7 @@ router.get('/sesiones/hoy', authenticate, requireClubPresident, async (req, res)
       }))
     );
   } catch (err) {
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al obtener sesiones de hoy:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -453,6 +461,7 @@ router.get('/sesiones/:id', authenticate, requirePresidenteDeLaSesion, async (re
   try {
     res.json(await construirDetalleSesion(req.sesion));
   } catch (err) {
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al obtener sesión:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -496,6 +505,7 @@ router.post('/sesiones/:id/iniciar', authenticate, requirePresidenteDeLaSesion, 
 
     res.json(result.rows[0]);
   } catch (err) {
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al iniciar asistencia:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -589,6 +599,7 @@ router.put('/sesiones/:id/registros', authenticate, requirePresidenteDeLaSesion,
     } catch {
       // Sin transacción activa: el fallo fue previo a BEGIN.
     }
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al registrar asistencias:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   } finally {
@@ -655,6 +666,7 @@ router.post('/sesiones/:id/finalizar', authenticate, requirePresidenteDeLaSesion
 
     res.json({ ...result.rows[0], resumen });
   } catch (err) {
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al finalizar asistencia:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -715,6 +727,7 @@ router.put('/sesiones/:id/cancelar', authenticate, requirePresidenteDeLaSesion, 
 
     res.json(result.rows[0]);
   } catch (err) {
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al cancelar sesión:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -729,6 +742,7 @@ router.get('/historial', authenticate, requireClubPresident, async (req, res) =>
     if (err && err.statusCode === 400) {
       return res.status(400).json({ error: err.message });
     }
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al obtener historial:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -748,6 +762,7 @@ router.get('/estadisticas/club', authenticate, requireClubPresident, async (req,
     if (err && err.statusCode === 400) {
       return res.status(400).json({ error: err.message });
     }
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al obtener estadísticas del club:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -772,6 +787,7 @@ router.get('/estadisticas/integrante/:userId', authenticate, requireClubPresiden
     if (err && err.statusCode === 400) {
       return res.status(400).json({ error: err.message });
     }
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al obtener estadísticas del integrante:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -785,6 +801,7 @@ router.get('/periodos', authenticate, async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error al obtener periodos:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -833,6 +850,7 @@ router.get('/coordinacion/clubes/:clubId/historial', authenticate, requireAdminO
     if (err && err.statusCode === 400) {
       return res.status(400).json({ error: err.message });
     }
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error en historial de coordinación:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -859,6 +877,7 @@ router.get('/coordinacion/clubes/:clubId/sesiones/:id', authenticate, requireAdm
 
     res.json(await construirDetalleSesion(sesion.rows[0]));
   } catch (err) {
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error en detalle de coordinación:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -881,6 +900,7 @@ router.get('/coordinacion/clubes/:clubId/estadisticas', authenticate, requireAdm
     if (err && err.statusCode === 400) {
       return res.status(400).json({ error: err.message });
     }
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error en estadísticas de coordinación:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -908,16 +928,32 @@ router.get('/coordinacion/clubes/:clubId/estadisticas/integrante/:userId', authe
     if (err && err.statusCode === 400) {
       return res.status(400).json({ error: err.message });
     }
+    if (responderErrorPeriodo(err, res)) return;
     console.error('Error en estadísticas de integrante (coordinación):', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
 async function obtenerPeriodoActivo() {
-  const result = await pool.query(
-    'SELECT id_periodo FROM periodos_actividad WHERE activo = TRUE LIMIT 1'
-  );
-  return result.rows[0]?.id_periodo || null;
+  const hoy = await fechaInstitucionalHoy(pool);
+  const resolucion = await resolverPeriodoVigente(pool, hoy);
+  if (resolucion.inconsistencia) {
+    const err = new Error('Configuracion de periodos inconsistente: varios periodos coinciden con la fecha institucional');
+    err.code = 'PERIODO_INCONSISTENTE';
+    err.candidatos = resolucion.candidatos;
+    throw err;
+  }
+  return resolucion.periodo?.id_periodo || null;
+}
+
+function responderErrorPeriodo(err, res) {
+  if (err && err.code === 'PERIODO_INCONSISTENTE') {
+    return res.status(409).json({
+      error: 'Configuracion de periodos inconsistente',
+      candidatos: err.candidatos || [],
+    });
+  }
+  return false;
 }
 
 export default router;

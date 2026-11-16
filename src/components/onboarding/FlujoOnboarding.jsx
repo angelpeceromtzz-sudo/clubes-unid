@@ -2,7 +2,7 @@
    confirmación. Las respuestas viven solo en memoria mientras el componente
    está montado (no se guardan en el navegador) y se envían con un único PUT
    al terminar el paso 5. Lo montará la fase D tras el inicio de sesión. */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../services/api';
 import { useCatalogoIntereses } from '../../hooks/useCatalogoIntereses';
 import { Alerta } from '../ui/Alerta';
@@ -16,6 +16,7 @@ import { PasoMotivaciones } from './PasoMotivaciones';
 import { PasoGenero } from './PasoGenero';
 import { PasoCorreo } from './PasoCorreo';
 import { PasoConfirmacion } from './PasoConfirmacion';
+import { PasoDatosAcademicos } from './PasoDatosAcademicos';
 import { TOTAL_PASOS_ONBOARDING } from '../../constants/onboarding';
 import {
   alternarCategoria,
@@ -39,7 +40,50 @@ export function FlujoOnboarding({ onCompletar }) {
   const [errorPropuestaTexto, setErrorPropuestaTexto] = useState('');
   const [haComenzado, setHaComenzado] = useState(false);
   const [resumen, setResumen] = useState(null);
+  const [licenciaturas, setLicenciaturas] = useState([]);
+  const [periodoActivo, setPeriodoActivo] = useState(null);
+  const [periodoCargando, setPeriodoCargando] = useState(true);
+  const [periodoError, setPeriodoError] = useState('');
   const enCurso = useRef(false);
+  const periodoRequestId = useRef(0);
+
+  const fetchPeriodo = useCallback(() => {
+    const requestId = ++periodoRequestId.current;
+    api.getAsistenciaPeriodoActivo()
+      .then((datos) => {
+        if (requestId !== periodoRequestId.current) return;
+        setPeriodoActivo(datos || null);
+        setRespuestas((actual) => ({ ...actual, periodo: datos?.id_periodo ?? null }));
+      })
+      .catch((err) => {
+        if (requestId !== periodoRequestId.current) return;
+        setPeriodoActivo(null);
+        setPeriodoError(err?.message || 'No se pudo cargar el periodo académico.');
+        setRespuestas((actual) => ({ ...actual, periodo: null }));
+      })
+      .finally(() => {
+        if (requestId === periodoRequestId.current) setPeriodoCargando(false);
+      });
+  }, []);
+
+  const reintentarPeriodo = useCallback(() => {
+    setPeriodoCargando(true);
+    setPeriodoError('');
+    setRespuestas((actual) => ({ ...actual, periodo: null }));
+    fetchPeriodo();
+  }, [fetchPeriodo]);
+
+  useEffect(() => {
+    let vigente = true;
+    api.getLicenciaturas()
+      .then((datos) => { if (vigente) setLicenciaturas(Array.isArray(datos) ? datos : []); })
+      .catch(() => { if (vigente) setLicenciaturas([]); });
+    fetchPeriodo();
+    return () => {
+      vigente = false;
+      periodoRequestId.current += 1;
+    };
+  }, [fetchPeriodo]);
 
   const categorias = catalogo?.categorias ?? [];
   const actividades = catalogo?.actividades ?? [];
@@ -91,11 +135,7 @@ export function FlujoOnboarding({ onCompletar }) {
       setResumen(construirResumen(datos));
       setPaso('confirmacion');
     } catch (err) {
-      setError(
-        err.status === 409
-          ? 'Ya tienes el máximo de propuestas pendientes de revisión. Quita la propuesta de este paso y vuelve a guardar.'
-          : err.message || MENSAJE_GUARDADO,
-      );
+      setError(err.message || MENSAJE_GUARDADO);
     } finally {
       enCurso.current = false;
       setOcupado(false);
@@ -116,6 +156,7 @@ export function FlujoOnboarding({ onCompletar }) {
       else if (paso === 3) setAviso('Selecciona al menos una motivación para continuar.');
       else if (paso === 4) setAviso('Selecciona una opción para continuar.');
       else if (paso === 5) setAviso('Indica si quieres recibir correos opcionales.');
+      else if (paso === 6) setAviso('Selecciona tu licenciatura para continuar.');
       return;
     }
     if (paso === TOTAL_PASOS_ONBOARDING) {
@@ -223,6 +264,18 @@ export function FlujoOnboarding({ onCompletar }) {
           }))
         }
         onCambiarFrecuencia={(frecuencia) => setRespuestas((actual) => ({ ...actual, correo: { ...actual.correo, frecuencia } }))}
+      />
+    );
+  } else if (paso === 6) {
+    contenido = (
+      <PasoDatosAcademicos
+        licenciaturas={licenciaturas}
+        periodoActivo={periodoActivo}
+        periodoCargando={periodoCargando}
+        periodoError={periodoError}
+        onReintentarPeriodo={reintentarPeriodo}
+        licenciatura={respuestas.licenciatura}
+        onCambiarLicenciatura={(valor) => setRespuestas((actual) => ({ ...actual, licenciatura: valor }))}
       />
     );
   }

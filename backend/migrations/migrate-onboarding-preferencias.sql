@@ -105,6 +105,8 @@ CREATE TABLE IF NOT EXISTS preferencias_usuario (
     id_usuario                  INT PRIMARY KEY REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
     estado_onboarding           VARCHAR(20) NOT NULL DEFAULT 'pendiente',
     genero                      VARCHAR(30),
+    id_licenciatura             INT REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE SET NULL,
+    id_periodo_ingreso          INT REFERENCES periodos_actividad(id_periodo) ON DELETE SET NULL,
     correo_activo               BOOLEAN NOT NULL DEFAULT FALSE,
     correo_frecuencia           VARCHAR(20) NOT NULL DEFAULT 'inmediata',
     correo_clubes_convocatorias BOOLEAN NOT NULL DEFAULT FALSE,
