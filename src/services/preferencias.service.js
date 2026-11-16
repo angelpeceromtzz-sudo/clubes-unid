@@ -12,4 +12,6 @@ export const preferenciasService = {
     }),
 
   omitirOnboarding: () => request('/me/preferencias/omitir', { method: 'POST' }),
+
+  getInsights: () => request('/me/preferencias/insights'),
 };

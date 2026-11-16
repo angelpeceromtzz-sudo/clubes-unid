@@ -73,3 +73,23 @@ test('el PDF identifica las muestras abiertas y conserva la base de preguntas mÃ
   assert.deepEqual(escala.indicadores.at(-1), ['Promedio de escala', '3.5']);
   assert.deepEqual(escala.tablas[1].filas[0], ['3', '2', '50.0%']);
 });
+
+
+test('el PDF de preferencias contiene los agregados registrados sin atribuir filtros de otras secciones', () => {
+  const preferenciasInsights = {
+    estados: [{ estado_onboarding: 'completado', total: 3 }, { estado_onboarding: 'omitido', total: 1 }],
+    categorias: [{ nombre: 'Deportes', total: 2 }],
+    motivaciones: [{ nombre: 'Aprender', total: 3 }],
+    licenciaturas: [{ nombre: 'IngenierÃ­a', total: 4 }],
+    propuestas: [{ texto: 'Ajedrez', total: 1 }],
+  };
+  const reporte = crearReportePDF({ ...datos, preferenciasInsights }, 'preferencias');
+  assert.deepEqual(describirFiltros(datos, 'preferencias'), []);
+  assert.deepEqual(reporte.filtros, []);
+  assert.deepEqual(reporte.indicadores, [['Registros de preferencias', '4']]);
+  assert.equal(reporte.tablas.length, 5);
+  assert.deepEqual(reporte.tablas[1].filas, [['Deportes', '2']]);
+  assert.deepEqual(reporte.tablas[4].filas, [['Ajedrez', '1']]);
+  assert.match(reporte.nota, /globales|sin filtro/i);
+  assert.ok(generarPDF(reporte).output('arraybuffer').byteLength > 1000);
+});

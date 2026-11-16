@@ -4,6 +4,7 @@ export const TITULOS_REPORTE = {
   asistencia: 'Asistencia',
   encuestas: 'Encuestas',
   postulaciones: 'Postulaciones',
+  preferencias: 'Preferencias',
 };
 
 const numero = (valor) => Number(valor) || 0;
@@ -24,7 +25,7 @@ export function describirFiltros(d, tab) {
     carrera: ['Licenciatura', (d.licenciaturas || []).find((fila) => String(fila.id_licenciatura) === String(filtros.carrera))?.nombre],
     estado: ['Estado', filtros.estado],
   };
-  const relevantes = { clubes: ['id_club'], asistencia: ['id_club', 'id_periodo'], encuestas: ['carrera'], postulaciones: ['id_club', 'id_periodo', 'carrera', 'estado'] };
+  const relevantes = { preferencias: [], clubes: ['id_club'], asistencia: ['id_club', 'id_periodo'], encuestas: ['carrera'], postulaciones: ['id_club', 'id_periodo', 'carrera', 'estado'] };
   return (relevantes[tab] || Object.keys(campos)).filter((campo) => filtros[campo])
     .map((campo) => `${campos[campo][0]}: ${campos[campo][1] || filtros[campo]}`);
 }
@@ -117,6 +118,24 @@ export function crearReportePDF(d, tab, fecha = new Date()) {
     reporte.tablas = [{ titulo: 'Evolución mensual', encabezados: ['Mes', 'Postulaciones', 'Altas de inscripción'], pesos: [2, 2, 2], filas: filas.map((fila) => [fila[0], entero(fila[1]), entero(fila[2])]) }];
     reporte.graficas = [{ titulo: 'Postulaciones por mes', filas: filas.map((fila) => ({ nombre: fila[0], valor: fila[1] })) }];
     reporte.nota = 'Últimos 6 meses, dentro del periodo seleccionado si lo hay. Pendientes: estados Pendiente o En revisión. Licenciatura y estado filtran postulaciones; las altas de inscripción se filtran por club y periodo.';
+  } else if (tab === 'preferencias') {
+    const ins = d.preferenciasInsights || {};
+    const estados = ins.estados || [];
+    const categorias = ins.categorias || [];
+    const motivaciones = ins.motivaciones || [];
+    const licenciaturas = ins.licenciaturas || [];
+    const propuestas = ins.propuestas || [];
+    reporte.indicadores = [['Registros de preferencias', entero(estados.reduce((a, f) => a + (Number(f.total) || 0), 0))]];
+    reporte.tablas = [
+      { titulo: 'Estado del onboarding', encabezados: ['Estado', 'Total'], pesos: [4, 1], filas: estados.map((f) => [f.estado_onboarding, entero(f.total)]) },
+      { titulo: 'Top categorías', encabezados: ['Categoría', 'Total'], pesos: [4, 1], filas: categorias.map((f) => [f.nombre, entero(f.total)]) },
+      { titulo: 'Top motivaciones', encabezados: ['Motivación', 'Total'], pesos: [4, 1], filas: motivaciones.map((f) => [f.nombre, entero(f.total)]) },
+      { titulo: 'Licenciaturas', encabezados: ['Licenciatura', 'Total'], pesos: [4, 1], filas: licenciaturas.map((f) => [f.nombre, entero(f.total)]) },
+      { titulo: 'Actividades propuestas', encabezados: ['Propuesta', 'Total'], pesos: [4, 1], filas: propuestas.map((f) => [f.texto, entero(f.total)]) },
+    ];
+    reporte.graficas = [{ titulo: 'Top categorías', filas: categorias.map((f) => ({ nombre: f.nombre, valor: Number(f.total) || 0 })) }];
+    reporte.nota = 'Datos globales del alumnado (sin filtro por periodo, club o licenciatura).';
+    reporte.filtros = [];
   }
   return reporte;
 }

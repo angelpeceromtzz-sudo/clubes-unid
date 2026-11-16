@@ -1,10 +1,14 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* Hook compartido para la vista ejecutiva de Administración y Rectoría. */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../services/api';
 
 export function useVistaEjecutiva() {
   const [stats, setStats] = useState(null);
+  const [preferenciasInsights, setPreferenciasInsights] = useState(null);
+  const [cargandoPreferencias, setCargandoPreferencias] = useState(true);
+  const [errorPreferencias, setErrorPreferencias] = useState('');
+  const preferenciasId = useRef(0);
   const [ocupacionClubes, setOcupacionClubes] = useState([]);
   const [topClubes, setTopClubes] = useState([]);
   const [clubesDetalle, setClubesDetalle] = useState([]);
@@ -27,6 +31,27 @@ export function useVistaEjecutiva() {
     carrera: '',
     estado: '',
   });
+
+  const recargarPreferencias = useCallback(async () => {
+    const id = ++preferenciasId.current;
+    setCargandoPreferencias(true);
+    setErrorPreferencias('');
+    try {
+      const respuesta = await api.getPreferenciasInsights();
+      if (id === preferenciasId.current) setPreferenciasInsights(respuesta);
+    } catch (err) {
+      if (id === preferenciasId.current) {
+        setPreferenciasInsights(null);
+        setErrorPreferencias(err?.message || 'No se pudieron cargar las preferencias.');
+      }
+    } finally {
+      if (id === preferenciasId.current) setCargandoPreferencias(false);
+    }
+  }, []);
+  useEffect(() => {
+    recargarPreferencias();
+    return () => { preferenciasId.current += 1; };
+  }, [recargarPreferencias]);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -159,6 +184,10 @@ export function useVistaEjecutiva() {
     seleccionarPregunta,
     periodos,
     licenciaturas,
+    preferenciasInsights,
+    cargandoPreferencias,
+    errorPreferencias,
+    recargarPreferencias,
     cargando,
     error,
     filtros,

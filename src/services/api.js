@@ -171,6 +171,7 @@ export const api = {
   getPreferenciasOnboarding: preferenciasService.getPreferencias,
   guardarPreferenciasOnboarding: preferenciasService.guardarPreferencias,
   omitirOnboarding: preferenciasService.omitirOnboarding,
+  getPreferenciasInsights: preferenciasService.getInsights,
 
   getAsistenciaPeriodoActivo: asistenciaService.getPeriodoActivo,
   getAsistenciaSesionesHoy: asistenciaService.getSesionesHoy,

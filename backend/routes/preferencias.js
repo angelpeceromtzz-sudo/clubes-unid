@@ -274,6 +274,53 @@ router.post('/preferencias/omitir', authenticate, requireRole(ROL_ALUMNO), limit
   }
 });
 
+router.get('/preferencias/insights', authenticate, requireRole(3, 4, 7), async (req, res) => {
+  try {
+    const estados = (await pool.query(
+      `SELECT estado_onboarding, COUNT(*)::int AS total
+       FROM preferencias_usuario
+       GROUP BY estado_onboarding`,
+    )).rows;
+
+    const categorias = (await pool.query(
+      `SELECT ci.nombre, COUNT(*)::int AS total
+       FROM usuario_categorias_interes uci
+       JOIN cat_categorias_interes ci ON ci.id_categoria_interes = uci.id_categoria_interes
+       GROUP BY ci.nombre
+       ORDER BY total DESC`,
+    )).rows;
+
+    const motivaciones = (await pool.query(
+      `SELECT cm.nombre, COUNT(*)::int AS total
+       FROM usuario_motivaciones um
+       JOIN cat_motivaciones cm ON cm.id_motivacion = um.id_motivacion
+       GROUP BY cm.nombre
+       ORDER BY total DESC`,
+    )).rows;
+
+    const licenciaturas = (await pool.query(
+      `SELECT cl.nombre, COUNT(*)::int AS total
+       FROM preferencias_usuario pu
+       JOIN cat_licenciaturas cl ON cl.id_licenciatura = pu.id_licenciatura
+       GROUP BY cl.nombre
+       ORDER BY total DESC`,
+    )).rows;
+
+    const propuestas = (await pool.query(
+      `SELECT texto, COUNT(*)::int AS total
+       FROM actividades_propuestas
+       GROUP BY texto
+       ORDER BY total DESC, texto ASC
+       LIMIT 20`,
+    )).rows;
+
+    res.json({ estados, categorias, motivaciones, licenciaturas, propuestas });
+  } catch (err) {
+    console.error('Error al obtener insights de preferencias:', err);
+    res.status(500).json({ error: 'No se pudieron cargar los insights' });
+  }
+});
+
 router.get('/preferencias/historial-correo', authenticate, requireRole(ROL_ALUMNO), async (req, res) => {
   try {
     const historial = await pool.query(
