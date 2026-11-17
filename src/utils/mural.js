@@ -9,6 +9,20 @@ export function imagenMuralSegura(valor) {
   } catch { return null; }
 }
 
+// El nombre de un control nunca puede sobrescribir la imagen ni los metadatos.
+export function actualizarCampoMural(actual, nombre, valor) {
+  switch (nombre) {
+    case 'titulo': return { ...actual, titulo: valor };
+    case 'subtitulo': return { ...actual, subtitulo: valor };
+    case 'contenido': return { ...actual, contenido: valor };
+    case 'enlace_url': return { ...actual, enlace_url: valor };
+    case 'enlace_texto': return { ...actual, enlace_texto: valor };
+    case 'fecha_retiro': return { ...actual, fecha_retiro: valor };
+    case 'destacada': return { ...actual, destacada: valor === true };
+    default: return actual;
+  }
+}
+
 export function enlaceMural(base) {
   try {
     const url = new URL(base);

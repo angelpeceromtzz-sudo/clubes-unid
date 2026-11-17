@@ -1,7 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { enlaceMural, clavePublicacionMural, estadoPublicacionMural, imagenMuralSegura } from '../src/utils/mural.js';
+import { enlaceMural, clavePublicacionMural, estadoPublicacionMural, imagenMuralSegura, actualizarCampoMural } from '../src/utils/mural.js';
 import { publicacionesMural } from '../src/utils/calendario.js';
+
+test('el editor solo actualiza controles permitidos y conserva imagen y metadatos', () => {
+  const original = Object.freeze({ titulo: 'Anterior', url_imagen: 'https://example.org/cartel.jpg', id_publicacion: 1, status: 'draft', destacada: false });
+  for (const campo of ['titulo', 'subtitulo', 'contenido', 'enlace_url', 'enlace_texto', 'fecha_retiro']) {
+    const actualizado = actualizarCampoMural(original, campo, 'Nuevo valor');
+    assert.deepEqual(actualizado, { ...original, [campo]: 'Nuevo valor' });
+  }
+  const destacada = actualizarCampoMural(original, 'destacada', true);
+  assert.equal(destacada.destacada, true);
+  assert.equal(actualizarCampoMural(destacada, 'destacada', false).destacada, false);
+  for (const campo of ['url_imagen', 'id_publicacion', 'status', '__proto__', 'constructor', 'campo_ajeno', '']) {
+    assert.equal(actualizarCampoMural(original, campo, 'javascript:alert(1)'), original, campo);
+  }
+});
 
 test('las imágenes del mural conservan HTTP(S) y cargas locales y rechazan esquemas ejecutables', () => {
   for (const url of ['https://res.cloudinary.com/demo/image/upload/cartel.jpg', 'http://localhost:4000/uploads/cartel.png', '/uploads/cartel.jpg']) {

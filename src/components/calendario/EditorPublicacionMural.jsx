@@ -3,6 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { api } from '../../services/api';
 import { muralService } from '../../services/mural.service';
 import { fechaHoyCampus } from '../../utils/fechas';
+import { actualizarCampoMural } from '../../utils/mural';
 import { useDialogoCalendario } from '../../hooks/useDialogoCalendario';
 import { ModalBase } from '../ui/ModalBase';
 import { Icono } from '../ui/Icono';
@@ -26,8 +27,8 @@ export function EditorPublicacionMural({ publicacion, onClose, onGuardado }) {
   const previa = { ...form, origen: 'mural', titulo: form.titulo || 'Título de tu publicación', contenido: form.contenido || 'El mensaje para la comunidad aparecerá aquí.' };
 
   function cambiar(e) {
-    const { name, value, type, checked } = e.target;
-    setForm((actual) => ({ ...actual, [name]: type === 'checkbox' ? checked : value }));
+    const { name, value, type, checked } = e.currentTarget;
+    setForm((actual) => actualizarCampoMural(actual, name, type === 'checkbox' ? checked : value));
   }
   async function subir(e) {
     const archivo = e.target.files?.[0];
