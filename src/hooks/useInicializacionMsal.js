@@ -2,11 +2,10 @@ import { useRef, useEffect } from 'react';
 import { api, getSession, setSession, clearSession } from '../services/api';
 import { msalInstance, loginRequest } from '../services/authConfig';
 import { jwtExpirado } from '../utils/jwt';
+import { rutaRegresoActividades } from '../utils/rutaRegresoActividades';
 
 function rutaDeRegreso() {
-  const ruta = window.location.pathname;
-  const edicion = new URLSearchParams(window.location.search).get('edicion');
-  return ruta + (ruta.startsWith('/actividades/') && /^[1-9]\d*$/.test(edicion || '') ? '?edicion=' + edicion : '');
+  return rutaRegresoActividades(window.location.pathname, window.location.search);
 }
 
 export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {

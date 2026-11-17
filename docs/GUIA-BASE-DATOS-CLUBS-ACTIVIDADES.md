@@ -2,7 +2,7 @@
 
 El cambio principal es un catálogo compartido: `clubes` guarda tanto clubes como actividades. Cada registro tiene un `tipo`, mientras que sus procesos se guardan en tablas específicas. Así, una actividad puede tener ediciones e inscripciones sin convertirse en una membresía de club.
 
-Esta guía explica la unificación introducida en `6c6aef9` respecto a `8f08b82` y su compactación posterior de once a ocho tablas nuevas. Describe los archivos actuales de la rama. La estructura final está en [schema.sql](../backend/schema.sql), desde el comentario `CATALOGO UNIFICADO`. Los ejemplos con IDs y participantes son ficticios.
+Esta guía explica la unificación introducida en `6c6aef9` respecto a `8f08b82`, su compactación posterior de once a ocho tablas nuevas y la incorporación de dos tablas para el pase de lista. El módulo actual añade diez tablas físicas. La estructura final está en [schema.sql](../backend/schema.sql), desde el comentario `CATALOGO UNIFICADO`. Los ejemplos con IDs y participantes son ficticios.
 
 Para estudiar por partes, empieza por el catálogo y el diagrama, continúa con los registros y la publicación, y termina con las [consultas de práctica](sql/estudiar-catalogo.sql) y las preguntas de repaso.
 
@@ -20,9 +20,9 @@ Para estudiar por partes, empieza por el catálogo y el diagrama, continúa con 
 
 Durante el desarrollo también existió una versión con una tabla física `actividades` separada. La migración reconoce ese caso. En el modelo final, `actividades` es una **vista** y los datos principales se guardan en `clubes`.
 
-## Control de tablas: de once a ocho
+## Control de tablas: diez tablas actuales
 
-El conteo corresponde a las tablas que añade este módulo, no al total de tablas del proyecto. La versión compacta crea estas **ocho tablas físicas**:
+El conteo corresponde a las tablas que añade este módulo, no al total de tablas del proyecto. La versión compacta con pase de lista crea estas **diez tablas físicas**:
 
 | Tabla nueva | Qué almacena |
 | --- | --- |
@@ -34,6 +34,8 @@ El conteo corresponde a las tablas que añade este módulo, no al total de tabla
 | `publicaciones_imagenes` | Imágenes de cada publicación. |
 | `reacciones_catalogo` | Reacciones tanto de clubes como de ediciones. |
 | `migraciones_catalogo` | Correspondencias de IDs y traslados desde clubes anteriores. |
+| `actividades_asistencia_accesos` | Código privado de acceso al pase de lista de cada edición. |
+| `actividades_asistencias` | Una marca de asistencia por inscripción, su origen y última corrección. |
 
 Se modifican dos tablas existentes: `clubes`, para el catálogo compartido, y `actividad_clubes`, para la bitácora compartida. Las tablas operativas de clubes conservan sus funciones y reciben las restricciones de tipo correspondientes.
 
@@ -104,6 +106,8 @@ flowchart TD
     C["clubes"] -->|id_actividad| E["actividades_ediciones"]
     U["usuarios"] -->|id_usuario| R["actividades_registros"]
     E -->|id_edicion| R
+    E -->|id_edicion único| Q["actividades_asistencia_accesos"]
+    R -->|id_registro único| AS["actividades_asistencias"]
     E -->|id_edicion| O["actividades_aportes_catalogo"]
     R -->|id_registro| A["actividades_aportaciones"]
     O -->|id_opcion| A
@@ -137,8 +141,10 @@ Los nombres son distintos por compatibilidad con el módulo. El destino es la fi
 | `actividades_registros` | La inscripción de un usuario a una edición. | `id_edicion` e `id_usuario`. |
 | `actividades_aportes_catalogo` | Una opción de aportación, con unidad y mínimo. | `id_edicion`. |
 | `actividades_aportaciones` | El compromiso de un participante con una opción. | `id_registro` e `id_opcion`. |
+| `actividades_asistencia_accesos` | El acceso privado al pase de lista de una edición. | `id_edicion` único e `id_autor`. |
+| `actividades_asistencias` | La asistencia o su anulación, con fecha y origen. | `id_registro` único e `id_actor`. |
 
-`formularios`, `inscripciones`, `convocatorias`, `horarios_club`, `sesiones` y `asistencias` siguen atendiendo los procesos de clubes. Una inscripción `confirmado` en actividades expresa que el registro quedó confirmado; no acredita la asistencia física al evento.
+`formularios`, `inscripciones`, `convocatorias`, `horarios_club`, `sesiones` y `asistencias` siguen atendiendo los procesos de clubes. Una inscripción `confirmado` en actividades expresa que el registro quedó confirmado; la asistencia se registra por separado en `actividades_asistencias`. El código privado no se añade a `actividades_ediciones`, que también se consulta públicamente. Cada registro y cada corrección de asistencia se guardan junto con su entrada de bitácora en una transacción. Cancelar la inscripción conserva las marcas anteriores. Véase la [operación del pase de lista](ACTIVIDADES.md#pase-de-lista).
 
 ### Tablas de publicaciones
 
@@ -342,7 +348,7 @@ Esta consulta recupera el nombre general desde el catálogo y el nombre particul
 10. ¿Un registro `confirmado` demuestra que la persona asistió al evento?
 11. ¿Por qué una instalación nueva puede no tener `actividades_catalogo_anterior`?
 12. ¿Qué revisa el servidor que JSONB por sí solo no comprueba?
-13. ¿Por qué quedan ocho tablas nuevas aunque todavía veas cinco nombres anteriores?
+13. ¿Cómo quedan diez tablas nuevas aunque todavía veas cinco nombres anteriores?
 14. ¿Cómo se distingue una reacción de club de una reacción de edición?
 15. ¿Qué ocurre si falla la escritura de la bitácora durante una inscripción?
 
@@ -357,10 +363,10 @@ Esta consulta recupera el nombre general desde el catálogo y el nombre particul
 7. Conservando las columnas publicadas y guardando los cambios en `propuesta`, con su propio estado de revisión.
 8. Una vez en `publicaciones_oferta.contenido`; las cuatro imágenes apuntan a esa publicación.
 9. La FK comprueba que exista la fila. El trigger comprueba además que su tipo sea club.
-10. Confirma la inscripción. La asistencia física es otro dato.
+10. Confirma la inscripción. La asistencia se registra por separado en `actividades_asistencias`.
 11. Esa tabla aparece al convertir un catálogo separado que ya existía.
 12. Requisitos de la plantilla, opciones permitidas, tipos de respuesta y reglas de aportaciones, entre otros.
-13. Esos cinco nombres son vistas sobre las estructuras compartidas. Se fusionaron reacciones y correspondencias y se reutilizó una bitácora existente.
+13. Esos cinco nombres son vistas sobre las estructuras compartidas. La compactación dejó ocho tablas al fusionar reacciones y correspondencias y reutilizar una bitácora; el pase de lista añade dos tablas específicas.
 14. Ambas están en `reacciones_catalogo`: la de club tiene edición vacía; la de actividad apunta a su edición.
 15. La transacción se revierte y la inscripción no queda confirmada sin su entrada de historial.
 
@@ -376,7 +382,9 @@ Esta consulta recupera el nombre general desde el catálogo y el nombre particul
 | [actividadCatalogo.js](../backend/lib/actividadCatalogo.js) | Registro transaccional de acciones y resolución de su actividad y edición. |
 | [actividadConsultaRouter.js](../backend/lib/actividadConsultaRouter.js) | Consulta autorizada, filtros y paginación de la bitácora compartida. |
 | [catalogoMigracion.integration.test.mjs](../backend/tests/catalogoMigracion.integration.test.mjs) | Comprobaciones de IDs, historial, fotos y repetición del esquema. |
-| [catalogoCompacto.integration.test.mjs](../backend/tests/catalogoCompacto.integration.test.mjs) | Ocho tablas finales y conservación de datos al actualizar la versión de once. |
+| [catalogoCompacto.integration.test.mjs](../backend/tests/catalogoCompacto.integration.test.mjs) | Diez tablas finales y conservación de datos al actualizar la versión de once. |
+| [actividadesAsistencia.js](../backend/lib/actividadesAsistencia.js) | Acceso privado, registro propio, correcciones y bitácora del pase de lista. |
+| [actividadesAsistencia.integration.test.mjs](../backend/tests/actividadesAsistencia.integration.test.mjs) | Fechas, permisos, concurrencia, historial y migración del pase de lista. |
 
 Para estudiar la unificación original y la compactación actual desde la terminal del proyecto:
 

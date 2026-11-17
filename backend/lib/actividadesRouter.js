@@ -2,12 +2,14 @@ import { Router } from 'express';
 import { guardarPublicacionFotos } from './mediosOferta.js';
 import { migrarLegadoActividades } from './actividadesLegado.js';
 import { registrarActividadCatalogo } from './actividadCatalogo.js';
+import { montarAsistenciaActividades, consultarAsistencia, asistenciaPropia } from './actividadesAsistencia.js';
 import {
   ROLES_CREAN_ACTIVIDADES, ROLES_SUPERVISAN_ACTIVIDADES, REACCIONES_ACTIVIDAD,
   errorActividad, textoActividad, normalizarRecursoCatalogo, normalizarEdicionActividad,
   validarPublicacionEdicion, esDestacadaActividad, estadoRegistroActividad,
   validarRespuestasActividad, validarAportacionesActividad,
   normalizarOpcionAportacion,
+  disponibilidadAsistenciaActividad,
 } from './actividadesDominio.js';
 
 const FECHAS = ['fecha_inicio', 'fecha_fin', 'inscripcion_desde', 'inscripcion_hasta', 'destacada_desde', 'destacada_hasta'];
@@ -75,7 +77,7 @@ async function auditar(db, usuario, accion, detalle) {
 export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secretoAdmin, limpiarImagenes = async () => {}, limitarEscritura = (_req, _res, next) => next(), limitarSubida = (_req, _res, next) => next() }) {
   const router = Router();
   router.use((_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
-  for (const parametro of ['idActividad', 'idEdicion', 'idFoto', 'idAporte', 'idOpcion', 'idClub']) {
+  for (const parametro of ['idActividad', 'idEdicion', 'idFoto', 'idAporte', 'idOpcion', 'idClub', 'idRegistro']) {
     router.param(parametro, (_req, _res, next, valor) => {
       if (!/^[1-9]\d*$/.test(valor) || !Number.isSafeInteger(Number(valor))) return next(errorActividad('Identificador no válido'));
       next();
@@ -504,8 +506,20 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   });
 
   router.get('/mis-registros', autenticar, async (req, res) => {
-    const registros = (await db.query('SELECT r.*,e.nombre AS edicion_nombre,e.fecha_inicio::text,e.fecha_fin::text,a.nombre AS actividad_nombre,a.slug AS actividad_slug,a.url_imagen FROM actividades_registros r JOIN actividades_ediciones e ON e.id_edicion=r.id_edicion JOIN catalogo_recursos a ON a.id_actividad=e.id_actividad WHERE r.id_usuario=$1 ORDER BY e.fecha_inicio DESC NULLS LAST,r.id_registro DESC',[req.user.id])).rows;
-    for (const registro of registros) registro.aportaciones = await aportesRegistro(db, registro.id_registro);
+    const registros = (await db.query(`SELECT r.*,e.nombre AS edicion_nombre,e.fecha_inicio::text,e.fecha_fin::text,
+      e.requiere_registro,e.estado AS estado_edicion,a.estado AS estado_actividad,
+      a.nombre AS actividad_nombre,a.slug AS actividad_slug,a.url_imagen,
+      CASE WHEN asistencia.id_registro IS NULL THEN NULL ELSE json_build_object(
+        'estado',asistencia.estado,'registrada_en',asistencia.registrada_en,'origen',asistencia.origen) END AS asistencia
+      FROM actividades_registros r JOIN actividades_ediciones e ON e.id_edicion=r.id_edicion
+      JOIN catalogo_recursos a ON a.id_actividad=e.id_actividad
+      LEFT JOIN actividades_asistencias asistencia ON asistencia.id_registro=r.id_registro
+      WHERE r.id_usuario=$1 ORDER BY e.fecha_inicio DESC NULLS LAST,r.id_registro DESC`,[req.user.id])).rows;
+    for (const registro of registros) {
+      registro.aportaciones = await aportesRegistro(db, registro.id_registro);
+      registro.asistencia = asistenciaPropia(registro.asistencia);
+      registro.disponibilidad_asistencia = disponibilidadAsistenciaActividad({ ...registro, estado: registro.estado_edicion }, hoy());
+    }
     res.json(registros);
   });
 
@@ -515,7 +529,8 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const registro = (await db.query('SELECT * FROM actividades_registros WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id])).rows[0] || null;
     if (registro) registro.aportaciones = await aportesRegistro(db, registro.id_registro);
     const reaccion = (await db.query('SELECT reaccion FROM reacciones_catalogo WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id])).rows[0]?.reaccion || null;
-    res.json({ registro, reaccion });
+    res.json({ registro, reaccion, asistencia: await consultarAsistencia(db, registro?.id_registro),
+      disponibilidad_asistencia: disponibilidadAsistenciaActividad(edicion, hoy()) });
   });
 
   router.put('/ediciones/:idEdicion/registro', autenticar, limitarEscritura, async (req, res) => {
@@ -571,6 +586,10 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       else await cliente.query('DELETE FROM reacciones_catalogo WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id]);
       return { reaccion: req.body.reaccion || null, totales: (await cliente.query('SELECT reaccion, COUNT(*)::int AS total FROM reacciones_catalogo WHERE id_edicion = $1 GROUP BY reaccion', [edicion.id_edicion])).rows };
     }));
+  });
+
+  montarAsistenciaActividades(router, {
+    db, autenticar, limitarEscritura, hoy, obtenerEdicion, comprobarGestion, transaccion, auditar,
   });
 
   router.use(async (error, req, res, _next) => {

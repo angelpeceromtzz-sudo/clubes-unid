@@ -9,6 +9,7 @@ import { GaleriaFotosActividad } from '../components/actividades/GaleriaFotosAct
 import { NavegacionActividades, FechaActividad, EstadoActividad } from '../components/actividades/ActividadUI';
 import { BotonAccion } from '../components/ui/BotonAccion';
 import { Spinner } from '../components/ui/Spinner';
+import { FormularioAsistenciaActividad } from '../components/actividades/AsistenciaActividad';
 
 function ParticipacionEdicion({ edicion, onLoginClick }) {
   const { usuario, authReady } = useAutenticacion();
@@ -38,6 +39,12 @@ function ParticipacionEdicion({ edicion, onLoginClick }) {
     {edicion.requiere_registro && <section className={'rounded-2xl border p-5 sm:p-7 space-y-5 ' + cardCls} aria-label="Inscripción"><h3 className={'text-xl font-bold ' + tema.title}>Participa en esta edición</h3>
       {mensaje && <p role="status" className="text-emerald-700 dark:text-emerald-300">{mensaje}</p>}
       {!authReady || cargando ? <Spinner /> : !usuario ? <><p className={tema.subtitle}>Inicia sesión con tu cuenta institucional para consultar o completar tu registro.</p><BotonAccion onClick={onLoginClick}>Iniciar sesión para registrarme</BotonAccion></> : error ? <div role="alert"><p>{error}</p><BotonAccion onClick={recargar}>Volver a intentar</BotonAccion></div> : <RegistroActividad key={edicion.id_edicion + ':' + identidad + ':' + (datos?.registro?.actualizado_en || 'nuevo')} edicion={edicion} registro={datos?.registro} onGuardado={(texto) => { setMensaje(texto); recargar(); }} />}
+    </section>}
+    {usuario && datos?.registro && <section className={'rounded-2xl border p-5 sm:p-7 space-y-4 ' + cardCls} aria-label="Mi asistencia">
+      <h3 className={'text-xl font-bold ' + tema.title}>Mi asistencia</h3>
+      <FormularioAsistenciaActividad key={datos.registro.id_registro + ':' + (datos.asistencia?.estado || 'sin_registro')}
+        idEdicion={edicion.id_edicion} estadoInscripcion={datos.registro.estado} asistencia={datos.asistencia}
+        disponibilidad={datos.disponibilidad_asistencia} />
     </section>}
   </>;
 }

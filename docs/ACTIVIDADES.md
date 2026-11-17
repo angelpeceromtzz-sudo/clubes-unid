@@ -35,10 +35,11 @@ La [guía de estudio de la base de datos](GUIA-BASE-DATOS-CLUBS-ACTIVIDADES.md) 
 | Cupo, participación y niveles | Obligatorios para clubes |
 | Miembros, postulaciones, convocatorias y horarios | Procesos exclusivos de clubes, conservando sus tablas e IDs |
 | Ediciones, formularios configurables, asistentes y aportaciones | Procesos exclusivos de actividades |
+| Acceso al pase de lista y asistencia física por inscripción | `actividades_asistencia_accesos` y `actividades_asistencias`, exclusivas de actividades |
 | Publicación con una descripción y varias fotos | `publicaciones_oferta` y `publicaciones_imagenes`, compartidas |
 | Reacciones | Una por cuenta y club, o una por cuenta y edición |
 
-La estructura compacta añade **ocho tablas físicas** al proyecto: `actividades_ediciones`, `actividades_registros`, `actividades_aportes_catalogo`, `actividades_aportaciones`, `publicaciones_oferta`, `publicaciones_imagenes`, `reacciones_catalogo` y `migraciones_catalogo`. Se amplían las tablas existentes `clubes` y `actividad_clubes`.
+La estructura compacta añade **diez tablas físicas** al proyecto: `actividades_ediciones`, `actividades_registros`, `actividades_aportes_catalogo`, `actividades_aportaciones`, `publicaciones_oferta`, `publicaciones_imagenes`, `reacciones_catalogo`, `migraciones_catalogo`, `actividades_asistencia_accesos` y `actividades_asistencias`. Se amplían las tablas existentes `clubes` y `actividad_clubes`.
 
 `reacciones_catalogo` reúne las reacciones de ambos tipos. Para clubes, `id_edicion` queda vacío; para actividades, identifica una edición de esa misma actividad. Dos índices únicos parciales mantienen una reacción por cuenta y destino. `migraciones_catalogo.tipo` distingue las equivalencias de IDs (`equivalencia_actividad`) de los traslados explícitos desde clubes (`traslado_club`); cada caso tiene sus campos y restricciones.
 
@@ -64,11 +65,11 @@ Las entradas importadas conservan actor, acción, detalle JSONB y fecha. Obtiene
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/schema.sql
 ```
 
-El comando manual existente `node backend/migrate.js` aplica ese mismo archivo. No hace falta ejecutar después las migraciones de actividades. En una base vacía crea directamente las ocho tablas finales, sin crear un catálogo anterior de respaldo. Reconoce tanto el módulo separado como la versión unificada de once tablas y conserva sus datos al actualizar. Se verificó su repetición con datos existentes, sin duplicar registros ni sobrescribir las descripciones de las actividades.
+El comando manual existente `node backend/migrate.js` aplica ese mismo archivo. No hace falta ejecutar después las migraciones de actividades. En una base vacía crea directamente las diez tablas finales, sin crear un catálogo anterior de respaldo. Reconoce tanto el módulo separado como la versión unificada de once tablas y conserva sus datos al actualizar. Se verificó su repetición con datos existentes, sin duplicar registros ni sobrescribir las descripciones de las actividades.
 
 Para una base compartida, revisar el esquema y probar sobre una copia con respaldo antes de aplicarlo; el archivo también contiene la estructura de los demás módulos y bloquea escrituras mientras realiza cambios. El arranque de Express sigue sin ejecutarlo automáticamente. La versión nueva de la aplicación requiere terminar esta actualización antes de recibir tráfico.
 
-Las migraciones se conservan como alternativa para actualizar exclusivamente el módulo: `migrate-actividades.sql` y después `migrate-catalogo-unificado.sql` si aún no existía; solo la segunda si ya había actividades o la versión unificada de once tablas. La segunda incluye la compactación actual. Esta alternativa no se combina con la instalación mediante el esquema consolidado. Después de unificar, no se repiten las migraciones retiradas `migrate-actividades.sql` ni `migrate-actividades-galeria.sql`.
+Las migraciones se conservan como alternativa para actualizar exclusivamente el módulo: `migrate-actividades.sql` y después `migrate-catalogo-unificado.sql` si aún no existía; solo la segunda si ya había actividades o la versión unificada de once tablas. Después de unificar, aplicar `migrate-actividades-asistencia.sql`, que incorpora las dos tablas del pase de lista. Si la base ya tiene el catálogo compacto de ocho tablas, aplicar únicamente esta última migración. Esta alternativa no se combina con la instalación mediante el esquema consolidado. Después de unificar, no se repiten las migraciones retiradas `migrate-actividades.sql` ni `migrate-actividades-galeria.sql`.
 
 La instalación incorpora únicamente las descripciones e imágenes informativas existentes de Trineo y Misiones. No crea cuentas, ediciones, fechas, aportaciones, mínimos, tallas ni responsables ficticios. La configuración operativa posterior se hace desde el panel: tipo al crear, información, cupo y niveles de clubes, responsables, ediciones, preguntas, tallas, aportaciones, fechas y destacados. Los registros existentes conservan su tipo; el traslado revisado atiende los eventos registrados anteriormente como clubes.
 
@@ -101,6 +102,32 @@ El encargado puede pausar/reabrir inscripciones dentro del periodo aprobado. Los
 Las fotografías se presentan en una galería general del club o edición, con las más recientes primero, descripción, fecha y visor ampliado con botones, teclado y gestos. Desde el panel se seleccionan hasta diez fotos de hasta 5 MB cada una, con vista previa y la opción de quitarlas antes de enviarlas. La descripción se almacena una sola vez por publicación y se presenta con sus fotos. Se admiten JPG, PNG, WebP y GIF. No existe clasificación antes/después.
 
 La autorización por actividad se comprueba antes de procesar los archivos. El álbum se registra en una transacción; si falla, se revierten sus filas y se intenta limpiar sus archivos subidos. Las fotos de encargados requieren aprobación; las de Rectoría se publican directamente. Cada cuenta tiene una reacción por edición, que puede cambiar o retirar. El catálogo público se actualiza cada minuto y al volver a la pestaña para reflejar los cambios de fecha sin un proceso programado.
+
+## Pase de lista
+
+Cada edición con inscripciones tiene el apartado **Pase de lista**, dentro de su administración. El encargado actual y los supervisores con permisos de gestión pueden consultar la lista, generar una sola vez el acceso y realizar correcciones. La reasignación revoca el acceso del encargado anterior. El QR y el código de ocho caracteres se conservan para la edición; no se generan datos durante una consulta ni al migrar la base.
+
+El alumno escanea el QR, inicia sesión y pulsa **Registrar mi asistencia**. También puede escribir el código desde **Mis actividades** o desde el detalle de su inscripción. El inicio de sesión conserva la edición y el código del enlace. Se requiere cuenta activa, inscripción confirmada, actividad y edición publicadas, código correcto y fecha del campus dentro del inicio y fin del evento, ambos incluidos. Sin fecha final, solo se admite el día inicial. Se usa la zona de fechas de actividades existente, `America/Mexico_City`; la hora de inicio y las fechas o pausas de inscripción no limitan el pase de lista.
+
+Hay una asistencia por inscripción/edición, con fecha del servidor, origen (QR, código o manual) y autor. Los reintentos y los envíos simultáneos devuelven la misma marca y no repiten el evento de bitácora. La confirmación se muestra únicamente después de guardar en el servidor; no hay almacenamiento de asistencias sin conexión. El código se valida con el limitador de escrituras por cuenta existente. El acceso no aparece en las consultas públicas ni en la bitácora. Como el QR y el código pueden compartirse, la verificación física queda a cargo del encargado.
+
+La lista se actualiza cada 15 segundos mientras su apartado está abierto y la pestaña está visible, y al volver a ella. Permite buscar por nombre o matrícula, ver inscripciones confirmadas, asistencias registradas y confirmados sin asistencia. Se conservan visibles las marcas de inscripciones posteriormente canceladas o incompletas con su estado identificado; el total de asistencias incluye esas marcas históricas y puede superar el total de inscripciones confirmadas actuales. Sin marca se muestra **Sin asistencia registrada**, sin asignar ausencias, retardos o justificaciones.
+
+El registro manual y la corrección requieren motivo y se permiten fuera de las fechas del evento. Solo se marca presente a inscritos confirmados con cuenta activa; una marca existente puede anularse incluso si después se canceló la inscripción. Las anulaciones conservan el registro y su historial; el alumno debe pedir ayuda al encargado para restablecer una asistencia anulada. Cancelar una inscripción, archivar o modificar la publicación no elimina las asistencias. Cada corrección guarda el antes, el después, el actor y el motivo en la misma transacción que la marca.
+
+Contratos bajo `/api/actividades`, todos privados y sin caché:
+
+| Operación | Ruta | Entrada / respuesta |
+| --- | --- | --- |
+| Lista y acceso existentes, para gestión | `GET /gestion/ediciones/:idEdicion/asistencia` | Disponibilidad, acceso si existe, totales y registros; cada marca incluye origen, fecha, autor y último motivo |
+| Generar u obtener acceso estable | `POST /gestion/ediciones/:idEdicion/asistencia/acceso` | Devuelve `{ codigo }`; requiere publicación vigente e inscripciones |
+| Consulta propia, incluso histórica | `GET /ediciones/:idEdicion/mi-asistencia` | Edición, estado de inscripción, disponibilidad y asistencia propia |
+| Registrar llegada propia | `POST /ediciones/:idEdicion/asistencia` | `{ codigo, origen: 'qr' o 'codigo' }`; devuelve `{ asistencia }` |
+| Registrar o corregir manualmente | `PUT /gestion/ediciones/:idEdicion/asistencia/:idRegistro` | `{ estado: 'presente' o 'anulada', motivo }`; devuelve `{ asistencia }` |
+
+Las consultas existentes de **Mis actividades** y **Mi registro** también entregan `asistencia` (estado, fecha ISO y origen, o `null`) y `disponibilidad_asistencia`. Ningún alumno puede indicar la identidad de otra persona para registrar una llegada.
+
+Para una base ya unificada, probar y aplicar manualmente `backend/migrations/migrate-actividades-asistencia.sql` con respaldo previo, antes de desplegar backend y frontend. La migración es aditiva e idempotente; no se ejecuta al arrancar ni necesita el seed. No se ha aplicado a una base compartida como parte de esta implementación.
 
 ## Transición de clubes existentes
 
@@ -140,4 +167,4 @@ Las pruebas de dominio funcionan sin base de datos. Las pruebas de API, migraci�
 
 La implementación y las verificaciones locales no aplican migraciones ni trasladan registros en una base compartida. Su activación requiere actualizar esa base y desplegar las dos partes de la aplicación.
 
-`catalogoCompacto.integration.test.mjs` verifica las ocho tablas físicas, las cinco vistas compatibles, los destinos y duplicados de reacciones, la conservación de la bitácora al retirar un actor y la actualización desde once tablas mediante ambos procedimientos. También se prueban los permisos y filtros de la bitácora y la reversión de una operación si falla su registro.
+`catalogoCompacto.integration.test.mjs` verifica las diez tablas físicas, las cinco vistas compatibles, los destinos y duplicados de reacciones, la conservación de la bitácora al retirar un actor y la actualización desde once tablas mediante ambos procedimientos. `actividadesAsistencia.integration.test.mjs` prueba QR/código, permisos y reasignación, fechas inclusivas, cuentas inactivas, inscripciones canceladas o incompletas, concurrencia, correcciones, historial, limitación de intentos, repetición de migración y reversión ante un fallo de bitácora.

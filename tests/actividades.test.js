@@ -2,10 +2,40 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ELEMENTOS_NAV_ADMIN, ELEMENTOS_NAV_RECTORIA, ELEMENTOS_NAV_COORDINACION, ELEMENTOS_NAV_ALUMNO, ELEMENTOS_NAV_RESPONSABLE_CLUB, ELEMENTOS_NAV_MURAL } from '../src/constants/navegacion.js';
 import { normalizarActividad, normalizarRecursoCatalogo, normalizarEdicionActividad, camposPlantillaActividad, validarPublicacionEdicion, validarRespuestasActividad, validarAportacionesActividad, esDestacadaActividad, estadoRegistroActividad, fechaActividad } from '../shared/actividades.js';
+import { disponibilidadAsistenciaActividad, normalizarCodigoAsistencia } from '../shared/actividades.js';
+import { hoyEnCampus } from '../backend/lib/fechasEvento.js';
+import { rutaRegresoActividades } from '../src/utils/rutaRegresoActividades.js';
 
 const campos = camposPlantillaActividad('trineo').map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['CH', 'M', 'G'] } : campo);
 const edicion = { nombre: 'Edición de prueba', descripcion: '', lugar: 'Campus', fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', requiere_registro: true, campos_registro: campos, inscripcion_desde: '2026-11-01', inscripcion_hasta: '2026-12-04', destacable: true, destacada_desde: '2026-11-20', destacada_hasta: '2026-12-06', estado: 'publicada', inscripciones_habilitadas: true };
 const catalogo = [{ id_opcion: 1, nombre: 'Aportación de prueba', unidad: 'piezas', cantidad_minima: 2, activa: true }];
+
+test('el pase de lista incluye todos los días de la edición y es independiente de inscripciones y hora', () => {
+  const actividad = { ...edicion, estado_actividad: 'publicada', hora_inicio: '23:59', inscripciones_habilitadas: false };
+  assert.equal(disponibilidadAsistenciaActividad(actividad, '2026-12-04'), 'proxima');
+  for (const fecha of ['2026-12-05', '2026-12-06']) assert.equal(disponibilidadAsistenciaActividad(actividad, fecha), 'disponible');
+  assert.equal(disponibilidadAsistenciaActividad(actividad, '2026-12-07'), 'finalizada');
+  assert.equal(disponibilidadAsistenciaActividad({ ...actividad, fecha_fin: null }, '2026-12-06'), 'finalizada');
+  for (const cambio of [{ estado: 'archivada' }, { estado_actividad: 'borrador' }, { requiere_registro: false }, { fecha_inicio: null }]) {
+    assert.equal(disponibilidadAsistenciaActividad({ ...actividad, ...cambio }, '2026-12-05'), 'no_disponible');
+  }
+  assert.equal(hoyEnCampus(new Date('2026-12-05T05:59:59Z')), '2026-12-04');
+  assert.equal(hoyEnCampus(new Date('2026-12-05T06:00:00Z')), '2026-12-05');
+});
+
+test('el código de asistencia acepta espacios, guiones y minúsculas sin aceptar valores ambiguos', () => {
+  assert.equal(normalizarCodigoAsistencia(' abcd-2345 '), 'ABCD2345');
+  for (const invalido of [null, undefined, true, {}, 12345678, '', 'ABCD234', 'ABCD23456', 'ABCD01IO', 'ABC/2345', 'A'.repeat(33)]) {
+    assert.throws(() => normalizarCodigoAsistencia(invalido), { status: 400 });
+  }
+});
+
+test('iniciar sesión conserva edición y código del QR sin conservar parámetros ajenos a la actividad', () => {
+  assert.equal(rutaRegresoActividades('/actividades/asistencia/12', '?codigo=abcd-2345&code=oauth&state=externo'), '/actividades/asistencia/12?codigo=ABCD2345');
+  assert.equal(rutaRegresoActividades('/actividades/asistencia/12', '?codigo=invalido'), '/actividades/asistencia/12');
+  assert.equal(rutaRegresoActividades('/actividades/trineo', '?edicion=12&code=oauth'), '/actividades/trineo?edicion=12');
+  assert.equal(rutaRegresoActividades('/panel', '?codigo=ABCD2345&edicion=12'), '/panel');
+});
 
 test('Gestión de Clubs y su acceso al catálogo solo aparecen para Admin, Coordinación y Rectoría', () => {
   const menus = new Map([[1, ELEMENTOS_NAV_ALUMNO], [2, ELEMENTOS_NAV_RESPONSABLE_CLUB], [3, ELEMENTOS_NAV_ADMIN], [4, ELEMENTOS_NAV_RECTORIA], [5, ELEMENTOS_NAV_ALUMNO], [6, ELEMENTOS_NAV_MURAL], [7, ELEMENTOS_NAV_COORDINACION]]);

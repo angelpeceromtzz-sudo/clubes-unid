@@ -16,7 +16,9 @@ export function useActividadRecurso(ruta, identidad = 'publico', refrescar = fal
       if (activo) setEstado({ clave, datos: null, error: error.mensajeServidor || error.message });
     });
     cargar();
-    const intervalo = refrescar ? window.setInterval(cargar, 60000) : null;
+    const intervalo = refrescar ? window.setInterval(() => {
+      if (!document.hidden) cargar();
+    }, typeof refrescar === 'number' ? refrescar : 60000) : null;
     const alVolver = () => { if (!document.hidden) cargar(); };
     if (refrescar) document.addEventListener('visibilitychange', alVolver);
     if (refrescar) window.addEventListener('focus', alVolver);

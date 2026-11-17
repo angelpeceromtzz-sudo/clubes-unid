@@ -33,11 +33,31 @@ export const ETIQUETAS_ACTIVIDAD_CATALOGO = {
   foto_eliminada: 'Fotografía retirada',
   registro_confirmado: 'Inscripción confirmada',
   registro_cancelado: 'Inscripción cancelada',
+  asistencia_acceso_creado: 'Acceso al pase de lista generado',
+  asistencia_registrada: 'Asistencia registrada',
+  asistencia_corregida: 'Asistencia corregida por el encargado',
   legado_migrado: 'Participantes de un club anterior trasladados',
 };
 
 export function errorActividad(mensaje, status = 400) {
   return Object.assign(new Error(mensaje), { status });
+}
+
+// El servidor proporciona "hoy" en la zona del campus. La inscripción y la
+// hora de inicio no limitan el pase: incluye todos los días de la edición.
+export function disponibilidadAsistenciaActividad(edicion, hoy) {
+  if (!edicion.requiere_registro || edicion.estado !== 'publicada' ||
+      edicion.estado_actividad !== 'publicada' || !edicion.fecha_inicio) return 'no_disponible';
+  if (hoy < edicion.fecha_inicio) return 'proxima';
+  if (hoy > (edicion.fecha_fin || edicion.fecha_inicio)) return 'finalizada';
+  return 'disponible';
+}
+
+export function normalizarCodigoAsistencia(valor) {
+  if (typeof valor !== 'string' || valor.length > 32) throw errorActividad('Revisa el código de asistencia');
+  const codigo = valor.trim().toUpperCase().replace(/[ -]/g, '');
+  if (!/^[A-HJ-NP-Z2-9]{8}$/.test(codigo)) throw errorActividad('Escribe los ocho caracteres del código de asistencia');
+  return codigo;
 }
 
 export function textoActividad(valor, maximo, nombre, obligatorio = false) {

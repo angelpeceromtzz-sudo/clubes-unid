@@ -11,6 +11,7 @@ import {GestorFotosActividad} from './GestorFotosActividad';
 import {TrasladoActividad} from './GestionCatalogoExtra';
 import {BotonAccion} from '../ui/BotonAccion';
 import {Spinner} from '../ui/Spinner';
+import {PaseListaActividad} from './PaseListaActividad';
 
 export function OperacionEdicionActividad({ actividad, edicion, puedeAprobar, operarRevision, pendienteRevision, seccion = 'todo' }) {
   const { usuario } = useAutenticacion();
@@ -20,7 +21,7 @@ export function OperacionEdicionActividad({ actividad, edicion, puedeAprobar, op
   const [busqueda, setBusqueda] = useState('');
   const [opcionEditada, setOpcionEditada] = useState(null);
   const [verPublicada,setVerPublicada]=useState(false);
-  const [secciones,setSecciones]=useState({inscripciones:seccion==='participantes',aportes:seccion==='aportaciones',participantes:seccion==='participantes',fotos:seccion==='fotografias'});
+  const [secciones,setSecciones]=useState({inscripciones:seccion==='participantes',aportes:seccion==='aportaciones',participantes:seccion==='participantes',fotos:seccion==='fotografias',asistencia:seccion==='asistencia'});
   const alternar=(nombre)=>(evento)=>{const abierta=evento.currentTarget.open;setSecciones((actual)=>actual[nombre]===abierta ? actual : {...actual,[nombre]:abierta});};
   const [errorOperacion, setErrorOperacion] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -46,6 +47,7 @@ export function OperacionEdicionActividad({ actividad, edicion, puedeAprobar, op
     {visible('ediciones') && <section aria-label="Revisión de la edición" className="space-y-3 rounded-xl bg-amber-400/10 p-4"><h3 className="font-bold">Publicación de la edición: {edicion.nombre}</h3><p className="text-sm">Rectoría revisa las fechas, el formulario y las aportaciones de esta edición.</p><fieldset disabled={pendienteRevision}><AccionesRevisionActividad tipo="ediciones" entidad={edicion} puedeAprobar={puedeAprobar} operar={operarRevision} bloqueoPublicacion={actividad.estado!=='publicada' ? 'Aprueba primero la información general de la actividad.' : verPublicada && datos.edicion.propuesta ? 'Abre la propuesta para revisarla antes de aprobar.' : ''}/></fieldset></section>}
     {mensaje && <p role="status" className="text-emerald-700 dark:text-emerald-300">{mensaje}</p>}{errorOperacion && <p role="alert" className="text-red-600 dark:text-red-400">{errorOperacion}</p>}
     <fieldset disabled={pendiente} className="space-y-8">
+      {(visible('asistencia') || seccion==='participantes') && datos.edicion.requiere_registro && <details open={secciones.asistencia} onToggle={alternar('asistencia')} className="rounded-xl border border-slate-400/25 p-4"><summary className="cursor-pointer font-bold">Pase de lista</summary>{secciones.asistencia && <div className="pt-5"><PaseListaActividad key={edicion.id_edicion} edicion={datos.edicion}/></div>}</details>}
       {visible('participantes') && datos.edicion.requiere_registro && <details open={secciones.inscripciones} onToggle={alternar("inscripciones")} className="rounded-xl border border-slate-400/25 p-4"><summary className="cursor-pointer font-bold">Control de inscripciones</summary><div className="space-y-4 pt-5"><h3 className="text-xl font-bold">Inscripciones</h3><p className={tema.subtitle}>El periodo aprobado determina las fechas disponibles. Este control permite pausar o reabrir dentro de ese periodo.</p><BotonAccion variant="outline" onClick={() => operar(() => actividadService.abrirInscripciones(edicion.id_edicion, !datos.edicion.inscripciones_habilitadas))}>{datos.edicion.inscripciones_habilitadas ? 'Pausar inscripciones' : 'Habilitar inscripciones'}</BotonAccion></div></details>}
       {visible('aportaciones') && <details open={secciones.aportes} onToggle={alternar("aportes")} className="rounded-xl border border-slate-400/25 p-4"><summary className="cursor-pointer font-bold">Aportaciones</summary><div className="space-y-4 pt-5"><h3 className="text-xl font-bold">Catálogo de aportaciones</h3><p className={'text-sm ' + tema.subtitle}>Los cambios del catálogo conservan las condiciones de los compromisos existentes. El catálogo publicado lo actualiza Rectoría.</p>
         {datos.catalogo.map((opcion) => <div className="space-y-2 border-b border-slate-500/20 pb-4" key={opcion.id_opcion}><p className="font-semibold">{opcion.nombre} · mínimo {Number(opcion.cantidad_minima)} {opcion.unidad} · {opcion.activa ? 'Disponible' : 'Retirada'}</p><p className={'text-sm ' + tema.subtitle}>{opcion.descripcion}</p>{editarCatalogo && <div className="flex flex-wrap gap-3"><BotonAccion variant="outline" size="sm" onClick={() => setOpcionEditada(opcion)}>Editar opción</BotonAccion><BotonAccion variant="outline" size="sm" onClick={() => operar(() => actividadService.guardarOpcion(edicion.id_edicion, opcion.id_opcion, { activa: !opcion.activa }))}>{opcion.activa ? 'Retirar del catálogo' : 'Volver a ofrecer'}</BotonAccion></div>}</div>)}

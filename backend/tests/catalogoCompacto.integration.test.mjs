@@ -6,7 +6,7 @@ import pg from 'pg';
 import { registrarActividadCatalogo } from '../lib/actividadCatalogo.js';
 
 const connectionString = process.env.ACTIVIDADES_TEST_DATABASE_URL;
-const NUEVAS = ['actividades_ediciones', 'actividades_registros', 'actividades_aportes_catalogo', 'actividades_aportaciones', 'publicaciones_oferta', 'publicaciones_imagenes', 'reacciones_catalogo', 'migraciones_catalogo'].sort();
+const NUEVAS = ['actividades_ediciones', 'actividades_registros', 'actividades_aportes_catalogo', 'actividades_aportaciones', 'publicaciones_oferta', 'publicaciones_imagenes', 'reacciones_catalogo', 'migraciones_catalogo', 'actividades_asistencia_accesos', 'actividades_asistencias'].sort();
 const COMPATIBLES = ['catalogo_equivalencias_actividades', 'actividades_legado_clubes', 'actividades_reacciones', 'clubes_reacciones', 'actividades_historial'].sort();
 const leer = (ruta) => readFile(new URL(ruta, import.meta.url), 'utf8');
 
@@ -31,7 +31,7 @@ async function comprobarModelo(db) {
   assert.deepEqual(relaciones.filter((fila) => fila.relkind === 'v').map((fila) => fila.relname), COMPATIBLES);
 }
 
-test('catálogo compacto: ocho tablas, destinos protegidos y reacciones independientes', { skip: !connectionString }, async () => aislado(async (db) => {
+test('catálogo compacto: diez tablas, destinos protegidos y reacciones independientes', { skip: !connectionString }, async () => aislado(async (db) => {
   const sql = await leer('../schema.sql');
   await db.query(sql);
   await comprobarModelo(db);
@@ -80,7 +80,7 @@ for (const origen of ['schema', 'migracion']) test('catálogo compacto desde onc
   const traslados = (await db.query('SELECT * FROM actividades_legado_clubes')).rows;
   const historial = (await db.query('SELECT * FROM actividades_historial ORDER BY id')).rows;
   const originalClub = (await db.query('SELECT * FROM actividad_clubes WHERE id_evento=50')).rows[0];
-  const actualizar = origen === 'schema' ? sql : await leer('../migrations/migrate-catalogo-unificado.sql');
+  const actualizar = origen === 'schema' ? sql : (await leer('../migrations/migrate-catalogo-unificado.sql')) + '\n' + (await leer('../migrations/migrate-actividades-asistencia.sql'));
   await db.query(actualizar);
   await comprobarModelo(db);
   assert.deepEqual((await db.query('SELECT * FROM actividades_registros')).rows, registros);

@@ -27,6 +27,7 @@ import PaginaSelectorCampus from './pages/PaginaSelectorCampus';
 import PaginaOferta from './pages/PaginaOferta';
 import { PaginaActividades, MisActividades } from './pages/PaginaActividades';
 import { DetalleActividad } from './pages/DetalleActividad';
+import { PaginaAsistenciaActividad } from './pages/PaginaAsistenciaActividad';
 import { GestionActividades } from './pages/GestionActividades';
 import PaginaTerminosCondiciones from './pages/PaginaTerminosCondiciones';
 import PaginaAvisoPrivacidad from './pages/PaginaAvisoPrivacidad';
@@ -90,6 +91,11 @@ const RUTAS_CONOCIDAS = [
   '/campus/campeche/coordinacion/panel',
   '/encuesta/:slug',
   '/oferta',
+  '/actividades',
+  '/actividades/mis-registros',
+  '/actividades/gestion',
+  '/actividades/asistencia/:idEdicion',
+  '/actividades/:slug',
   '/experiencia-estudiantil',
   '/terminos',
   '/privacidad',
@@ -350,6 +356,7 @@ return (
         <Route path="/actividades" element={<PaginaActividades />} />
         <Route path="/actividades/mis-registros" element={<MisActividades onLoginClick={() => setShowLogin(true)} />} />
         <Route path="/actividades/gestion" element={<GestionActividades onLoginClick={() => setShowLogin(true)} />} />
+        <Route path="/actividades/asistencia/:idEdicion" element={<PaginaAsistenciaActividad key={location.pathname} onLoginClick={() => setShowLogin(true)} />} />
         <Route path="/actividades/:slug" element={<DetalleActividad onLoginClick={() => setShowLogin(true)} />} />
         <Route path="/campus/campeche/portal" element={
           <PaginaInicio key={catalogoKey} />
