@@ -28,6 +28,7 @@ export const UMBRALES = {
   notificacionesMinuto: enteroPositivo(process.env.RATE_LIMIT_NOTIFICACIONES_MINUTO, 30),
   lecturasPesadasMinuto: enteroPositivo(process.env.RATE_LIMIT_LECTURAS_MINUTO, 60),
   escrituraMinuto: enteroPositivo(process.env.RATE_LIMIT_ESCRITURA_MINUTO, 60),
+  preferenciasMinuto: enteroPositivo(process.env.RATE_LIMIT_PREFERENCIAS_MINUTO, 30),
 };
 
 const MENSAJE_429 =
@@ -178,6 +179,13 @@ export const limitadorNotificaciones = crearLimitador({
   identifier: 'notificaciones-usuario',
   windowMs: 60 * 1000,
   limit: UMBRALES.notificacionesMinuto,
+  keyGenerator: claveUsuario,
+});
+
+export const limitadorPreferencias = crearLimitador({
+  identifier: 'preferencias-usuario',
+  windowMs: 60 * 1000,
+  limit: UMBRALES.preferenciasMinuto,
   keyGenerator: claveUsuario,
 });
 
