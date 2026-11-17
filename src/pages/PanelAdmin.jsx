@@ -1,17 +1,25 @@
 /* Panel de administración: gestiona usuarios, clubes, anuncios e historial mediante NavegacionPanel. */
+import { useEffect } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
+import { usePanelNav } from '../contexts/PanelNavContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { usePanelAdmin } from '../hooks/usePanelAdmin';
+import { useVistaEjecutiva } from '../hooks/useVistaEjecutiva';
+import { VistaEjecutiva } from '../components/ejecutivo/VistaEjecutiva';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
 import { ELEMENTOS_NAV_ADMIN } from '../constants/navegacion';
 import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
-import { DashboardAdmin } from '../components/admin/DashboardAdmin';
 import { SeccionUsuarios } from '../components/admin/secciones/SeccionUsuarios';
 import { SeccionClubesAdmin } from '../components/admin/secciones/SeccionClubesAdmin';
 import { SeccionAnuncios } from '../components/admin/secciones/SeccionAnuncios';
+import { SeccionCalendarioAdmin } from '../components/admin/secciones/SeccionCalendarioAdmin';
+import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdmin';
+import { SeccionConvocatoriasAdmin } from '../components/admin/secciones/SeccionConvocatoriasAdmin';
+import { SeccionHorariosAdmin } from '../components/admin/secciones/SeccionHorariosAdmin';
 import { ModalFormularioClub } from '../components/admin/modales/ModalFormularioClub';
 import { ModalFormularioUsuario } from '../components/admin/modales/ModalFormularioUsuario';
 import { TablaHistorial } from '../components/admin/tablas/TablaHistorial';
+import { SeccionExpediente } from '../components/expediente/SeccionExpediente';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
 import { ModalPasswordAdmin } from '../components/admin/modales/ModalPasswordAdmin';
 import { SeccionDiapositivas } from '../components/admin/seccion-diapositivas/SeccionDiapositivas';
@@ -21,10 +29,20 @@ import { Spinner } from '../components/ui/Spinner';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { formatearNombre } from '../utils/formato';
+import { SeccionGestionClubs } from '../components/actividades/SeccionGestionClubs';
+import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
+import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
 
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
+  const asignacion=useActividadesAsignadas();
   const d = usePanelAdmin(usuario);
+  const ejecutivo = useVistaEjecutiva();
+  const { setPanelNav } = usePanelNav();
+  useEffect(() => {
+    setPanelNav({ itemsNav: ELEMENTOS_NAV_ADMIN, onNavChange: d.setVistaActiva });
+    return () => setPanelNav({ itemsNav: [], onNavChange: null });
+  }, [setPanelNav, d.setVistaActiva]);
 
   if (d.loading) {
     return (
@@ -46,62 +64,44 @@ export function PanelAdmin() {
           </div>
 
           <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
+          {d.vistaActiva === 'clubes' && <SeccionGestionClubs onVolver={d.refetchClubes}>
+            {(onPublicacion) => <SeccionClubesAdmin d={d} onPublicacion={onPublicacion}/>}
+          </SeccionGestionClubs>}
 
-          {d.vistaActiva === 'resumen' && (
-            <DashboardAdmin
-              totalAlumnos={d.totalAlumnos}
-              clubesActivos={d.clubesActivos}
-              totalInscripciones={d.totalInscripciones}
-              solicitudesPendientes={d.dashboardData?.solicitudesPendientes}
-              cargandoDashboard={d.cargandoDashboard}
-              inscripciones={d.dashboardData?.ultimasInscripciones}
-              inscripcionesPorMes={d.dashboardData?.inscripcionesPorMes}
-              clubes={d.clubes}
-              historial={d.historial}
-              historialLoading={d.historialLoading}
-              noticias={d.noticias.noticias}
-              noticiasLoading={d.noticias.cargando}
-            />
-          )}
+
+
+          {d.vistaActiva === 'resumen' && <>
+            <TarjetasMiActividad asignacion={asignacion}/>
+            <VistaEjecutiva d={ejecutivo} />
+          </>}
 
           {d.vistaActiva === 'usuarios' && <SeccionUsuarios d={d} />}
 
-          {d.vistaActiva === 'clubes' && <SeccionClubesAdmin d={d} />}
 
           {d.vistaActiva === 'anuncios' && (
-            <SeccionAnuncios clubes={d.clubes} onSuccess={() => d.setFeedback('Anuncio publicado correctamente')} />
+            <SeccionAnuncios clubes={d.clubes} onSuccess={() => {
+              d.setFeedback('Anuncio publicado correctamente');
+            }} />
           )}
 
           {d.vistaActiva === 'encuestas' && <SeccionEncuestas d={d} />}
+          {d.vistaActiva === 'calendario' && <SeccionCalendarioAdmin />}
+          {d.vistaActiva === 'mural' && <SeccionMuralAdmin />}
+          {d.vistaActiva === 'convocatorias' && <SeccionConvocatoriasAdmin />}
+          {d.vistaActiva === 'horarios' && <SeccionHorariosAdmin />}
 
           {d.vistaActiva === 'noticias' && (
-            <SeccionNoticias
-              noticias={d.noticias.noticias}
-              noticiasFiltradas={d.noticias.noticiasFiltradas}
-              cargando={d.noticias.cargando}
-              busqueda={d.noticias.busqueda}
-              setBusqueda={d.noticias.setBusqueda}
-              showModal={d.noticias.showModal}
-              editando={d.noticias.editando}
-              form={d.noticias.form}
-              enviando={d.noticias.enviando}
-              errorModal={d.noticias.errorModal}
-              abrirModalCrear={d.noticias.abrirModalCrear}
-              abrirModalEditar={d.noticias.abrirModalEditar}
-              cerrarModal={d.noticias.cerrarModal}
-              togglePublicada={d.noticias.togglePublicada}
-              eliminar={d.noticias.eliminar}
-              guardar={d.noticias.guardar}
-              handleFormChange={d.noticias.handleFormChange}
-              subirImagen={d.noticias.subirImagen}
-            />
+            <SeccionNoticias gestion={d.noticias} />
           )}
 
+          {d.vistaActiva === 'expediente' && <SeccionExpediente />}
           {d.vistaActiva === 'historial' && (
             <TablaHistorial
               historial={d.historial}
               historialLoading={d.historialLoading}
               onRefresh={d.cargarHistorial}
+              filtros={d.historialFiltros}
+              onFiltrosChange={d.setHistorialFiltros}
             />
           )}
 
@@ -169,7 +169,7 @@ export function PanelAdmin() {
           />
 
           <ModalConfirmacion
-            show={!!d.pendienteConfirmacionClub}
+            show={!!d.pendienteConfirmacionClub && d.pendienteConfirmacionClub.tipo === 'baja'}
             titulo="Dar de baja club"
             mensaje="¿Estás seguro de dar de baja este club? Los miembros serán notificados."
             textoConfirmar="Dar de Baja"
@@ -218,7 +218,7 @@ export function PanelAdmin() {
           />
           <ModalConfirmacion
             show={!!d.pendienteConfirmacionNoticia}
-            titulo="Eliminar noticia"
+            titulo="Eliminar publicación"
             mensaje={`¿Eliminar la publicación "${d.pendienteConfirmacionNoticia?.titulo || ''}"? Esta acción no se puede deshacer.`}
             textoConfirmar="Eliminar"
             varianteDanger

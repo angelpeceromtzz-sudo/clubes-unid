@@ -1,8 +1,8 @@
 -- ============================================================
 -- SCHEMA COMPLETO — CLUBS UNID
 -- ============================================================
--- Archivo consolidado generado a partir de los 22 scripts
--- de migración. Representa el estado final de la base de datos.
+-- Archivo consolidado con la estructura actual del proyecto.
+-- Incluye clubes, actividades, registros y publicaciones compartidas.
 --
 -- Uso:
 --   psql -U postgres -d clubs_bd -f schema.sql
@@ -13,6 +13,8 @@
 -- CATÁLOGOS
 -- ============================================================
 
+BEGIN;
+
 CREATE TABLE IF NOT EXISTS cat_roles (
     id_rol SERIAL PRIMARY KEY,
     nombre_rol VARCHAR(20) UNIQUE NOT NULL
@@ -20,10 +22,12 @@ CREATE TABLE IF NOT EXISTS cat_roles (
 
 INSERT INTO cat_roles (id_rol, nombre_rol) VALUES
     (1, 'alumno'),
-    (2, 'presidente'),
+    (2, 'responsable_club'),
     (3, 'admin'),
     (4, 'rectoria'),
-    (5, 'vicepresidente')
+    (5, 'vicepresidente'),
+    (6, 'responsable_mural'),
+    (7, 'coordinacion')
 ON CONFLICT (id_rol) DO UPDATE SET nombre_rol = EXCLUDED.nombre_rol;
 
 CREATE TABLE IF NOT EXISTS cat_estatus_clubes (
@@ -132,17 +136,30 @@ CREATE TABLE IF NOT EXISTS usuarios (
 CREATE INDEX IF NOT EXISTS idx_usuarios_institutional_id ON usuarios(institutional_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_deleted_at ON usuarios(deleted_at);
 
+-- ============================================================
+-- ACCESO MEDIANTE CÓDIGO OTP (Fase 1.5)
+-- ============================================================
+-- La tabla otp_codigos NO se crea desde schema.sql. Su fuente de verdad es
+-- migrations/migrate-otp-codigos.sql y se aplica de forma manual y controlada:
+--
+--   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+--     -f backend/migrations/migrate-otp-codigos.sql
+--
+-- Así, desplegar el backend no crea ni modifica esta tabla en una base
+-- compartida. migrate.js ya no se ejecuta al arrancar.
+
 CREATE TABLE IF NOT EXISTS clubes (
     id_club SERIAL PRIMARY KEY,
     nombre_club VARCHAR(100) NOT NULL,
     descripcion TEXT,
     categoria VARCHAR(50),
     participacion VARCHAR(20) NOT NULL DEFAULT 'mixta' CONSTRAINT chk_club_participacion CHECK (participacion IN ('masculina', 'femenina', 'mixta')),
-    cupo_maximo INT NOT NULL CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo > 0),
-    id_presidente INT,
+    cupo_maximo INT NOT NULL CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo IN (10, 15, 20, 25, 30, 40, 50)),
+    lugar_actividades VARCHAR(255),
+    id_responsable_club INT,
     id_vicepresidente INT,
     imagen_portada VARCHAR(255),
-    id_estatus_club INT NOT NULL DEFAULT 1,
+    id_estatus_club INT NOT NULL DEFAULT 2,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     horario VARCHAR(100) DEFAULT '',
     max_postulaciones INTEGER DEFAULT NULL,
@@ -150,10 +167,20 @@ CREATE TABLE IF NOT EXISTS clubes (
     cerrada_manualmente BOOLEAN DEFAULT FALSE,
     fecha_apertura_programada TIMESTAMPTZ DEFAULT NULL,
     fecha_limite_cierre TIMESTAMPTZ DEFAULT NULL,
-    CONSTRAINT fk_club_presidente FOREIGN KEY (id_presidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_club_presidente FOREIGN KEY (id_responsable_club) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_vicepresidente FOREIGN KEY (id_vicepresidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_estatus FOREIGN KEY (id_estatus_club) REFERENCES cat_estatus_clubes(id_estatus_club) ON DELETE RESTRICT
 );
+
+DO $$
+BEGIN
+  ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_cupo_positivo;
+  ALTER TABLE clubes ADD CONSTRAINT chk_cupo_positivo CHECK (cupo_maximo IN (10, 15, 20, 25, 30, 40, 50));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS lugar_actividades VARCHAR(255);
+ALTER TABLE clubes ALTER COLUMN id_estatus_club SET DEFAULT 2;
 
 CREATE TABLE IF NOT EXISTS inscripciones (
     id_inscripcion SERIAL PRIMARY KEY,
@@ -243,7 +270,7 @@ ALTER TABLE formularios DROP COLUMN IF EXISTS turno;
 CREATE TABLE IF NOT EXISTS convocatorias (
     id_convocatoria SERIAL PRIMARY KEY,
     id_club INTEGER NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
-    id_presidente INT,
+    id_responsable_club INT,
     bloque CHAR(1) NOT NULL,
     periodo VARCHAR(50) NOT NULL,
     fecha DATE,
@@ -264,7 +291,7 @@ CREATE INDEX IF NOT EXISTS idx_conv_club ON convocatorias(id_club);
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'fk_formulario_convocatoria'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_formulario_convocatoria' AND conrelid='formularios'::regclass
     ) THEN
         ALTER TABLE formularios
             ADD CONSTRAINT fk_formulario_convocatoria
@@ -344,6 +371,8 @@ CREATE TABLE IF NOT EXISTS actividad_clubes (
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_fecha ON actividad_clubes(fecha_creacion DESC);
 CREATE INDEX IF NOT EXISTS idx_actividad_clubes_club ON actividad_clubes(id_club);
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_club_id_responsable_club ON clubes (id_responsable_club) WHERE id_responsable_club IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS diapositivas_hero (
     id_diapositiva SERIAL PRIMARY KEY,
     titulo VARCHAR(200) NOT NULL,
@@ -368,6 +397,9 @@ CREATE TABLE IF NOT EXISTS noticias (
     categoria VARCHAR(20) NOT NULL DEFAULT 'informativo'
         CONSTRAINT chk_noticia_categoria CHECK (categoria IN ('promocion', 'evento', 'informativo')),
     fecha_evento DATE,
+    fecha_fin_evento DATE,
+    mostrar_en_mural BOOLEAN NOT NULL DEFAULT FALSE,
+    solo_calendario BOOLEAN NOT NULL DEFAULT FALSE,
     hora_evento TIME,
     lugar_evento VARCHAR(200),
     categoria_evento VARCHAR(20) NOT NULL DEFAULT 'social'
@@ -380,16 +412,19 @@ CREATE TABLE IF NOT EXISTS noticias (
 -- Migración idempotente: en bases ya existentes la columna no está.
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria VARCHAR(20) NOT NULL DEFAULT 'informativo';
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS fecha_evento DATE;
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS fecha_fin_evento DATE;
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS mostrar_en_mural BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE noticias ADD COLUMN IF NOT EXISTS solo_calendario BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS hora_evento TIME;
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS lugar_evento VARCHAR(200);
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria_evento VARCHAR(20) NOT NULL DEFAULT 'social';
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS subtitulo VARCHAR(300);
-UPDATE noticias SET categoria_evento = 'social' WHERE categoria_evento NOT IN ('social', 'deportivo', 'cultural');
+UPDATE noticias SET categoria_evento = 'social' WHERE categoria_evento NOT IN ('social', 'deportivo', 'cultural', 'examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite');
 ALTER TABLE noticias ALTER COLUMN categoria_evento SET DEFAULT 'social';
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_categoria') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_categoria' AND conrelid='noticias'::regclass) THEN
         ALTER TABLE noticias
             ADD CONSTRAINT chk_noticia_categoria CHECK (categoria IN ('promocion', 'evento', 'informativo'));
     END IF;
@@ -397,18 +432,175 @@ END $$;
 
 DO $$
 BEGIN
-    IF EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'chk_noticia_categoria_evento'
-          AND pg_get_constraintdef(oid) LIKE '%general%'
-    ) THEN
-        ALTER TABLE noticias DROP CONSTRAINT chk_noticia_categoria_evento;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_categoria_evento') THEN
-        ALTER TABLE noticias ADD CONSTRAINT chk_noticia_categoria_evento
-            CHECK (categoria_evento IN ('social', 'deportivo', 'cultural'));
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_periodo_evento' AND conrelid='noticias'::regclass) THEN
+        ALTER TABLE noticias ADD CONSTRAINT chk_noticia_periodo_evento
+            CHECK (fecha_fin_evento IS NULL OR (fecha_evento IS NOT NULL AND fecha_fin_evento >= fecha_evento));
     END IF;
 END $$;
+
+-- Las fechas académicas son registros independientes de las noticias y eventos.
+CREATE TABLE IF NOT EXISTS fechas_calendario (
+    id_fecha SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    tipo_fecha VARCHAR(20) NOT NULL CHECK (tipo_fecha IN ('examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite')),
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE,
+    nota TEXT,
+    url_imagen VARCHAR(500),
+    publicada BOOLEAN NOT NULL DEFAULT TRUE,
+    mostrar_en_mural BOOLEAN NOT NULL DEFAULT FALSE,
+    id_autor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    id_noticia_origen INT UNIQUE,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_fecha_calendario_periodo CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio)
+);
+
+ALTER TABLE fechas_calendario
+    ADD COLUMN IF NOT EXISTS mostrar_en_mural BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Copia y retirada del origen en una sola sentencia: si falla la copia, se
+-- conservan los originales. La clave de origen evita duplicados al reejecutar.
+WITH trasladadas AS (
+    INSERT INTO fechas_calendario (titulo, tipo_fecha, fecha_inicio, fecha_fin, nota, url_imagen,
+                                  publicada, id_autor, id_noticia_origen, fecha_creacion, fecha_actualizacion)
+    SELECT titulo,
+           CASE WHEN categoria_evento IN ('examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite')
+                THEN categoria_evento ELSE 'academico' END,
+           fecha_evento, fecha_fin_evento,
+           NULLIF(CONCAT_WS(E'\n', CASE WHEN contenido <> titulo THEN contenido END,
+                           CASE WHEN hora_evento IS NOT NULL THEN 'Hora: ' || TO_CHAR(hora_evento, 'HH24:MI') END,
+                           CASE WHEN lugar_evento IS NOT NULL THEN 'Lugar: ' || lugar_evento END), ''),
+           url_imagen, publicada, id_autor, id_noticia, fecha_publicacion, fecha_actualizacion
+    FROM noticias
+    WHERE fecha_evento IS NOT NULL AND
+          (solo_calendario = TRUE OR (categoria = 'evento' AND categoria_evento IN ('examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite')))
+    ON CONFLICT (id_noticia_origen) DO UPDATE SET titulo = EXCLUDED.titulo, tipo_fecha = EXCLUDED.tipo_fecha,
+        fecha_inicio = EXCLUDED.fecha_inicio, fecha_fin = EXCLUDED.fecha_fin, nota = EXCLUDED.nota,
+        url_imagen = EXCLUDED.url_imagen, publicada = EXCLUDED.publicada, id_autor = EXCLUDED.id_autor,
+        fecha_actualizacion = EXCLUDED.fecha_actualizacion
+    RETURNING id_noticia_origen
+)
+DELETE FROM noticias WHERE id_noticia IN (SELECT id_noticia_origen FROM trasladadas);
+
+UPDATE noticias SET categoria_evento = 'social' WHERE categoria_evento NOT IN ('social', 'deportivo', 'cultural');
+DO $$
+DECLARE definicion TEXT;
+BEGIN
+    SELECT pg_get_constraintdef(oid) INTO definicion FROM pg_constraint
+    WHERE conname='chk_noticia_categoria_evento' AND conrelid='noticias'::regclass;
+    IF definicion LIKE '%examen%' OR definicion LIKE '%general%' THEN
+        ALTER TABLE noticias DROP CONSTRAINT chk_noticia_categoria_evento;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_categoria_evento' AND conrelid='noticias'::regclass) THEN
+        ALTER TABLE noticias ADD CONSTRAINT chk_noticia_categoria_evento CHECK (categoria_evento IN ('social', 'deportivo', 'cultural'));
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_fechas_calendario_inicio ON fechas_calendario(fecha_inicio);
+
+-- ============================================================
+-- PBI-17 — Flujo de aprobación previa de publicaciones
+-- ============================================================
+-- `status` es la fuente de verdad del estado editorial:
+--   draft     Borrador                  pendiente  Pendiente de aprobación
+--   published Publicada                 rejected   Rechazada (con motivo)
+--
+-- `publicada` se conserva como columna ESPEJO (`publicada = status='published'`)
+-- para no romper a los lectores actuales: panel, `/eventos`,
+-- `intereses_eventos` y cualquier query que todavía compare esa bandera.
+--
+-- Idempotente y seguro de re-ejecutar: el backfill sólo corre la PRIMERA vez,
+-- es decir, cuando la columna se acaba de crear. Reaplicar el script sobre una
+-- base que ya guarda estados no los pisa.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'noticias'
+          AND column_name = 'status'
+    ) THEN
+        ALTER TABLE noticias ADD COLUMN status VARCHAR(20);
+
+        -- Lo que ya estaba publicado sigue publicado; todo lo demás queda como
+        -- borrador y de ahí entra al flujo de revisión.
+        UPDATE noticias SET status = CASE WHEN publicada THEN 'published' ELSE 'draft' END;
+
+        ALTER TABLE noticias ALTER COLUMN status SET DEFAULT 'draft';
+        ALTER TABLE noticias ALTER COLUMN status SET NOT NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'noticias'
+          AND column_name = 'motivo_rechazo'
+    ) THEN
+        ALTER TABLE noticias ADD COLUMN motivo_rechazo TEXT;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'noticias'
+          AND column_name = 'fecha_revision'
+    ) THEN
+        ALTER TABLE noticias ADD COLUMN fecha_revision TIMESTAMPTZ;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_noticia_status' AND conrelid='noticias'::regclass) THEN
+        ALTER TABLE noticias
+            ADD CONSTRAINT chk_noticia_status
+            CHECK (status IN ('draft', 'pending', 'published', 'rejected'));
+    END IF;
+END $$;
+
+-- Alinea la bandera espejo con el estado que ya traía cada fila (sólo toca las
+-- que difieren, así una re-ejecución no escribe de más).
+UPDATE noticias
+SET publicada = (status = 'published')
+WHERE publicada IS DISTINCT FROM (status = 'published');
+
+-- Invariante en la base: nadie puede dejar `publicada` desincronizada de
+-- `status`, ni publicar sin pasar por `published`. Protege también contra un
+-- backend desplegado con código viejo que sólo escriba la bandera.
+CREATE OR REPLACE FUNCTION fn_noticias_espejo_publicada() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        -- Alta con la bandera encendida y sin estado explícito: era el
+        -- comportamiento de "publicar directo" anterior al flujo.
+        IF NEW.publicada AND NEW.status = 'draft' THEN
+            NEW.status := 'published';
+        END IF;
+    ELSIF NEW.status IS NOT DISTINCT FROM OLD.status
+          AND NEW.publicada IS DISTINCT FROM OLD.publicada THEN
+        -- Sólo movieron la bandera (cliente viejo): el estado la sigue.
+        NEW.status := CASE WHEN NEW.publicada THEN 'published' ELSE 'draft' END;
+        IF NEW.status <> 'rejected' THEN
+            NEW.motivo_rechazo := NULL;
+        END IF;
+    END IF;
+
+    NEW.publicada := (NEW.status = 'published');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_noticias_espejo_publicada ON noticias;
+CREATE TRIGGER trg_noticias_espejo_publicada
+    BEFORE INSERT OR UPDATE ON noticias
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_noticias_espejo_publicada();
+
+CREATE INDEX IF NOT EXISTS idx_noticias_status ON noticias(status);
+-- Filtra el feed público por estado y fecha; parcial porque sólo le interesan
+-- las publicadas.
+CREATE INDEX IF NOT EXISTS idx_noticias_publicadas_fecha
+    ON noticias(fecha_publicacion DESC)
+    WHERE status = 'published';
 
 CREATE TABLE IF NOT EXISTS intereses_eventos (
     id_noticia INT NOT NULL REFERENCES noticias(id_noticia) ON DELETE CASCADE,
@@ -474,26 +666,8 @@ CREATE INDEX IF NOT EXISTS idx_clubes_niveles_nivel ON clubes_niveles(id_nivel);
 -- VISTAS
 -- ============================================================
 
-DROP VIEW IF EXISTS clubes_con_estado;
-
-CREATE OR REPLACE VIEW clubes_con_estado AS
-SELECT
-  cl.*,
-  COUNT(f.id_formulario) AS formularios_recibidos,
-  CASE
-    WHEN cl.cerrada_manualmente = TRUE                           THEN 'cerrado'
-    WHEN cl.fecha_apertura_programada IS NOT NULL
-     AND NOW() < cl.fecha_apertura_programada                    THEN 'proximo'
-    WHEN cl.max_postulaciones IS NOT NULL
-     AND COUNT(f.id_formulario) >= cl.max_postulaciones           THEN 'lleno'
-    WHEN cl.fecha_limite_cierre IS NOT NULL
-     AND NOW() > cl.fecha_limite_cierre                           THEN 'cerrado'
-    WHEN cl.fecha_apertura_programada IS NULL                     THEN 'cerrado'
-    ELSE 'abierto'
-  END AS estado_calculado
-FROM clubes cl
-LEFT JOIN formularios f ON f.id_club = cl.id_club
-GROUP BY cl.id_club;
+-- La vista clubes_con_estado se define al final del archivo (BUG-01) para
+-- contar únicamente las postulaciones del ciclo de inscripción vigente.
 
 -- ============================================================
 -- FUNCIONES Y TRIGGERS
@@ -750,7 +924,7 @@ CREATE TABLE IF NOT EXISTS detalle_respuestas (
     texto_otro   TEXT,
     CONSTRAINT chk_detalle_valor CHECK (num_nonnulls(id_opcion, texto, numero) = 1),
     CONSTRAINT chk_detalle_texto CHECK (char_length(texto) <= 2000),
-    CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 200),
+    CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70),
     CONSTRAINT fk_detalle_respuesta FOREIGN KEY (id_respuesta) REFERENCES respuestas_encuesta(id_respuesta) ON DELETE CASCADE,
     -- Integridad histórica: con respuestas registradas, ni la pregunta ni la
     -- opción se pueden borrar (RESTRICT, no CASCADE).
@@ -774,7 +948,7 @@ ALTER TABLE detalle_respuestas
     DROP CONSTRAINT IF EXISTS chk_detalle_texto_otro;
 
 ALTER TABLE detalle_respuestas
-    ADD CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 200);
+    ADD CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70);
 
 -- Índices para las consultas de resultados
 CREATE INDEX IF NOT EXISTS idx_preguntas_encuesta        ON preguntas(id_encuesta);
@@ -824,7 +998,6 @@ ALTER TABLE preguntas           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE opciones_pregunta   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE respuestas_encuesta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE detalle_respuestas  ENABLE ROW LEVEL SECURITY;
-
 
 -- ============================================================
 -- MODULO ASISTENCIA V1 (PBI-05) — integra al arranque
@@ -1094,3 +1267,1011 @@ SELECT s.*,
        jsonb_array_length(s.integrantes_snapshot) AS total_integrantes,
        (SELECT COUNT(*) FROM asistencias a WHERE a.id_sesion = s.id_sesion) AS registradas
 FROM sesiones s;
+
+-- Publicaciones propias del mural, independientes del feed de noticias.
+CREATE TABLE IF NOT EXISTS publicaciones_mural (
+    id_publicacion SERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    subtitulo VARCHAR(300),
+    contenido TEXT NOT NULL,
+    url_imagen VARCHAR(500),
+    enlace_url VARCHAR(2048),
+    enlace_texto VARCHAR(80),
+    publicada BOOLEAN NOT NULL DEFAULT FALSE,
+    destacada BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_retiro DATE,
+    id_autor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Flujo de aprobación previa para publicaciones del mural.
+-- El rol responsable_mural crea y edita; Coordinación (admin) aprueba o devuelve.
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS status VARCHAR(20);
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS motivo_rechazo TEXT;
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS id_revisor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS fecha_revision TIMESTAMPTZ;
+ALTER TABLE publicaciones_mural ADD COLUMN IF NOT EXISTS enviado_revision_at TIMESTAMPTZ;
+
+-- Migración idempotente: publicada heredado -> status.
+UPDATE publicaciones_mural
+SET status = CASE WHEN publicada THEN 'published' ELSE 'draft' END
+WHERE status IS NULL;
+
+ALTER TABLE publicaciones_mural ALTER COLUMN status SET DEFAULT 'draft';
+ALTER TABLE publicaciones_mural ALTER COLUMN status SET NOT NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_mural_status' AND conrelid='publicaciones_mural'::regclass) THEN
+        ALTER TABLE publicaciones_mural ADD CONSTRAINT chk_mural_status
+            CHECK (status IN ('draft', 'pending', 'published', 'rejected'));
+    END IF;
+END $$;
+
+-- Invariante: publicada siempre refleja status (protege código anterior).
+CREATE OR REPLACE FUNCTION fn_mural_espejo_publicada() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.publicada AND NEW.status = 'draft' THEN
+            NEW.status := 'published';
+        END IF;
+    ELSIF NEW.status IS NOT DISTINCT FROM OLD.status
+          AND NEW.publicada IS DISTINCT FROM OLD.publicada THEN
+        NEW.status := CASE WHEN NEW.publicada THEN 'published' ELSE 'draft' END;
+        IF NEW.status <> 'rejected' THEN
+            NEW.motivo_rechazo := NULL;
+        END IF;
+    END IF;
+    NEW.publicada := (NEW.status = 'published');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_mural_espejo_publicada ON publicaciones_mural;
+CREATE TRIGGER trg_mural_espejo_publicada
+    BEFORE INSERT OR UPDATE ON publicaciones_mural
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_mural_espejo_publicada();
+
+CREATE INDEX IF NOT EXISTS idx_mural_status ON publicaciones_mural(status);
+CREATE INDEX IF NOT EXISTS idx_mural_visibilidad ON publicaciones_mural(publicada, status, fecha_retiro);
+CREATE TABLE IF NOT EXISTS configuracion_mural (
+    id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    url_publica VARCHAR(2048)
+);
+ALTER TABLE publicaciones_mural ENABLE ROW LEVEL SECURITY;
+ALTER TABLE configuracion_mural ENABLE ROW LEVEL SECURITY;
+
+-- PBI-13: horarios oficiales y propuestas revisadas por Coordinación (admin).
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS version_horario INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS espacios_club (
+    id_espacio SERIAL PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL,
+    nombre_normalizado TEXT GENERATED ALWAYS AS (LOWER(REGEXP_REPLACE(TRIM(nombre), '\s+', ' ', 'g'))) STORED,
+    CONSTRAINT uq_espacio_nombre UNIQUE (nombre_normalizado)
+);
+INSERT INTO espacios_club(nombre)
+SELECT DISTINCT TRIM(lugar) FROM horarios_club WHERE TRIM(lugar) <> ''
+ON CONFLICT (nombre_normalizado) DO NOTHING;
+ALTER TABLE horarios_club ADD COLUMN IF NOT EXISTS id_espacio INT REFERENCES espacios_club(id_espacio);
+ALTER TABLE horarios_club ADD COLUMN IF NOT EXISTS vigencia_inicio DATE;
+ALTER TABLE horarios_club ADD COLUMN IF NOT EXISTS vigencia_fin DATE;
+UPDATE horarios_club h SET id_espacio = e.id_espacio FROM espacios_club e
+WHERE h.id_espacio IS NULL AND e.nombre_normalizado = LOWER(REGEXP_REPLACE(TRIM(h.lugar), '\s+', ' ', 'g'));
+CREATE TABLE IF NOT EXISTS solicitudes_horario (
+    id_solicitud SERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_solicitante INT NOT NULL REFERENCES usuarios(id_usuario),
+    estado VARCHAR(15) NOT NULL DEFAULT 'borrador' CHECK (estado IN ('borrador', 'pendiente', 'aprobado', 'rechazado')),
+    version_base INTEGER NOT NULL,
+    detalle JSONB NOT NULL CHECK (JSONB_TYPEOF(detalle) = 'array'),
+    vigencia_inicio DATE NOT NULL,
+    vigencia_fin DATE,
+    id_revisor INT REFERENCES usuarios(id_usuario),
+    observaciones TEXT,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (vigencia_fin IS NULL OR vigencia_fin >= vigencia_inicio)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_solicitud_horario_activa ON solicitudes_horario(id_club) WHERE estado IN ('borrador', 'pendiente');
+CREATE TABLE IF NOT EXISTS historial_solicitudes_horario (
+    id_historial SERIAL PRIMARY KEY,
+    id_solicitud INT NOT NULL REFERENCES solicitudes_horario(id_solicitud) ON DELETE CASCADE,
+    id_actor INT NOT NULL REFERENCES usuarios(id_usuario),
+    accion VARCHAR(30) NOT NULL,
+    observaciones TEXT,
+    fecha TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE espacios_club ENABLE ROW LEVEL SECURITY;
+ALTER TABLE solicitudes_horario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE historial_solicitudes_horario ENABLE ROW LEVEL SECURITY;
+
+-- PBI-12: el presidente propone; únicamente admin revisa y publica.
+CREATE TABLE IF NOT EXISTS solicitudes_convocatoria (
+    id_solicitud SERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_solicitante INT NOT NULL REFERENCES usuarios(id_usuario),
+    configuracion JSONB NOT NULL,
+    estado VARCHAR(15) NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente','aprobado','rechazado','vencido')),
+    id_revisor INT REFERENCES usuarios(id_usuario),
+    observaciones TEXT,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_revision TIMESTAMPTZ
+);
+ALTER TABLE solicitudes_convocatoria DROP CONSTRAINT IF EXISTS solicitudes_convocatoria_estado_check;
+ALTER TABLE solicitudes_convocatoria ADD CONSTRAINT solicitudes_convocatoria_estado_check CHECK (estado IN ('pendiente','aprobado','rechazado','vencido'));
+CREATE UNIQUE INDEX IF NOT EXISTS uq_convocatoria_pendiente ON solicitudes_convocatoria(id_club) WHERE estado = 'pendiente';
+ALTER TABLE solicitudes_convocatoria ENABLE ROW LEVEL SECURITY;
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS estado_revision VARCHAR(15) NOT NULL DEFAULT 'preparacion' CHECK (estado_revision IN ('preparacion','pendiente','aprobado','rechazado','vencido'));
+ALTER TABLE convocatorias DROP CONSTRAINT IF EXISTS convocatorias_estado_revision_check;
+ALTER TABLE convocatorias ADD CONSTRAINT convocatorias_estado_revision_check CHECK (estado_revision IN ('preparacion','pendiente','aprobado','rechazado','vencido'));
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS id_revisor INT REFERENCES usuarios(id_usuario);
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS observaciones TEXT;
+ALTER TABLE convocatorias ADD COLUMN IF NOT EXISTS fecha_revision TIMESTAMPTZ;
+UPDATE convocatorias SET estado_revision = 'aprobado' WHERE enviada = TRUE AND estado_revision <> 'aprobado';
+
+-- ============================================================
+-- BUG-01: cada convocatoria de inscripción tiene su propio conteo.
+-- Los formularios históricos se conservan, pero sólo cuentan para
+-- el ciclo de inscripción al que pertenecen.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS convocatorias_inscripcion (
+    id_convocatoria_inscripcion SERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_solicitud INT REFERENCES solicitudes_convocatoria(id_solicitud) ON DELETE SET NULL,
+    fecha_apertura_programada TIMESTAMPTZ,
+    fecha_limite_cierre TIMESTAMPTZ,
+    max_postulaciones INT,
+    fecha_publicacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_convocatoria_inscripcion_club
+    ON convocatorias_inscripcion(id_club, fecha_publicacion DESC);
+ALTER TABLE convocatorias_inscripcion ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS id_convocatoria_inscripcion_actual INT;
+ALTER TABLE formularios ADD COLUMN IF NOT EXISTS id_convocatoria_inscripcion INT;
+CREATE INDEX IF NOT EXISTS idx_formularios_convocatoria_inscripcion
+    ON formularios(id_convocatoria_inscripcion);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_club_convocatoria_inscripcion_actual' AND conrelid='clubes'::regclass
+    ) THEN
+        ALTER TABLE clubes
+            ADD CONSTRAINT fk_club_convocatoria_inscripcion_actual
+            FOREIGN KEY (id_convocatoria_inscripcion_actual)
+            REFERENCES convocatorias_inscripcion(id_convocatoria_inscripcion)
+            ON DELETE SET NULL;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_formulario_convocatoria_inscripcion' AND conrelid='formularios'::regclass
+    ) THEN
+        ALTER TABLE formularios
+            ADD CONSTRAINT fk_formulario_convocatoria_inscripcion
+            FOREIGN KEY (id_convocatoria_inscripcion)
+            REFERENCES convocatorias_inscripcion(id_convocatoria_inscripcion)
+            ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- Backfill: representa la convocatoria publicada actual de cada club.
+-- La fecha de publicación es la última aprobación conocida (o la apertura).
+WITH aprobada AS (
+    SELECT DISTINCT ON (id_club) id_club, id_solicitud, fecha_revision
+    FROM solicitudes_convocatoria
+    WHERE estado = 'aprobado'
+    ORDER BY id_club, fecha_revision DESC NULLS LAST, id_solicitud DESC
+), nuevos AS (
+    INSERT INTO convocatorias_inscripcion
+        (id_club, id_solicitud, fecha_apertura_programada, fecha_limite_cierre,
+         max_postulaciones, fecha_publicacion)
+    SELECT cl.id_club, a.id_solicitud, cl.fecha_apertura_programada,
+           cl.fecha_limite_cierre, cl.max_postulaciones,
+           GREATEST(
+               COALESCE(a.fecha_revision, cl.fecha_apertura_programada),
+               cl.fecha_apertura_programada
+           )
+    FROM clubes cl
+    LEFT JOIN aprobada a ON a.id_club = cl.id_club
+    WHERE cl.id_convocatoria_inscripcion_actual IS NULL
+      AND cl.fecha_apertura_programada IS NOT NULL
+    RETURNING id_convocatoria_inscripcion, id_club
+)
+UPDATE clubes cl
+SET id_convocatoria_inscripcion_actual = n.id_convocatoria_inscripcion
+FROM nuevos n
+WHERE cl.id_club = n.id_club;
+
+-- Los formularios enviados desde la apertura del ciclo actual se enlazan a él,
+-- aunque hayan llegado antes de la última aprobación del mismo periodo. Los
+-- anteriores quedan sin ciclo y no cuentan para el cupo nuevo.
+UPDATE formularios f
+SET id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
+FROM clubes cl
+JOIN convocatorias_inscripcion ci
+  ON ci.id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
+WHERE f.id_club = cl.id_club
+  AND f.id_convocatoria_inscripcion IS NULL
+  AND f.fecha_envio >= ci.fecha_apertura_programada;
+
+UPDATE clubes cl
+SET postulaciones_actuales = (
+    SELECT COUNT(*)::int
+    FROM formularios f
+    WHERE f.id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
+);
+
+DROP VIEW IF EXISTS clubes_con_estado;
+
+CREATE VIEW clubes_con_estado AS
+SELECT
+  cl.*,
+  COUNT(f.id_formulario)::int AS formularios_recibidos,
+  CASE
+    WHEN cl.cerrada_manualmente = TRUE                           THEN 'cerrado'
+    WHEN cl.fecha_apertura_programada IS NOT NULL
+     AND NOW() < cl.fecha_apertura_programada                    THEN 'proximo'
+    WHEN cl.max_postulaciones IS NOT NULL
+     AND COUNT(f.id_formulario) >= cl.max_postulaciones           THEN 'lleno'
+    WHEN cl.fecha_limite_cierre IS NOT NULL
+     AND NOW() > cl.fecha_limite_cierre                           THEN 'cerrado'
+    WHEN cl.fecha_apertura_programada IS NULL                     THEN 'cerrado'
+    ELSE 'abierto'
+  END AS estado_calculado
+FROM clubes cl
+LEFT JOIN formularios f
+  ON f.id_club = cl.id_club
+ AND f.id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
+GROUP BY cl.id_club;
+
+-- CATALOGO UNIFICADO: clubes, actividades y publicaciones.
+
+-- Este bloque forma parte del esquema completo; no requiere ejecutar archivos adicionales.
+-- También incorpora las versiones anteriores del módulo conservando sus correspondencias e historial.
+
+LOCK TABLE clubes IN SHARE ROW EXCLUSIVE MODE;
+DROP VIEW IF EXISTS clubes_con_estado;
+DROP VIEW IF EXISTS clubes_operativos;
+
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS tipo VARCHAR(12) NOT NULL DEFAULT 'club';
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS slug VARCHAR(100);
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS plantilla VARCHAR(20) NOT NULL DEFAULT 'general';
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS estado_publicacion VARCHAR(20);
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS mostrar_en_oferta BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS id_autor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS propuesta JSONB;
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS estado_propuesta VARCHAR(20);
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS motivo_rechazo TEXT;
+ALTER TABLE clubes ADD COLUMN IF NOT EXISTS actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW();
+DO $$ BEGIN
+ IF (SELECT character_maximum_length FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='clubes' AND column_name='nombre_club') IS DISTINCT FROM 160 THEN
+  ALTER TABLE clubes ALTER COLUMN nombre_club TYPE VARCHAR(160);
+ END IF;
+ IF (SELECT character_maximum_length FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='clubes' AND column_name='categoria') IS DISTINCT FROM 80 THEN
+  ALTER TABLE clubes ALTER COLUMN categoria TYPE VARCHAR(80);
+ END IF;
+ IF (SELECT data_type FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='clubes' AND column_name='imagen_portada') IS DISTINCT FROM 'text' THEN
+  ALTER TABLE clubes ALTER COLUMN imagen_portada TYPE TEXT;
+ END IF;
+END $$;
+ALTER TABLE clubes ALTER COLUMN cupo_maximo DROP NOT NULL;
+ALTER TABLE clubes ALTER COLUMN participacion DROP NOT NULL;
+UPDATE clubes SET slug = 'club-' || id_club WHERE slug IS NULL;
+UPDATE clubes SET estado_publicacion = CASE WHEN id_estatus_club = 3 THEN 'archivada' ELSE 'publicada' END WHERE estado_publicacion IS NULL;
+ALTER TABLE clubes ALTER COLUMN estado_publicacion SET DEFAULT 'borrador';
+ALTER TABLE clubes ALTER COLUMN estado_publicacion SET NOT NULL;
+ALTER TABLE clubes ALTER COLUMN slug SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_catalogo_slug ON clubes(slug);
+CREATE INDEX IF NOT EXISTS idx_catalogo_tipo_publicacion ON clubes(tipo,estado_publicacion);
+DROP INDEX IF EXISTS uq_club_id_responsable_club;
+CREATE UNIQUE INDEX uq_club_id_responsable_club ON clubes(id_responsable_club) WHERE tipo='club' AND id_responsable_club IS NOT NULL;
+ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_tipo;
+ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_tipo CHECK (tipo IN ('club','actividad'));
+ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_publicacion;
+ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_publicacion CHECK (estado_publicacion IN ('borrador','pendiente','publicada','rechazada','archivada'));
+ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_plantilla;
+ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_plantilla CHECK (plantilla IN ('general','trineo','misiones') AND (tipo='actividad' OR plantilla='general'));
+ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_revision;
+ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_revision CHECK (estado_propuesta IN ('borrador','pendiente','rechazada'));
+ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_datos_club;
+ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_datos_club CHECK (tipo <> 'club' OR (cupo_maximo IS NOT NULL AND cupo_maximo IN (10,15,20,25,30,40,50) AND participacion IS NOT NULL));
+
+CREATE TABLE IF NOT EXISTS migraciones_catalogo (
+  id_migracion BIGSERIAL PRIMARY KEY,
+  tipo VARCHAR(30) NOT NULL CHECK (tipo IN ('equivalencia_actividad','traslado_club')),
+  id_actividad_anterior INT,
+  id_club_origen INT REFERENCES clubes(id_club) ON DELETE RESTRICT,
+  id_club_destino INT NOT NULL REFERENCES clubes(id_club) ON DELETE RESTRICT,
+  id_edicion_destino INT,
+  datos_originales JSONB NOT NULL DEFAULT '{}'::jsonb,
+  resumen JSONB NOT NULL DEFAULT '{}'::jsonb,
+  migrado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (
+    (tipo='equivalencia_actividad' AND id_actividad_anterior IS NOT NULL AND id_club_origen IS NULL AND id_edicion_destino IS NULL)
+    OR (tipo='traslado_club' AND id_actividad_anterior IS NULL AND id_club_origen IS NOT NULL AND id_edicion_destino IS NOT NULL)
+  )
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_migracion_actividad_anterior ON migraciones_catalogo(id_actividad_anterior) WHERE tipo='equivalencia_actividad';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_migracion_actividad_destino ON migraciones_catalogo(id_club_destino) WHERE tipo='equivalencia_actividad';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_migracion_club_origen ON migraciones_catalogo(id_club_origen) WHERE tipo='traslado_club';
+CREATE OR REPLACE FUNCTION fn_migracion_catalogo_destino() RETURNS trigger AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM clubes WHERE id_club=NEW.id_club_destino AND tipo='actividad')
+    OR (NEW.tipo='traslado_club' AND NOT EXISTS(SELECT 1 FROM clubes WHERE id_club=NEW.id_club_origen AND tipo='club')) THEN
+  RAISE EXCEPTION 'Revisa el origen y el destino de la migración del catálogo' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_migracion_catalogo_destino ON migraciones_catalogo;
+CREATE TRIGGER trg_migracion_catalogo_destino BEFORE INSERT OR UPDATE ON migraciones_catalogo FOR EACH ROW EXECUTE FUNCTION fn_migracion_catalogo_destino();
+
+-- Incorpora las equivalencias de la versión con once tablas antes de retirarla.
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('catalogo_equivalencias_actividades') AND relkind='r') THEN
+  LOCK TABLE catalogo_equivalencias_actividades IN ACCESS EXCLUSIVE MODE;
+  INSERT INTO migraciones_catalogo(tipo,id_actividad_anterior,id_club_destino,datos_originales,migrado_en)
+   SELECT 'equivalencia_actividad',id_actividad_anterior,id_club,datos_originales,migrado_en FROM catalogo_equivalencias_actividades
+   ON CONFLICT DO NOTHING;
+  IF EXISTS(
+   SELECT 1 FROM catalogo_equivalencias_actividades a LEFT JOIN migraciones_catalogo m
+    ON m.tipo='equivalencia_actividad' AND m.id_actividad_anterior=a.id_actividad_anterior
+   WHERE m.id_migracion IS NULL OR m.id_club_destino IS DISTINCT FROM a.id_club
+    OR m.datos_originales IS DISTINCT FROM a.datos_originales OR m.migrado_en IS DISTINCT FROM a.migrado_en
+  ) THEN RAISE EXCEPTION 'Hay equivalencias incompatibles; la migración se revierte'; END IF;
+  DROP TABLE catalogo_equivalencias_actividades;
+ END IF;
+END $$;
+CREATE OR REPLACE VIEW catalogo_equivalencias_actividades AS
+ SELECT id_actividad_anterior,id_club_destino AS id_club,datos_originales,migrado_en
+ FROM migraciones_catalogo WHERE tipo='equivalencia_actividad';
+DO $$
+DECLARE secuencia TEXT; ultimo BIGINT; usado BOOLEAN; maximo BIGINT;
+BEGIN
+ secuencia:=pg_get_serial_sequence('clubes','id_club');
+ SELECT COALESCE(MAX(id_club),0) INTO maximo FROM clubes;
+ EXECUTE format('SELECT last_value,is_called FROM %s',secuencia) INTO ultimo,usado;
+ PERFORM setval(secuencia,GREATEST(ultimo,maximo),usado OR maximo>=ultimo);
+END $$;
+
+CREATE TABLE IF NOT EXISTS actividades_ediciones (
+  id_edicion SERIAL PRIMARY KEY,
+  id_actividad INT NOT NULL CONSTRAINT fk_edicion_catalogo REFERENCES clubes(id_club) ON DELETE RESTRICT,
+  nombre VARCHAR(160) NOT NULL,
+  descripcion TEXT NOT NULL DEFAULT '',
+  lugar VARCHAR(240) NOT NULL DEFAULT '',
+  fecha_inicio DATE,
+  fecha_fin DATE,
+  hora_inicio VARCHAR(5) NOT NULL DEFAULT '',
+  requiere_registro BOOLEAN NOT NULL DEFAULT FALSE,
+  campos_registro JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(campos_registro) = 'array'),
+  requiere_aportacion BOOLEAN NOT NULL DEFAULT FALSE,
+  inscripcion_desde DATE,
+  inscripcion_hasta DATE,
+  inscripciones_habilitadas BOOLEAN NOT NULL DEFAULT TRUE,
+  destacable BOOLEAN NOT NULL DEFAULT FALSE,
+  destacada_desde DATE,
+  destacada_hasta DATE,
+  estado VARCHAR(20) NOT NULL DEFAULT 'borrador' CHECK (estado IN ('borrador','pendiente','publicada','rechazada','archivada')),
+  propuesta JSONB,
+  estado_propuesta VARCHAR(20) CHECK (estado_propuesta IN ('borrador','pendiente','rechazada')),
+  motivo_rechazo TEXT,
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (fecha_fin IS NULL OR fecha_inicio IS NULL OR fecha_fin >= fecha_inicio),
+  CHECK (inscripcion_hasta IS NULL OR inscripcion_desde IS NULL OR inscripcion_hasta >= inscripcion_desde),
+  CHECK (destacada_hasta IS NULL OR destacada_desde IS NULL OR destacada_hasta >= destacada_desde)
+);
+
+-- No empareja por nombre ni reutiliza IDs que puedan pertenecer a otro club.
+DO $$
+DECLARE fila RECORD; nuevo_id INT; nueva_slug TEXT; restriccion RECORD; contador INT;
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_class WHERE oid=to_regclass('actividades') AND relkind='r') THEN
+    FOR fila IN SELECT * FROM actividades ORDER BY id_actividad LOOP
+      IF NOT EXISTS (SELECT 1 FROM migraciones_catalogo WHERE tipo='equivalencia_actividad' AND id_actividad_anterior=fila.id_actividad) THEN
+        nueva_slug := fila.slug;
+        contador:=0;
+        WHILE EXISTS (SELECT 1 FROM clubes WHERE slug=nueva_slug) LOOP
+          contador:=contador+1;
+          nueva_slug := left(fila.slug,65) || '-actividad-' || fila.id_actividad || CASE WHEN contador=1 THEN '' ELSE '-' || contador END;
+        END LOOP;
+        INSERT INTO clubes (nombre_club,descripcion,categoria,imagen_portada,tipo,slug,plantilla,estado_publicacion,mostrar_en_oferta,id_autor,id_responsable_club,propuesta,estado_propuesta,motivo_rechazo,actualizado_en,cupo_maximo,participacion)
+        VALUES (fila.nombre,fila.descripcion,fila.categoria,fila.url_imagen,'actividad',nueva_slug,fila.plantilla,fila.estado,fila.mostrar_en_oferta,fila.id_autor,fila.id_responsable,fila.propuesta,fila.estado_propuesta,fila.motivo_rechazo,fila.actualizado_en,NULL,NULL)
+        RETURNING id_club INTO nuevo_id;
+        INSERT INTO migraciones_catalogo(tipo,id_actividad_anterior,id_club_destino,datos_originales) VALUES ('equivalencia_actividad',fila.id_actividad,nuevo_id,to_jsonb(fila));
+      END IF;
+    END LOOP;
+    FOR restriccion IN SELECT conname FROM pg_constraint WHERE conrelid=to_regclass('actividades_ediciones') AND confrelid=to_regclass('actividades') LOOP
+      EXECUTE format('ALTER TABLE actividades_ediciones DROP CONSTRAINT %I',restriccion.conname);
+    END LOOP;
+    UPDATE actividades_ediciones e SET id_actividad=m.id_club_destino FROM migraciones_catalogo m WHERE m.tipo='equivalencia_actividad' AND e.id_actividad=m.id_actividad_anterior;
+    ALTER TABLE actividades RENAME TO actividades_catalogo_anterior;
+  END IF;
+END $$;
+ALTER TABLE actividades_ediciones DROP CONSTRAINT IF EXISTS fk_edicion_catalogo;
+ALTER TABLE actividades_ediciones ADD CONSTRAINT fk_edicion_catalogo FOREIGN KEY (id_actividad) REFERENCES clubes(id_club) ON DELETE RESTRICT;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_edicion_propietario ON actividades_ediciones(id_edicion,id_actividad);
+ALTER TABLE migraciones_catalogo DROP CONSTRAINT IF EXISTS fk_migracion_edicion;
+ALTER TABLE migraciones_catalogo ADD CONSTRAINT fk_migracion_edicion FOREIGN KEY(id_edicion_destino,id_club_destino) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT;
+
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('actividades_legado_clubes') AND relkind='r') THEN
+  LOCK TABLE actividades_legado_clubes IN ACCESS EXCLUSIVE MODE;
+  INSERT INTO migraciones_catalogo(tipo,id_club_origen,id_club_destino,id_edicion_destino,resumen,migrado_en)
+   SELECT 'traslado_club',l.id_club,e.id_actividad,l.id_edicion,l.resumen,l.migrado_en
+   FROM actividades_legado_clubes l JOIN actividades_ediciones e ON e.id_edicion=l.id_edicion
+   ON CONFLICT DO NOTHING;
+  IF EXISTS(
+   SELECT 1 FROM actividades_legado_clubes l LEFT JOIN migraciones_catalogo m
+    ON m.tipo='traslado_club' AND m.id_club_origen=l.id_club
+   WHERE m.id_migracion IS NULL OR m.id_edicion_destino IS DISTINCT FROM l.id_edicion
+    OR m.resumen IS DISTINCT FROM l.resumen OR m.migrado_en IS DISTINCT FROM l.migrado_en
+  ) THEN RAISE EXCEPTION 'Hay traslados incompatibles; la migración se revierte'; END IF;
+  DROP TABLE actividades_legado_clubes;
+ END IF;
+END $$;
+CREATE OR REPLACE VIEW actividades_legado_clubes AS
+ SELECT id_club_origen AS id_club,id_edicion_destino AS id_edicion,resumen,migrado_en
+ FROM migraciones_catalogo WHERE tipo='traslado_club';
+
+CREATE OR REPLACE VIEW catalogo_recursos AS
+SELECT id_club AS id_actividad,id_club,tipo,slug,nombre_club AS nombre,descripcion,categoria,
+       imagen_portada AS url_imagen,plantilla,mostrar_en_oferta,estado_publicacion AS estado,
+       id_autor,id_responsable_club AS id_responsable,propuesta,estado_propuesta,motivo_rechazo,
+       actualizado_en,cupo_maximo,participacion,lugar_actividades,id_vicepresidente,id_estatus_club
+FROM clubes;
+CREATE OR REPLACE VIEW actividades AS SELECT id_actividad,slug,nombre,descripcion,categoria,url_imagen,
+       plantilla,mostrar_en_oferta,estado,id_autor,id_responsable,propuesta,estado_propuesta,
+       motivo_rechazo,actualizado_en FROM catalogo_recursos WHERE tipo='actividad';
+CREATE OR REPLACE VIEW clubes_operativos AS SELECT * FROM clubes WHERE tipo='club' WITH LOCAL CHECK OPTION;
+CREATE VIEW clubes_con_estado AS
+SELECT cl.*,COUNT(f.id_formulario)::int AS formularios_recibidos,
+ CASE WHEN cl.cerrada_manualmente THEN 'cerrado'
+      WHEN cl.fecha_apertura_programada IS NOT NULL AND NOW()<cl.fecha_apertura_programada THEN 'proximo'
+      WHEN cl.max_postulaciones IS NOT NULL AND COUNT(f.id_formulario)>=cl.max_postulaciones THEN 'lleno'
+      WHEN cl.fecha_limite_cierre IS NOT NULL AND NOW()>cl.fecha_limite_cierre THEN 'cerrado'
+      WHEN cl.fecha_apertura_programada IS NULL THEN 'cerrado' ELSE 'abierto' END AS estado_calculado
+FROM clubes cl LEFT JOIN formularios f ON f.id_club=cl.id_club AND f.id_convocatoria_inscripcion=cl.id_convocatoria_inscripcion_actual
+WHERE cl.tipo='club' GROUP BY cl.id_club;
+
+CREATE TABLE IF NOT EXISTS actividades_aportes_catalogo (
+  id_opcion SERIAL PRIMARY KEY,
+  id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
+  nombre VARCHAR(160) NOT NULL,
+  descripcion TEXT NOT NULL DEFAULT '',
+  unidad VARCHAR(60) NOT NULL,
+  cantidad_minima NUMERIC(12,3) NOT NULL CHECK (cantidad_minima > 0),
+  activa BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS actividades_registros (
+  id_registro SERIAL PRIMARY KEY,
+  id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
+  id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+  nombre_completo VARCHAR(150) NOT NULL,
+  matricula VARCHAR(50) NOT NULL,
+  respuestas JSONB NOT NULL DEFAULT '{}'::jsonb,
+  formulario_snapshot JSONB NOT NULL DEFAULT '[]'::jsonb,
+  estado VARCHAR(30) NOT NULL DEFAULT 'confirmado' CHECK (estado IN ('confirmado','cancelado','pendiente_completar')),
+  origen_legacy JSONB,
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (id_edicion, id_usuario),
+  UNIQUE (id_edicion, matricula)
+);
+
+CREATE TABLE IF NOT EXISTS actividades_aportaciones (
+  id_aportacion SERIAL PRIMARY KEY,
+  id_registro INT NOT NULL REFERENCES actividades_registros(id_registro) ON DELETE RESTRICT,
+  id_opcion INT NOT NULL REFERENCES actividades_aportes_catalogo(id_opcion) ON DELETE RESTRICT,
+  nombre VARCHAR(160) NOT NULL,
+  unidad VARCHAR(60) NOT NULL,
+  cantidad NUMERIC(12,3) NOT NULL CHECK (cantidad > 0),
+  cantidad_minima NUMERIC(12,3) NOT NULL CHECK (cantidad_minima > 0),
+  estado VARCHAR(20) NOT NULL DEFAULT 'comprometida' CHECK (estado IN ('comprometida','recibida','cancelada')),
+  recibida_por INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+  recibida_en TIMESTAMPTZ,
+  UNIQUE (id_registro, id_opcion)
+);
+
+CREATE INDEX IF NOT EXISTS idx_actividades_ediciones_actividad ON actividades_ediciones(id_actividad);
+CREATE INDEX IF NOT EXISTS idx_actividades_registros_usuario ON actividades_registros(id_usuario);
+CREATE INDEX IF NOT EXISTS idx_actividades_aportes_edicion ON actividades_aportes_catalogo(id_edicion);
+
+-- Publicaciones e imágenes compartidas. El identificador de cada foto se conserva.
+CREATE TABLE IF NOT EXISTS publicaciones_oferta (
+ id_publicacion SERIAL PRIMARY KEY,
+ id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE RESTRICT,
+ id_edicion INT,
+ contenido VARCHAR(300) NOT NULL DEFAULT '',
+ id_autor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+ creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ FOREIGN KEY (id_edicion,id_club) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT
+);
+DO $$
+DECLARE foto RECORD; publicacion INT;
+BEGIN
+ IF EXISTS (SELECT 1 FROM pg_class WHERE oid=to_regclass('actividades_fotos') AND relkind='r') THEN
+   ALTER TABLE actividades_fotos RENAME TO publicaciones_imagenes;
+   ALTER TABLE publicaciones_imagenes ADD COLUMN id_publicacion INT REFERENCES publicaciones_oferta(id_publicacion) ON DELETE RESTRICT;
+   ALTER TABLE publicaciones_imagenes ADD COLUMN orden INT NOT NULL DEFAULT 0;
+   ALTER TABLE publicaciones_imagenes ADD COLUMN public_id TEXT;
+   FOR foto IN SELECT f.*,e.id_actividad AS id_propietario FROM publicaciones_imagenes f JOIN actividades_ediciones e ON e.id_edicion=f.id_edicion LOOP
+     INSERT INTO publicaciones_oferta(id_club,id_edicion,contenido,id_autor,creado_en)
+     VALUES(foto.id_propietario,foto.id_edicion,foto.pie,foto.id_autor,foto.creado_en) RETURNING id_publicacion INTO publicacion;
+     UPDATE publicaciones_imagenes SET id_publicacion=publicacion WHERE id_foto=foto.id_foto;
+   END LOOP;
+   ALTER TABLE publicaciones_imagenes ALTER COLUMN id_publicacion SET NOT NULL;
+   ALTER TABLE publicaciones_imagenes DROP COLUMN id_edicion;
+   ALTER TABLE publicaciones_imagenes DROP COLUMN pie;
+   ALTER TABLE publicaciones_imagenes DROP COLUMN id_autor;
+   ALTER TABLE publicaciones_imagenes DROP COLUMN creado_en;
+   ALTER TABLE publicaciones_imagenes DROP COLUMN IF EXISTS etapa;
+ END IF;
+END $$;
+CREATE TABLE IF NOT EXISTS publicaciones_imagenes (
+ id_foto SERIAL PRIMARY KEY,
+ id_publicacion INT NOT NULL REFERENCES publicaciones_oferta(id_publicacion) ON DELETE RESTRICT,
+ url_imagen TEXT NOT NULL,
+ estado VARCHAR(20) NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente','publicada','rechazada','eliminada')),
+ orden INT NOT NULL DEFAULT 0,
+ public_id TEXT
+);
+
+CREATE OR REPLACE VIEW actividades_fotos AS
+ SELECT i.id_foto,p.id_edicion,p.id_club,p.id_publicacion,i.url_imagen,p.contenido AS pie,
+        i.estado,p.id_autor,p.creado_en,i.orden,i.public_id
+ FROM publicaciones_imagenes i JOIN publicaciones_oferta p ON p.id_publicacion=i.id_publicacion;
+CREATE INDEX IF NOT EXISTS idx_publicaciones_oferta_dueno ON publicaciones_oferta(id_club,id_edicion,creado_en DESC);
+CREATE INDEX IF NOT EXISTS idx_publicaciones_imagenes_publicacion ON publicaciones_imagenes(id_publicacion,estado,orden);
+CREATE TABLE IF NOT EXISTS reacciones_catalogo (
+ id_reaccion BIGSERIAL PRIMARY KEY,
+ id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE RESTRICT,
+ id_edicion INT,
+ id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+ reaccion VARCHAR(10) NOT NULL CHECK (reaccion IN ('like','love','clap')),
+ FOREIGN KEY(id_edicion,id_club) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reaccion_club_usuario ON reacciones_catalogo(id_club,id_usuario) WHERE id_edicion IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reaccion_edicion_usuario ON reacciones_catalogo(id_edicion,id_usuario) WHERE id_edicion IS NOT NULL;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('actividades_reacciones') AND relkind='r') THEN
+  LOCK TABLE actividades_reacciones IN ACCESS EXCLUSIVE MODE;
+  INSERT INTO reacciones_catalogo(id_club,id_edicion,id_usuario,reaccion)
+   SELECT e.id_actividad,r.id_edicion,r.id_usuario,r.reaccion FROM actividades_reacciones r JOIN actividades_ediciones e USING(id_edicion)
+   ON CONFLICT DO NOTHING;
+  IF EXISTS(
+   SELECT 1 FROM actividades_reacciones a LEFT JOIN reacciones_catalogo r
+    ON r.id_edicion=a.id_edicion AND r.id_usuario=a.id_usuario
+   WHERE r.id_reaccion IS NULL OR r.reaccion IS DISTINCT FROM a.reaccion
+  ) THEN RAISE EXCEPTION 'Hay reacciones de edición incompatibles; la migración se revierte'; END IF;
+  DROP TABLE actividades_reacciones;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('clubes_reacciones') AND relkind='r') THEN
+  LOCK TABLE clubes_reacciones IN ACCESS EXCLUSIVE MODE;
+  INSERT INTO reacciones_catalogo(id_club,id_usuario,reaccion)
+   SELECT id_club,id_usuario,reaccion FROM clubes_reacciones ON CONFLICT DO NOTHING;
+  IF EXISTS(
+   SELECT 1 FROM clubes_reacciones a LEFT JOIN reacciones_catalogo r
+    ON r.id_club=a.id_club AND r.id_usuario=a.id_usuario AND r.id_edicion IS NULL
+   WHERE r.id_reaccion IS NULL OR r.reaccion IS DISTINCT FROM a.reaccion
+  ) THEN RAISE EXCEPTION 'Hay reacciones de club incompatibles; la migración se revierte'; END IF;
+  DROP TABLE clubes_reacciones;
+ END IF;
+END $$;
+CREATE OR REPLACE VIEW actividades_reacciones AS
+ SELECT id_edicion,id_usuario,reaccion FROM reacciones_catalogo WHERE id_edicion IS NOT NULL;
+CREATE OR REPLACE VIEW clubes_reacciones AS
+ SELECT id_club,id_usuario,reaccion FROM reacciones_catalogo WHERE id_edicion IS NULL;
+
+-- La bitácora existente también recibe las acciones del catálogo y las ediciones.
+DO $$ BEGIN
+ IF (SELECT character_maximum_length FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='actividad_clubes' AND column_name='tipo_evento') IS DISTINCT FROM 80 THEN
+  ALTER TABLE actividad_clubes ALTER COLUMN tipo_evento TYPE VARCHAR(80);
+ END IF;
+END $$;
+ALTER TABLE actividad_clubes ADD COLUMN IF NOT EXISTS id_edicion INT;
+ALTER TABLE actividad_clubes ADD COLUMN IF NOT EXISTS origen VARCHAR(20) NOT NULL DEFAULT 'club';
+ALTER TABLE actividad_clubes ADD COLUMN IF NOT EXISTS id_historial_actividad_anterior INT;
+ALTER TABLE actividad_clubes DROP CONSTRAINT IF EXISTS chk_actividad_origen;
+ALTER TABLE actividad_clubes ADD CONSTRAINT chk_actividad_origen CHECK(origen IN ('club','catalogo'));
+ALTER TABLE actividad_clubes DROP CONSTRAINT IF EXISTS chk_actividad_edicion;
+ALTER TABLE actividad_clubes ADD CONSTRAINT chk_actividad_edicion CHECK(id_edicion IS NULL OR id_club IS NOT NULL);
+ALTER TABLE actividad_clubes DROP CONSTRAINT IF EXISTS fk_actividad_edicion;
+ALTER TABLE actividad_clubes ADD CONSTRAINT fk_actividad_edicion FOREIGN KEY(id_edicion,id_club) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT;
+DO $$
+DECLARE restriccion RECORD;
+BEGIN
+ FOR restriccion IN SELECT conname FROM pg_constraint
+  WHERE conrelid=to_regclass('actividad_clubes') AND contype='f' AND confrelid=to_regclass('usuarios')
+    AND conkey=ARRAY[(SELECT attnum FROM pg_attribute WHERE attrelid=to_regclass('actividad_clubes') AND attname='id_actor')]::smallint[]
+ LOOP EXECUTE format('ALTER TABLE actividad_clubes DROP CONSTRAINT %I',restriccion.conname); END LOOP;
+ ALTER TABLE actividad_clubes ADD CONSTRAINT fk_actividad_actor FOREIGN KEY(id_actor) REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_actividad_historial_anterior ON actividad_clubes(id_historial_actividad_anterior) WHERE id_historial_actividad_anterior IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_actividad_clubes_edicion ON actividad_clubes(id_edicion);
+DO $$
+DECLARE fila RECORD; destino INT; edicion INT; referencia INT;
+BEGIN
+ IF EXISTS(SELECT 1 FROM pg_class WHERE oid=to_regclass('actividades_historial') AND relkind='r') THEN
+  LOCK TABLE actividades_historial IN ACCESS EXCLUSIVE MODE;
+  FOR fila IN SELECT * FROM actividades_historial ORDER BY id LOOP
+   destino:=NULL; edicion:=NULL;
+   -- Las referencias a hijos mantienen su identidad aunque cambie el ID del catálogo.
+   BEGIN
+    SELECT e.id_edicion,e.id_actividad INTO edicion,destino FROM actividades_ediciones e
+    WHERE e.id_edicion=COALESCE(
+     (fila.detalle->>'id_edicion')::int,
+     (SELECT id_edicion FROM actividades_registros WHERE id_registro=(fila.detalle->>'id_registro')::int),
+     (SELECT id_edicion FROM actividades_aportes_catalogo WHERE id_opcion=(fila.detalle->>'id_opcion')::int),
+     (SELECT r.id_edicion FROM actividades_aportaciones a JOIN actividades_registros r USING(id_registro) WHERE a.id_aportacion=(fila.detalle->>'id_aportacion')::int),
+     (SELECT id_edicion FROM actividades_fotos WHERE id_foto=(fila.detalle->>'id_foto')::int)
+    );
+    IF destino IS NULL THEN
+     referencia:=COALESCE((fila.detalle->>'id_actividad')::int,(fila.detalle->>'id_club')::int,
+      (SELECT id_club FROM actividades_fotos WHERE id_foto=(fila.detalle->>'id_foto')::int));
+     SELECT id_club_destino INTO destino FROM migraciones_catalogo
+      WHERE tipo='equivalencia_actividad' AND id_actividad_anterior=referencia AND fila.creado_en<=migrado_en;
+     IF destino IS NULL THEN SELECT id_club INTO destino FROM clubes WHERE id_club=referencia; END IF;
+    END IF;
+   EXCEPTION WHEN invalid_text_representation OR numeric_value_out_of_range THEN destino:=NULL; edicion:=NULL;
+   END;
+   INSERT INTO actividad_clubes(tipo_evento,id_club,id_edicion,id_actor,descripcion,detalles,fecha_creacion,origen,id_historial_actividad_anterior)
+    VALUES(fila.accion,destino,edicion,fila.id_usuario,'Acción anterior: '||replace(fila.accion,'_',' '),fila.detalle,fila.creado_en,'catalogo',fila.id)
+    ON CONFLICT DO NOTHING;
+   IF NOT EXISTS(SELECT 1 FROM actividad_clubes WHERE id_historial_actividad_anterior=fila.id
+     AND tipo_evento=fila.accion AND id_actor IS NOT DISTINCT FROM fila.id_usuario
+     AND detalles IS NOT DISTINCT FROM fila.detalle AND fecha_creacion=fila.creado_en) THEN
+    RAISE EXCEPTION 'Hay entradas de historial incompatibles; la migración se revierte';
+   END IF;
+  END LOOP;
+  DROP TABLE actividades_historial;
+ END IF;
+END $$;
+CREATE OR REPLACE VIEW actividades_historial AS
+ SELECT id_evento AS id,id_actor AS id_usuario,tipo_evento AS accion,COALESCE(detalles,'{}'::jsonb) AS detalle,
+        fecha_creacion AS creado_en,id_historial_actividad_anterior AS id_anterior
+ FROM actividad_clubes WHERE origen='catalogo';
+
+-- Las restricciones se aplican también a llamadas directas y conservan los estados históricos cerrados.
+CREATE OR REPLACE FUNCTION fn_catalogo_destino_club() RETURNS trigger AS $$
+DECLARE clase TEXT;
+BEGIN
+ SELECT tipo INTO clase FROM clubes WHERE id_club=NEW.id_club FOR KEY SHARE;
+ IF clase IS DISTINCT FROM 'club' THEN
+   RAISE EXCEPTION 'Este proceso requiere un club' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DO $$
+DECLARE tabla TEXT;
+BEGIN
+ FOREACH tabla IN ARRAY ARRAY['inscripciones','formularios','horarios_club','convocatorias','convocatorias_inscripcion','solicitudes_horario','solicitudes_convocatoria','clubes_niveles'] LOOP
+   IF to_regclass(tabla) IS NOT NULL THEN
+     EXECUTE format('DROP TRIGGER IF EXISTS trg_catalogo_solo_club ON %I',tabla);
+     EXECUTE format('CREATE TRIGGER trg_catalogo_solo_club BEFORE INSERT OR UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION fn_catalogo_destino_club()',tabla);
+   END IF;
+ END LOOP;
+END $$;
+CREATE OR REPLACE FUNCTION fn_catalogo_edicion_actividad() RETURNS trigger AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM clubes WHERE id_club=NEW.id_actividad AND tipo='actividad') THEN
+  RAISE EXCEPTION 'Una edición requiere una actividad' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_catalogo_edicion_actividad ON actividades_ediciones;
+CREATE TRIGGER trg_catalogo_edicion_actividad BEFORE INSERT OR UPDATE ON actividades_ediciones FOR EACH ROW EXECUTE FUNCTION fn_catalogo_edicion_actividad();
+CREATE OR REPLACE FUNCTION fn_catalogo_tipo_estable() RETURNS trigger AS $$
+BEGIN
+ IF NEW.tipo IS DISTINCT FROM OLD.tipo THEN
+  RAISE EXCEPTION 'El tipo se conserva; utiliza un traslado revisado para los registros anteriores' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_catalogo_tipo_estable ON clubes;
+CREATE TRIGGER trg_catalogo_tipo_estable BEFORE UPDATE OF tipo ON clubes FOR EACH ROW EXECUTE FUNCTION fn_catalogo_tipo_estable();
+CREATE OR REPLACE FUNCTION fn_publicacion_destino() RETURNS trigger AS $$
+DECLARE clase TEXT;
+BEGIN
+ SELECT tipo INTO clase FROM clubes WHERE id_club=NEW.id_club FOR KEY SHARE;
+ IF (clase='club' AND NEW.id_edicion IS NOT NULL) OR (clase='actividad' AND NEW.id_edicion IS NULL) THEN
+  RAISE EXCEPTION 'La publicación debe corresponder al club o a una edición de la actividad' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_publicacion_destino ON publicaciones_oferta;
+CREATE TRIGGER trg_publicacion_destino BEFORE INSERT OR UPDATE ON publicaciones_oferta FOR EACH ROW EXECUTE FUNCTION fn_publicacion_destino();
+DROP TRIGGER IF EXISTS trg_reaccion_destino ON reacciones_catalogo;
+CREATE TRIGGER trg_reaccion_destino BEFORE INSERT OR UPDATE ON reacciones_catalogo FOR EACH ROW EXECUTE FUNCTION fn_publicacion_destino();
+
+-- Impide que el catálogo retirado vuelva a ser una fuente de escritura.
+CREATE OR REPLACE FUNCTION fn_catalogo_anterior_lectura() RETURNS trigger AS $$
+BEGIN RAISE EXCEPTION 'Usa el catálogo unificado' USING ERRCODE='55000'; END $$ LANGUAGE plpgsql;
+DO $$ BEGIN
+ IF to_regclass('actividades_catalogo_anterior') IS NOT NULL THEN
+  DROP TRIGGER IF EXISTS trg_catalogo_anterior_lectura ON actividades_catalogo_anterior;
+  CREATE TRIGGER trg_catalogo_anterior_lectura BEFORE INSERT OR UPDATE OR DELETE ON actividades_catalogo_anterior FOR EACH ROW EXECUTE FUNCTION fn_catalogo_anterior_lectura();
+ END IF;
+END $$;
+DROP TRIGGER IF EXISTS trg_actividades_compat_lectura ON actividades;
+CREATE TRIGGER trg_actividades_compat_lectura INSTEAD OF INSERT OR UPDATE OR DELETE ON actividades FOR EACH ROW EXECUTE FUNCTION fn_catalogo_anterior_lectura();
+DO $$
+DECLARE vista TEXT;
+BEGIN
+ FOREACH vista IN ARRAY ARRAY['catalogo_equivalencias_actividades','actividades_legado_clubes','actividades_reacciones','clubes_reacciones','actividades_historial'] LOOP
+  EXECUTE format('DROP TRIGGER IF EXISTS trg_compat_catalogo_lectura ON %I',vista);
+  EXECUTE format('CREATE TRIGGER trg_compat_catalogo_lectura INSTEAD OF INSERT OR UPDATE OR DELETE ON %I FOR EACH ROW EXECUTE FUNCTION fn_catalogo_anterior_lectura()',vista);
+ END LOOP;
+END $$;
+CREATE OR REPLACE FUNCTION fn_catalogo_slug() RETURNS trigger AS $$
+DECLARE base TEXT; contador INT:=0;
+BEGIN
+ IF NEW.slug IS NULL OR NEW.slug='' THEN
+  base:=NEW.tipo || '-' || NEW.id_club;
+  NEW.slug:=base;
+  WHILE EXISTS(SELECT 1 FROM clubes WHERE slug=NEW.slug) LOOP
+   contador:=contador+1; NEW.slug:=base || '-' || contador;
+  END LOOP;
+ END IF;
+ RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_catalogo_slug ON clubes;
+CREATE TRIGGER trg_catalogo_slug BEFORE INSERT ON clubes FOR EACH ROW EXECUTE FUNCTION fn_catalogo_slug();
+
+
+-- Información institucional; las fechas, preguntas y aportaciones se configuran en el panel.
+-- Se reconoce por plantilla, conserva los datos publicados y evita duplicar un catálogo importado.
+DO $$
+DECLARE actividad RECORD; direccion TEXT; contador INT;
+BEGIN
+ FOR actividad IN SELECT * FROM (VALUES
+  ('trineo-de-los-suenos','Trineo de los Sueños','Integración con valores de solidaridad y amor al prójimo en comunidad.','/actividades/trineo-suenos-1.jpg','trineo'),
+  ('misiones','Misiones','Espacios de servicio y encuentro que fortalecen la vida en comunidad.','/actividades/misiones-3.jpg','misiones')
+ ) AS datos(slug,nombre,descripcion,imagen,plantilla) LOOP
+  IF NOT EXISTS(SELECT 1 FROM clubes WHERE tipo='actividad' AND plantilla=actividad.plantilla) THEN
+   direccion:=actividad.slug; contador:=0;
+   WHILE EXISTS(SELECT 1 FROM clubes WHERE slug=direccion) LOOP
+    contador:=contador+1; direccion:=actividad.slug || '-actividad-' || contador;
+   END LOOP;
+   INSERT INTO clubes(tipo,slug,nombre_club,descripcion,categoria,imagen_portada,plantilla,estado_publicacion,cupo_maximo,participacion)
+   VALUES('actividad',direccion,actividad.nombre,actividad.descripcion,'Servicio',actividad.imagen,actividad.plantilla,'publicada',NULL,NULL);
+  END IF;
+ END LOOP;
+END $$;
+
+-- Pase de lista de actividades. El acceso se entrega solo por gestión;
+-- permanece separado de las ediciones que también se consultan públicamente.
+CREATE TABLE IF NOT EXISTS actividades_asistencia_accesos (
+    id_edicion INT PRIMARY KEY REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
+    codigo VARCHAR(8) NOT NULL CHECK (codigo ~ '^[A-HJ-NP-Z2-9]{8}$'),
+    id_autor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS actividades_asistencias (
+    id_registro INT PRIMARY KEY REFERENCES actividades_registros(id_registro) ON DELETE RESTRICT,
+    estado VARCHAR(12) NOT NULL CHECK (estado IN ('presente', 'anulada')),
+    registrada_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    origen VARCHAR(10) NOT NULL CHECK (origen IN ('qr', 'codigo', 'manual')),
+    id_actor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    motivo_correccion VARCHAR(500),
+    actualizada_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (origen <> 'manual' OR LENGTH(BTRIM(motivo_correccion)) > 0),
+    CHECK (origen <> 'manual' OR motivo_correccion IS NOT NULL)
+);
+
+COMMIT;
+
+
+-- ============================================================
+-- ONBOARDING DE PREFERENCIAS (integrado desde migracion manual)
+-- ============================================================
+-- ============================================================
+-- MIGRACIÓN — ONBOARDING DE PREFERENCIAS DE ALUMNOS
+-- ============================================================
+-- Idempotente: se puede ejecutar varias veces sin efectos secundarios.
+-- NO se ejecuta al arrancar el backend (index.js no lee schema.sql).
+-- Aplicar a mano, en la base objetivo, y solo con autorización explícita:
+--
+--   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
+--     -f backend/migrations/migrate-onboarding-preferencias.sql
+--
+-- Toca solo tablas nuevas. No modifica usuarios, clubes, notificaciones,
+-- OTP ni ninguna tabla existente. Los alumnos sin fila en
+-- preferencias_usuario se interpretan como estado 'pendiente' (sin backfill).
+-- Los catálogos se siembran sin sobrescribir cambios administrativos previos
+-- (ON CONFLICT DO NOTHING): volver a ejecutar la migración no revierte ediciones.
+-- ============================================================
+
+BEGIN;
+
+-- ------------------------------------------------------------
+-- Catálogos
+-- ------------------------------------------------------------
+
+-- Categorías visibles del onboarding. categoria_club enlaza con el texto
+-- libre de clubes.categoria (sin FK, a propósito: clubes no cambia).
+CREATE TABLE IF NOT EXISTS cat_categorias_interes (
+    id_categoria_interes SERIAL PRIMARY KEY,
+    nombre               VARCHAR(40) NOT NULL UNIQUE,
+    categoria_club       VARCHAR(50) UNIQUE,
+    orden                INT NOT NULL DEFAULT 0,
+    activo               BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO cat_categorias_interes (nombre, categoria_club, orden) VALUES
+    ('Deportivos', 'Deportes',   1),
+    ('Culturales', 'Cultura',    2),
+    ('Sociales',   'Sociales',   3),
+    ('Tecnología', 'Tecnología', 4)
+ON CONFLICT (nombre) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS cat_actividades_interes (
+    id_actividad         SERIAL PRIMARY KEY,
+    id_categoria_interes INT NOT NULL REFERENCES cat_categorias_interes(id_categoria_interes) ON DELETE RESTRICT,
+    nombre               VARCHAR(80) NOT NULL,
+    orden                INT NOT NULL DEFAULT 0,
+    activo               BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT uq_actividad_categoria_nombre UNIQUE (id_categoria_interes, nombre)
+);
+
+-- El índice único (id_categoria_interes, nombre) ya cubre el filtro por categoría.
+INSERT INTO cat_actividades_interes (id_categoria_interes, nombre, orden)
+SELECT c.id_categoria_interes, v.nombre, v.orden
+FROM (VALUES
+    ('Deportivos', 'Fútbol', 1),
+    ('Deportivos', 'Básquetbol', 2),
+    ('Deportivos', 'Voleibol', 3),
+    ('Deportivos', 'Ajedrez', 4),
+    ('Deportivos', 'Atletismo', 5),
+    ('Deportivos', 'Entrenamiento físico', 6),
+    ('Culturales', 'Danza', 1),
+    ('Culturales', 'Música', 2),
+    ('Culturales', 'Teatro', 3),
+    ('Culturales', 'Pintura', 4),
+    ('Culturales', 'Fotografía', 5),
+    ('Culturales', 'Lectura', 6),
+    ('Sociales', 'Voluntariado', 1),
+    ('Sociales', 'Meditación', 2),
+    ('Sociales', 'Bienestar emocional', 3),
+    ('Sociales', 'Actividades espirituales', 4),
+    ('Sociales', 'Servicio comunitario', 5),
+    ('Sociales', 'Liderazgo', 6),
+    ('Tecnología', 'Programación', 1),
+    ('Tecnología', 'Robótica', 2),
+    ('Tecnología', 'Desarrollo web', 3),
+    ('Tecnología', 'Videojuegos', 4)
+) AS v(categoria, nombre, orden)
+JOIN cat_categorias_interes c ON c.nombre = v.categoria
+ON CONFLICT (id_categoria_interes, nombre) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS cat_motivaciones (
+    id_motivacion SERIAL PRIMARY KEY,
+    codigo        VARCHAR(40) NOT NULL UNIQUE,
+    nombre        VARCHAR(80) NOT NULL,
+    orden         INT NOT NULL DEFAULT 0,
+    activo        BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO cat_motivaciones (codigo, nombre, orden) VALUES
+    ('amistades',        'Hacer nuevos amigos',         1),
+    ('aprender',         'Aprender algo nuevo',         2),
+    ('condicion_fisica', 'Mejorar mi condición física', 3),
+    ('talentos',         'Desarrollar mis talentos',    4),
+    ('comunidad',        'Ayudar a mi comunidad',       5),
+    ('bienestar',        'Cuidar mi bienestar',         6)
+ON CONFLICT (codigo) DO NOTHING;
+
+-- ------------------------------------------------------------
+-- Preferencias del alumno (1:1 con usuarios)
+-- ------------------------------------------------------------
+
+-- Una fila por alumno que interactuó con el onboarding. Sin fila = 'pendiente'.
+-- Los cinco booleanos de correo se guardan aunque correo_activo sea FALSE:
+-- así se conserva la selección al reactivar las preferencias.
+CREATE TABLE IF NOT EXISTS preferencias_usuario (
+    id_usuario                  INT PRIMARY KEY REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    estado_onboarding           VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    genero                      VARCHAR(30),
+    correo_activo               BOOLEAN NOT NULL DEFAULT FALSE,
+    correo_frecuencia           VARCHAR(20) NOT NULL DEFAULT 'inmediata',
+    correo_clubes_convocatorias BOOLEAN NOT NULL DEFAULT FALSE,
+    correo_mis_clubes           BOOLEAN NOT NULL DEFAULT FALSE,
+    correo_eventos              BOOLEAN NOT NULL DEFAULT FALSE,
+    correo_noticias             BOOLEAN NOT NULL DEFAULT FALSE,
+    correo_recordatorios        BOOLEAN NOT NULL DEFAULT FALSE,
+    onboarding_completado_en    TIMESTAMPTZ,
+    onboarding_omitido_en       TIMESTAMPTZ,
+    actualizado_en              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_pref_estado CHECK (estado_onboarding IN ('pendiente', 'completado', 'omitido')),
+    CONSTRAINT chk_pref_genero CHECK (genero IS NULL OR genero IN ('mujer', 'hombre', 'otra_identidad', 'prefiero_no_responder')),
+    CONSTRAINT chk_pref_frecuencia CHECK (correo_frecuencia IN ('inmediata', 'diaria', 'semanal'))
+);
+
+-- ------------------------------------------------------------
+-- Selecciones N:M
+-- ------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS usuario_categorias_interes (
+    id_usuario           INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    id_categoria_interes INT NOT NULL REFERENCES cat_categorias_interes(id_categoria_interes) ON DELETE RESTRICT,
+    PRIMARY KEY (id_usuario, id_categoria_interes)
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuario_categorias_interes_categoria
+    ON usuario_categorias_interes(id_categoria_interes);
+
+CREATE TABLE IF NOT EXISTS usuario_actividades_interes (
+    id_usuario   INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    id_actividad INT NOT NULL REFERENCES cat_actividades_interes(id_actividad) ON DELETE RESTRICT,
+    PRIMARY KEY (id_usuario, id_actividad)
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuario_actividades_interes_actividad
+    ON usuario_actividades_interes(id_actividad);
+
+CREATE TABLE IF NOT EXISTS usuario_motivaciones (
+    id_usuario    INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    id_motivacion INT NOT NULL REFERENCES cat_motivaciones(id_motivacion) ON DELETE RESTRICT,
+    PRIMARY KEY (id_usuario, id_motivacion)
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuario_motivaciones_motivacion
+    ON usuario_motivaciones(id_motivacion);
+
+-- ------------------------------------------------------------
+-- Propuestas de actividades (texto libre, revisión administrativa futura)
+-- ------------------------------------------------------------
+
+-- No crea actividades ni clubes. El índice único evita que un mismo alumno
+-- repita la misma propuesta tras normalizarla (minúsculas, sin acentos).
+CREATE TABLE IF NOT EXISTS actividades_propuestas (
+    id_propuesta      SERIAL PRIMARY KEY,
+    id_usuario        INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    texto             VARCHAR(80) NOT NULL,
+    texto_normalizado VARCHAR(80) NOT NULL,
+    estado            VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    creada_en         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revisada_en       TIMESTAMPTZ,
+    id_revisor        INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT chk_propuesta_estado CHECK (estado IN ('pendiente', 'aprobada', 'rechazada')),
+    CONSTRAINT uq_propuesta_usuario_texto UNIQUE (id_usuario, texto_normalizado)
+);
+
+-- Cola de revisión (estado + antigüedad) y detección de propuestas repetidas entre alumnos.
+CREATE INDEX IF NOT EXISTS idx_propuestas_estado_fecha
+    ON actividades_propuestas(estado, creada_en);
+CREATE INDEX IF NOT EXISTS idx_propuestas_texto_normalizado
+    ON actividades_propuestas(texto_normalizado);
+
+-- ------------------------------------------------------------
+-- Historial de consentimiento para correos OPCIONALES
+-- ------------------------------------------------------------
+
+-- Solo registra cambios del consentimiento opcional. OTP, seguridad y avisos
+-- operativos no pasan por aquí. Append-only: la aplicación solo inserta.
+-- version_aviso es NULL mientras no exista una versión publicada del aviso.
+-- ON DELETE CASCADE es provisional, pendiente de la política institucional de
+-- conservación (ver documento de diseño).
+CREATE TABLE IF NOT EXISTS historial_consentimiento_correo (
+    id_consentimiento BIGSERIAL PRIMARY KEY,
+    id_usuario        INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    tipo              VARCHAR(30) NOT NULL,
+    accion            VARCHAR(20) NOT NULL,
+    frecuencia        VARCHAR(20),
+    origen            VARCHAR(20) NOT NULL,
+    version_aviso     VARCHAR(40),
+    creado_en         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_consentimiento_tipo CHECK (tipo IN ('general', 'clubes_convocatorias', 'mis_clubes', 'eventos', 'noticias', 'recordatorios')),
+    CONSTRAINT chk_consentimiento_accion CHECK (accion IN ('otorgado', 'retirado')),
+    CONSTRAINT chk_consentimiento_origen CHECK (origen IN ('onboarding', 'perfil')),
+    CONSTRAINT chk_consentimiento_frecuencia CHECK (frecuencia IS NULL OR frecuencia IN ('inmediata', 'diaria', 'semanal'))
+);
+
+-- Cubre el historial de un alumno y el último estado por tipo (leading: id_usuario, tipo).
+CREATE INDEX IF NOT EXISTS idx_consentimiento_usuario_tipo_fecha
+    ON historial_consentimiento_correo(id_usuario, tipo, creado_en DESC);
+
+COMMIT;
+

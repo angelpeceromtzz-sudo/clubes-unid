@@ -1,3 +1,9 @@
+export const MENSAJE_CLUB_NO_ACTIVO = 'El club no está activo. No se pueden crear, abrir ni publicar convocatorias.';
+
+export function clubEstaActivo(club) {
+  return Number(club?.id_estatus_club) === 1;
+}
+
 /**
  * Calcula el estado dinámico de un club basándose en fechas programadas,
  * conteo de postulaciones y cierre manual.

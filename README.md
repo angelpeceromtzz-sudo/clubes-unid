@@ -2,7 +2,53 @@
 
 Sistema de gestión de clubes universitarios para UNID Campeche. Permite a alumnos postularse a clubes, y a presidentes/administradores gestionar convocatorias, bloques, asistencias y ofertas de ingreso.
 
+## Clubes y actividades
+
+El módulo general de `/actividades` permite solicitar actividades de cualquier categoría, configurar ediciones y formularios, revisar publicaciones en Rectoría, asignar encargados, gestionar inscripciones, aportaciones y fotografías, y reaccionar con una cuenta institucional. Las descripciones permanecen en Oferta; los destacados se calculan según el periodo aprobado de cada edición, independientemente de sus inscripciones. El selector de Explorar clubes incluye **Actividades**. Solo los alumnos ven **Mi panel → Mis actividades**, incluso sin membresía. La organización y la revisión se abren desde **Gestión de Clubs → Clubs y actividades**. El listado de gestión tiene un selector **Clubs / Actividades** y conserva la tabla y el formulario de clubes. Las ediciones se crean en cuatro pasos y Rectoría revisa su vista previa desde el detalle.
+
+El catálogo comparte la tabla principal `clubes`, con `tipo` para distinguir clubes y actividades. La gestión común está en `/actividades/gestion`: creación, información de Oferta, responsables, revisión y fotos. Miembros y convocatorias de clubes siguen separados de las ediciones y registros de actividades. Trineo y Misiones exigen edad y talla; Trineo también exige una aportación. Las ediciones, sus formularios y los periodos de destacados se configuran desde el panel.
+
+Solo Administración, Coordinación y Rectoría ven el acceso **Gestión de Clubs → Clubs y actividades** y pueden crear actividades. Los encargados ven **Actividades a mi cargo** directamente en la pantalla principal de su panel, mediante tarjetas con **Administrar actividad**, que abre la gestión completa. La barra conserva sus opciones originales, sin grupos separados para club y actividad. Rectoría revisa sus publicaciones.
+
+La extensión añade **diez tablas físicas**: cuatro para ediciones, registros y aportaciones, dos para publicaciones e imágenes, dos para accesos y asistencias, `reacciones_catalogo` y `migraciones_catalogo`. Reutiliza `actividad_clubes` como bitácora de clubes y actividades, consultable por Administración, Rectoría y Coordinación. La actualización incorpora las once tablas de la versión anterior conservando sus datos; los cinco nombres retirados quedan como vistas de consulta.
+
+Toda esta extensión está consolidada en `backend/schema.sql`, junto con el resto de la estructura del proyecto. Una instalación nueva requiere únicamente ese archivo para habilitar clubes, actividades, ediciones, registros, aportaciones, fotos y reacciones; también incorpora las versiones anteriores del módulo conservando IDs e historial. El comando manual `node backend/migrate.js` aplica el esquema completo en una transacción. No se ejecuta al arrancar el servicio ni inventa fechas, encargados, tallas, mínimos o inscripciones. Consultar la preparación y las alternativas para bases existentes en [docs/ACTIVIDADES.md](docs/ACTIVIDADES.md).
+
+La transición de registros antiguos es una operación separada con vista previa, correspondencia explícita de IDs y conservación de estados anteriores. Véase [operación y transición de actividades](docs/ACTIVIDADES.md).
+
+Clubes y actividades comparten publicaciones con una descripción y hasta diez imágenes, vista previa, aprobación y visor. La migración de unificación incorpora las fotos antiguas y retira la clasificación antes/después. `npm run test:actividades` verifica el módulo y la migración; la integración requiere una base explícita de pruebas mediante `ACTIVIDADES_TEST_DATABASE_URL`.
+
+Las ediciones con inscripciones tienen **Pase de lista**: el encargado obtiene un QR y un código de ocho caracteres; los inscritos confirmados registran una sola asistencia durante todas las fechas de la edición, también desde **Mis actividades**. La lista se actualiza automáticamente y permite correcciones manuales con motivo e historial. Una cancelación de inscripción conserva la asistencia previa. Para actualizar una base ya unificada, aplicar manualmente `backend/migrations/migrate-actividades-asistencia.sql` antes de desplegar; una instalación nueva lo incluye en `schema.sql`. Véase [operación del pase de lista](docs/ACTIVIDADES.md#pase-de-lista).
+
+Para estudiar el cambio de la base de datos, consulta la [guía con diagrama, ejemplos y preguntas de repaso](docs/GUIA-BASE-DATOS-CLUBS-ACTIVIDADES.md) y las [consultas SQL de solo lectura](docs/sql/estudiar-catalogo.sql).
+
 ---
+
+## Mural digital
+
+Administración, Rectoría y el rol **responsable del mural** tienen la sección **Mural digital** para crear, editar, publicar, destacar, ocultar y eliminar publicaciones con imagen, resumen, mensaje, enlace y último día visible. También pueden configurar la dirección del QR. Se pueden editar desde el panel o desde las tarjetas públicas al iniciar sesión como editor. El responsable accede desde `/mural/panel`; sus noticias y eventos siguen el flujo de aprobación de Rectoría. Las fechas académicas se administran desde Coordinación y Rectoría.
+
+En el panel, **Dirección pública del sitio** guarda en la base de datos el destino del QR. También se utiliza `VITE_PUBLIC_URL` o el origen actual si no hay una dirección guardada. El QR abre `/calendario?vista=mural`, sin sesión, y se descarga en PNG o SVG. Una dirección localhost solo sirve en el equipo de desarrollo; usa el dominio publicado para compartirlo con teléfonos.
+
+El esquema inicial crea `publicaciones_mural` y `configuracion_mural` de forma aditiva; las actualizaciones se aplican manualmente antes del despliegue. No hay que ejecutar el seed. Las publicaciones vencidas permanecen en administración y se excluyen de la consulta pública usando la fecha de America/Mexico_City. Validación: `npm run test:mural` y `npm run test:calendario`.
+
+## PBI-18: contenido público y privado
+
+Sin sesión se mantienen el inicio, el catálogo, el detalle de club, la landing, las encuestas y el **mural público** en `/calendario?vista=mural`, que solo muestra las publicaciones aprobadas de `publicaciones_mural`. Las **noticias, los eventos, los avisos de noticias y el calendario académico** requieren sesión: sus consultas responden `401` sin token y sus respuestas privadas se envían con `Cache-Control: private, no-store`.
+
+En la navegación, **Noticias** y **Calendario** se ocultan para invitados. `/calendario` sin `vista=mural` muestra un candado con la opción de iniciar sesión y un acceso al mural público; `/calendario?vista=mural` conserva el QR público sin sesión. Con sesión se muestran las noticias, los eventos, el mural completo, el calendario, los exámenes y el registro/interés en torneos o eventos.
+
+## PBI-12 y PBI-13: Coordinación VIVE
+
+Coordinación VIVE corresponde al rol existente `admin` (id 3). En el panel dispone de **Convocatorias VIVE** y **Aprobación de horarios**. El presidente crea las convocatorias de su propio club (inscripción y bloques de evaluación), completa sus datos y las envía a revisión. Admin aprueba y publica/envía, o devuelve con observaciones obligatorias. Una propuesta de inscripción no altera la configuración pública antes de ser aprobada; generar o enviar un bloque a revisión tampoco convoca alumnos. Los vicepresidentes conservan la consulta; la preselección y selección mantienen su flujo existente. Las escrituras comprueban rol, club y estado en el backend.
+
+El presidente elige días y horas recurrentes desde **Horario** y pulsa **Enviar horario a aprobación**, sin un paso visible de guardar borrador. El horario se repite cada semana sin límite de semanas y, por defecto, no vence. Se puede delimitar un periodo opcional de inicio y término. Puede retirar una propuesta pendiente para corregirla. Coordinación aprueba o rechaza con observaciones; el sistema notifica a los interesados y registra la decisión. Los horarios oficiales solo cambian con una aprobación. Un reemplazo futuro conserva el horario anterior hasta su inicio de vigencia. Las sesiones previas al cambio se conservan como horarios oficiales existentes.
+
+Los espacios se eligen de un catálogo administrado por Coordinación. Se comprueban cruces dentro del club y ocupación de espacios entre clubes, incluyendo vigencias y horas consecutivas. Al aprobar se repite la validación dentro de una transacción con bloqueo para evitar reservas simultáneas. Las antiguas escrituras directas de horarios devuelven 409 y no permiten eludir la revisión. La actualización se aplica manualmente antes del despliegue; no se necesita el seed.
+
+Verificación: `npm run test:permisos-horarios` ejecuta pruebas de integración de PostgreSQL en un esquema temporal exclusivo, que se elimina al finalizar. No utiliza las tablas de datos del sistema. Requiere las credenciales del archivo `backend/.env`.
+
+Las propuestas de convocatoria pendientes pasan a **Vencida · requiere nuevas fechas** si llega su cierre de inscripciones o la fecha y hora de evaluación antes de aprobarse. La comprobación se realiza al consultar y al intentar aprobar, usando la zona `America/Mexico_City` para los bloques. El presidente puede corregir y reenviar; Coordinación debe revisar otra vez. No se cambia la convocatoria publicada ni se convoca a alumnos al vencer. Las propuestas de inscripción anteriores se conservan en su tabla. Sin fecha de cierre, la propuesta de inscripción no vence; una apertura que ya pasó puede aprobarse mientras el cierre siga vigente. No se aceptan nuevos envíos a revisión con un cierre o una evaluación en el pasado. El estado nuevo requiere su actualización manual de la base antes del despliegue.
 
 ## Tech Stack
 
@@ -30,12 +76,14 @@ Sistema de gestión de clubes universitarios para UNID Campeche. Permite a alumn
 - Notificaciones en app + notificaciones nativas del navegador
 - Autenticación con cuenta institucional Microsoft
 - Modo oscuro / claro
+- Calendario académico con captura en administración mediante concepto, símbolo y fecha o periodo; incluye sugerencias para parciales, calificaciones, pagos y vacaciones
+- Vista de calendario y mural con emojis y pestañas; el mural público usa solo `publicaciones_mural` y conserva el QR sin sesión. Noticias, eventos y calendario académico se consultan con sesión
 
 ---
 
 ## Requisitos
 
-- Node.js 18+
+- Node.js 20+
 - PostgreSQL 14+
 - Cuenta de Azure AD con aplicación registrada (MSAL)
 - Cuenta de Cloudinary (opcional, para imágenes)
@@ -94,11 +142,20 @@ DB_SSL_CA_FILE=
 # En producción (Render) debe existir NODE_ENV=production (H8).
 ```
 
-Ejecutar migraciones:
+Preparación manual de la estructura consolidada (el backend **no** la ejecuta al arrancar). Incluye clubes y actividades; no requiere aplicar aparte sus migraciones. Para una base existente, revisar y ensayar sobre una copia antes de aplicar:
 
 ```bash
+cd backend
+# Revisar antes de aplicar. No usar schema.sql completo contra una BD
+# compartida sin autorización: contiene DDL legacy.
 node migrate.js
+
+# Migración aditiva de OTP (fuente de verdad de otp_codigos):
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/migrate-otp-codigos.sql
 ```
+
+`otp_codigos` no se crea desde `schema.sql`; se aplica solo con la migración
+manual, con respaldo previo. No se ejecuta automáticamente al desplegar.
 
 (Opcional, solo desarrollo local) Sembrar datos de prueba. Úsalo **únicamente
 con una base de datos local desechable**: nunca contra Render, Supabase ni
@@ -122,10 +179,13 @@ npm install
 Crear archivo `.env` en la raíz:
 
 ```env
-VITE_API_URL=http://localhost:4000
+VITE_API_URL=http://localhost:4000/api
 VITE_AZURE_CLIENT_ID=tu_client_id_de_azure
 VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/tu_tenant_id
 VITE_AZURE_REDIRECT_URI=http://localhost:5173
+# Tercera opción de acceso; ponla en true solo si el backend tiene
+# AUTH_OTP_ENABLED=true y la migración OTP ya fue aplicada.
+VITE_AUTH_OTP_ENABLED=false
 ```
 
 ---
@@ -180,7 +240,7 @@ clubes-unid/
 | Plataforma | Componente | Configuración |
 |---|---|---|
 | **Vercel** | Frontend | `vercel.json` apunta a Vite, SPA fallback a `index.html` |
-| **Render** | Backend | Servicio Web, variables de entorno desde dashboard |
+| **Render** | Backend | Servicio Web, variables de entorno desde panel |
 | **Supabase** | Base de datos (PostgreSQL) | Conexión desde backend vía `DATABASE_URL` (SSL) |
 
 > **Destino desplegado: pendiente de confirmación.** La infraestructura
@@ -192,7 +252,7 @@ clubes-unid/
 ### Variables en producción
 
 - **Vercel**: variables `VITE_*` (URL del API, Azure), horneadas en el build.
-- **Render** (dashboard): `DATABASE_URL` **sin** parámetros `ssl`/`sslmode`
+- **Render** (panel): `DATABASE_URL` **sin** parámetros `ssl`/`sslmode`
   (el backend exige TLS verificado; ver `backend/.env.example`) y sin `DB_*`
   locales; `JWT_SECRET` y `ADMIN_SECRET` con valores nuevos (H3);
   `CLOUDINARY_URL`; `CORS_ORIGIN` de producción; `NODE_ENV=production` (H8);
@@ -208,13 +268,49 @@ clubes-unid/
    una terminal, fuera del servicio) contra la BD **antes** de arrancar el
    backend: la cadena no debe llevar `sslmode` y la validación debe
    completarse sin errores. No imprimir la URL ni credenciales.
-2. El proceso en Render ejecuta `node migrate.js` (aplica `schema.sql`,
-   idempotente) **al arrancar**: solo debe hacerlo tras superar el paso 1.
+2. El proceso en Render **no ejecuta** `schema.sql` al arrancar. Las
+   migraciones se aplican manualmente, con respaldo previo, desde una terminal
+   autorizada. `migrate.js` queda como comando manual y no debe usarse con
+   `schema.sql` completo contra una BD compartida sin revisión.
 3. **Migración aditiva del hero**: aplicar
    `backend/migrations/migrate-diapositivas-hero-movil.sql` (o asegurar que
    `schema.sql` versionado ya contenga `url_imagen_movil`) **antes** de
    usar la nueva columna en API/UI. `migrate.js` solo ejecuta `schema.sql`;
    el archivo de migración del hero no corre solo.
+
+### Correo OTP en Render Free (Resend)
+
+Render Free bloquea las conexiones SMTP salientes en los puertos 25, 465 y 587.
+Para producción usa Resend por HTTPS; SMTP queda solo como compatibilidad.
+
+En Render configura explícitamente:
+
+```env
+OTP_MAIL_PROVIDER=resend
+RESEND_API_KEY=tu_api_key_de_resend
+RESEND_FROM=Clubs UNID <no-reply@tu-dominio-verificado>
+```
+
+`RESEND_FROM` debe usar un remitente de un dominio verificado en Resend. Si
+faltan estas variables, el backend falla cerrado y responde 503 sin generar
+código.
+
+`backend/.env.example` conserva `OTP_MAIL_PROVIDER=mock` como valor seguro por
+defecto para desarrollo y pruebas.
+
+Los registros del backend incluyen líneas `[OTP]` sin correos, códigos ni
+credenciales. Al arrancar, `configuracion_cargada` muestra el proveedor que
+realmente cargó el proceso; los cambios de variables requieren reiniciarlo.
+Cada solicitud tiene un `solicitud_id` generado en el servidor para seguirla:
+
+- `solicitud_recibida`: el intento llegó a este backend.
+- `envio_simulado`: está usando `mock`; no se contactó a Resend.
+- `cuenta_desactivada` o `rol_sin_otp`: se omitió el envío por el estado de la cuenta.
+- `envio_aceptado`: el proveedor aceptó el envío; la entrega se revisa en Resend.
+- `envio_fallido`: falló el intento; `http_proveedor`, si existe, es el estado
+  HTTP que devolvió el proveedor. El detalle se consulta en sus registros.
+- `solicitud_finalizada`: estado HTTP de la respuesta del portal. Un 200 por
+  sí solo no confirma el envío, ya que la respuesta es genérica.
 
 ### Orden operativo
 
@@ -225,12 +321,15 @@ clubes-unid/
    en vuelo.
 3. Incluir la migración aditiva del hero antes de utilizar la nueva
    columna `url_imagen_movil`.
-4. Comprobar TLS mediante una conexión aislada antes de arrancar el backend
-   con migraciones automáticas.
-5. Desplegar en este orden, cuando se autorice: backend en Render →
+4. **OTP**: aplicar `backend/migrations/migrate-otp-codigos.sql` antes de
+   habilitar `AUTH_OTP_ENABLED=true`. Es la fuente de verdad de
+   `otp_codigos`; no está en `schema.sql` ni se ejecuta al desplegar.
+5. Comprobar TLS mediante una conexión aislada antes de arrancar el backend
+   con migraciones manuales.
+6. Desplegar en este orden, cuando se autorice: backend en Render →
    frontend en Vercel (con los merges y arreglos registrados en
    `SEGURIDAD-PROGRESO.md`).
-6. Verificación posterior: cabeceras H5b (`curl -I`), 404 global, rate
+7. Verificación posterior: cabeceras H5b (`curl -I`), 404 global, rate
    limits, login real y hero móvil con dato real.
 
 > Las comprobaciones que dependen del entorno desplegado (rotación H3, H4,
@@ -248,8 +347,11 @@ npm run dev      # Servidor de desarrollo
 npm run build    # Build producción
 npm run lint     # ESLint
 npm run preview  # Vista previa del build
+npm run test:calendario  # Pruebas de periodos, mural y permisos (sin conexión a la base de datos)
 
 # Backend
 cd backend && npm run dev     # Desarrollo con hot-reload
 cd backend && npm start       # Producción
 ```
+
+Los cambios del calendario requieren actualizar frontend y backend. Las actualizaciones de la base se aplican manualmente: el esquema inicial del calendario crea `fechas_calendario` y traslada las fechas académicas del formato anterior, conservando concepto, periodo, nota, imagen, autor y visibilidad. El arranque del backend no ejecuta `migrate()`; el esquema consolidado incluye la estructura actual de clubes, actividades y calendario, y se aplica manualmente. La copia y retirada del origen se ejecutan juntas para evitar pérdida o duplicación al reintentar. Las fechas se consultan y administran mediante `/api/calendario` (con sesión) y `/api/calendario/admin`; no son noticias ni eventos y no se agregan al mural. Los eventos conservan sus categorías social, deportiva y cultural. Noticias y eventos tienen la opción «También en el mural», visible para usuarios con sesión. El aviso y su publicación en el mural se guardan en una sola transacción. El **mural público** (`/api/mural` y `/calendario?vista=mural`) solo incluye las publicaciones aprobadas de `publicaciones_mural`; las noticias, los eventos y las fechas marcadas para el mural se muestran únicamente dentro de una sesión. Los eventos vencidos dejan de mostrarse.

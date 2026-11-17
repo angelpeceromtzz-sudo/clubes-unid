@@ -2,6 +2,11 @@ import { useRef, useEffect } from 'react';
 import { api, getSession, setSession, clearSession } from '../services/api';
 import { msalInstance, loginRequest } from '../services/authConfig';
 import { jwtExpirado } from '../utils/jwt';
+import { rutaRegresoActividades } from '../utils/rutaRegresoActividades';
+
+function rutaDeRegreso() {
+  return rutaRegresoActividades(window.location.pathname, window.location.search);
+}
 
 export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
   const cancelado = useRef(false);
@@ -20,7 +25,7 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
           const data = await api.loginMicrosoft(respuesta.accessToken);
           if (cancelado.current) return;
           setSession({ token: data.token, user: data.user });
-          window.history.replaceState({}, document.title, window.location.pathname);
+          window.history.replaceState({}, document.title, rutaDeRegreso());
           onLoggedIn?.(data);
           return;
         }
@@ -39,7 +44,7 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
               const data = await api.loginMicrosoft(silencioso.accessToken);
               if (!cancelado.current) {
                 setSession({ token: data.token, user: data.user });
-                window.history.replaceState({}, document.title, window.location.pathname);
+                window.history.replaceState({}, document.title, rutaDeRegreso());
                 onLoggedIn?.(data);
                 return;
               }
@@ -52,13 +57,13 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
         if (!sesion || tokenExpirado) {
           if (tokenExpirado) clearSession();
           onLoggedOut?.();
-          window.history.replaceState({}, document.title, window.location.pathname);
+          window.history.replaceState({}, document.title, rutaDeRegreso());
         } else {
           onLoggedIn?.({ user: sesion.user });
         }
       } catch (err) {
         console.error('[MSAL] Error en handleRedirectPromise:', err);
-        window.history.replaceState({}, document.title, window.location.pathname);
+        window.history.replaceState({}, document.title, rutaDeRegreso());
       } finally {
         if (!cancelado.current) onReady?.();
       }

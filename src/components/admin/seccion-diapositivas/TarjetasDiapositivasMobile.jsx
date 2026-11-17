@@ -9,7 +9,7 @@ export function TarjetasDiapositivasMobile({ diapositivas, modoOscuro, tdTitle, 
         <div key={d.id_diapositiva} className={`rounded-xl border p-3 ${modoOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200'}`}>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-14 h-10 rounded-lg overflow-hidden bg-slate-800/30 shrink-0">
-              <img src={obtenerUrlImagen(d.url_imagen)} alt={d.titulo} className="w-full h-full object-cover" />
+              <img draggable={false} src={obtenerUrlImagen(d.url_imagen)} alt={d.titulo} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold truncate ${tdTitle}`}>{d.titulo}</p>

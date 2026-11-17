@@ -5,19 +5,17 @@
 // nada: sólo presenta. Esa separación es a propósito, porque el promedio de una
 // escala tiene que ponderar por cuántas respuestas hay de cada valor y eso es
 // mucho más fácil de hacer mal dos veces.
+/* eslint-disable react-refresh/only-export-components */
 import { useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Alerta } from '../../ui/Alerta';
 import { Badge } from '../../ui/Badge';
-import { BotonAccion } from '../../ui/BotonAccion';
 import { Icono } from '../../ui/Icono';
 import { ModalConfirmacion } from '../../ui/ModalConfirmacion';
 import { Spinner } from '../../ui/Spinner';
 import { EmptyState } from '../../ui/EmptyState';
 import { GraficaBarras } from './GraficaBarras';
 import { etiquetaTipoPregunta } from '../../../constants/encuesta';
-import { infoEstadoEncuesta } from '../../../constants/estatus';
-import { enlacePublicoEncuesta } from '../../../utils/encuesta';
 
 // Respuestas por debajo de las cuales los porcentajes no significan gran cosa.
 const UMBRAL_REPRESENTATIVO = 30;
@@ -49,7 +47,7 @@ function formatearDiaCorto(iso) {
 // Hora de la última respuesta recibida. Si no es de hoy se antepone el día:
 // una encuesta de varios días no debe mostrar "14:32" sin más, que se lee como
 // si fuera de hace un rato.
-function formatearHoraRespuesta(iso) {
+export function formatearHoraRespuesta(iso) {
   if (!iso) return '';
   const fecha = new Date(iso);
   if (Number.isNaN(fecha.getTime())) return '';
@@ -94,8 +92,8 @@ function Metrica({ etiqueta, valor, nota, texto }) {
       <p
         className={
           texto
-            ? `text-sm font-black leading-snug ${tema.title}`
-            : `text-3xl font-black ${tema.title}`
+            ? `text-xl font-black leading-snug ${tema.title}`
+            : `text-xl font-black ${tema.title}`
         }
       >
         {valor}
@@ -312,7 +310,7 @@ function FiltroCarrera({ porLicenciatura, carreraActiva, onChange, tema, modoOsc
         id="filtro-carrera"
         value={carreraActiva ?? ''}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-        className={`border rounded-lg px-3 py-1.5 text-sm font-semibold cursor-pointer ${
+        className={`w-full sm:w-auto border rounded-lg px-3 py-1.5 text-sm font-semibold cursor-pointer ${
           modoOscuro
             ? 'border-slate-700 bg-[#18223f] text-white'
             : 'border-slate-300 bg-white text-slate-900'
@@ -340,27 +338,11 @@ function FiltroCarrera({ porLicenciatura, carreraActiva, onChange, tema, modoOsc
 
 export function PanelResultados({ hook, cargando, resultados }) {
   const { tema, modoOscuro } = useTheme();
-  const { esAdmin, aplicarEstado, refrescarSeleccion, cargarResultados, enviando,
+  const { aplicarEstado, refrescarSeleccion, cargarResultados, enviando,
     carreraActiva, setCarreraActiva, ultimaRespuesta } = hook;
 
-  const [copiado, setCopiado] = useState(false);
   const [cerrando, setCerrando] = useState(false);
-
-  // Guardar la lista completa de licenciaturas antes de filtrar para que el
-  // <select> siempre muestre todas las opciones, no solo las del filtro activo.
   const [licenciaturasTodas, setLicenciaturasTodas] = useState(null);
-
-  const enlace = enlacePublicoEncuesta(hook.seleccion?.slug ?? resultados?.encuesta?.slug);
-
-  const copiar = async () => {
-    try {
-      await navigator.clipboard.writeText(enlace);
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
-    } catch {
-      setCopiado(false);
-    }
-  };
 
   // Cuando llegan resultados sin filtro, guardar las licenciaturas completas.
   if (resultados?.por_licenciatura && !carreraActiva && licenciaturasTodas !== resultados.por_licenciatura) {
@@ -397,23 +379,10 @@ export function PanelResultados({ hook, cargando, resultados }) {
   const encuesta = hook.seleccion ?? encuestaResultados;
 
   const sinRespuestas = total === 0;
-  const infoEstado = infoEstadoEncuesta(encuesta.estado);
 
   // `por_fecha` viene en orden ascendente (ORDER BY 1 en el backend), así que el
   // primer y el último elemento son la primera y la última respuesta. Sólo se
-  // calculan con respuestas: sin ellas el arreglo está vacío y el bloque de
-  // resumen ni siquiera se pinta.
-  const primerDia = porFecha[0]?.dia;
-  const ultimoDia = porFecha[porFecha.length - 1]?.dia;
-  const rangoActividad =
-    primerDia && ultimoDia
-      ? primerDia === ultimoDia
-        ? formatearDiaCorto(primerDia)
-        : `${formatearDiaCorto(primerDia)} – ${formatearDiaCorto(ultimoDia)}`
-      : '—';
-  const promedioPorDia = porFecha.length > 0 ? (total / porFecha.length).toFixed(1) : '—';
-
-  // Las licenciaturas para el <select>: las completas si las tenemos, o las del
+// Las licenciaturas para el <select>: las completas si las tenemos, o las del
   // resultado actual como fallback.
   const licenciaturasParaFiltro = licenciaturasTodas ?? porLicenciatura;
 
@@ -425,65 +394,9 @@ export function PanelResultados({ hook, cargando, resultados }) {
   return (
     <div className="space-y-5">
       {/* Cabecera */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <h2 className={`text-xl font-black break-words ${tema.title}`}>{encuesta.titulo}</h2>
-          <Badge texto={infoEstado.etiqueta} color={infoEstado.color} />
-          {/* Es la hora de la respuesta más reciente, no la del último
-              refresco: si lleva rato sin moverse, es que no ha llegado nada
-              nuevo. El punto sigue pulsando sólo mientras el sondeo está
-              activo (encuesta publicada); con la encuesta cerrada la hora se
-              muestra quieta. */}
-          {ultimaRespuesta && (
-            <span
-              title="Fecha y hora de la respuesta más reciente"
-              className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${
-                modoOscuro ? 'text-emerald-400' : 'text-emerald-600'
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  encuesta.estado === 'publicada' ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-500'
-                }`}
-              />
-              Última respuesta: {formatearHoraRespuesta(ultimaRespuesta)}
-            </span>
-          )}
-        </div>
+      {/* Cerrar encuesta movido a la barra del editor para evitar duplicado. */}
 
-        {esAdmin && encuesta.estado === 'publicada' && (
-          <BotonAccion
-            variant="outline"
-            size="sm"
-            onClick={() => setCerrando(true)}
-            disabled={enviando}
-          >
-            <Icono nombre="lock" className="h-3.5 w-3.5" />
-            Cerrar encuesta
-          </BotonAccion>
-        )}
-      </div>
-
-      {/* Enlace público */}
-      {encuesta.estado === 'publicada' && (
-        <div className="flex items-center gap-2">
-          <input
-            readOnly
-            value={enlace}
-            aria-label="Enlace público de la encuesta"
-            onFocus={(e) => e.target.select()}
-            className={`border rounded-lg px-3 py-2 text-xs flex-1 min-w-0 cursor-text ${
-              modoOscuro
-                ? 'border-slate-700 bg-[#18223f] text-white'
-                : 'border-slate-300 bg-white text-slate-900'
-            }`}
-          />
-          <BotonAccion variant="outline" size="sm" onClick={copiar} disabled={enviando}>
-            <Icono nombre={copiado ? 'check' : 'clipboard'} className="h-3.5 w-3.5" />
-            {copiado ? 'Copiado' : 'Copiar'}
-          </BotonAccion>
-        </div>
-      )}
+      {/* Enlace público eliminado: ya existe botón de compartir en la lista. */}
 
       {/* ── Filtro por carrera ──────────────────────────────────────────── */}
       {licenciaturasParaFiltro.length > 0 && (
@@ -523,10 +436,13 @@ export function PanelResultados({ hook, cargando, resultados }) {
         ) : (
           <div className="grid grid-cols-2 gap-5 md:grid-cols-3">
             <Metrica etiqueta="Respuestas" valor={total} />
-
-            <Metrica etiqueta="Primera y última respuesta" valor={rangoActividad} texto />
-
-            <Metrica etiqueta="Promedio por día" valor={promedioPorDia} nota="sobre días con actividad" />
+            {ultimaRespuesta && (
+              <Metrica
+                etiqueta="Última respuesta"
+                valor={formatearHoraRespuesta(ultimaRespuesta)}
+                texto
+              />
+            )}
           </div>
         )}
       </Tarjeta>
@@ -549,7 +465,7 @@ export function PanelResultados({ hook, cargando, resultados }) {
             {porFecha.map((dia) => (
               <li key={dia.dia} className="flex items-center gap-3 text-sm">
                 <span className="w-24 shrink-0 opacity-70">{dia.dia}</span>
-                <span className="flex-1 h-2 rounded-full bg-amber-400/20 overflow-hidden">
+                <span className="flex-1 min-w-0 h-2 rounded-full bg-amber-400/20 overflow-hidden">
                   <span
                     className="block h-full bg-amber-400 rounded-full"
                     style={{ width: `${(dia.respuestas / total) * 100}%` }}

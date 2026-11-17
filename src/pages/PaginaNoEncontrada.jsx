@@ -1,9 +1,8 @@
 /* Página 404 del sitio: ninguna ruta declarada coincide con la URL. Se
-   monta dentro del layout del sistema (con la navbar) desde el catch-all
-   principal, y también dentro del grupo con return temprano de la encuesta
-   como respaldo de su <Routes> propio. No registra alias ni redirige: una
-   ruta desconocida —incluida la versión mal escrita de /acerca-del-proyecto—
-   siempre sirve este contenido. */
+   monta sin navbar ni navegación inferior (return temprano en App.jsx), y
+   también dentro del grupo de la encuesta como respaldo de su <Routes> propio.
+   No registra alias ni redirige: una ruta desconocida —incluida la versión mal
+   escrita de /acerca-del-proyecto— siempre sirve este contenido. */
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -24,7 +23,7 @@ export function PaginaNoEncontrada() {
           La ruta que intentas abrir no existe o fue movida. Vuelve al inicio para explorar los clubes.
         </p>
         <Link
-          to="/"
+          to="/campus/campeche/portal"
           className={`mt-6 inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[48px] rounded-full bg-amber-400 text-[#0e162c] font-black text-sm transition duration-200 hover:bg-amber-300 active:scale-[0.98] ${FOCO_PRIMARIO}`}
         >
           Volver al inicio

@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 
 const router = Router();
 
-router.post('/asignar-alumno', authenticate, requireRole(3), async (req, res) => {
+router.post('/asignar-alumno', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id_usuario, id_club } = req.body;
 
@@ -31,7 +32,7 @@ router.post('/asignar-alumno', authenticate, requireRole(3), async (req, res) =>
     }
 
     const clubResult = await pool.query(
-      'SELECT id_club, nombre_club, cupo_maximo FROM clubes WHERE id_club = $1 AND id_estatus_club = 1',
+      'SELECT id_club, nombre_club, cupo_maximo FROM clubes_operativos WHERE id_club = $1 AND id_estatus_club = 1',
       [id_club]
     );
 
@@ -42,7 +43,7 @@ router.post('/asignar-alumno', authenticate, requireRole(3), async (req, res) =>
     const club = clubResult.rows[0];
 
     const activaResult = await pool.query(
-      'SELECT i.id_inscripcion, c.nombre_club as club_anterior FROM inscripciones i LEFT JOIN clubes c ON c.id_club = i.id_club WHERE i.id_usuario = $1 AND i.id_estatus_inscripcion = 1 LIMIT 1',
+      'SELECT i.id_inscripcion, c.nombre_club as club_anterior FROM inscripciones i LEFT JOIN clubes_operativos c ON c.id_club = i.id_club WHERE i.id_usuario = $1 AND i.id_estatus_inscripcion = 1 LIMIT 1',
       [id_usuario]
     );
 

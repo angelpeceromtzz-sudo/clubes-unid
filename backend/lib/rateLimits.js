@@ -14,12 +14,21 @@ export const UMBRALES = {
   loginIp15Min: enteroPositivo(process.env.RATE_LIMIT_LOGIN_IP_15MIN, 20),
   loginCuenta15Min: enteroPositivo(process.env.RATE_LIMIT_LOGIN_CUENTA_15MIN, 5),
   microsoft15Min: enteroPositivo(process.env.RATE_LIMIT_MICROSOFT_15MIN, 20),
+  // OTP: por IP se permite algo más de holgura (varios alumnos detrás del NAT
+  // del campus); por correo se es más estricto para evitar spam y fuerza bruta
+  // contra una cuenta concreta. La ventana es de 15 minutos.
+  otpSolicitudIp15Min: enteroPositivo(process.env.RATE_LIMIT_OTP_SOLICITUD_IP_15MIN, 10),
+  otpSolicitudCuenta15Min: enteroPositivo(process.env.RATE_LIMIT_OTP_SOLICITUD_CUENTA_15MIN, 3),
+  otpVerificacionIp15Min: enteroPositivo(process.env.RATE_LIMIT_OTP_VERIFICACION_IP_15MIN, 20),
+  otpVerificacionCuenta15Min: enteroPositivo(process.env.RATE_LIMIT_OTP_VERIFICACION_CUENTA_15MIN, 10),
   registroHora: enteroPositivo(process.env.RATE_LIMIT_REGISTRO_HORA, 10),
   envioEncuestasMinuto: enteroPositivo(process.env.RATE_LIMIT_ENCUESTAS_MINUTO, 300),
   formulariosHora: enteroPositivo(process.env.RATE_LIMIT_FORMULARIOS_HORA, 5),
   uploadMinuto: enteroPositivo(process.env.RATE_LIMIT_UPLOAD_MINUTO, 30),
   notificacionesMinuto: enteroPositivo(process.env.RATE_LIMIT_NOTIFICACIONES_MINUTO, 30),
   lecturasPesadasMinuto: enteroPositivo(process.env.RATE_LIMIT_LECTURAS_MINUTO, 60),
+  escrituraMinuto: enteroPositivo(process.env.RATE_LIMIT_ESCRITURA_MINUTO, 60),
+  preferenciasMinuto: enteroPositivo(process.env.RATE_LIMIT_PREFERENCIAS_MINUTO, 30),
 };
 
 const MENSAJE_429 =
@@ -110,6 +119,36 @@ export const limitadorLoginMicrosoft = crearLimitador({
   limit: UMBRALES.microsoft15Min,
 });
 
+// OTP: límites por IP y por cuenta/correo, con contadores separados de los del
+// login local. El máximo de intentos por código (5) se controla además en la
+// tabla otp_codigos; estos límites frenan la generación masiva de códigos y la
+// fuerza bruta distribuida.
+export const limitadorOtpSolicitudIp = crearLimitador({
+  identifier: 'otp-solicitud-ip',
+  windowMs: 15 * 60 * 1000,
+  limit: UMBRALES.otpSolicitudIp15Min,
+});
+
+export const limitadorOtpSolicitudCuenta = crearLimitador({
+  identifier: 'otp-solicitud-cuenta',
+  windowMs: 15 * 60 * 1000,
+  limit: UMBRALES.otpSolicitudCuenta15Min,
+  keyGenerator: claveCuentaLogin,
+});
+
+export const limitadorOtpVerificacionIp = crearLimitador({
+  identifier: 'otp-verificacion-ip',
+  windowMs: 15 * 60 * 1000,
+  limit: UMBRALES.otpVerificacionIp15Min,
+});
+
+export const limitadorOtpVerificacionCuenta = crearLimitador({
+  identifier: 'otp-verificacion-cuenta',
+  windowMs: 15 * 60 * 1000,
+  limit: UMBRALES.otpVerificacionCuenta15Min,
+  keyGenerator: claveCuentaLogin,
+});
+
 export const limitadorRegistro = crearLimitador({
   identifier: 'register-ip',
   windowMs: 60 * 60 * 1000,
@@ -143,9 +182,29 @@ export const limitadorNotificaciones = crearLimitador({
   keyGenerator: claveUsuario,
 });
 
+export const limitadorPreferencias = crearLimitador({
+  identifier: 'preferencias-usuario',
+  windowMs: 60 * 1000,
+  limit: UMBRALES.preferenciasMinuto,
+  keyGenerator: claveUsuario,
+});
+
 export const limitadorLecturasPesadas = crearLimitador({
   identifier: 'lecturas-pesadas-usuario',
   windowMs: 60 * 1000,
   limit: UMBRALES.lecturasPesadasMinuto,
   keyGenerator: claveUsuario,
+});
+
+// Limitador genérico para escrituras administrativas que antes solo dependían
+// del global (T-034). Se monta tras authenticate para usar la identidad
+// revalidada (H2).
+export const limitadorEscritura = crearLimitador({
+  identifier: 'escritura-usuario',
+  windowMs: 60 * 1000,
+  limit: UMBRALES.escrituraMinuto,
+  keyGenerator: claveUsuario,
+  // Solo se aplica a operaciones de escritura; las lecturas ya tienen el
+  // global y, en su caso, limitadores específicos (lecturas pesadas).
+  skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
 });

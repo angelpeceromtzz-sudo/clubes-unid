@@ -9,7 +9,6 @@ export function InfoLugar({ lugar, c }) {
       </h3>
       <div className="flex items-center gap-3">
         <Icono nombre="location" className="h-5 w-5 text-amber-400 shrink-0" />
-        <Icono nombre="location-point" className="h-5 w-5 text-amber-400 shrink-0" />
         <p className={`text-sm font-medium ${c.text}`}>{lugar}</p>
       </div>
     </div>

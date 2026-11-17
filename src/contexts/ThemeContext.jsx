@@ -4,12 +4,19 @@ const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
   const [modoOscuro, setModoOscuro] = useState(() => {
-    const guardado = localStorage.getItem('theme');
-    return guardado !== null ? guardado === 'dark' : true;
+    return document.documentElement.classList.contains('dark');
   });
 
   useEffect(() => {
-    localStorage.setItem('theme', modoOscuro ? 'dark' : 'light');
+    const temaActual = modoOscuro ? 'dark' : 'light';
+    document.documentElement.classList.toggle('dark', modoOscuro);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', modoOscuro ? '#0b111e' : '#f8fafc');
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', temaActual);
+    try {
+      localStorage.setItem('theme', temaActual);
+    } catch {
+      // El tema puede cambiar aunque el navegador no permita guardarlo.
+    }
   }, [modoOscuro]);
 
   const esOscuro = modoOscuro;
@@ -25,7 +32,7 @@ export function ThemeProvider({ children }) {
         subtitle: 'text-slate-400',
         navPill: 'bg-[#18223f]/60 border border-slate-800 rounded-full p-1',
         btnActive: 'bg-amber-400 text-[#0e162c] font-black rounded-full',
-        btnInactive: 'bg-transparent text-slate-400 hover:text-white rounded-full',
+        btnInactive: 'bg-transparent text-white hover:text-amber-400 rounded-full',
         dropdownBg: 'bg-[#0e162c]',
         dropdownBorder: 'border-slate-700',
         dropdownItem: 'hover:bg-slate-700/50',

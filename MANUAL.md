@@ -110,13 +110,13 @@ Desde el menú de usuario (esquina superior derecha), selecciona **"Cerrar Sesi�
 - **Categorías** — Filtrar clubes por "Todos", "Deportes", "Cultura", "Tecnología".
 - **Estado** — Píldoras para filtrar: "Todos", "Abiertos", "Próximos", "Cerrados".
 - **Campana** — Notificaciones (si hay sesión iniciada). Polling cada 30s.
-- **Icono de cuadrícula** — Ir al dashboard (si hay sesión).
-- **Menú de usuario** — Dashboard / Ayuda / Cerrar sesión.
+- **Icono de cuadrícula** — Ir al panel (si hay sesión).
+- **Menú de usuario** — Panel / Ayuda / Cerrar sesión.
 
 ### Navegación inferior (móvil)
 - **Inicio** — Volver al catálogo.
 - **Mi Club** — Acceso directo al panel del alumno (si tiene inscripción activa).
-- **Perfil / Iniciar Sesión** — Acceso al dashboard o al login.
+- **Perfil / Iniciar Sesión** — Acceso al panel o al login.
 
 ### Splash Screen
 Al cargar la aplicación, se muestra una pantalla de presentación mientras se inicializan la autenticación y los datos.
@@ -196,11 +196,25 @@ Estados posibles del enlace, con pantallas distintas:
 | Ya cerró | 410 | "Esta encuesta ya se cerró", sin reintentar |
 | Se alcanzó el límite de envíos | 429 | "Demasiados envíos desde tu red" |
 
+### Mural público y contenido privado (PBI-18)
+
+El visitante puede abrir **`/calendario?vista=mural`** sin sesión: es el destino
+del QR y solo muestra las publicaciones aprobadas de `publicaciones_mural`.
+Las noticias, los eventos, los avisos de noticias y el calendario académico
+(incluidos los exámenes) requieren iniciar sesión. Si un visitante abre
+`/calendario` sin `vista=mural`, ve un candado con el botón de acceso; desde ahí
+puede iniciar sesión o volver al mural público. En la barra superior, las
+opciones **Noticias** y **Calendario** solo aparecen con sesión iniciada.
+
+Con sesión se habilitan las noticias y eventos, el mural completo, el calendario
+académico, los exámenes y el registro de interés en eventos o torneos. Las
+consultas privadas no se almacenan en caché (`Cache-Control: private, no-store`).
+
 ---
 
 ## 7. Panel del Alumno
 
-Ruta: `/dashboard`
+Ruta: `/panel`
 
 ### Vista "Mi Club" (si es miembro)
 - **Banner de bienvenida** con el nombre del club (descartable).
@@ -217,13 +231,13 @@ Ruta: `/dashboard`
 - **Cancelar postulación:** El alumno puede retirar su solicitud si está en revisión, preseleccionado, convocado u oferta enviada.
 
 ### Redirección automática
-Si el usuario tiene rol Presidente, Vicepresidente, Admin o Rectoría, es redirigido automáticamente a su dashboard correspondiente.
+Si el usuario tiene rol Presidente, Vicepresidente, Admin o Rectoría, es redirigido automáticamente a su panel correspondiente.
 
 ---
 
 ## 8. Panel del Presidente / Vicepresidente
 
-Ruta: `/presidente/dashboard`
+Ruta: `/presidente/panel`
 
 ### Mi Club
 - **Información del club:** Datos generales.
@@ -258,9 +272,9 @@ Ruta: `/presidente/dashboard`
 
 ## 9. Panel del Administrador
 
-Ruta: `/admin/dashboard`
+Ruta: `/admin/panel`
 
-### Resumen / Dashboard
+### Resumen / Panel
 - Tarjetas con totales: **Alumnos**, **Clubes Activos**, **Inscripciones Activas**.
 - Gráfica de inscripciones por mes.
 - Clubes más populares.
@@ -304,9 +318,9 @@ Ruta: `/admin/dashboard`
 
 ## 10. Panel de Rectoría
 
-Ruta: `/rectoria/dashboard`
+Ruta: `/rectoria/panel`
 
-### Dashboard (Resumen)
+### Panel (Resumen)
 - **Tarjetas de estadísticas:** Totales del sistema (alumnos, inscritos, clubes, % ocupación).
 - **Barras de ocupación:** Porcentaje de ocupación por club con código de colores:
   - Verde (< 50%), Ámbar (50-79%), Rojo (≥ 80%).
@@ -482,7 +496,7 @@ clubes-unid/
 ### Estadísticas (Rectoría)
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| GET | `/api/estadisticas/dashboard` | Estadísticas generales |
+| GET | `/api/estadisticas/panel` | Estadísticas generales |
 | GET | `/api/estadisticas/ocupacion-clubes` | Ocupación por club |
 | GET | `/api/estadisticas/top-clubes` | Clubes con más miembros |
 | GET | `/api/estadisticas/clubes-detalle` | Detalle de todos los clubes |
@@ -501,7 +515,7 @@ clubes-unid/
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | POST | `/api/admin/asignar-alumno` | Asignar alumno a club |
-| GET | `/api/admin/dashboard-data` | Datos del dashboard admin |
+| GET | `/api/admin/panel-data` | Datos del panel admin |
 
 ### Diapositivas Hero
 | Método | Ruta | Descripción |
@@ -519,9 +533,24 @@ clubes-unid/
 | POST | `/api/upload/imagen` | Subir imagen a Cloudinary |
 | GET | `/api/health` | Health check |
 
+### Noticias, calendario y mural (PBI-18)
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| GET | `/api/noticias` | sesión | Feed de noticias publicadas; privado |
+| GET | `/api/noticias/eventos` | sesión | Eventos publicados; privado |
+| GET | `/api/noticias/mural` | sesión | Avisos de noticias para el mural; privado |
+| GET | `/api/calendario` | sesión | Fechas académicas y exámenes publicados; privado |
+| GET | `/api/mural` | público | Publicaciones aprobadas de `publicaciones_mural`; alimenta el QR y `/calendario?vista=mural` |
+| GET | `/api/mural/config` | público | Destino público configurado para el QR |
+
+Las respuestas privadas de noticias, eventos y calendario usan
+`Cache-Control: private, no-store`. Las rutas de escritura conservan sus roles
+actuales (Administración, Rectoría y responsables autorizados).
+
 ### Encuestas
 
-Las públicas **no piden token**: es el único caso en el sistema.
+Las rutas de encuestas públicas **no piden token**. El mural público (`/api/mural`) y el catálogo también se consultan sin sesión; noticias, eventos y calendario requieren sesión.
 
 | Método | Endpoint | Rol | Descripción |
 |--------|----------|-----|-------------|

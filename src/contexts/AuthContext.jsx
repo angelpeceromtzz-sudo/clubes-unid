@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { api, getSession, setSession, clearSession } from '../services/api';
 import { useInicializacionMsal } from '../hooks/useInicializacionMsal';
+import { errorRequiereNombreOtp } from '../utils/nombreOtp';
 
 const ContextoAutenticacion = createContext(null);
 
@@ -81,6 +82,30 @@ export function ProveedorAutenticacion({ children: hijos }) {
     }
   }, [despuesDeLogin]);
 
+  const iniciarSesionOtp = useCallback(async (correo, codigo, nombre) => {
+    try {
+      const data = await api.verificarOtp(correo, codigo, nombre);
+      await despuesDeLogin(data);
+      return { ok: true, user: data.user };
+    } catch (err) {
+      if (errorRequiereNombreOtp(err)) {
+        return {
+          ok: false,
+          requiereNombre: true,
+          error: err.message,
+          status: err.status,
+        };
+      }
+
+      return {
+        ok: false,
+        error: err.message,
+        status: err.status,
+        reintentarEnSegundos: err.reintentarEnSegundos,
+      };
+    }
+  }, [despuesDeLogin]);
+
   const cerrarSesion = useCallback(() => {
     setUsuario(null);
     setTieneInscripcionActiva(false);
@@ -108,24 +133,33 @@ export function ProveedorAutenticacion({ children: hijos }) {
       if (!inscripcion) return null;
       const club = await api.getClub(inscripcion.id_club);
       const avisos = await api.getAvisos(inscripcion.id_club);
-      const esPresidente = club.id_presidente === usuario?.id;
-      return { club, avisos, esPresidente, inscripcion };
+      const esResponsableClub = club.id_responsable_club === usuario?.id;
+      return { club, avisos, esResponsableClub, inscripcion };
     } catch {
       return null;
     }
   }, [usuario]);
 
   const estaAutenticado = !!usuario;
-  const esAdmin = usuario?.id_rol === 3;
-  const esPresidente = usuario?.id_rol === 2;
+  const esAdmin = usuario?.id_rol === 3 || usuario?.id_rol === 7;
+  const esCoordinacion = usuario?.id_rol === 7;
+  const esAdminOCoordinacion = esAdmin || esCoordinacion;
+  const esResponsableClub = usuario?.id_rol === 2;
   const esRectoria = usuario?.id_rol === 4;
+  // El responsable administra el mural digital y redacta noticias;
+  // la aprobación editorial de noticias corresponde a rectoría.
+  const esResponsableMural = usuario?.id_rol === 6;
+  const puedeGestionarMural = esResponsableMural;
+  const puedeGestionarNoticias = esAdmin || esRectoria || esResponsableMural;
+  const puedeAprobarNoticias = esRectoria;
 
   return (
     <ContextoAutenticacion.Provider
       value={{
         usuario, authReady,
-        iniciarSesion, iniciarSesionMicrosoft, cerrarSesion,
-        estaAutenticado, esAdmin, esPresidente, esRectoria,
+        iniciarSesion, iniciarSesionMicrosoft, iniciarSesionOtp, cerrarSesion,
+        estaAutenticado, esAdmin, esCoordinacion, esAdminOCoordinacion, esResponsableClub, esRectoria,
+        esResponsableMural, puedeGestionarMural, puedeGestionarNoticias, puedeAprobarNoticias,
         tieneInscripcionActiva, clubesPostulados,
         actualizarClubesPostulados: setClubesPostulados,
         refrescarInscripcionActiva,

@@ -50,8 +50,10 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   }, []);
 
   const handleRoleChange = useCallback(async (userId, nuevoRolId) => {
+    const password = window.prompt('Ingresa la contraseña de administrador para cambiar el rol:');
+    if (!password) return;
     try {
-      await api.updateUserRol(userId, nuevoRolId);
+      await api.updateUserRol(userId, nuevoRolId, password);
       const actualizados = await api.getUsuarios();
       setUsuarios(actualizados);
       setFeedback('Rol actualizado correctamente');
@@ -149,7 +151,12 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     }
     setEnviandoUsuario(true);
     try {
-      await api.createUser({ nombre_completo, correo_institucional, contrasena, id_rol: Number(id_rol) });
+      const password = window.prompt('Ingresa la contraseña de administrador para crear el usuario:');
+      if (!password) {
+        setEnviandoUsuario(false);
+        return;
+      }
+      await api.createUser({ nombre_completo, correo_institucional, contrasena, id_rol: Number(id_rol), password });
       const actualizados = await api.getUsuarios();
       setUsuarios(actualizados);
       setFeedback('Usuario creado correctamente');

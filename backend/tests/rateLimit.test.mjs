@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 
 process.env.JWT_SECRET = 'secreto-de-prueba-ficticio-solo-para-tests';
 process.env.DB_PASSWORD = 'ficticio';
+process.env.ADMIN_SECRET = 'secreto-admin-ficticio-solo-para-tests';
 process.env.RATE_LIMIT_GLOBAL_MINUTO = '4';
 process.env.RATE_LIMIT_LOGIN_IP_15MIN = '2';
 process.env.RATE_LIMIT_LOGIN_CUENTA_15MIN = '2';
@@ -374,7 +375,7 @@ test('router real de notificaciones: el límite por usuario corta antes de inser
   const enviar = () => fetch(`${b}/api/notificaciones`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${tokenAdmin}` },
-    body: JSON.stringify({ titulo: 'Aviso', mensaje: 'x', audiencia: 'global' }),
+    body: JSON.stringify({ titulo: 'Aviso', mensaje: 'x', audiencia: 'global', password: process.env.ADMIN_SECRET }),
   });
   const antes = ejecuciones.notificacionesInsert;
   assert.equal((await enviar()).status, 201);

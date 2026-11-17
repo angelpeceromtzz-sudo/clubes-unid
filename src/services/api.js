@@ -12,10 +12,12 @@ import { ofertaService } from './oferta.service';
 import { horarioService } from './horario.service';
 import { diapositivaService } from './diapositiva.service';
 import { noticiaService } from './noticia.service';
+import { calendarioService } from './calendario.service';
 import { uploadService } from './upload.service';
-import { dashboardService } from './dashboard.service';
+import { panelService } from './panel.service';
 import { encuestaService, catalogoService } from './encuesta.service';
 import { asistenciaService } from './asistencia.service';
+import { preferenciasService } from './preferencias.service';
 
 export { API_BASE, getToken, setSession, clearSession, getSession, request } from './api-core';
 
@@ -32,16 +34,21 @@ export { ofertaService } from './oferta.service';
 export { horarioService } from './horario.service';
 export { diapositivaService } from './diapositiva.service';
 export { noticiaService } from './noticia.service';
+export { calendarioService } from './calendario.service';
 export { uploadService } from './upload.service';
-export { dashboardService } from './dashboard.service';
+export { panelService } from './panel.service';
 export { encuestaService, catalogoService } from './encuesta.service';
 export { asistenciaService } from './asistencia.service';
+export { preferenciasService } from './preferencias.service';
 
 export const api = {
+  ...calendarioService,
   get: (endpoint) => request(endpoint),
 
   login: autenticacionService.login,
   loginMicrosoft: autenticacionService.loginMicrosoft,
+  solicitarOtp: autenticacionService.solicitarOtp,
+  verificarOtp: autenticacionService.verificarOtp,
   getMe: autenticacionService.getMe,
 
   getClubes: clubService.getClubes,
@@ -53,6 +60,7 @@ export const api = {
   updateVicepresidente: clubService.updateVicepresidente,
   asignarClubAPresidente: clubService.asignarClubAPresidente,
   getActividadClubes: clubService.getActividadClubes,
+  getActividadFiltros: clubService.getActividadFiltros,
   getActividad: clubService.getActividad,
 
   getUsuarios: usuarioService.getUsuarios,
@@ -77,6 +85,8 @@ export const api = {
 
   getNotificaciones: notificacionService.getNotificaciones,
   createNotificacion: notificacionService.createNotificacion,
+  getMisAnuncios: notificacionService.getMisAnuncios,
+  updateNotificacion: notificacionService.updateNotificacion,
   marcarNotificacionLeida: notificacionService.marcarNotificacionLeida,
   marcarTodasNotificacionesLeidas: notificacionService.marcarTodasNotificacionesLeidas,
   eliminarNotificacion: notificacionService.eliminarNotificacion,
@@ -121,16 +131,21 @@ export const api = {
 
   getNoticias: noticiaService.getNoticias,
   getEventos: noticiaService.getEventos,
+  getMural: noticiaService.getMural,
   getMisInteresesEventos: noticiaService.getMisInteresesEventos,
   marcarInteresEvento: noticiaService.marcarInteresEvento,
   getNoticiasAdmin: noticiaService.getNoticiasAdmin,
   createNoticia: noticiaService.createNoticia,
   updateNoticia: noticiaService.updateNoticia,
   deleteNoticia: noticiaService.deleteNoticia,
+  enviarRevisionNoticia: noticiaService.enviarRevisionNoticia,
+  aprobarNoticia: noticiaService.aprobarNoticia,
+  rechazarNoticia: noticiaService.rechazarNoticia,
+  ocultarNoticia: noticiaService.ocultarNoticia,
 
   uploadImagen: uploadService.uploadImagen,
 
-  getDashboardData: dashboardService.getDashboardData,
+  getPanelData: panelService.getPanelData,
 
   obtenerEncuestaPublica: encuestaService.obtenerPublica,
   obtenerResumenPublico: encuestaService.obtenerResumenPublico,
@@ -148,6 +163,11 @@ export const api = {
   updateOpcionesPregunta: encuestaService.actualizarOpciones,
 
   getLicenciaturas: catalogoService.getLicenciaturas,
+
+  getCatalogoIntereses: preferenciasService.getCatalogoIntereses,
+  getPreferenciasOnboarding: preferenciasService.getPreferencias,
+  guardarPreferenciasOnboarding: preferenciasService.guardarPreferencias,
+  omitirOnboarding: preferenciasService.omitirOnboarding,
 
   getAsistenciaPeriodoActivo: asistenciaService.getPeriodoActivo,
   getAsistenciaSesionesHoy: asistenciaService.getSesionesHoy,

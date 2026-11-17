@@ -34,11 +34,14 @@ export function SelectorCategoria({ categoriaActiva, setCategoriaActiva }) {
     }
   }, [esMobile, abierto]);
 
-  const etiqueta = categoriaActiva === 'Todos' ? 'Categorías' : `Categoría: ${categoriaActiva}`;
+  const etiqueta = categoriaActiva === 'Todos' ? 'Categorías' : categoriaActiva === 'Actividades' ? 'Actividades' : `Categoría: ${categoriaActiva}`;
 
   return (
     <div className="relative" ref={botonRef}>
       <button
+        type="button"
+        aria-label="Explorar clubes y actividades"
+        aria-expanded={abierto}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={() => setAbierto((v) => !v)}
         className={`inline-flex items-center gap-1 font-semibold text-xs lg:text-sm tracking-wide px-3 py-1.5 transition-all duration-200 cursor-pointer active:scale-95 ${

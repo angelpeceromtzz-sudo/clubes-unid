@@ -19,8 +19,6 @@ export function SeccionResumen({ stats, ocupacionClubes, topClubes, cargando }) 
   const totalMiembros = solicitudesArr.find(s => s.status === 'Miembro oficial')?.total || 0;
   const totalRechazados = solicitudesArr.find(s => s.status === 'Rechazado')?.total || 0;
 
-  const maxOcupado = Math.max(...ocupacionClubes.map(c => c.cupo_ocupado), 0);
-
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -51,7 +49,7 @@ export function SeccionResumen({ stats, ocupacionClubes, topClubes, cargando }) 
           <div className="space-y-1">
             {ocupacionClubes.length === 0 && <p className="text-sm text-slate-500">Sin datos</p>}
             {ocupacionClubes.map(c => (
-              <BarraOcupacion key={c.id_club} nombre={c.nombre_club} maximo={c.cupo_maximo} ocupado={c.cupo_ocupado} maxOcupado={maxOcupado} modoOscuro={modoOscuro} />
+              <BarraOcupacion key={c.id_club} nombre={c.nombre_club} maximo={c.cupo_maximo} ocupado={c.cupo_ocupado}  modoOscuro={modoOscuro} />
             ))}
           </div>
         </div>

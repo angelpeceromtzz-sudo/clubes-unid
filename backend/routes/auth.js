@@ -1,41 +1,23 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ALUMNO, ROL_ADMIN, ROL_COORDINACION, ROL_RESPONSABLE_CLUB, ROL_RECTORIA, ROL_RESPONSABLE_MURAL } from '../constants/roles.js';
+import { generarToken } from '../lib/jwt.js';
 import {
   limitadorLoginLocalIp,
   limitadorLoginLocalCuenta,
   limitadorLoginMicrosoft,
   limitadorRegistro,
 } from '../lib/rateLimits.js';
+import otpRouter from './otp.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET no está definido en las variables de entorno');
-  process.exit(1);
-}
 
-// Meto institutional_id en el JWT para que el frontend lo tenga disponible
-// sin necesidad de llamar a /me en cada render. La key "id" la dejé como
-// está porque cambiarla a "id_usuario" implicaría modificar todas las
-// rutas que usan req.user.id y prefiero no arriesgarme a romper algo.
-function generarToken(user) {
-  return jwt.sign(
-    {
-      id: user.id_usuario,
-      nombre_completo: user.nombre_completo,
-      correo_institucional: user.correo_institucional,
-      institutional_id: user.institutional_id,
-      id_rol: user.id_rol,
-      rol: user.rol,
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' },
-  );
-}
+// Acceso alternativo por código OTP. No reemplaza ni modifica los flujos
+// existentes de Microsoft ni de correo/contraseña.
+router.use('/otp', otpRouter);
 
 // Doble límite (H5a): por IP (protege contra fuerza bruta distribuida desde
 // una máquina) y por cuenta (correo del body, normalizado; evita el ataque a
@@ -46,6 +28,10 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
 
     if (!correo || !contrasena) {
       return res.status(400).json({ error: 'Correo y contraseña son obligatorios' });
+    }
+    // T-034: evita hashes costosos (bcrypt) con entradas enormes.
+    if (typeof contrasena !== 'string' || contrasena.length > 128) {
+      return res.status(400).json({ error: 'Credenciales inválidas' });
     }
 
     // El correo se normaliza antes de comparar: en la base está en minúsculas
@@ -273,18 +259,43 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
 // Crear usuario (solo admin)
 // El límite por IP va antes de authenticate: también frena inundaciones de
 // peticiones sin sesión válida contra esta ruta.
-router.post('/register', limitadorRegistro, authenticate, requireRole(3), async (req, res) => {
+router.post('/register', limitadorRegistro, authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
-    const { nombre_completo, correo_institucional, contrasena, id_rol } = req.body;
+    const { nombre_completo, correo_institucional, contrasena, id_rol, password } = req.body;
 
     if (!nombre_completo || !correo_institucional || !contrasena) {
       return res.status(400).json({ error: 'nombre_completo, correo_institucional y contrasena son obligatorios' });
     }
 
-    // El correo se normaliza para no duplicar cuentas por mayúsculas/minúsculas.
-    const correoLimpio = correo_institucional.toLowerCase().trim();
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+    if (!ADMIN_SECRET || password !== ADMIN_SECRET) {
+      return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+    }
 
-    if (id_rol != null && ![1, 2, 4].includes(id_rol)) {
+    // Validaciones de longitud y caracteres
+    if (nombre_completo.trim().length > 60) {
+      return res.status(400).json({ error: 'El nombre no puede exceder 60 caracteres' });
+    }
+    if (!/^[\p{L}\s]+$/u.test(nombre_completo.trim())) {
+      return res.status(400).json({ error: 'El nombre solo permite letras y espacios' });
+    }
+
+    const correoLimpio = correo_institucional.toLowerCase().trim();
+    if (correoLimpio.length > 30) {
+      return res.status(400).json({ error: 'El correo no puede exceder 30 caracteres' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoLimpio)) {
+      return res.status(400).json({ error: 'Correo institucional inválido' });
+    }
+
+    if (contrasena.length > 64) {
+      return res.status(400).json({ error: 'La contraseña no puede exceder 64 caracteres' });
+    }
+    if (!/^[A-Za-z0-9]+$/.test(contrasena)) {
+      return res.status(400).json({ error: 'La contraseña solo permite letras y números' });
+    }
+
+    if (id_rol != null && ![ROL_ALUMNO, ROL_RESPONSABLE_CLUB, ROL_RECTORIA, ROL_RESPONSABLE_MURAL, ROL_COORDINACION].includes(id_rol)) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
 
@@ -321,14 +332,14 @@ router.get('/me', authenticate, async (req, res) => {
               COALESCE(cp.nombre_club, cv.nombre_club, c.nombre_club) AS nombre_club,
               COALESCE(cp.categoria, cv.categoria, c.categoria) AS categoria,
               COALESCE(cp.cupo_maximo, cv.cupo_maximo, c.cupo_maximo) AS cupo_maximo,
-              cp.id_presidente,
+              cp.id_responsable_club,
               cv.id_vicepresidente
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
-       LEFT JOIN clubes cp ON cp.id_presidente = u.id_usuario
-       LEFT JOIN clubes cv ON cv.id_vicepresidente = u.id_usuario AND cp.id_club IS NULL
+       LEFT JOIN clubes_operativos cp ON cp.id_responsable_club = u.id_usuario AND cp.id_estatus_club<>3 AND cp.estado_publicacion<>'archivada'
+       LEFT JOIN clubes_operativos cv ON cv.id_vicepresidente = u.id_usuario AND cp.id_club IS NULL
        LEFT JOIN inscripciones i ON i.id_usuario = u.id_usuario AND i.id_estatus_inscripcion = 1
-       LEFT JOIN clubes c ON c.id_club = i.id_club
+       LEFT JOIN clubes_operativos c ON c.id_club = i.id_club
        WHERE u.id_usuario = $1`,
       [req.user.id],
     );

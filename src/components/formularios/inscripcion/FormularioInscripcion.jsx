@@ -104,7 +104,7 @@ export function FormularioInscripcion({ club, onClose }) {
         </div>
 
         {limiteAlcanzado && <Alerta tipo="error" mensaje="Has alcanzado el límite de 3 postulaciones. No puedes enviar más formularios." />}
-        {yaPostulado && !limiteAlcanzado && <Alerta tipo="warning" mensaje="Ya te has postulado a este club anteriormente." />}
+        {yaPostulado && !limiteAlcanzado && <Alerta tipo="warning" mensaje="Ya te has postulado a este club en esta convocatoria." />}
 
         {confirmando ? (
           <PasoConfirmacionInscripcion
@@ -173,9 +173,9 @@ export function FormularioInscripcion({ club, onClose }) {
 
             <CampoTexto label="Teléfono de Contacto" name="telefono_contacto" value={formulario.telefono_contacto} onChange={manejarCambio} placeholder="+52 981 123 4567" type="tel" required error={errores.telefono_contacto} maxLength={10} />
 
-            <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} />
+            <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} maxLength={200} />
 
-            <CampoTexto label="Experiencia Previa" name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} placeholder="¿Has participado en algo similar antes?" type="textarea" />
+            <CampoTexto label="Experiencia Previa" name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} placeholder="¿Has participado en algo similar antes?" type="textarea" maxLength={200} />
 
             <Alerta tipo="error" mensaje={errorApi} />
 

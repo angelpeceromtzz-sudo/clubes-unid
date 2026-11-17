@@ -7,6 +7,9 @@ const msalConfig = {
     redirectUri: import.meta.env.VITE_AZURE_REDIRECT_URI || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'),
   },
   cache: {
+    // T-034 (H9 aceptado): se mantiene localStorage. La seguridad depende de la
+    // ausencia de sinks XSS en src/ y de la CSP servida por Vercel. No guardar
+    // tokens adicionales aquí.
     cacheLocation: 'localStorage',
     storeAuthStateInCookie: false,
   },

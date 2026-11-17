@@ -1,8 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b111e" />
+    <meta name="color-scheme" content="dark" />
+    <script>
+      let modoOscuro = true;
+      try {
+        const guardado = localStorage.getItem('theme');
+        modoOscuro = guardado === null || guardado === 'dark';
+      } catch {
+        // Conserva el tema predeterminado si el almacenamiento no está disponible.
+      }
+      document.documentElement.classList.toggle('dark', modoOscuro);
+      document.querySelector('meta[name="theme-color"]').content = modoOscuro ? '#0b111e' : '#f8fafc';
+      document.querySelector('meta[name="color-scheme"]').content = modoOscuro ? 'dark' : 'light';
+    </script>
     <title>Clubs UNID CAMPECHE</title>
     <link rel="icon" href="/favicon.svg" />
   </head>

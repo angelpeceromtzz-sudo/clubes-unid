@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNotificaciones } from '../../contexts/NotificationContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Alerta } from '../ui/Alerta';
 import { CampoTexto } from '../ui/CampoTexto';
+import { Alerta } from '../ui/Alerta';
 import { SelectorClubNotificacion } from './notificacion/SelectorClubNotificacion';
 
 const AUDIENCIAS = [
@@ -12,7 +12,7 @@ const AUDIENCIAS = [
   { value: 'club', label: 'Club en Específico' },
 ];
 
-export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess }) {
+export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, clubes, onSuccess, requiereSecret = false }) {
   const { modoOscuro } = useTheme();
   const { crearNotificacion } = useNotificaciones();
   const [titulo, setTitulo] = useState('');
@@ -25,6 +25,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
 
   async function manejarEnvio(e) {
     e.preventDefault();
+    if (enviando) return;
     if (!titulo.trim() || !mensaje.trim()) return;
     if (audiencia === 'club' && !audienciaFija && !clubSeleccionado) return;
     setEnviando(true);
@@ -35,7 +36,17 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
       const clubIdFinal = audienciaFinal === 'club'
         ? (audienciaFija ? clubId : Number(clubSeleccionado))
         : undefined;
-      await crearNotificacion(titulo.trim(), mensaje.trim(), audienciaFinal, clubIdFinal);
+
+      let password;
+      if (requiereSecret) {
+        password = window.prompt('Ingresa la contraseña de administrador para publicar el anuncio:');
+        if (!password) {
+          setEnviando(false);
+          return;
+        }
+      }
+
+      await crearNotificacion(titulo.trim(), mensaje.trim(), audienciaFinal, clubIdFinal, undefined, password ? { password } : undefined);
       const tituloEnviado = titulo.trim();
       const mensajeEnviado = mensaje.trim();
       setMensajeExito('Anuncio publicado correctamente');
@@ -54,13 +65,13 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
 
   return (
     <form onSubmit={manejarEnvio} className="space-y-4">
-      <CampoTexto label="Título del anuncio" name="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Horario de entrenamiento" required />
-      <CampoTexto label="Mensaje" name="mensaje" value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Escribe el contenido del anuncio..." type="textarea" required />
+      <CampoTexto label="Título del anuncio" name="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Horario de entrenamiento" maxLength={100} disabled={enviando} required />
+      <CampoTexto label="Contenido del anuncio" name="mensaje" value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="Escribe el contenido del anuncio..." type="textarea" disabled={enviando} required maxLength={500} />
 
       {!audienciaFija && (
         <div>
           <label className={labelClass}>Audiencia destino</label>
-          <select value={audiencia} onChange={(e) => { setAudiencia(e.target.value); setClubSeleccionado(''); }} className={inputClass}>
+          <select aria-label="Audiencia destino" value={audiencia} onChange={(e) => { setAudiencia(e.target.value); setClubSeleccionado(''); }} disabled={enviando} className={inputClass}>
             {AUDIENCIAS.map((a) => (
               <option key={a.value} value={a.value}>{a.label}</option>
             ))}
@@ -88,7 +99,7 @@ export function FormularioNotificacion({ audienciaFija, clubId, clubNombre, club
         disabled={enviando || !titulo.trim() || !mensaje.trim() || (audiencia === 'club' && !audienciaFija && !clubSeleccionado)}
         className="w-full bg-amber-400 hover:bg-amber-500 text-[#0e162c] font-black text-sm uppercase tracking-widest rounded-xl px-8 py-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {enviando ? 'Enviando...' : 'Publicar Anuncio'}
+        {enviando ? 'Publicando…' : 'Publicar anuncio'}
       </button>
     </form>
   );

@@ -1,7 +1,8 @@
-/* Punto de entrada principal. Renderiza la barra de navegación, las rutas (inicio, dashboard por rol) y el modal de inicio de sesión. */
+/* Punto de entrada principal. Renderiza la barra de navegación, las rutas (inicio, panel por rol) y el modal de inicio de sesión. */
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate, matchPath } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
+import { usePanelNav } from './contexts/PanelNavContext';
 import { useNoticias } from './contexts/NoticiasContext';
 import { useTheme } from './contexts/ThemeContext';
 import { BarraNavegacion } from './components/layout/barra-navegacion/BarraNavegacion';
@@ -13,31 +14,54 @@ import { ModalConfirmacion } from './components/ui/ModalConfirmacion';
 import { NavegacionInferiorMovil } from './components/layout/paneles-navegacion/NavegacionInferiorMovil';
 import { RutaProtegida } from './components/layout/RutaProtegida';
 import { PanelAlumno } from './pages/PanelAlumno';
-import { PanelPresidente } from './pages/PanelPresidente';
+import { PanelResponsableClub } from './pages/PanelResponsableClub';
 import { PanelAdmin } from './pages/PanelAdmin';
 import { PanelRectoria } from './pages/PanelRectoria';
+import { PanelMural } from './pages/PanelMural';
 import { PaginaInicio } from './pages/PaginaInicio';
 import { PaginaCalendario } from './pages/PaginaCalendario';
 import PaginaConoceClubs from './pages/PaginaConoceClubs';
 import PaginaAcercaProyecto from './pages/PaginaAcercaProyecto';
-import { DetalleClub } from './components/clubes/DetalleClub';
+import PaginaLandingGeneral from './pages/PaginaLandingGeneral';
+import PaginaSelectorCampus from './pages/PaginaSelectorCampus';
+import PaginaOferta from './pages/PaginaOferta';
+import { PaginaActividades, MisActividades } from './pages/PaginaActividades';
+import { DetalleActividad } from './pages/DetalleActividad';
+import { PaginaAsistenciaActividad } from './pages/PaginaAsistenciaActividad';
+import { GestionActividades } from './pages/GestionActividades';
+import PaginaTerminosCondiciones from './pages/PaginaTerminosCondiciones';
+import PaginaAvisoPrivacidad from './pages/PaginaAvisoPrivacidad';
+import PaginaReportarProblemas from './pages/PaginaReportarProblemas';
+import PaginaPreguntasFrecuentes from './pages/PaginaPreguntasFrecuentes';
+import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
+import { RutaClubActividad } from './components/actividades/RutaClubActividad';
+import { abrirPanelResponsable } from './services/panelResponsable';
+import PaginaPerfilPreferencias from './pages/PaginaPerfilPreferencias';
+import { FlujoOnboarding } from './components/onboarding/FlujoOnboarding';
+
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
-import { useClubes } from './hooks/useClubes';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
+import { useEstadoOnboarding } from './hooks/useEstadoOnboarding';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { NAVBAR_HEIGHT, NAVBAR_HEIGHT_LOGO } from './constants/limites';
 
 function RedireccionNoticias() {
   const { abrirActualizaciones } = useNoticias();
+  const { authReady, estaAutenticado } = useAutenticacion();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    if (!authReady) return;
+    if (!estaAutenticado) {
+      navigate('/campus/campeche/portal', { replace: true });
+      return;
+    }
     const eventos = location.pathname === '/eventos' || new URLSearchParams(location.search).get('seccion') === 'eventos';
     abrirActualizaciones(eventos ? 'evento' : 'todos');
-    navigate('/', { replace: true });
-  }, [abrirActualizaciones, location.pathname, location.search, navigate]);
+    navigate('/campus/campeche/portal', { replace: true });
+  }, [abrirActualizaciones, authReady, estaAutenticado, location.pathname, location.search, navigate]);
 
   return null;
 }
@@ -54,20 +78,74 @@ function ScrollAlInicio() {
   return null;
 }
 
+const RUTAS_CONOCIDAS = [
+  '/',
+  '/conocenos',
+  '/acerca-del-proyecto',
+  '/conoce-clubs',
+  '/campus',
+  '/campus/campeche',
+  '/campus/campeche/portal',
+  '/campus/campeche/portal/club/:id',
+  '/campus/campeche/portal/responsable-de-club/panel',
+  '/campus/campeche/coordinacion/panel',
+  '/encuesta/:slug',
+  '/oferta',
+  '/actividades',
+  '/actividades/mis-registros',
+  '/actividades/gestion',
+  '/actividades/asistencia/:idEdicion',
+  '/actividades/:slug',
+  '/experiencia-estudiantil',
+  '/terminos',
+  '/privacidad',
+  '/reportar-problemas',
+  '/preguntas-frecuentes',
+  '/noticias',
+  '/eventos',
+  '/calendario',
+  '/panel',
+  '/admin/panel',
+  '/rectoria/panel',
+  '/mural/panel',
+];
+
 function App() {
-  const { estaAutenticado, authReady, esAdmin, esPresidente, esRectoria, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { estaAutenticado, authReady, esAdmin, esCoordinacion, esResponsableClub, esRectoria, esResponsableMural, usuario, cerrarSesion, tieneInscripcionActiva } = useAutenticacion();
+  const { itemsNav: panelItemsNav, onNavChange: panelOnNavChange } = usePanelNav();
   const { actualizacionesAbiertas } = useNoticias();
   const { tema, modoOscuro } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { clubesFiltrados, clubesLoading, categoriaActiva, setCategoriaActiva, estadoActivo, setEstadoActivo } = useClubes();
+  const clubesLoading = false;
   const { redirigirPostLogin } = useAuthRedirect();
+  const { estado: estadoOnboarding, esAlumno: esAlumnoOnboarding, marcarCompletado: marcarCompletadoOnboarding } = useEstadoOnboarding(usuario);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [confirmarLogout, setConfirmarLogout] = useState(false);
   const [catalogoKey] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
   const [splashDone, setSplashDone] = useState(false);
+  const [onboardingAbierto, setOnboardingAbierto] = useState(false);
+
+  const debeAbrirOnboarding =
+    authReady && estaAutenticado && esAlumnoOnboarding && estadoOnboarding === 'pendiente' && !onboardingAbierto;
+
+  const onboardingAbiertoEfectivo =
+    onboardingAbierto || debeAbrirOnboarding;
+
+  useEffect(() => {
+    if (!onboardingAbiertoEfectivo) return;
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = anterior;
+    };
+  }, [onboardingAbiertoEfectivo]);
+
+  // El estado del onboarding es derivado de `debeAbrirOnboarding`; no se
+  // sincroniza con setState dentro de un effect. La condición se calcula
+  // directamente en el render para evitar cascadas de render.
 
   const handleScrollChange = useCallback((isScrolled) => {
     setHeroVisible(!isScrolled);
@@ -80,28 +158,36 @@ function App() {
 
   const handleLoginSuccess = useCallback(() => {
     setShowLogin(false);
-    if (!actualizacionesAbiertas && location.pathname !== '/noticias') redirigirPostLogin();
+    if (!actualizacionesAbiertas && location.pathname !== '/noticias' && location.pathname !== '/calendario' && !location.pathname.startsWith('/actividades')) redirigirPostLogin();
   }, [redirigirPostLogin, location.pathname, actualizacionesAbiertas]);
 
-  function handleLogout() {
+   function handleLogout() {
     cerrarSesion();
-    navigate('/');
+    navigate('/campus/campeche/portal');
     setMenuAbierto(false);
     setConfirmarLogout(false);
   }
 
-  const mostrarFiltros = location.pathname === '/';
+  const mostrarFiltros = location.pathname === '/campus/campeche/portal';
 
   // La landing /conoce-clubs y la página /acerca-del-proyecto se montan
   // fuera del layout del sistema con este return temprano (mismo patrón que
   // la encuesta): informativas, sin navbar del sistema.
-  const esLanding = location.pathname === '/conoce-clubs';
+  const esLandingGeneral = location.pathname === '/';
+  const esConocenos = location.pathname === '/conocenos';
+  const esSelectorCampus = location.pathname === '/campus';
+  const esOferta = location.pathname === '/oferta';
+  const esExperienciaEstudiantil = location.pathname === '/experiencia-estudiantil';
+  const esLegal = ['/terminos', '/privacidad', '/reportar-problemas'].includes(location.pathname);
+  const esPreguntasFrecuentes = location.pathname === '/preguntas-frecuentes';
+  const esLandingCampeche = location.pathname === '/campus/campeche';
   const esAcercaProyecto = location.pathname === '/acerca-del-proyecto';
+  const esLandingStandalone = esLandingGeneral || esConocenos || esSelectorCampus || esOferta || esExperienciaEstudiantil || esLandingCampeche || esAcercaProyecto || esLegal || esPreguntasFrecuentes || onboardingAbierto;
 
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
   // coincide con NAVBAR_HEIGHT y no con la del logotipo de NAVBAR_HEIGHT_LOGO.
-  const esRutaPanel = ['/dashboard', '/presidente/dashboard', '/admin/dashboard', '/rectoria/dashboard'].includes(location.pathname);
+  const esRutaPanel = ['/panel', '/campus/campeche/portal/responsable-de-club/panel', '/admin/panel', '/rectoria/panel', '/mural/panel'].includes(location.pathname);
   const alturaNavbar = esRutaPanel ? NAVBAR_HEIGHT_LOGO : NAVBAR_HEIGHT;
 
   // La encuesta pública se monta FUERA del layout de abajo, a propósito: es la
@@ -134,6 +220,18 @@ function App() {
     );
   }
 
+  // Una URL que no coincide con ninguna ruta declarada se muestra sin navbar,
+  // sin navegación inferior ni pie: solo la página 404.
+  const esRutaConocida = RUTAS_CONOCIDAS.some((ruta) => matchPath({ path: ruta, end: true }, location.pathname));
+  if (!esRutaConocida) {
+    return (
+      <>
+        <ScrollAlInicio />
+        <PaginaNoEncontrada />
+      </>
+    );
+  }
+
   // La landing /conoce-clubs y /acerca-del-proyecto son informativas y se
   // montan fuera del layout del sistema (mismo patrón que la encuesta): sin
   // navbar ni menú hamburguesa, sin navegación inferior, splash ni popups.
@@ -142,62 +240,89 @@ function App() {
   // pathname es literalmente una de las dos rutas y su <Route> siempre
   // coincide; las variantes (p. ej. la versión mal escrita de acerca) caen
   // en el layout del sistema y su catch-all 404.
-  if (esLanding || esAcercaProyecto) {
+  if (location.pathname === '/conoce-clubs') {
+    return <Navigate to="/campus/campeche" replace />;
+  }
+
+  if (location.pathname === '/acerca-del-proyecto') {
+    return <Navigate to="/conocenos" replace />;
+  }
+
+  if (esLandingStandalone) {
     return (
       <>
         <ScrollAlInicio />
         <Routes>
-          <Route path="/conoce-clubs" element={<PaginaConoceClubs />} />
-          <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />
+          {esLandingGeneral && <Route path="/" element={<PaginaLandingGeneral />} />}
+          {esConocenos && <Route path="/conocenos" element={<PaginaAcercaProyecto />} />}
+          {esSelectorCampus && <Route path="/campus" element={<PaginaSelectorCampus />} />}
+          {esOferta && <Route path="/oferta" element={<PaginaOferta />} />}
+          {esExperienciaEstudiantil && <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />}
+          {esLegal && <Route path="/terminos" element={<PaginaTerminosCondiciones />} />}
+          {esLegal && <Route path="/privacidad" element={<PaginaAvisoPrivacidad />} />}
+          {esLegal && <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />}
+          {esPreguntasFrecuentes && <Route path="/preguntas-frecuentes" element={<PaginaPreguntasFrecuentes />} />}
+          {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs />} />}
         </Routes>
+        {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} />}
       </>
     );
   }
 
-  function irADashboard() {
-    if (esAdmin) {
-      navigate('/admin/dashboard');
-    } else if (esPresidente) {
-      navigate('/presidente/dashboard');
+  function irAPanel() {
+    if (esCoordinacion) {
+      navigate('/admin/panel');
+    } else if (esAdmin) {
+      navigate('/admin/panel');
+    } else if (esResponsableClub) {
+      abrirPanelResponsable(navigate);
     } else if (esRectoria) {
-      navigate('/rectoria/dashboard');
+      navigate('/rectoria/panel');
+    } else if (esResponsableMural) {
+      navigate('/mural/panel');
     } else {
-      navigate('/dashboard');
+      navigate('/panel');
     }
     setMenuAbierto(false);
   }
 
-  function irACatalogo() {
-    navigate('/');
+   function irACatalogo() {
+    navigate('/campus/campeche/portal');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  return (
-    <div
-      className={`min-h-screen font-sans transition-colors duration-300 overflow-x-clip pb-16 lg:pb-0 lg:pt-[var(--navbar-height)] ${tema.bg} ${tema.text}`}
-      style={{ '--navbar-height': modoOscuro && location.pathname !== '/' ? `${alturaNavbar}px` : '0px' }}
+return (
+      <div
+        className={`min-h-dvh font-sans transition-colors duration-300 overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0 ${esLandingGeneral ? '' : 'lg:pt-[var(--navbar-height)]'} ${tema.bg} ${tema.text}`}
+      style={{ '--navbar-height': modoOscuro && !esLandingGeneral && !esOferta && location.pathname !== '/campus/campeche/portal' ? `${alturaNavbar}px` : '0px' }}
     >
       <SplashScreen authReady={authReady} clubesLoading={clubesLoading} onFinish={() => setSplashDone(true)} />
 
-      <BarraNavegacion
-        splashActivo={!splashDone}
-        menuAbierto={menuAbierto}
-        setMenuAbierto={setMenuAbierto}
-        onLogoClick={irACatalogo}
-        user={usuario}
-        onLoginClick={() => setShowLogin(true)}
-        onLogout={() => setConfirmarLogout(true)}
-        onDashboardClick={irADashboard}
-        mostrarFiltros={mostrarFiltros}
-        mostrarLogo={esRutaPanel}
-        onVolverCatalogo={irACatalogo}
-        contenidoMax={location.pathname.startsWith('/club/') ? '7xl' : null}
-        heroVisible={heroVisible}
-        onScrollChange={handleScrollChange}
-      />
+      {!esLandingGeneral && !esOferta && (
+        <BarraNavegacion
+          splashActivo={!splashDone}
+          menuAbierto={menuAbierto}
+          setMenuAbierto={setMenuAbierto}
+          onLogoClick={irACatalogo}
+          user={usuario}
+          onLoginClick={() => setShowLogin(true)}
+          onLogout={() => setConfirmarLogout(true)}
+          onPanelClick={irAPanel}
+          mostrarFiltros={mostrarFiltros}
+          mostrarNoticias={mostrarFiltros || location.pathname === '/admin/panel'}
+          mostrarLogo={esRutaPanel}
+          onVolverCatalogo={irACatalogo}
+          contenidoMax={location.pathname.startsWith('/campus/campeche/portal/club/') ? '7xl' : null}
+          heroVisible={heroVisible}
+          onScrollChange={handleScrollChange}
+          itemsNav={panelItemsNav}
+          onNavChange={panelOnNavChange}
+          ocultarHamburguesa={true}
+        />
+      )}
 
-      <ModalNoticias />
-      <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />
+      {!onboardingAbiertoEfectivo && estaAutenticado && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
+      {!onboardingAbiertoEfectivo && estaAutenticado && <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />}
 
       <ModalConfirmacion
         show={confirmarLogout}
@@ -214,47 +339,78 @@ function App() {
         <ModalInicioSesion onClose={handleLoginSuccess} />
       )}
 
+      {onboardingAbiertoEfectivo && (
+        <div className="scrollbar-amber fixed inset-0 z-[1000] flex items-stretch justify-center overflow-y-auto bg-slate-50 dark:bg-[#0b111e] p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          <div className="flex min-h-[100dvh] w-full flex-col px-4 py-6 sm:px-6">
+            <FlujoOnboarding
+              onCompletar={() => {
+                marcarCompletadoOnboarding();
+                setOnboardingAbierto(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       <Routes>
-        <Route path="/" element={
-          <PaginaInicio key={catalogoKey}
-            clubes={clubesFiltrados}
-            clubesLoading={clubesLoading}
-            categoriaActiva={categoriaActiva}
-            setCategoriaActiva={setCategoriaActiva}
-            estadoActivo={estadoActivo}
-            setEstadoActivo={setEstadoActivo}
-            onLoginClick={() => setShowLogin(true)}
-          />
+        <Route path="/actividades" element={<PaginaActividades />} />
+        <Route path="/actividades/mis-registros" element={<MisActividades onLoginClick={() => setShowLogin(true)} />} />
+        <Route path="/actividades/gestion" element={<GestionActividades onLoginClick={() => setShowLogin(true)} />} />
+        <Route path="/actividades/asistencia/:idEdicion" element={<PaginaAsistenciaActividad key={location.pathname} onLoginClick={() => setShowLogin(true)} />} />
+        <Route path="/actividades/:slug" element={<DetalleActividad onLoginClick={() => setShowLogin(true)} />} />
+        <Route path="/campus/campeche/portal" element={
+          <PaginaInicio key={catalogoKey} />
         } />
         <Route path="/noticias" element={<RedireccionNoticias />} />
         <Route path="/eventos" element={<RedireccionNoticias />} />
-        <Route path="/calendario" element={<PaginaCalendario />} />
-        {/* Respaldo del early return de arriba: cubre variantes de pathname
-            (p. ej. barra final) para que la landing y la página del proyecto
-            nunca caigan en 404. */}
-        <Route path="/conoce-clubs" element={<PaginaConoceClubs />} />
-        <Route path="/acerca-del-proyecto" element={<PaginaAcercaProyecto />} />
-        <Route path="/club/:id" element={
-          <DetalleClub onLoginClick={() => setShowLogin(true)} />
+        <Route path="/calendario" element={<PaginaCalendario onLoginClick={() => setShowLogin(true)} />} />
+        {/* Compatibilidad: la landing anterior de Campeche ahora vive en
+            /campus/campeche. */}
+        <Route path="/conoce-clubs" element={<Navigate to="/campus/campeche" replace />} />
+        <Route path="/acerca-del-proyecto" element={<Navigate to="/conocenos" replace />} />
+        <Route path="/conocenos" element={<PaginaAcercaProyecto />} />
+        <Route path="/oferta" element={<PaginaOferta />} />
+        <Route path="/terminos" element={<PaginaTerminosCondiciones />} />
+        <Route path="/privacidad" element={<PaginaAvisoPrivacidad />} />
+        <Route path="/reportar-problemas" element={<PaginaReportarProblemas />} />
+        <Route path="/preguntas-frecuentes" element={<PaginaPreguntasFrecuentes />} />
+        <Route path="/experiencia-estudiantil" element={<PaginaExperienciaEstudiantil />} />
+        <Route path="/perfil/preferencias" element={
+          <RutaProtegida requiereAlumno>
+            <PaginaPerfilPreferencias />
+          </RutaProtegida>
         } />
-        <Route path="/dashboard" element={
+        <Route path="/campus/campeche/portal/club/:id" element={
+          <RutaClubActividad onLoginClick={() => setShowLogin(true)} />
+        } />
+        <Route path="/panel" element={
           <RutaProtegida>
             <PanelAlumno />
           </RutaProtegida>
         } />
-        <Route path="/presidente/dashboard" element={
+        <Route path="/campus/campeche/portal/responsable-de-club/panel" element={
           <RutaProtegida requierePresidente>
-            <PanelPresidente />
+            <PanelResponsableClub />
           </RutaProtegida>
         } />
-        <Route path="/admin/dashboard" element={
-          <RutaProtegida requiereAdmin>
+        <Route path="/admin/panel" element={
+          <RutaProtegida requiereAdminOCoordinacion>
             <PanelAdmin />
           </RutaProtegida>
         } />
-        <Route path="/rectoria/dashboard" element={
+        <Route path="/rectoria/panel" element={
           <RutaProtegida requiereRectoria>
             <PanelRectoria />
+          </RutaProtegida>
+        } />
+        <Route path="/campus/campeche/coordinacion/panel" element={
+          <RutaProtegida requiereAdminOCoordinacion>
+            <PanelAdmin />
+          </RutaProtegida>
+        } />
+        <Route path="/mural/panel" element={
+          <RutaProtegida requiereResponsableMural>
+            <PanelMural />
           </RutaProtegida>
         } />
         {/* Catch-all: cualquier ruta desconocida (incluida la versión mal
@@ -263,13 +419,15 @@ function App() {
         <Route path="*" element={<PaginaNoEncontrada />} />
       </Routes>
 
-      <NavegacionInferiorMovil
-        estaAutenticado={estaAutenticado}
-        tieneInscripcionActiva={tieneInscripcionActiva}
-        onLoginClick={() => setShowLogin(true)}
-        onInicioClick={irACatalogo}
-      />
-      {location.pathname === '/' && <PiePagina />}
+      {!onboardingAbiertoEfectivo && (
+        <NavegacionInferiorMovil
+          estaAutenticado={estaAutenticado}
+          tieneInscripcionActiva={tieneInscripcionActiva}
+          onLoginClick={() => setShowLogin(true)}
+          onInicioClick={irACatalogo}
+        />
+      )}
+      {location.pathname === '/campus/campeche/portal' && <PiePagina />}
     </div>
   );
 }

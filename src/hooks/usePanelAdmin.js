@@ -8,38 +8,40 @@ import { useAdminUsuarios } from './useAdminUsuarios';
 import { useAdminHistorial } from './useAdminHistorial';
 import { useAdminHeroDiapositivas } from './useAdminHeroDiapositivas';
 import { useAdminNoticias } from './useAdminNoticias';
+import { useVistaPanel } from './useVistaPanel';
+import { ELEMENTOS_NAV_ADMIN } from '../constants/navegacion';
 
 export function usePanelAdmin(usuario) {
   const { esOscuro, cardCls, tableBg, thCls, tdCls, tdTitle, sbBg, sbItemBase, sbItemActive, sbItemInactive, selectCls, inputCls, labelCls, tema } = useTheme();
-  const [vistaActiva, setVistaActiva] = useState('resumen');
-  const [dashboardData, setDashboardData] = useState(null);
-  const [cargandoDashboard, setCargandoDashboard] = useState(true);
+  const [vistaActiva, setVistaActiva] = useVistaPanel(ELEMENTOS_NAV_ADMIN);
+  const [panelData, setPanelData] = useState(null);
+  const [cargandoPanel, setCargandoPanel] = useState(true);
 
   const { feedback, setFeedback, errorFeedback, setErrorFeedback } = useFeedback();
-  const clubes = useAdminClubes(setFeedback, setErrorFeedback);
+  const clubes = useAdminClubes(setFeedback, setErrorFeedback, usuario);
   const usuarios = useAdminUsuarios(clubes.refetchClubes, setFeedback, setErrorFeedback);
   const historial = useAdminHistorial(vistaActiva === 'historial');
   const heroDiapositivas = useAdminHeroDiapositivas(setFeedback, setErrorFeedback);
   const noticias = useAdminNoticias(setFeedback, setErrorFeedback);
 
-  const cargarDashboard = useCallback(async () => {
-    setCargandoDashboard(true);
+  const cargarPanel = useCallback(async () => {
+    setCargandoPanel(true);
     try {
-      const data = await api.get('/admin/dashboard-data');
-      setDashboardData(data);
+      const data = await api.get('/admin/panel-data');
+      setPanelData(data);
     } catch {
-      setDashboardData(null);
+      setPanelData(null);
     } finally {
-      setCargandoDashboard(false);
+      setCargandoPanel(false);
     }
   }, []);
 
   useEffect(() => {
     if (vistaActiva === 'resumen') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      cargarDashboard();
+      cargarPanel();
     }
-  }, [vistaActiva, cargarDashboard]);
+  }, [vistaActiva, cargarPanel]);
 
   return {
     vistaActiva,
@@ -65,15 +67,18 @@ export function usePanelAdmin(usuario) {
     filtrados: usuarios.usuariosFiltrados,
     usuariosFiltrados: usuarios.usuariosFiltrados,
     clubesFiltrados: clubes.clubesFiltrados,
+    refetchClubes: clubes.refetchClubes,
     historial: historial.historial,
     historialLoading: historial.historialLoading,
+    historialFiltros: historial.filtros,
+    setHistorialFiltros: historial.setFiltros,
     isDark: esOscuro,
     totalAlumnos: usuarios.totalAlumnos,
     clubesActivos: clubes.clubesActivos,
     clubesActivosList: clubes.clubesActivosList,
     totalInscripciones: usuarios.totalInscripciones,
-    dashboardData,
-    cargandoDashboard,
+    panelData,
+    cargandoPanel,
     cardCls,
     tableBg,
     thCls,

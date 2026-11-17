@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
 
@@ -13,11 +14,11 @@ router.get('/activa', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT i.*, c.nombre_club, c.descripcion, c.cupo_maximo,
-              c.id_presidente, c.imagen_portada as imagen,
+              c.id_responsable_club, c.imagen_portada as imagen,
               c.id_estatus_club, e.nombre_estatus as estatus_club,
               c.fecha_creacion
        FROM inscripciones i
-       JOIN clubes c ON c.id_club = i.id_club
+       JOIN clubes_operativos c ON c.id_club = i.id_club
        JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
        WHERE i.id_usuario = $1 AND i.id_estatus_inscripcion = 1
        LIMIT 1`,
@@ -44,12 +45,12 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'ID del club es obligatorio' });
     }
 
-    if (req.user.id_rol === 3) {
+    if (req.user.id_rol === ROL_ADMIN || req.user.id_rol === ROL_COORDINACION) {
       return res.status(403).json({ error: 'Los administradores no pueden inscribirse a clubes' });
     }
 
     const clubResult = await pool.query(
-      'SELECT cupo_maximo FROM clubes WHERE id_club = $1 AND id_estatus_club = 1',
+      "SELECT cupo_maximo FROM clubes_operativos WHERE id_club = $1 AND id_estatus_club = 1 AND estado_publicacion='publicada'",
       [id_club]
     );
 
@@ -99,7 +100,7 @@ router.post('/', authenticate, async (req, res) => {
 router.delete('/:userId', authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
-    const esAdmin = req.user.id_rol === 3;
+    const esAdmin = req.user.id_rol === 3 || req.user.id_rol === 7;
 
     if (!esAdmin && req.user.id_rol !== 2 && req.user.id_rol !== 5) {
       return res.status(403).json({ error: 'No tienes permisos para esta acción' });
@@ -108,7 +109,7 @@ router.delete('/:userId', authenticate, async (req, res) => {
     if (!esAdmin) {
       // Verificar que el usuario pertenezca al club del presidente/vicepresidente
       const clubDelLeader = await pool.query(
-        `SELECT id_club FROM clubes WHERE id_presidente = $1 OR id_vicepresidente = $1`,
+        `SELECT id_club FROM clubes_operativos WHERE id_responsable_club = $1 OR id_vicepresidente = $1`,
         [req.user.id]
       );
 

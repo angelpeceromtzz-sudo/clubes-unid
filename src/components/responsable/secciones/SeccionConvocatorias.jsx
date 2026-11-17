@@ -1,0 +1,119 @@
+/* Sección de convocatorias del presidente: gestiona bloques y horarios del club. */
+import { useState, useEffect } from 'react';
+import { useAutenticacion } from '../../../contexts/AuthContext';
+import { convocatoriaService } from '../../../services/convocatoria.service';
+import { api } from '../../../services/api';
+import { BloqueCard } from '../bloques/BloqueCard';
+import { Spinner } from '../../ui/Spinner';
+import { EmptyState } from '../../ui/EmptyState';
+import { EncabezadoPagina } from '../../ui/EncabezadoPagina';
+import { Alerta } from '../../ui/Alerta';
+
+export function SeccionConvocatorias({ club }) {
+  const { esAdmin } = useAutenticacion();
+  const clubActivo = Number(club?.id_estatus_club) === 1;
+  const [convocatorias, setConvocatorias] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+
+  async function cargar() {
+    try {
+      const data = await api.getConvocatorias(club.id_club);
+      setConvocatorias(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargar();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [club.id_club]);
+
+  async function manejarActualizar(id, data) {
+    const actualizada = await api.actualizarConvocatoria(id, data);
+    setConvocatorias((prev) =>
+      prev.map((c) => c.id_convocatoria === id ? { ...c, ...actualizada } : c)
+    );
+  }
+
+  async function manejarEnviar(id) {
+    try {
+      if (esAdmin) await api.enviarConvocatoria(id);
+      else await convocatoriaService.solicitarRevision(id);
+    } catch (err) {
+      try { setConvocatorias(await api.getConvocatorias(club.id_club)); } catch { /* Conserva el error de revisión. */ }
+      throw err;
+    }
+    setConvocatorias(await api.getConvocatorias(club.id_club));
+  }
+
+  async function manejarRechazar(id, observaciones) {
+    const actualizada = await convocatoriaService.rechazarConvocatoria(id, observaciones);
+    setConvocatorias((prev) => prev.map((c) => c.id_convocatoria === id ? { ...c, ...actualizada } : c));
+  }
+
+  async function manejarImprimir(id) {
+    // Se abre la pestaña dentro del gesto del usuario para que el navegador no
+    // la bloquee; el HTML se carga después con el JWT en la cabecera.
+    const ventana = window.open('', '_blank');
+    try {
+      const blob = await api.descargarAsistencia(id);
+      const url = URL.createObjectURL(blob);
+      if (ventana) {
+        ventana.location = url;
+      } else {
+        window.open(url, '_blank');
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      if (ventana) ventana.close();
+      setError(err.message);
+    }
+  }
+
+  if (cargando) {
+    return <Spinner />;
+  }
+
+  const visibles = convocatorias.filter((c) => (c.alumnos?.length || 0) > 0);
+  const flujoCompletado = convocatorias.length > 0 && visibles.length === 0;
+
+  return (
+    <div className="space-y-6">
+      <EncabezadoPagina
+        titulo="Convocatorias"
+        subtitulo="El presidente crea y programa los bloques; admin los revisa, aprueba y envía a los alumnos."
+      />
+
+      {error && <Alerta tipo="error" mensaje={error} />}
+
+      {flujoCompletado ? (
+        <EmptyState
+          icono="check-circle"
+          titulo="Proceso de convocatorias completado"
+          descripcion="Todos los alumnos han sido evaluados. Las ofertas han sido enviadas o los alumnos han sido notificados. Puedes revisar el estado en la sección de Selección Final."
+        />
+      ) : convocatorias.length === 0 ? (
+        <EmptyState icono="calendar" titulo="No hay convocatorias activas" descripcion="El presidente puede crear los bloques desde Formularios, después de revisar todas las postulaciones." />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {visibles.map((c) => (
+            <BloqueCard
+              key={c.id_convocatoria}
+              convocatoria={c}
+              clubActivo={clubActivo}
+              onActualizar={manejarActualizar}
+              onEnviar={manejarEnviar}
+              onRechazar={manejarRechazar}
+              onImprimir={manejarImprimir}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
