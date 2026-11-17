@@ -298,7 +298,7 @@ export default function PaginaAcercaProyecto() {
                 </figcaption>
               </figure>
               <div className="md:self-start">
-                <h3 className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight ${tema.title}`}>
+                <h3 className={`text-[clamp(1rem,2.1vw,2.25rem)] whitespace-nowrap font-black tracking-tight ${tema.title}`}>
                   <span className="border-b-4 border-amber-400 pb-1">{ACERCA.paraQuien.protagonista}</span>
                 </h3>
                 <p className={`mt-5 max-w-xl text-base sm:text-lg leading-relaxed ${tema.subtitle}`}>

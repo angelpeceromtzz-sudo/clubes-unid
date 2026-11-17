@@ -17,6 +17,7 @@ import { uploadService } from './upload.service';
 import { panelService } from './panel.service';
 import { encuestaService, catalogoService } from './encuesta.service';
 import { asistenciaService } from './asistencia.service';
+import { preferenciasService } from './preferencias.service';
 
 export { API_BASE, getToken, setSession, clearSession, getSession, request } from './api-core';
 
@@ -38,6 +39,7 @@ export { uploadService } from './upload.service';
 export { panelService } from './panel.service';
 export { encuestaService, catalogoService } from './encuesta.service';
 export { asistenciaService } from './asistencia.service';
+export { preferenciasService } from './preferencias.service';
 
 export const api = {
   ...calendarioService,
@@ -161,6 +163,11 @@ export const api = {
   updateOpcionesPregunta: encuestaService.actualizarOpciones,
 
   getLicenciaturas: catalogoService.getLicenciaturas,
+
+  getCatalogoIntereses: preferenciasService.getCatalogoIntereses,
+  getPreferenciasOnboarding: preferenciasService.getPreferencias,
+  guardarPreferenciasOnboarding: preferenciasService.guardarPreferencias,
+  omitirOnboarding: preferenciasService.omitirOnboarding,
 
   getAsistenciaPeriodoActivo: asistenciaService.getPeriodoActivo,
   getAsistenciaSesionesHoy: asistenciaService.getSesionesHoy,

@@ -22,6 +22,7 @@ import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionE
 import { SeccionGestionClubs } from '../components/actividades/SeccionGestionClubs';
 import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
 import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
+import { SeccionExpediente } from '../components/expediente/SeccionExpediente';
 
 export function PanelRectoria() {
   const { tema } = useTheme();
@@ -86,6 +87,8 @@ export function PanelRectoria() {
              lectura completa: lista, resultados, vista previa y enlace público. */
           <SeccionEncuestas d={d} />
         )}
+
+        {d.vistaActiva === 'expediente' && <SeccionExpediente />}
 
         {d.vistaActiva === 'actividad' && (
           <TablaActividad />

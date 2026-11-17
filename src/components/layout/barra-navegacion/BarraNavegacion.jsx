@@ -8,7 +8,7 @@ import { Logotipo } from './Logotipo';
 import { ModalAyuda } from '../navegacion/ModalAyuda';
 import { BotonNoticias } from '../../noticias/BotonNoticias';
 import { BotonCalendario } from '../../noticias/BotonCalendario';
-import { BotonPortal } from './BotonPortal';
+import { BotonNeo } from './BotonNeo';
 
 export function BarraNavegacion({
   menuAbierto, setMenuAbierto, onLogoClick,
@@ -89,7 +89,7 @@ export function BarraNavegacion({
                 <BotonCalendario colorClase={modoOscuro ? '' : 'text-[#0B1535]'} />
               </div>
             )}
-            <BotonPortal />
+            <BotonNeo />
             {user && (
               <div className="hidden lg:flex items-center gap-3">
                 <BadgeNotificaciones colorClase={modoOscuro ? '' : 'text-[#0B1535]'} />

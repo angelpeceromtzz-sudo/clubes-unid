@@ -19,6 +19,7 @@ import { SeccionHorariosAdmin } from '../components/admin/secciones/SeccionHorar
 import { ModalFormularioClub } from '../components/admin/modales/ModalFormularioClub';
 import { ModalFormularioUsuario } from '../components/admin/modales/ModalFormularioUsuario';
 import { TablaHistorial } from '../components/admin/tablas/TablaHistorial';
+import { SeccionExpediente } from '../components/expediente/SeccionExpediente';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
 import { ModalPasswordAdmin } from '../components/admin/modales/ModalPasswordAdmin';
 import { SeccionDiapositivas } from '../components/admin/seccion-diapositivas/SeccionDiapositivas';
@@ -93,6 +94,7 @@ export function PanelAdmin() {
             <SeccionNoticias gestion={d.noticias} />
           )}
 
+          {d.vistaActiva === 'expediente' && <SeccionExpediente />}
           {d.vistaActiva === 'historial' && (
             <TablaHistorial
               historial={d.historial}
