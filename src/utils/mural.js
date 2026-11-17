@@ -1,3 +1,14 @@
+// Las imágenes del mural solo pueden apuntar a HTTP(S) o a cargas locales.
+export function imagenMuralSegura(valor) {
+  if (typeof valor !== 'string' || /[\s\\]/.test(valor)) return null;
+  if (valor.startsWith('/uploads/')) return valor;
+  try {
+    const url = new URL(valor);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
+    return url.href;
+  } catch { return null; }
+}
+
 export function enlaceMural(base) {
   try {
     const url = new URL(base);

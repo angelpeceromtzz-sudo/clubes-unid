@@ -472,7 +472,8 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       } catch (error) { next(error); }
     };
     const guardarFotos = async (req, res) => {
-      const archivos = req.files || (req.file ? [req.file] : []);
+      if (req.files != null && !Array.isArray(req.files)) throw errorActividad('La carga de imágenes no es válida');
+      const archivos = Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
       if (!archivos.length || archivos.length > 10) throw errorActividad('Selecciona de 1 a 10 imágenes JPG, PNG, GIF o WebP de hasta 5 MB cada una');
       const pie = textoActividad(req.body.pie, 300, 'Descripción de las fotos');
       const fotos = await transaccion(async (cliente) => {
@@ -594,7 +595,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
 
   router.use(async (error, req, res, _next) => {
     if (req.fotosActividadEnProceso && !req.fotosActividadGuardadas) {
-      try { await limpiarImagenes(req.files || (req.file ? [req.file] : [])); }
+      try { await limpiarImagenes(Array.isArray(req.files) ? req.files : (req.file ? [req.file] : [])); }
       catch { console.error('[actividades] No se pudieron limpiar las imágenes de una carga incompleta'); }
     }
     if (error.status >= 400 && error.status < 500) return res.status(error.status).json({ error: error.message });

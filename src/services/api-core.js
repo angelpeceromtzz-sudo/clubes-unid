@@ -71,7 +71,7 @@ export async function request(endpoint, options = {}) {
     // H19: un fallo de red (sin conexión, DNS) llega como texto crudo en
     // inglés ('Failed to fetch'); aquí se traduce a un mensaje propio y se
     // marca status 0 para que el consumidor pueda distinguirlo.
-    console.error(`[API] Sin conexión en ${endpoint}:`, err);
+    console.error('[API] Sin conexión en %s:', endpoint, err);
     const error = new Error('No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.');
     error.status = 0;
     throw error;
@@ -85,7 +85,7 @@ export async function request(endpoint, options = {}) {
     data = await res.json();
   } else {
     const text = await res.text();
-    console.error(`[API] Respuesta no-JSON desde ${endpoint}:`, text.slice(0, 500));
+    console.error('[API] Respuesta no-JSON desde %s:', endpoint, text.slice(0, 500));
     // H19: el texto técnico no se pinta en la UI; el detalle queda en la consola.
     const error = new Error('El servidor no respondió correctamente. Intenta de nuevo en unos momentos.');
     error.status = res.status;

@@ -6,11 +6,12 @@ import { nombreCategoriaEvento } from '../../constants/categoriasEvento';
 import { estiloPublicacion } from '../../constants/publicaciones';
 import { periodoEvento } from '../../utils/calendario';
 import { obtenerUrlImagen } from '../../utils/imagen';
+import { imagenMuralSegura } from '../../utils/mural';
 
 export function ModalDetalleCalendario({ publicacion, onClose }) {
   const { tema, modoOscuro } = useTheme();
   const dialogoRef = useDialogoCalendario(onClose);
-  const imagen = obtenerUrlImagen(publicacion.url_imagen);
+  const imagen = imagenMuralSegura(obtenerUrlImagen(imagenMuralSegura(publicacion.url_imagen)));
   const color = { ...estiloPublicacion(publicacion.categoria, modoOscuro), ...(publicacion.origen === 'mural' ? { label: 'Mural', icono: 'newspaper' } : {}) };
   return (
     <ModalBase show onClose={onClose} maxWidth="max-w-2xl" panelClassName={`p-0 border ${color.borde} ${modoOscuro ? 'bg-[#0e162c]' : 'bg-white'}`}>

@@ -1,7 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { enlaceMural, clavePublicacionMural, estadoPublicacionMural } from '../src/utils/mural.js';
+import { enlaceMural, clavePublicacionMural, estadoPublicacionMural, imagenMuralSegura } from '../src/utils/mural.js';
 import { publicacionesMural } from '../src/utils/calendario.js';
+
+test('las imágenes del mural conservan HTTP(S) y cargas locales y rechazan esquemas ejecutables', () => {
+  for (const url of ['https://res.cloudinary.com/demo/image/upload/cartel.jpg', 'http://localhost:4000/uploads/cartel.png', '/uploads/cartel.jpg']) {
+    assert.equal(imagenMuralSegura(url), url);
+  }
+  for (const valor of [null, undefined, {}, [], 42, '', 'javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'java\nscript:alert(1)', 'data:text/html,<script>alert(1)</script>', 'data:image/svg+xml,<svg onload=alert(1)>', '//example.org/a.png', '/\\example.org/a.png', 'https://user:pass@example.org/a.png', 'https://', ' https://example.org/a.png']) {
+    assert.equal(imagenMuralSegura(valor), null, String(valor));
+  }
+});
 
 test('el QR abre el mural aunque se introduzca una dirección de administración', () => {
   assert.equal(enlaceMural('https://campus.example.org/admin?seccion=noticias#editar'), 'https://campus.example.org/calendario?vista=mural');

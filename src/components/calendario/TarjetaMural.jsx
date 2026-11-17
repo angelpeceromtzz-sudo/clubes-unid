@@ -6,6 +6,7 @@ import { tipoFecha } from '../../constants/tiposFecha';
 import { periodoEvento, periodoFechaAcademica } from '../../utils/calendario';
 import { fechaCorta } from '../../utils/formato';
 import { obtenerUrlImagen } from '../../utils/imagen';
+import { imagenMuralSegura } from '../../utils/mural';
 
 export function TarjetaMural({ item, onDetalle, onEditar }) {
   const { tema, modoOscuro } = useTheme();
@@ -13,7 +14,7 @@ export function TarjetaMural({ item, onDetalle, onEditar }) {
   const propia = item.origen === 'mural';
   const tipo = esFecha ? tipoFecha(item.tipo_fecha) : null;
   const color = estiloPublicacion(esFecha ? 'promocion' : item.categoria, modoOscuro);
-  const imagen = obtenerUrlImagen(item.url_imagen);
+  const imagen = imagenMuralSegura(obtenerUrlImagen(imagenMuralSegura(item.url_imagen)));
   const etiqueta = esFecha ? tipo.label : propia ? 'Mural' : `${color.label}${item.categoria === 'evento' ? ` · ${nombreCategoriaEvento(item.categoria_evento)}` : ''}`;
   return (
     <article className={`relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border shadow-sm motion-safe:transition-transform motion-safe:hover:-translate-y-0.5 ${modoOscuro ? 'border-slate-700/70 bg-[#182238]' : 'border-white bg-[#fffdf7]'}`}>

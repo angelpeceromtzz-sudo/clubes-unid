@@ -3,9 +3,20 @@ import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { esIdEntero } from '../lib/validarId.js';
 import { ROL_ADMIN, ROL_ALUMNO, ROL_COORDINACION, ROL_RECTORIA } from '../constants/roles.js';
+import rateLimit from 'express-rate-limit';
+import { UMBRALES, limitadorLecturasPesadas } from '../lib/rateLimits.js';
 
 const router = Router();
 
+// Un contador propio por IP protege también la revalidación de la sesión,
+// sin consumir por segunda vez el contador global de /api.
+router.use(rateLimit({
+  windowMs: 60 * 1000,
+  limit: UMBRALES.globalMinuto,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Espera un momento y vuelve a intentarlo.' },
+}));
 router.use(authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION));
 
 const MIN_BUSQUEDA = 3;
@@ -40,7 +51,7 @@ function resumirTrayectoria({ membresias, postulaciones, asistencia }) {
   };
 }
 
-router.get('/buscar', async (req, res) => {
+router.get('/buscar', limitadorLecturasPesadas, async (req, res) => {
   try {
     const termino = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     if (termino.length < MIN_BUSQUEDA) {
@@ -76,7 +87,7 @@ router.get('/buscar', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
   try {
     const { id } = req.params;
     if (!esIdEntero(id)) {
