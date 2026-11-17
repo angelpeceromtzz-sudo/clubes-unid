@@ -37,7 +37,7 @@ import { RutaClubActividad } from './components/actividades/RutaClubActividad';
 import { abrirPanelResponsable } from './services/panelResponsable';
 import PaginaPerfilPreferencias from './pages/PaginaPerfilPreferencias';
 import { FlujoOnboarding } from './components/onboarding/FlujoOnboarding';
-import { DetalleClub } from './components/clubes/DetalleClub';
+
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
 import { useAuthRedirect } from './hooks/useAuthRedirect';
