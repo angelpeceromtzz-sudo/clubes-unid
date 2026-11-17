@@ -9,6 +9,7 @@ import { BienvenidoCard } from './BienvenidoCard';
 
 export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo }) {
   const { tema } = useTheme();
+  const clubActivo = Number(postulacion.id_estatus_club) === 1;
   const conf = CONFIG_ESTATUS[postulacion.status] || CONFIG_ESTATUS['Postulado'];
   const esOferta = postulacion.status === 'Oferta enviada';
   const esFinal = ['Miembro oficial', 'Rechazado'].includes(postulacion.status);
@@ -22,7 +23,7 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {postulacion.imagen_portada ? (
-              <img src={postulacion.imagen_portada} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+              <img draggable={false} src={postulacion.imagen_portada} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
             ) : (
               <AvatarInicial nombre={postulacion.nombre_club} color="amber" size="md" />
             )}
@@ -61,7 +62,13 @@ export function TarjetaPostulacionV2({ postulacion, onRespuesta, respondiendo })
               </div>
             </div>
 
-            <InfoConvocatoria convocatoria={postulacion.convocatoria} tema={tema} />
+            {clubActivo ? (
+              <InfoConvocatoria convocatoria={postulacion.convocatoria} tema={tema} />
+            ) : postulacion.status === 'Convocado' ? (
+              <p className={`text-xs ${tema.isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                La convocatoria no está disponible porque el club no está activo.
+              </p>
+            ) : null}
 
             {esOferta && (
               <OfertaCard

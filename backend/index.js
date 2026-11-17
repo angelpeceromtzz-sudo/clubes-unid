@@ -8,8 +8,9 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import { migrate } from './migrate.js';
-await migrate();
+// Las migraciones son manuales y controladas. index.js no ejecuta schema.sql:
+// un despliegue no debe modificar una base compartida por el solo hecho de
+// arrancar. Ver backend/migrate.js y backend/migrations/.
 
 import authRoutes from './routes/auth.js';
 import usuariosRoutes from './routes/usuarios.js';
@@ -25,15 +26,22 @@ import estadisticasRoutes from './routes/estadisticas.js';
 import uploadRoutes from './routes/upload.js';
 import horariosRoutes from './routes/horarios.js';
 import adminRoutes from './routes/admin.js';
-import adminDashboardRoutes from './routes/adminDashboard.js';
+import adminPanelRoutes from './routes/adminPanel.js';
 import catalogosRoutes from './routes/catalogos.js';
 import encuestasRoutes from './routes/encuestas.js';
 import diapositivasHeroRoutes from './routes/diapositivasHero.js';
 import noticiasRoutes from './routes/noticias.js';
-import { limitadorGlobal } from './lib/rateLimits.js';
+import { limitadorGlobal, limitadorEscritura } from './lib/rateLimits.js';
 import { cabecerasSeguridad } from './lib/securityHeaders.js';
 import { manejadorErroresGlobal } from './lib/errorHandler.js';
+import { verificarSecretosArranque } from './lib/secretos.js';
+import { mailer } from './lib/mailer.js';
+import { registrarConfiguracionOtp } from './lib/otpDiagnostico.js';
 import asistenciaRoutes from './routes/asistencia.js';
+import calendarioRoutes from './routes/calendario.js';
+import muralRoutes from './routes/mural.js';
+import actividadesRoutes from './routes/actividades.js';
+import preferenciasRoutes from './routes/preferencias.js';
 
 const app = express();
 // Render termina TLS y reenvía con X-Forwarded-For (un solo proxy).
@@ -52,19 +60,31 @@ app.use(cabecerasSeguridad);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite peticiones sin origin (como Postman) o si está en la lista
+    // Permite peticiones sin origin (como Postman/curl) o si está en la lista.
+    // Un origen no permitido se rechaza con 403 (no 500) para no filtrar
+    // detalles ni generar ruido en el manejador global de errores.
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('No permitido por CORS'));
+      const error = new Error('No permitido por CORS');
+      error.status = 403;
+      callback(error);
     }
-  }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  // El frontend (otro origen) necesita leer estos encabezados para respetar
+  // el cooldown real que impone express-rate-limit en un 429.
+  exposedHeaders: ['Retry-After', 'RateLimit', 'RateLimit-Reset', 'X-RateLimit-Reset'],
 }));
 
 // Cobertura general de API por IP (H5a): red de seguridad única para todas
 // las rutas /api. Va después de CORS (los OPTIONS de preflight los responde
 // CORS) y antes de express.json para frenar también el costo de parseo.
 app.use('/api', limitadorGlobal);
+// Cobertura adicional de escrituras por usuario (T-034): red de seguridad para
+// los endpoints administrativos que antes solo tenían el global por IP.
+app.use('/api', limitadorEscritura);
 
 app.use(express.json());
 
@@ -87,12 +107,16 @@ app.use('/api/ofertas', ofertasRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/horarios', horariosRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/admin', adminDashboardRoutes);
+app.use('/api/admin', adminPanelRoutes);
 app.use('/api/diapositivas-hero', diapositivasHeroRoutes);
 app.use('/api/catalogos', catalogosRoutes);
 app.use('/api/encuestas', encuestasRoutes);
 app.use('/api/noticias', noticiasRoutes);
 app.use('/api/asistencia', asistenciaRoutes);
+app.use('/api/calendario', calendarioRoutes);
+app.use('/api/mural', muralRoutes);
+app.use('/api/actividades', actividadesRoutes);
+app.use('/api/me', preferenciasRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -124,6 +148,8 @@ app.use(manejadorErroresGlobal);
 //
 // Por eso se comprueba que el servidor quedó escuchando de verdad y se
 // informa con claridad en cualquiera de los dos casos.
+verificarSecretosArranque();
+
 const servidor = app.listen(PORT, () => {
   // Si otro proceso tiene el puerto, `listening` es false y `address()` es
   // null: el callback corrió, pero no hay socket.
@@ -135,6 +161,7 @@ const servidor = app.listen(PORT, () => {
   }
 
   console.log(`Servidor de Clubs UNID corriendo en puerto ${PORT}`);
+  registrarConfiguracionOtp(mailer);
 });
 
 servidor.on('error', (err) => {

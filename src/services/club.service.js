@@ -20,10 +20,10 @@ export const clubService = {
       body: JSON.stringify(data),
     }),
 
-  updateClubEstatus: (id, id_estatus_club) =>
+  updateClubEstatus: (id, id_estatus_club, password) =>
     request(`/clubes/${id}/estatus`, {
       method: 'PUT',
-      body: JSON.stringify({ id_estatus_club }),
+      body: JSON.stringify({ id_estatus_club, force: Boolean(password), password: password || undefined }),
     }),
 
   updateVicepresidente: (idClub, idUsuario) =>
@@ -38,7 +38,18 @@ export const clubService = {
       body: JSON.stringify({ id_club: clubId }),
     }),
 
-  getActividadClubes: (page = 1) => request(`/clubes/actividad?page=${page}`),
+  getActividadClubes: (page = 1, filtros = {}) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (filtros.desde) params.set('desde', filtros.desde);
+    if (filtros.hasta) params.set('hasta', filtros.hasta);
+    if (filtros.actor) params.set('actor', filtros.actor);
+    if (filtros.tipo) params.set('tipo', filtros.tipo);
+    if (filtros.club) params.set('club', filtros.club);
+    if (filtros.recurso) params.set('recurso', filtros.recurso);
+    return request(`/clubes/actividad?${params.toString()}`);
+  },
+
+  getActividadFiltros: () => request('/clubes/actividad/filtros'),
 
   getActividad: (page = 1) => request(`/notificaciones/actividad?page=${page}`),
 };

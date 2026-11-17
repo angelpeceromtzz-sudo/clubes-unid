@@ -1,11 +1,15 @@
 import jwt from 'jsonwebtoken';
 import pool from '../db.js';
 import { esIdEntero } from '../lib/validarId.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_RESPONSABLE_CLUB, ROL_VICEPRESIDENTE, ROL_COORDINACION } from '../constants/roles.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('FATAL: JWT_SECRET no está definido en las variables de entorno');
   process.exit(1);
+}
+if (JWT_SECRET.length < 32) {
+  console.warn('ADVERTENCIA: JWT_SECRET tiene menos de 32 caracteres; rota a un valor más largo en producción.');
 }
 
 export async function authenticate(req, res, next) {
@@ -75,7 +79,7 @@ export function requireRole(...roles) {
 }
 
 export function requireClubLeader(req, res, next) {
-  if (!req.user || (req.user.id_rol !== 2 && req.user.id_rol !== 5)) {
+  if (!req.user || (req.user.id_rol !== ROL_RESPONSABLE_CLUB && req.user.id_rol !== ROL_VICEPRESIDENTE)) {
     return res.status(403).json({ error: 'No tienes permisos para esta acción' });
   }
 
@@ -94,14 +98,14 @@ export function requireClubLeader(req, res, next) {
   }
 
   pool.query(
-    'SELECT id_presidente, id_vicepresidente FROM clubes WHERE id_club = $1',
+    'SELECT id_responsable_club, id_vicepresidente FROM clubes_operativos WHERE id_club = $1',
     [clubId]
   ).then(({ rows }) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Club no encontrado' });
     }
     const club = rows[0];
-    if (club.id_presidente !== req.user.id && club.id_vicepresidente !== req.user.id) {
+    if (club.id_responsable_club !== req.user.id && club.id_vicepresidente !== req.user.id) {
       return res.status(403).json({ error: 'No eres líder de este club' });
     }
     next();
@@ -118,7 +122,7 @@ export function requireClubLeader(req, res, next) {
 // del horario y aplica las mismas restricciones: rol líder (2/5), horario
 // existente (404) y liderazgo sobre su club (403).
 export async function requireHorarioLeader(req, res, next) {
-  if (!req.user || (req.user.id_rol !== 2 && req.user.id_rol !== 5)) {
+  if (!req.user || (req.user.id_rol !== ROL_RESPONSABLE_CLUB && req.user.id_rol !== ROL_VICEPRESIDENTE)) {
     return res.status(403).json({ error: 'No tienes permisos para esta acción' });
   }
 
@@ -136,7 +140,7 @@ export async function requireHorarioLeader(req, res, next) {
       return res.status(404).json({ error: 'Horario no encontrado' });
     }
     const club = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_club = $1 AND (id_presidente = $2 OR id_vicepresidente = $2)',
+      'SELECT id_club FROM clubes_operativos WHERE id_club = $1 AND (id_responsable_club = $2 OR id_vicepresidente = $2)',
       [horario.rows[0].id_club, req.user.id]
     );
     if (club.rows.length === 0) {
@@ -153,7 +157,7 @@ export async function requireHorarioLeader(req, res, next) {
 // Si no llega id_club en la petición, se resuelve el club donde el usuario es presidente.
 export async function requireClubPresident(req, res, next) {
   try {
-    if (!req.user || req.user.id_rol !== 2) {
+    if (!req.user || req.user.id_rol !== ROL_RESPONSABLE_CLUB) {
       return res.status(403).json({ error: 'Solo el presidente del club puede realizar esta acción' });
     }
 
@@ -166,13 +170,13 @@ export async function requireClubPresident(req, res, next) {
         return res.status(400).json({ error: 'id_club inválido' });
       }
       const club = await pool.query(
-        'SELECT id_presidente FROM clubes WHERE id_club = $1',
+        'SELECT id_responsable_club FROM clubes_operativos WHERE id_club = $1',
         [clubId]
       );
       if (club.rows.length === 0) {
         return res.status(404).json({ error: 'Club no encontrado' });
       }
-      if (club.rows[0].id_presidente !== req.user.id) {
+      if (club.rows[0].id_responsable_club !== req.user.id) {
         return res.status(403).json({ error: 'No eres el presidente de este club' });
       }
       req.idClub = parseInt(clubId, 10);
@@ -180,7 +184,7 @@ export async function requireClubPresident(req, res, next) {
     }
 
     const propios = await pool.query(
-      'SELECT id_club FROM clubes WHERE id_presidente = $1 ORDER BY id_club LIMIT 1',
+      'SELECT id_club FROM clubes_operativos WHERE id_responsable_club = $1 ORDER BY id_club LIMIT 1',
       [req.user.id]
     );
     if (propios.rows.length === 0) {
@@ -200,7 +204,7 @@ export async function requireClubPresident(req, res, next) {
 // id_club enviado por el cliente.
 export async function requirePresidenteDeLaSesion(req, res, next) {
   try {
-    if (!req.user || req.user.id_rol !== 2) {
+    if (!req.user || req.user.id_rol !== ROL_RESPONSABLE_CLUB) {
       return res.status(403).json({ error: 'Solo el presidente del club puede realizar esta acción' });
     }
 
@@ -218,13 +222,13 @@ export async function requirePresidenteDeLaSesion(req, res, next) {
     }
 
     const club = await pool.query(
-      'SELECT id_presidente FROM clubes WHERE id_club = $1',
+      'SELECT id_responsable_club FROM clubes_operativos WHERE id_club = $1',
       [sesion.rows[0].id_club]
     );
     if (club.rows.length === 0) {
       return res.status(404).json({ error: 'Club no encontrado' });
     }
-    if (club.rows[0].id_presidente !== req.user.id) {
+    if (club.rows[0].id_responsable_club !== req.user.id) {
       return res.status(403).json({ error: 'No eres el presidente del club de esta sesión' });
     }
 
@@ -239,9 +243,22 @@ export async function requirePresidenteDeLaSesion(req, res, next) {
 
 // Coordinación (PBI-05 §27): admin (rol 3) y rectoría (rol 4) en modo lectura.
 // El vicepresidente queda fuera en Asistencia V1.
-export function requireCoordinacion(req, res, next) {
-  if (!req.user || ![3, 4].includes(req.user.id_rol)) {
+export function requireAdminOrRectoria(req, res, next) {
+  if (!req.user || ![ROL_ADMIN, ROL_RECTORIA].includes(req.user.id_rol)) {
     return res.status(403).json({ error: 'Solo Coordinación (rectoría o admin) puede consultar esta información' });
+  }
+  next();
+}
+
+// Solo para consultas compartidas: no amplía permisos de escritura de los líderes.
+export function requireClubReader(req, res, next) {
+  if (req.user?.id_rol === ROL_ADMIN || req.user?.id_rol === ROL_COORDINACION) return next();
+  return requireClubLeader(req, res, next);
+}
+
+export function requireAdminOrCoordinacion(req, res, next) {
+  if (!req.user || ![ROL_ADMIN, ROL_COORDINACION].includes(req.user.id_rol)) {
+    return res.status(403).json({ error: 'No tienes permisos para esta acci\u00f3n' });
   }
   next();
 }

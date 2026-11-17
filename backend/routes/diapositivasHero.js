@@ -2,12 +2,21 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
 // Helper idéntico (mismo hash) al que añade fix/seguridad-fase1: al unificar
 // ramas el merge es limpio y ambas quedan con la corrección del public_id
 // doble, la comparación por identidad y el destroy con invalidate.
 import { eliminarImagenCloudinary, mismaIdentidad } from '../lib/eliminarImagenCloudinary.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
+
+
+function tieneCaracteresNoPermitidos(texto) {
+  if (texto === null || texto === undefined) return false;
+  const valor = String(texto).trim();
+  if (valor === '') return false;
+  return !/^[\p{L}\p{N}\s.,;:!?¿¡()\-'"\/#&]+$/u.test(valor);
+}
 
 const router = Router();
 
@@ -31,7 +40,7 @@ router.get('/', async (req, res) => {
 });
 
 // Lista todas las diapositivas — admin (activas e inactivas)
-router.get('/admin', authenticate, requireRole(3), async (req, res) => {
+router.get('/admin', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id_diapositiva, titulo, subtitulo, url_imagen, url_imagen_movil,
@@ -49,12 +58,18 @@ router.get('/admin', authenticate, requireRole(3), async (req, res) => {
 const MAX_BANNERS = 6;
 
 // Crea una diapositiva — admin
-router.post('/', authenticate, requireRole(3), async (req, res) => {
+router.post('/', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { titulo, subtitulo, url_imagen, url_imagen_movil, orden, activa } = req.body;
 
     if (!titulo || !url_imagen) {
       return res.status(400).json({ error: 'Título e imagen son obligatorios' });
+    }
+    if (tieneCaracteresNoPermitidos(titulo)) {
+      return res.status(400).json({ error: 'El título no permite emojis ni caracteres especiales' });
+    }
+    if (subtitulo && tieneCaracteresNoPermitidos(subtitulo)) {
+      return res.status(400).json({ error: 'El subtítulo no permite emojis ni caracteres especiales' });
     }
 
     const ordenNum = parseInt(orden, 10) || 1;
@@ -127,13 +142,24 @@ router.post('/', authenticate, requireRole(3), async (req, res) => {
 });
 
 // Edita una diapositiva — admin
-router.put('/:id', authenticate, requireRole(3), async (req, res) => {
+router.put('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id } = req.params;
     const { titulo, subtitulo, url_imagen, orden, activa } = req.body;
     // Imagen móvil: string cambia la URL; '' la limpia (NULL); ausente la conserva.
     const incluyeMovil = Object.prototype.hasOwnProperty.call(req.body, 'url_imagen_movil');
     const urlImagenMovilNueva = incluyeMovil ? (req.body.url_imagen_movil || null) : null;
+
+    if (titulo !== undefined && titulo !== null && titulo !== '') {
+      if (tieneCaracteresNoPermitidos(titulo)) {
+        return res.status(400).json({ error: 'El título no permite emojis ni caracteres especiales' });
+      }
+    }
+    if (subtitulo) {
+      if (tieneCaracteresNoPermitidos(subtitulo)) {
+        return res.status(400).json({ error: 'El subtítulo no permite emojis ni caracteres especiales' });
+      }
+    }
 
     if (orden !== undefined) {
       const ordenNum = parseInt(orden, 10);
@@ -218,7 +244,7 @@ router.put('/:id', authenticate, requireRole(3), async (req, res) => {
 });
 
 // Elimina una diapositiva — admin
-router.delete('/:id', authenticate, requireRole(3), async (req, res) => {
+router.delete('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
   try {
     const { id } = req.params;
 

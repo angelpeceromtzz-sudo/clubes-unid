@@ -158,11 +158,11 @@ Convenciones: **Evidencia** = observado en código; **Riesgo inferido** = deduci
 #### H5b — Cabeceras de seguridad y clickjacking (frontend y backend por separado)
 
 - **Backend:** no hay `helmet` ni set equivalente (`backend/index.js` completo, 92 líneas): faltan `X-Content-Type-Options`, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, `Strict-Transport-Security`. La ausencia de la librería no es el problema per se; lo que falta son las protecciones concretas.
-- **Frontend (donde viven los paneles):** los paneles administrativos (presidente/admin/rectoría) son páginas React servidas por **Vercel** (`vercel.json` define solo `framework`, `buildCommand`, `outputDirectory`, `installCommand` y `rewrites`; **no hay sección `headers`**). Por lo tanto, la configuración versionada no envía `X-Frame-Options` ni `Content-Security-Policy: frame-ancestors` para el origen del frontend. **El impacto de clickjacking corresponde al hosting del frontend (Vercel), no a las cabeceras del backend**: un atacante puede iframar el panel y manipular al usuario para que haga clic en acciones (p. ej. aprobar inscripciones) tras haber iniciado sesión. *Pendiente:* verificar en producción (`curl -I https://<frontend>/admin/dashboard`) si Vercel inyecta alguna cabecera por defecto; no se asume ni se descarta.
+- **Frontend (donde viven los paneles):** los paneles administrativos (presidente/admin/rectoría) son páginas React servidas por **Vercel** (`vercel.json` define solo `framework`, `buildCommand`, `outputDirectory`, `installCommand` y `rewrites`; **no hay sección `headers`**). Por lo tanto, la configuración versionada no envía `X-Frame-Options` ni `Content-Security-Policy: frame-ancestors` para el origen del frontend. **El impacto de clickjacking corresponde al hosting del frontend (Vercel), no a las cabeceras del backend**: un atacante puede iframar el panel y manipular al usuario para que haga clic en acciones (p. ej. aprobar inscripciones) tras haber iniciado sesión. *Pendiente:* verificar en producción (`curl -I https://<frontend>/admin/panel`) si Vercel inyecta alguna cabecera por defecto; no se asume ni se descarta.
 - **Estado:** confirmado en configuración versionada; efectividad en producción **pendiente**.
 - **Prioridad:** alta. **Confianza:** alta sobre la ausencia en el repo; media sobre el impacto final (depende de headers del CDN y de la interacción del usuario).
-- **Corrección recomendada:** agregar en `vercel.json` `headers` con `X-Frame-Options: DENY` y `Content-Security-Policy: frame-ancestors 'none'` (al menos para rutas `/dashboard`, `/presidente/*`, `/admin/*`, `/rectoria/*`); en el backend, `helmet()` con política de `frame-ancestors 'none'` (protege también la página HTML de H1) y `X-Content-Type-Options: nosniff`.
-- **Prueba de validación:** página HTML que embeba `https://<frontend>/admin/dashboard` en un `<iframe>`; **esperado tras fix:** el navegador bloquea el frame. `curl -I` debe mostrar `x-frame-options`/`content-security-policy`.
+- **Corrección recomendada:** agregar en `vercel.json` `headers` con `X-Frame-Options: DENY` y `Content-Security-Policy: frame-ancestors 'none'` (al menos para rutas `/panel`, `/presidente/*`, `/admin/*`, `/rectoria/*`); en el backend, `helmet()` con política de `frame-ancestors 'none'` (protege también la página HTML de H1) y `X-Content-Type-Options: nosniff`.
+- **Prueba de validación:** página HTML que embeba `https://<frontend>/admin/panel` en un `<iframe>`; **esperado tras fix:** el navegador bloquea el frame. `curl -I` debe mostrar `x-frame-options`/`content-security-policy`.
 
 #### H5c — CORS acepta peticiones sin `Origin` — **informativo, no explotable como autorización**
 
@@ -702,3 +702,20 @@ Alcance ejecutado en `fix/seguridad-fase1` (sin commits), hallazgo por hallazgo,
 4. **Revisar el estado de la BD de Render** (columna `fecha` en `horarios_club`, aplicación de `seed.sql`) para concretar H11/H17.
 5. **Confirmar la regla del rol 4 en notificaciones** (§8.2). ~~H2 (revocación JWT)~~, ~~H4 (TLS)~~ y ~~H5a/H8 (rate limiting)~~ — **hechos en la Fase 1** (§8.6, §8.7 y §8.8).
 6. **Verificar H4 en el despliegue:** al desplegar la Fase 1, ajustar `DATABASE_URL` en Render según los pasos de §8.7 (quitar `sslmode` de la cadena, reiniciar y ejecutar una consulta inocua con `SELECT 1`); si el proveedor usa CA propia, declarar `DB_SSL_CA_FILE`. Hasta entonces H4 está corregido solo a nivel de código y pruebas locales.
+
+---
+
+## 10. Fase 3 / T-034 — cierre de pendientes de código
+
+Implementado en la rama `fix/T-034-cerrar-pendientes-seguridad` (código únicamente).
+
+### Cambios principales
+- CORS: origen no permitido responde 403 (no 500); métodos y headers acotados; documentación del origen de producción en `.env.example`.
+- Cabeceras: HSTS condicional a HTTPS, CSP por ruta (cerrada en API, relajada en asistencia); frontend en Vercel con HSTS y CSP en modo report-only, `X-Frame-Options: DENY`.
+- Rate limiting: nuevo `limitadorEscritura` (60/min por usuario) montado en `/api` para operaciones de escritura.
+- Sesiones: advertencia de secreto corto en arranque; límite de longitud de contraseña en login; decisión H9 documentada (sin migración a cookies).
+- Validación: `validarParamsEnteros` en calendario; modo estricto opcional para `imagen_portada` (env `IMAGEN_PORTADA_STRICT`).
+- Secretos: `lib/secretos.js` verifica arranque (fail-closed para JWT/OTP, advertencias en producción); `docs/SEGURIDAD-OPERACION.md` con checklist operativa.
+
+### Pendientes operativos restantes
+Ver `docs/SEGURIDAD-OPERACION.md` (rotación de secretos, `NODE_ENV`, install command, TLS, cabeceras, BD).

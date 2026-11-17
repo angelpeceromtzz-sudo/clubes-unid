@@ -41,7 +41,7 @@ export function TarjetaClub({
       <div className="flex flex-col flex-1">
         <div className={`overflow-hidden rounded-xl h-40 mb-3 lg:h-48 lg:mb-5 flex items-center justify-center`}>
           {obtenerUrlImagen(imagen) ? (
-            <img
+            <img draggable={false}
               src={obtenerUrlImagen(imagen)}
               alt={nombre}
               className={`w-full h-full object-cover ${esProximamente ? 'opacity-50' : 'transition-transform duration-500 group-hover:scale-110'}`}

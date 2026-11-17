@@ -1,0 +1,108 @@
+.grafica-unid {
+  --grafica-ambar: #fbbf24;
+  --grafica-azul: #71a7ff;
+  --grafica-turquesa: #55c5be;
+  --grafica-arena: #e6be83;
+  --grafica-indigo: #a6a8eb;
+  --grafica-neutral: #8794aa;
+  --grafica-fondo: #0e162c;
+  --grafica-borde: rgba(148, 163, 184, .16);
+  --grafica-texto: #f1f5f9;
+  --grafica-texto-secundario: #b1bfd3;
+  --grafica-atenuado: #91a0b8;
+  --grafica-rejilla: rgba(148, 163, 184, .15);
+  --grafica-cursor: rgba(148, 163, 184, .07);
+  --grafica-disponible: #33415b;
+  min-width: 0;
+  border: 1px solid var(--grafica-borde);
+  border-radius: 22px;
+  background: var(--grafica-fondo);
+  color: var(--grafica-texto);
+  overflow: hidden;
+}
+.grafica-unid[data-tema="claro"] {
+  --grafica-ambar: #d58b05;
+  --grafica-azul: #366fca;
+  --grafica-turquesa: #258982;
+  --grafica-arena: #a46e31;
+  --grafica-indigo: #6965b7;
+  --grafica-neutral: #7b8ca6;
+  --grafica-fondo: #fff;
+  --grafica-borde: #e2e8f0;
+  --grafica-texto: #17243c;
+  --grafica-texto-secundario: #475569;
+  --grafica-atenuado: #64748b;
+  --grafica-rejilla: #e9edf3;
+  --grafica-cursor: rgba(100, 116, 139, .05);
+  --grafica-disponible: #e2e8f0;
+}
+.grafica-unid__cabecera { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 22px 24px 12px; }
+.grafica-unid__encabezado { min-width: 0; }
+.grafica-unid__ceja { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; color: var(--grafica-atenuado); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.grafica-unid__ceja > span { width: 6px; height: 6px; background: var(--grafica-ambar); border-radius: 50%; }
+.grafica-unid__titulo { margin: 0; color: var(--grafica-texto); font-size: 18px; line-height: 1.4; font-weight: 600; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.grafica-unid__subtitulo { margin: 6px 0 0; color: var(--grafica-atenuado); font-size: 12px; line-height: 1.6; }
+.grafica-unid__resumen { display: grid; justify-items: end; gap: 2px; flex-shrink: 0; padding-top: 1px; }
+.grafica-unid__resumen strong { font-size: 26px; line-height: 1.2; letter-spacing: -.04em; font-weight: 600; font-variant-numeric: tabular-nums; }
+.grafica-unid__resumen > span { font-size: 11px; color: var(--grafica-atenuado); }
+.grafica-unid__contenido { padding: 0 18px 18px; min-width: 0; }
+.grafica-unid__leyenda { display: flex; flex-wrap: wrap; gap: 10px 18px; list-style: none; padding: 0 6px; margin: 5px 0 18px; }
+.grafica-unid__leyenda li { display: inline-flex; align-items: center; gap: 7px; color: var(--grafica-texto-secundario); font-size: 12px; }
+.grafica-unid__leyenda li > span { display: inline-block; width: 8px; height: 8px; border-radius: 3px; flex-shrink: 0; }
+.grafica-unid__lienzo { min-width: 0; width: 100%; }
+.grafica-unid__desplazable { overflow-x: auto; overscroll-behavior-x: contain; }
+.grafica-unid__pie { padding: 0 24px 18px; }
+.grafica-unid__nota { margin: 0 0 12px; color: var(--grafica-atenuado); font-size: 12px; line-height: 1.6; }
+.grafica-unid__estado { display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; min-height: 230px; padding: 28px; color: var(--grafica-texto-secundario); text-align: center; font-size: 13px; line-height: 1.7; }
+.grafica-unid__estado-marca { font-size: 28px; color: var(--grafica-atenuado); }
+.grafica-unid__esqueleto { display: flex; flex-direction: column; width: 70%; gap: 12px; }
+.grafica-unid__esqueleto i { height: 12px; border-radius: 5px; background: var(--grafica-disponible); width: 80%; }
+.grafica-unid__esqueleto i:nth-child(2) { width: 55%; }
+.grafica-unid__esqueleto i:nth-child(3) { width: 68%; }
+.grafica-unid__tooltip { min-width: 160px; max-width: 280px; padding: 12px 14px; border: 1px solid var(--grafica-borde); border-radius: 12px; background: var(--grafica-fondo); color: var(--grafica-texto); box-shadow: 0 8px 30px rgba(0, 0, 0, .16); font-size: 12px; }
+.grafica-unid__tooltip-titulo { margin: 0 0 8px; font-size: 12px; font-weight: 600; line-height: 1.5; }
+.grafica-unid__tooltip-fila { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 5px; }
+.grafica-unid__tooltip-fila > span { display: flex; align-items: center; gap: 7px; color: var(--grafica-texto-secundario); }
+.grafica-unid__tooltip-fila i { width: 7px; height: 7px; flex-shrink: 0; border-radius: 2px; }
+.grafica-unid__tooltip-fila strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.grafica-unid__tooltip-nota { margin-top: 7px; color: var(--grafica-atenuado); }
+.grafica-unid__datos { border-top: 1px solid var(--grafica-borde); }
+.grafica-unid__datos > summary { padding-top: 13px; color: var(--grafica-texto-secundario); font-size: 12px; font-weight: 500; cursor: pointer; }
+.grafica-unid__datos > summary > span { float: right; margin-left: 10px; color: var(--grafica-atenuado); font-weight: 400; }
+.grafica-unid__tabla-contenedor { max-width: 100%; overflow: auto; margin-top: 12px; border-radius: 8px; }
+.grafica-unid__tabla { width: 100%; border-collapse: collapse; font-size: 12px; color: var(--grafica-texto-secundario); }
+.grafica-unid__tabla th, .grafica-unid__tabla td { padding: 11px 8px; border-bottom: 1px solid var(--grafica-borde); text-align: left; line-height: 1.5; }
+.grafica-unid__tabla th { color: var(--grafica-texto); font-weight: 500; }
+.grafica-unid__tabla .grafica-unid__numero { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.grafica-unid__control-filas { display: flex; justify-content: space-between; gap: 12px; padding: 10px 6px 0; font-size: 12px; color: var(--grafica-atenuado); }
+.grafica-unid__control-filas button { color: var(--grafica-texto); font-weight: 500; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.grafica-unid button:focus-visible, .grafica-unid summary:focus-visible, .grafica-unid [tabindex="0"]:focus-visible { outline: 2px solid var(--grafica-ambar); outline-offset: 4px; border-radius: 4px; }
+.grafica-unid__formatos { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--grafica-borde); border-radius: 9px; flex-shrink: 0; }
+.grafica-unid__formatos button { padding: 5px 9px; border-radius: 6px; font-size: 12px; color: var(--grafica-atenuado); cursor: pointer; }
+.grafica-unid__formatos button[aria-pressed="true"] { background: var(--grafica-cursor); color: var(--grafica-texto); }
+.grafica-unid__pastel { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 4px 22px; }
+.grafica-unid__pastel-lienzo { height: 245px; min-width: 0; width: 100%; }
+.grafica-unid__partes { list-style: none; margin: 0; padding: 0 6px; }
+.grafica-unid__partes li { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--grafica-borde); }
+.grafica-unid__partes li:last-child { border: 0; }
+.grafica-unid__parte-color { width: 8px; height: 8px; border-radius: 3px; margin-top: 6px; }
+.grafica-unid__parte-nombre { color: var(--grafica-texto-secundario); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.grafica-unid__parte-valor { display: grid; gap: 3px; justify-items: end; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.grafica-unid__parte-valor small { font-size: 11px; font-weight: 400; color: var(--grafica-atenuado); }
+@container (min-width: 520px) {
+  .grafica-unid__pastel { grid-template-columns: minmax(200px, .9fr) minmax(0, 1fr); }
+}
+.grafica-unid--pastel { container-type: inline-size; }
+@media (max-width: 639px) {
+  .grafica-unid__cabecera { padding: 18px 16px 12px; gap: 12px; flex-wrap: wrap; }
+  .grafica-unid__encabezado { flex: 1 1 150px; }
+  .grafica-unid__titulo { font-size: 16px; }
+  .grafica-unid__contenido { padding: 0 10px 14px; }
+  .grafica-unid__pie { padding: 0 16px 16px; }
+  .grafica-unid__acciones { flex: 1 0 100%; }
+  .grafica-unid__pastel-lienzo { height: 225px; }
+}
+@media print {
+  .grafica-unid { break-inside: avoid; box-shadow: none; }
+  .grafica-unid__datos > summary, .grafica-unid__control-filas, .grafica-unid__acciones { display: none; }
+}

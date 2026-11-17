@@ -12,10 +12,10 @@ export const usuarioService = {
   deleteUser: (id) =>
     request(`/usuarios/${id}`, { method: 'DELETE' }),
 
-  updateUserRol: (id, id_rol) =>
+  updateUserRol: (id, id_rol, password) =>
     request(`/usuarios/${id}/rol`, {
       method: 'PUT',
-      body: JSON.stringify({ id_rol }),
+      body: JSON.stringify({ id_rol, password }),
     }),
 
   adminAction: (targetUserId, action, password) =>

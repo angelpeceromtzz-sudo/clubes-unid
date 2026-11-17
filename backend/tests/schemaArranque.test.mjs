@@ -1,7 +1,6 @@
-// H11: el arranque ya no contiene operaciones destructivas de horarios_club.
-// Pruebas de regresión sobre los archivos que se ejecutan en cada arranque
-// (schema.sql vía migrate.js) y sobre la migración manual que reemplaza al
-// bloque retirado. Lectura de archivos locales; sin base de datos.
+// H11: schema.sql ya no contiene operaciones destructivas de horarios_club.
+// Pruebas de regresión sobre schema.sql (aplicado solo de forma manual) y sobre
+// la migración manual que reemplaza al bloque retirado. Sin base de datos.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs';
@@ -17,7 +16,7 @@ const migracionManual = fs.readFileSync(
   'utf8',
 );
 
-test('schema.sql del arranque no contiene TRUNCATE', () => {
+test('schema.sql no contiene TRUNCATE', () => {
   // Los comentarios pueden mencionar la palabra al documentar el retiro;
   // lo que importa es que ninguna sentencia la ejecute.
   const sinComentarios = schema.replace(/--[^\n]*/g, '');

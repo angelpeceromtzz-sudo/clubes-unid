@@ -3,7 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Spinner } from '../ui/Spinner';
 import { Th, Td } from '../ui/CeldasTabla';
 
-export function SeccionClubes({ clubesDetalle, cargando }) {
+export function SeccionClubes({ clubesDetalle, cargando, onPublicacion }) {
   const { modoOscuro } = useTheme();
   if (cargando) {
     return <Spinner className="py-20" />;
@@ -24,11 +24,12 @@ export function SeccionClubes({ clubesDetalle, cargando }) {
             <Th>Cupo</Th>
             <Th>Ocupado</Th>
             <Th>Estatus</Th>
+            {onPublicacion && <Th>Publicación</Th>}
           </tr>
         </thead>
         <tbody>
           {clubesDetalle.length === 0 && (
-            <tr><td colSpan={5} className="text-center py-10 text-slate-500">No hay clubes registrados</td></tr>
+            <tr><td colSpan={onPublicacion ? 6 : 5} className="text-center py-10 text-slate-500">No hay clubes registrados</td></tr>
           )}
           {clubesDetalle.map(c => (
             <tr key={c.id_club} className={`border-b ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/20' : 'border-slate-100 hover:bg-slate-50'} transition-colors`}>
@@ -40,6 +41,7 @@ export function SeccionClubes({ clubesDetalle, cargando }) {
               <Td className="font-mono">{c.cupo_maximo}</Td>
               <Td className="font-mono">{c.cupo_ocupado}</Td>
               <Td><Badge texto={c.estatus} color={estatusColor(c.estatus)} /></Td>
+              {onPublicacion && <Td><button type="button" onClick={() => onPublicacion(c)} className="font-semibold text-amber-600 dark:text-amber-400 underline cursor-pointer">Revisar publicación</button></Td>}
             </tr>
           ))}
         </tbody>

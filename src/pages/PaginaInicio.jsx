@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useClubes } from '../hooks/useClubes';
 import { TarjetaClub } from '../components/clubes/tarjetas/TarjetaClub';
 import { Heroe } from '../components/clubes/Heroe';
 import { SelectorCategoria } from '../components/clubes/SelectorCategoria';
@@ -10,18 +11,21 @@ import { FiltrosEstado } from '../components/layout/navegacion/FiltrosEstado';
 import { Spinner } from '../components/ui/Spinner';
 import { Alerta } from '../components/ui/Alerta';
 import { obtenerUrlImagen } from '../utils/imagen';
+import { CatalogoActividades } from '../components/actividades/ActividadUI';
 
 const ORDEN_ESTADO = ['abierto', 'proximo', 'lleno', 'cerrado'];
 const ORDEN_CATEGORIA = ['Deportes', 'Cultura', 'Tecnologia'];
 
-export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCategoriaActiva, estadoActivo, setEstadoActivo }) {
+export function PaginaInicio() {
   const navigate = useNavigate();
   const { estaAutenticado } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();
   const [heroListo, setHeroListo] = useState(false);
+  const { clubesFiltrados, clubesLoading, categoriaActiva, setCategoriaActiva, estadoActivo, setEstadoActivo } = useClubes();
+  const verActividades = categoriaActiva === 'Actividades';
 
   const clubesOrdenados = useMemo(() => {
-    return [...clubes].sort((a, b) => {
+    return [...clubesFiltrados].sort((a, b) => {
       const estadoA = ORDEN_ESTADO.indexOf(a.estado_calculado);
       const estadoB = ORDEN_ESTADO.indexOf(b.estado_calculado);
       const rankEstadoA = estadoA === -1 ? ORDEN_ESTADO.length : estadoA;
@@ -36,11 +40,11 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
       const rankCatB = prioB === -1 ? ORDEN_CATEGORIA.length : prioB;
       return rankCatA - rankCatB;
     });
-  }, [clubes]);
+  }, [clubesFiltrados]);
 
   const clubesPorCategoria = useMemo(() => {
     const map = {};
-    for (const club of clubes) {
+    for (const club of clubesFiltrados) {
       if (club.id_estatus_club === 2) {
         if (!map['Proximamente']) map['Proximamente'] = [];
         map['Proximamente'].push(club);
@@ -51,7 +55,7 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
       map[cat].push(club);
     }
     return map;
-  }, [clubes]);
+  }, [clubesFiltrados]);
 
   const categoriasMobile = useMemo(() => {
     return Object.entries(clubesPorCategoria).sort(([a], [b]) => {
@@ -77,14 +81,15 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
           indicadores = ~16px hasta el encabezado. Escritorio conserva
           pt-12 (48px) y mb-10 de la fila con filtros (referencia develop). */}
       <main id="catalogo" className="w-full px-6 sm:px-8 lg:px-12 xl:px-16 pt-3 pb-24 md:py-12 lg:pt-12">
+        <div className="mb-8 empty:hidden"><CatalogoActividades soloDestacadas /></div>
         <div className="mb-6 lg:mb-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <h2 className={`shrink-0 text-2xl lg:text-3xl font-black tracking-tight transition-colors duration-300 ${tema.title}`}>
-            Explorar Clubes
+            {verActividades ? 'Explorar Actividades' : 'Explorar Clubes'}
           </h2>
 
-          <div className="hidden lg:flex flex-col gap-3 lg:items-end">
+          <div className="flex flex-col gap-3 lg:items-end">
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-start lg:justify-end">
-              <FiltrosEstado estadoActivo={estadoActivo} setEstadoActivo={setEstadoActivo} variante="desktop" />
+              {!verActividades && <FiltrosEstado estadoActivo={estadoActivo} setEstadoActivo={setEstadoActivo} variante="desktop" />}
               <SelectorCategoria
                 categoriaActiva={categoriaActiva}
                 setCategoriaActiva={setCategoriaActiva}
@@ -93,13 +98,13 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
           </div>
         </div>
 
-        {!estaAutenticado && (
+        {!estaAutenticado && !verActividades && (
           <Alerta tipo="warning" mensaje="Inicia sesión para inscribirte en un club." className="mb-4 lg:mb-8" />
         )}
 
-        {clubesLoading ? (
+        {verActividades ? <CatalogoActividades /> : clubesLoading ? (
           <Spinner className="py-20" />
-        ) : clubes.length === 0 ? (
+        ) : clubesFiltrados.length === 0 ? (
           <p className={`text-center py-20 text-lg ${tema.subtitle}`}>
             No hay clubes disponibles en esta categoría.
           </p>
@@ -116,7 +121,7 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
                   cupoMaximo={club.cupo_maximo}
                   cupoActual={parseInt(club.cupo_actual) || 0}
                   imagen={obtenerUrlImagen(club.imagen_portada || club.imagen)}
-                  onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
+                  onClick={() => navigate(`/campus/campeche/portal/club/${club.id_club}`, { state: { club } })}
                   idEstatusClub={club.id_estatus_club}
                   estatus={club.estatus}
                   estadoCalculado={club.estado_calculado}
@@ -148,7 +153,7 @@ export function PaginaInicio({ clubes, clubesLoading, categoriaActiva, setCatego
                           cupoMaximo={club.cupo_maximo}
                           cupoActual={parseInt(club.cupo_actual) || 0}
                           imagen={obtenerUrlImagen(club.imagen_portada || club.imagen)}
-                          onClick={() => navigate(`/club/${club.id_club}`, { state: { club } })}
+                          onClick={() => navigate(`/campus/campeche/portal/club/${club.id_club}`, { state: { club } })}
                           idEstatusClub={club.id_estatus_club}
                           estatus={club.estatus}
                           estadoCalculado={club.estado_calculado}

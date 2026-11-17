@@ -222,7 +222,7 @@ export function Heroe({ onReady }) {
                 aria-label={`Diapositiva ${index + 1} de ${total}`}
                 className={`relative shrink-0 snap-center w-full aspect-[4/5] rounded-t-2xl overflow-hidden ${clsFondoPagina}`}
               >
-                <img
+                <img draggable={false}
                   src={obtenerUrlImagen(slide.url_imagen_movil || slide.url_imagen)}
                   alt=""
                   aria-hidden="true"
@@ -237,16 +237,6 @@ export function Heroe({ onReady }) {
                       : 'from-slate-50 via-slate-50/55'
                   } to-transparent`}
                 />
-                <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-4">
-                  <h3 className="text-lg sm:text-xl font-black leading-tight text-white text-balance">
-                    {slide.titulo}
-                  </h3>
-                  {slide.subtitulo?.trim() ? (
-                    <p className="mt-1 text-sm leading-snug text-white/85 line-clamp-2">
-                      {slide.subtitulo}
-                    </p>
-                  ) : null}
-                </div>
               </article>
             ))}
           </div>
@@ -311,7 +301,7 @@ export function Heroe({ onReady }) {
                */
               <picture>
                 <source media="(min-width: 1024px)" srcSet={obtenerUrlImagen(slide.url_imagen)} />
-                <img
+                <img draggable={false}
                   src={obtenerUrlImagen(slide.url_imagen_movil)}
                   alt=""
                   aria-hidden="true"

@@ -7,7 +7,7 @@ import { CampoTexto } from '../../ui/CampoTexto';
 import { ModalBase } from '../../ui/ModalBase';
 import { Spinner } from '../../ui/Spinner';
 import { SubirImagen } from '../../ui/SubirImagen';
-import { PARTICIPACION, NIVELES } from '../../../constants/clubes';
+import { PARTICIPACION, NIVELES, CUPOS_CLUB } from '../../../constants/clubes';
 
 export function ModalFormularioClub({
   show,
@@ -35,15 +35,16 @@ export function ModalFormularioClub({
         <BotonCerrar onClick={onClose} />
       </div>
 
-      <form onSubmit={onSave} className="space-y-4">
-        <CampoTexto label="Nombre del Club" name="nombre_club" value={formClub.nombre_club} onChange={onFormChange} placeholder="Ej: Equipo de Voleibol" required />
+      <form aria-label="Datos del club" onSubmit={onSave} className="space-y-4">
+        <CampoTexto label="Nombre del Club" name="nombre_club" value={formClub.nombre_club} onChange={onFormChange} placeholder="Ej: Equipo de Voleibol" required maxLength={160} />
 
-        <CampoTexto label="Descripción" name="descripcion" value={formClub.descripcion} onChange={onFormChange} placeholder="Describe el club y sus actividades..." type="textarea" required />
+        <CampoTexto label="Descripción" name="descripcion" value={formClub.descripcion} onChange={onFormChange} placeholder="Describe el club y sus actividades..." type="textarea" required maxLength={5000} />
 
         <div>
           <label className={labelCls}>Categoría <span className="text-red-400">*</span></label>
           <select name="categoria" value={formClub.categoria} onChange={onFormChange} className={inputClasses}>
             <option value="" disabled>Selecciona una categoría</option>
+            {formClub.categoria && !['Deportes','Cultura','Tecnología'].includes(formClub.categoria) && <option value={formClub.categoria}>{formClub.categoria}</option>}
             <option value="Deportes">Deportes</option>
             <option value="Cultura">Cultura</option>
             <option value="Tecnología">Tecnología</option>
@@ -85,7 +86,16 @@ export function ModalFormularioClub({
           </div>
         </div>
 
-        <CampoTexto label="Cupo Máximo" name="cupo_maximo" value={formClub.cupo_maximo} onChange={onFormChange} type="number" placeholder="Ej: 30" required />
+        <div>
+          <label className={labelCls}>Cupo Máximo <span className="text-red-400">*</span></label>
+          <select name="cupo_maximo" value={formClub.cupo_maximo} onChange={onFormChange} className={inputClasses} required>
+            {CUPOS_CLUB.map((cupo) => (
+              <option key={cupo} value={cupo}>{cupo} personas</option>
+            ))}
+          </select>
+        </div>
+
+        <CampoTexto label="Lugar de actividades" name="lugar_actividades" value={formClub.lugar_actividades || ''} onChange={onFormChange} placeholder="Ej: Cancha principal" maxLength={128} />
 
         <SubirImagen label="Imagen del Club" urlImagen={formClub.imagen_portada} onUpload={onUploadImage} modoOscuro={modoOscuro} labelCls={labelCls} inputId="club-image-upload" obligatorio />
 

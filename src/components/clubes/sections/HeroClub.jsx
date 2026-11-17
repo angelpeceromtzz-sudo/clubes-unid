@@ -6,6 +6,7 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
   const esProximamente = club.id_estatus_club === 2;
   const esInactivo = club.id_estatus_club === 3;
   const estado = !esProximamente && !esInactivo ? club.estado_calculado : null;
+  const imagen=obtenerUrlImagen(club.imagen_portada || club.imagen);
 
   const c = {
     bg: modoOscuro ? "bg-[#0e162c]" : "bg-white",
@@ -15,14 +16,14 @@ export function HeroClub({ club, modoOscuro, onBotonClick, botonTexto, estaAuten
 
   return (
     <div className={`rounded-2xl overflow-hidden border ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${c.bg}`}>
-        <div className="overflow-hidden h-64 md:h-[460px] md:self-start">
-          <img
-            src={obtenerUrlImagen(club.imagen_portada || club.imagen)}
+      <div className={`grid grid-cols-1 ${imagen ? 'md:grid-cols-2' : ''} ${c.bg}`}>
+        {imagen && <div className="overflow-hidden h-64 md:h-[460px] md:self-start">
+          <img draggable={false}
+            src={imagen}
             alt={club.nombre_club}
             className={`w-full h-full object-cover ${esProximamente ? 'opacity-60' : ''}`}
           />
-        </div>
+        </div>}
         <div className="p-6 md:p-8 flex flex-col justify-center">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${clasesBadge(club.categoria, modoOscuro)}`}>

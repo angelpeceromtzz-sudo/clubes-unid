@@ -51,7 +51,7 @@ function SkeletonCard() {
   );
 }
 
-export function TarjetasEstadisticas({ totalAlumnos, clubesActivos, totalInscripciones, solicitudesPendientes, cargandoDashboard }) {
+export function TarjetasEstadisticas({ totalAlumnos, clubesActivos, totalInscripciones, solicitudesPendientes, cargandoPanel }) {
   const { cardCls, tema } = useTheme();
 
   const datos = { totalAlumnos, clubesActivos, totalInscripciones, solicitudesPendientes };
@@ -60,7 +60,7 @@ export function TarjetasEstadisticas({ totalAlumnos, clubesActivos, totalInscrip
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
       {TARJETAS.map((t) => {
         const valor = t.accessor(datos);
-        const cargando = cargandoDashboard && t.key === 'solicitudes';
+        const cargando = cargandoPanel && t.key === 'solicitudes';
 
         return (
           <div key={t.key} className={`${cardCls} border rounded-2xl p-5 md:p-6 transition-all duration-200 hover:shadow-lg hover:shadow-amber-400/5`}>

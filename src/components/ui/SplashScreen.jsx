@@ -106,7 +106,7 @@ export function SplashScreen({ authReady, clubesLoading, onFinish }) {
     <div className="fixed inset-0 z-[9999]">
       <div ref={bgRef} className="absolute inset-0 bg-[#0b111e]" />
       <div className="relative flex items-center justify-center h-full">
-        <img
+        <img draggable={false}
           ref={logoRef}
           src={logoLobo}
           alt="Logo"

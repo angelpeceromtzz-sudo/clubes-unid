@@ -64,7 +64,7 @@ export const ACERCA = {
     // un momento de Clubs UNID): se muestra con leyenda honesta. Reemplazar
     // por una foto propia del proyecto cuando exista autorización.
     imagen: {
-      src: '/como-nacio.jpeg',
+      src: '/campus/como-nacio.jpeg',
       alt: 'Estudiantes de UNID Campeche en el campus',
       leyenda: 'Vida universitaria en UNID Campeche',
     },
@@ -75,7 +75,7 @@ export const ACERCA = {
     protagonista: 'Estudiantes de UNID Campeche',
     texto: [
       'Clubs UNID está pensado para los estudiantes de UNID Campeche y para quienes organizan, coordinan y acompañan la vida universitaria.',
-      'Buscamos facilitar que los alumnos conozcan las actividades disponibles, participen y den continuidad a sus intereses. También desarrollamos herramientas para apoyar su organización y seguimiento.',
+      'Nuestro objetivo es que los estudiantes conozcan las actividades disponibles, se involucren y mantengan la continuidad de sus intereses; para ello desarrollamos herramientas de organización y seguimiento.',
       'Dentro del proyecto académico, el rector participa como beneficiario y aporta necesidades que orientan su desarrollo. Las opiniones de los alumnos, las conversaciones con colaboradores y las pruebas del sistema nos ayudan a mejorar la propuesta.',
     ],
     // Subtítulos de los bloques secundarios (fragmentos del texto aprobado).
@@ -84,7 +84,7 @@ export const ACERCA = {
     // Fotografía opcional: estudiantes participando en una actividad del
     // campus (no es un momento de Clubs UNID). Misma regla de reemplazo.
     imagen: {
-      src: '/para-quien.jpeg',
+      src: '/campus/para-quien.jpeg',
       alt: 'Estudiantes de UNID Campeche interactuando con una niña durante una actividad en el campus',
       leyenda: 'Estudiantes de UNID Campeche en actividad universitaria',
     },
@@ -110,8 +110,8 @@ export const ACERCA = {
           'Presentar los avances del proyecto.',
         ],
         frase: null,
-        foto: null,
-        mostrarFoto: false,
+        foto: '/personas/angel.png',
+        mostrarFoto: true,
         visible: true,
       },
       {
@@ -129,8 +129,8 @@ export const ACERCA = {
           'Probar y corregir su propio código antes de entregarlo.',
         ],
         frase: null,
-        foto: null,
-        mostrarFoto: false,
+        foto: '/personas/jorge.png',
+        mostrarFoto: true,
         visible: true,
       },
       {
@@ -149,8 +149,8 @@ export const ACERCA = {
           'Probar y corregir su propio código.',
         ],
         frase: null,
-        foto: null,
-        mostrarFoto: false,
+        foto: '/personas/gustavo.png',
+        mostrarFoto: true,
         visible: true,
       },
     ],
@@ -161,7 +161,28 @@ export const ACERCA = {
     // Acompañamiento: docencia, coordinación y dirección que orientan el
     // proyecto académico. Orden: docentes primero, luego coordinación y, al
     // final, el acompañamiento de mercadotecnia.
-    acompanamiento: [
+  acompanamiento: [],
+  // Colaboración: aportes puntuales de la comunidad universitaria. Orden:
+    // primero el beneficiario académico (rector), luego las comunicaciones.
+    colaboracion: [
+      {
+        nombre: 'David Antonio Chacón González',
+        rol: 'Rector de la universidad',
+        aportacion: 'Beneficiario del proyecto: aporta necesidades que orientan su desarrollo.',
+        frase: null,
+        foto: '/personas/rector-campeche.png',
+        mostrarFoto: true,
+        visible: true,
+      },
+      {
+        nombre: 'Avelina García Romero',
+        rol: 'Coordinación Académica',
+        aportacion: 'Nos ha apoyado en el desarrollo del proyecto.',
+        frase: null,
+        foto: '/personas/avelina.png',
+        mostrarFoto: true,
+        visible: true,
+      },
       {
         nombre: 'Cecilia Teresa Ocampo',
         rol: 'Docente de Mercadotecnia',
@@ -176,26 +197,17 @@ export const ACERCA = {
         rol: 'Docente de Ing. en Software y Sist.',
         aportacion: 'Nos pidió el proyecto, da seguimiento a su avance y lo califica.',
         frase: null,
-        foto: null,
-        mostrarFoto: false,
+        foto: '/personas/aldo.png',
+        mostrarFoto: true,
         visible: true,
       },
       {
         nombre: 'Omar Elías Aguilar',
         rol: 'Docente de Educación Física',
-        aportacion: 'Nos apoyó con el rol de Presidente de un club en el sistema.',
+        aportacion: 'Nos apoyó con el rol de Responsable de club en el sistema.',
         frase: null,
-        foto: null,
-        mostrarFoto: false,
-        visible: true,
-      },
-      {
-        nombre: 'Avelina García Romero',
-        rol: 'Coordinación Académica',
-        aportacion: 'Nos ha apoyado en el desarrollo del proyecto.',
-        frase: null,
-        foto: null,
-        mostrarFoto: false,
+        foto: '/personas/elias.png',
+        mostrarFoto: true,
         visible: true,
       },
       {
@@ -207,23 +219,10 @@ export const ACERCA = {
         mostrarFoto: false,
         visible: true,
       },
-    ],
-    // Colaboración: aportes puntuales de la comunidad universitaria. Orden:
-    // primero el beneficiario académico (rector), luego las comunicaciones.
-    colaboracion: [
-      {
-        nombre: 'David Antonio Chacón González',
-        rol: 'Rector de la universidad',
-        aportacion: 'Beneficiario del proyecto: aporta necesidades que orientan su desarrollo.',
-        frase: null,
-        foto: null,
-        mostrarFoto: false,
-        visible: true,
-      },
       {
         nombre: 'Alma Celeste Márquez Moctezuma',
         rol: 'Comunicaciones',
-        aportacion: 'Colaboración para dar a conocer el proyecto en el campus y expandir noticias del periodico mural.',
+        aportacion: 'Nos apoyo para dar a conocer el proyecto en el campus y expandir noticias del periodico mural.',
         frase: null,
         foto: null,
         mostrarFoto: false,
@@ -232,9 +231,9 @@ export const ACERCA = {
       {
         nombre: 'Margarita Elena Moo Matú',
         rol: 'Comunicaciones',
-        aportacion: 'Colaboración para dar a conocer el proyecto en el campus y expandir noticias del periodico mural.',
+        aportacion: 'Nos apoyo para dar a conocer el proyecto en el campus y expandir noticias del periodico mural.',
         frase: null,
-        foto: null,
+        foto: 'null',
         mostrarFoto: false,
         visible: true,
       },
@@ -245,12 +244,12 @@ export const ACERCA = {
     intro: 'Un proyecto académico, construido con la comunidad y validado paso a paso.',
     pasos: [
       {
-        icono: 'users',
+        icono: 'headphones',
         titulo: 'Escuchamos',
-        texto: 'La encuesta busca conocer intereses, preferencias, disponibilidad y obstáculos antes de decidir.',
+        texto: 'Buscamos conocer intereses, preferencias, disponibilidad y obstáculos antes de decidir.',
       },
       {
-        icono: 'grid',
+        icono: 'lightbulb',
         titulo: 'Proponemos',
         texto: 'Las ideas de clubes se presentan como propuestas con estados claros, sin anticipar aprobaciones.',
       },
@@ -264,7 +263,7 @@ export const ACERCA = {
   cierre: {
     titulo: 'El proyecto sigue creciendo',
     texto:
-      'Esta página se irá actualizando a medida que el proyecto avance. Si te interesa ser parte, la encuesta es el mejor lugar para empezar.',
+      'Esta página se irá actualizando a medida que el proyecto avance.',
     btnVolver: 'Volver',
   },
 };

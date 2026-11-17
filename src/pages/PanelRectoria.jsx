@@ -1,29 +1,53 @@
 /* Panel de rectoría: resumen estadístico, detalle de clubes, padrón y control de asistencia. */
+import { useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePanelNav } from '../contexts/PanelNavContext';
 import { usePanelRectoria } from '../hooks/usePanelRectoria';
+import { useVistaEjecutiva } from '../hooks/useVistaEjecutiva';
+import { VistaEjecutiva } from '../components/ejecutivo/VistaEjecutiva';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
 import { ELEMENTOS_NAV_RECTORIA } from '../constants/navegacion';
-import { SeccionResumen } from '../components/rectoria/SeccionResumen';
+
+
 import { SeccionClubes } from '../components/rectoria/SeccionClubes';
 import { SeccionPadron } from '../components/rectoria/SeccionPadron';
 import { SeccionAsistencia } from '../components/rectoria/SeccionAsistencia';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
 import { AlertaRetroalimentacion } from '../components/admin/AlertaRetroalimentacion';
 import { SeccionNoticias } from '../components/admin/seccion-noticias/SeccionNoticias';
+import { SeccionCalendarioAdmin } from '../components/admin/secciones/SeccionCalendarioAdmin';
+import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdmin';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
+import { SeccionGestionClubs } from '../components/actividades/SeccionGestionClubs';
+import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
+import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
+import { SeccionExpediente } from '../components/expediente/SeccionExpediente';
 
 export function PanelRectoria() {
   const { tema } = useTheme();
+  const asignacion=useActividadesAsignadas();
   const d = usePanelRectoria();
+  const ejecutivo = useVistaEjecutiva();
+  const { setPanelNav } = usePanelNav();
+  useEffect(() => {
+    setPanelNav({ itemsNav: ELEMENTOS_NAV_RECTORIA, onNavChange: d.setVistaActiva });
+    return () => setPanelNav({ itemsNav: [], onNavChange: null });
+  }, [setPanelNav, d.setVistaActiva]);
 
   return (
-    <NavegacionPanel
-      elementosNav={ELEMENTOS_NAV_RECTORIA}
-      vistaActiva={d.vistaActiva}
-      onVistaChange={d.setVistaActiva}
-    >
+    <>
+      <NavegacionPanel
+        elementosNav={ELEMENTOS_NAV_RECTORIA}
+        vistaActiva={d.vistaActiva}
+        onVistaChange={d.setVistaActiva}
+      >
       <h1 className={`text-2xl font-black tracking-tight mb-6 ${tema.title}`}>Panel de Rectoría</h1>
+      {d.vistaActiva === 'clubes' && <SeccionGestionClubs onVolver={d.recargarClubes}>
+        {(onPublicacion) => <SeccionClubes clubesDetalle={d.clubesDetalle} cargando={d.cargando} onPublicacion={onPublicacion}/>}
+      </SeccionGestionClubs>}
+
+
 
         {d.error && (
           <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
@@ -33,12 +57,10 @@ export function PanelRectoria() {
 
         <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
 
-        {d.vistaActiva === 'resumen' && (
-          <SeccionResumen stats={d.stats} ocupacionClubes={d.ocupacionClubes} topClubes={d.topClubes} cargando={d.cargando} />
-        )}
-        {d.vistaActiva === 'clubes' && (
-          <SeccionClubes clubesDetalle={d.clubesDetalle} cargando={d.cargando} />
-        )}
+        {d.vistaActiva === 'resumen' && <>
+          <TarjetasMiActividad asignacion={asignacion}/>
+          <VistaEjecutiva d={ejecutivo} />
+        </>}
         {d.vistaActiva === 'padron' && (
           <SeccionPadron
             padron={d.padron}
@@ -66,35 +88,20 @@ export function PanelRectoria() {
           <SeccionEncuestas d={d} />
         )}
 
+        {d.vistaActiva === 'expediente' && <SeccionExpediente />}
+
         {d.vistaActiva === 'actividad' && (
           <TablaActividad />
         )}
+        {d.vistaActiva === 'calendario' && <SeccionCalendarioAdmin />}
+        {d.vistaActiva === 'mural' && <SeccionMuralAdmin />}
         {d.vistaActiva === 'noticias' && (
-          <SeccionNoticias
-            noticias={d.noticias.noticias}
-            noticiasFiltradas={d.noticias.noticiasFiltradas}
-            cargando={d.noticias.cargando}
-            busqueda={d.noticias.busqueda}
-            setBusqueda={d.noticias.setBusqueda}
-            showModal={d.noticias.showModal}
-            editando={d.noticias.editando}
-            form={d.noticias.form}
-            enviando={d.noticias.enviando}
-            errorModal={d.noticias.errorModal}
-            abrirModalCrear={d.noticias.abrirModalCrear}
-            abrirModalEditar={d.noticias.abrirModalEditar}
-            cerrarModal={d.noticias.cerrarModal}
-            togglePublicada={d.noticias.togglePublicada}
-            eliminar={d.noticias.eliminar}
-            guardar={d.noticias.guardar}
-            handleFormChange={d.noticias.handleFormChange}
-            subirImagen={d.noticias.subirImagen}
-          />
+          <SeccionNoticias gestion={d.noticias} />
         )}
 
         <ModalConfirmacion
           show={!!d.pendienteConfirmacionNoticia}
-          titulo="Eliminar noticia"
+          titulo="Eliminar publicación"
           mensaje={`¿Eliminar la publicación "${d.pendienteConfirmacionNoticia?.titulo || ''}"? Esta acción no se puede deshacer.`}
           textoConfirmar="Eliminar"
           varianteDanger
@@ -102,5 +109,6 @@ export function PanelRectoria() {
           onCancelar={d.cancelarPendienteNoticia}
         />
     </NavegacionPanel>
+    </>
   );
 }

@@ -23,10 +23,10 @@ Cada regla se marca como:
 | Enfoque visual | Oscuro por defecto («azul noche») con acento **ámbar**; modo claro alternativo | `src/contexts/ThemeContext.jsx` (`modoOscuro` inicia en `true`) |
 | Estilos | **Tailwind CSS 4** vía `@import "tailwindcss"`; sin `tailwind.config.*` ni tokens CSS globales | `src/index.css`, `package.json` |
 | Fuentes | `font-sans` de Tailwind (pila del sistema). **No** hay `@font-face` ni Google Fonts | `src/App.jsx:132`; grep de `@font-face` sin resultados |
-| Iconografía | Mapa propio SVG (Heroicons-style), componente `Icono` | `src/components/ui/Icono.jsx` |
+| Iconografía | Lucide React, con nombres compatibles a través del componente `Icono`; símbolos académicos con color por categoría | `src/components/ui/Icono.jsx`, `src/constants/tiposFecha.js` |
 | Marca gráfica | `logo-lobo.svg` (navbar), `lobounid.png` (marca de agua encuesta/landing), `LogoU.png` (Portal), `favicon.svg` | `public/`, `src/components/layout/barra-navegacion/Logotipo.jsx`, `FondoEncuesta.jsx`, `BotonPortal.jsx` |
 
-**Alcance de esta guía:** páginas públicas (`/`, `/club/:id`, `/conoce-clubs`, `/encuesta/:slug`, `/calendario`) y componentes compartidos de `src/components/ui` y `layout`. Los paneles (`/dashboard`, `/presidente`, `/admin`, `/rectoria`) se describen aparte (sección 12).
+**Alcance de esta guía:** páginas públicas (`/`, `/club/:id`, `/conoce-clubs`, `/encuesta/:slug`, `/calendario?vista=mural`) y componentes compartidos de `src/components/ui` y `layout`. El calendario sin `vista=mural` requiere sesión desde PBI-18. Los paneles (`/panel`, `/presidente`, `/admin`, `/rectoria`) se describen aparte (sección 12).
 
 **Color de marca no centralizado:** no existe un archivo de tokens de color. Los hex y clases Tailwind están repartidos en `ThemeContext` y en JSX. Cualquier alias nuevo (p. ej. `--color-brand`) se considera **Propuesta**.
 
@@ -173,7 +173,7 @@ Se aplica como `--navbar-height` en el root de `App.jsx`.
 | `ModalBase` / `ModalConfirmacion` | `ui/` | Portal, overlay, `rounded-2xl`; **única** zona de scroll en el div interno (`max-h-[85vh] overflow-y-auto p-5 sm:p-8`), panel solo marco (props `panelClassName` / `innerClassName` para modales que gestionan su propio alto, p.ej. `ModalActualizaciones`); bloquea el scroll del body (`useBloqueoScroll`) |
 | `TarjetaClub` | `clubes/tarjetas/TarjetaClub.jsx` | Activa / «próximamente» (opaca, sin hover) |
 | `Heroe` | `clubes/Heroe.jsx` | Dual: móvil (< md) carrusel de tarjetas verticales 3:4 (~90% del ancho) con texto sobre fundido al fondo del tema, flechas laterales visibles y indicadores con target 24×24; desktop banner a sangre 21:9 con crossfade y flechas; imagen móvil opcional por slide (`<picture>`, §11.8) |
-| `Icono` | `ui/Icono.jsx` | Mapa de paths; `strokeWidth` configurable |
+| `Icono` | `ui/Icono.jsx` | Mapa de componentes Lucide React; `strokeWidth` configurable |
 | `BotonAccion` CTA interés | CSS `.boton-interes-cta` | Estado normal, hover, procesando, confirmado |
 | `FondoEncuesta` | `encuestas/FondoEncuesta.jsx` | Marca de agua `lobounid.png` con tratamiento por tema |
 | `SubirImagen` | `ui/SubirImagen.jsx` | `obligatorio`, `onRemove` (botón «Quitar»), `ayuda` (texto bajo el control) |
@@ -251,7 +251,7 @@ Tailwind 4 con breakpoints por defecto. Puntos **usados de forma consistente** e
 - Tratamiento de `lobounid.png`: en oscuro `opacity-25 brightness-110`; en claro `opacity-[0.14] brightness-[0.55] saturate-150` (`FondoEncuesta.jsx`).
 - **Hero móvil del catálogo (verificado con CDP/headless; revisión visual humana pendiente):** por debajo de `lg`, `Heroe` renderiza un carrusel de tarjetas verticales `aspect-[3/4]` de `w-[86vw]` (`max-w-[440px]`, `rounded-2xl`) dentro de una pista `<ul>` con `scroll-snap-type: x mandatory`, `gap-2` y `px-6 sm:px-8` (barra oculta con `.nf-scroll` + `scrollbarWidth: none`). Cada tarjeta: imagen `object-cover` a pantalla completa (misma selección `<picture>` que escritorio: `url_imagen_movil` con fallback a `url_imagen`), degradado inferior `from-black/90 via-black/45 to-transparent` y bloque HTML encima con `h2` (`line-clamp-2`), subtítulo (`line-clamp-3`) y CTA ámbar «Explorar clubes» → `#catalogo` (scroll con offset `NAVBAR_HEIGHT`, respetando `prefers-reduced-motion`). Debajo de las tarjetas: indicadores tipo píldora (activa ámbar 24 px, inactivas slate 8 px) con target táctil de 24×24 px (`h-6 w-6`), `aria-label` y `aria-current`. El autoplay de 8 s centra la tarjeta con `scrollTo` (vuelto última→primera sin animación) y el `scroll` del usuario devuelve el control (indicador sincronizado, temporizador reiniciado). Desktop conserva el banner crossfade + flechas sin cambios; ambas variantes comparten estado y `id="hero"` (clase `hero-catalogo`).
 
-**Iconos:** no se usa librería externa; siempre `Icono` + nombre del mapa. Nombres inexistentes hacen `console.warn` y no renderizan.
+**Iconos:** se usa `lucide-react` a través de `Icono` + nombre del mapa, con importaciones explícitas. Nombres inexistentes hacen `console.warn` y no renderizan. Las fechas académicas usan `SimboloFecha` para conservar el icono y color de su categoría.
 
 ---
 
@@ -315,7 +315,7 @@ La página deja de usar la secuencia «título + cajas con borde» y se compone 
 ### 11.4 Montaje fuera del layout del sistema (Verificado)
 
 - `/conoce-clubs` se sirve con un **return temprano en `App.jsx`** (mismo patrón que `/encuesta/:slug`): la página declara su propio `<Routes>` y se monta **sin el layout del sistema** — sin `BarraNavegacion`, sin `NavegacionInferiorMovil`, sin `SplashScreen` y sin `ModalNoticias`/`ModalActualizaciones`. Permisos y demás rutas no cambian.
-- La landing lleva su **propia barra**: solo `Logotipo` (componente compartido, estilos del tema), estática (no sticky) y **sin controles del sistema** (sin hamburguesa, portal, notificaciones, dashboard ni botón de tema; el tema usa el default/`localStorage`).
+- La landing lleva su **propia barra**: solo `Logotipo` (componente compartido, estilos del tema), estática (no sticky) y **sin controles del sistema** (sin hamburguesa, portal, notificaciones, panel ni botón de tema; el tema usa el default/`localStorage`).
 - Sin accesos salientes al catálogo ni al portal principal en esta etapa (decisión explícita de producto); el botón «Ir al portal» se retiró de la landing. La barra propia solo conserva `Logotipo` estático.
 - Anclas con `scroll-mt-8`: no hay cabecera fija que compensar.
 
@@ -353,6 +353,14 @@ La página deja de usar la secuencia «título + cajas con borde» y se compone 
 - **Banda F «Más formas de vivir tu universidad»** (ver §11.1): pósteres informativos de actividades universitarias reales distintas a los clubes (Misiones, Trineo de los Sueños, InterUNID), copy y rutas de imagen en `LANDING.actividades`. Reglas del póster: informativos (sin `<a>`, sin hover de elevación, sin `cursor-pointer`); sin fechas, cupos, responsables ni convocatorias; foto a sangre `aspect-[4/5]` con `loading="lazy"`; degradado de lectura oscuro inferior progresivo idéntico en ambos temas; título + texto **superpuestos en HTML** sobre la foto (sin texto incrustado en la imagen). Copy con **longitudes iguales (~69–73 caracteres ≈ 3 líneas a 320/375/768 px)** en `landing.js`: los 3 textos miden lo mismo para que **los títulos queden alineados a la misma altura** en las tarjetas y el texto **no tape la fotografía en móvil** (zona de texto: `p-4 sm:p-5`, título `text-base sm:text-lg`); `line-clamp-4` actúa solo como red de seguridad y no recorta el texto vigente; fallback gradiente + medallón ámbar cuando `imagen` es `null` o falla, conservando el mismo formato y lectura. Disposición: **móvil (< `md`): fila con sangrado a los bordes** (`-mx` + `nf-scroll`, tarjetas `w-[70vw] max-w-[300px]`, parte de la siguiente visible; contenedor con `aria-label` + `tabIndex={0}` para desplazarse con teclado; sin autoplay ni carruseles anidados); **`md+`: rejilla de 3 columnas (`md:grid-cols-3`) que llena el contenedor centrado — justificada, sin espacio muerto a los lados** (~221 px a 768, ~296 px a 1024, ~370 px a 1440). Si en el futuro se agrega una 4.ª actividad, el grid de 3 envolvería el excedente (3+1) y habría que revisarlo. Fotografías reales aportadas por el equipo en `public/`: Misiones, Trineo **e InterUNID** (`InterUNID.jpeg`, 800×533, apaisada; recorte 4:5 centrado conserva el grupo con letrero de campus; fallback queda solo por si la carga falla). Copy de Misiones: borrador neutro a la espera de revisión; Trineo resumido del texto aportado; InterUNID: borrador de **experiencia documentada** (publicación institucional del 25 de junio de 2019) — **no** es convocatoria vigente, sin afirmar participación actual de Campeche, sin fechas/sedes/requisitos, sin lista de disciplinas (la publicación de referencia cita ejemplos como fútbol, voleibol, basquetbol, fotografía, dibujo y canto, pero no se presentan como oferta actual). Textos con la misma longitud (~69–73 caracteres) para que las tres tarjetas queden alineadas; InterUNID conserva «Experiencia documentada» sin lista de disciplinas. **Retiros eliminado** de la banda (no existe como actividad operativa). Sin botón de inscripción.
 - Chip «Actividades» añadido a `LANDING.secciones` (5 chips en móvil; `EnlaceSeccion` los estira con `flex-1`).
 
+### 11.9 Separación entre contenido público y privado (PBI-18)
+
+- **Invitados:** conservan inicio, catálogo, detalle de club, landing, encuestas y el mural público de `/calendario?vista=mural` (solo `publicaciones_mural`). No reciben noticias, eventos, avisos de noticias ni calendario académico; esas consultas responden `401` y se sirven con `Cache-Control: private, no-store`.
+- **Navegación:** `BarraNavegacion` oculta Noticias y Calendario cuando no hay `user`; los enlaces directos a `/noticias` y `/eventos` redirigen al inicio.
+- **Calendario mixto:** `PaginaCalendario` mantiene las dos pestañas. La pestaña Calendario muestra un candado (`AccesoCalendarioPrivado`) para invitados y la pestaña Mural sigue siendo pública. El selector añade un icono de candado y una descripción accesible para la pestaña privada.
+- **Carga condicionada:** `NoticiasContext` solo consulta noticias, eventos y avisos de noticias con sesión; al cerrar sesión limpia el estado y descarta respuestas en vuelo. `useCalendarioAcademico(false, habilitado)` no consulta fechas para invitados y conserva la firma de administración.
+- **Modales:** `ModalActualizaciones` y `ModalNoticias` deben tener contraste legible en claro y oscuro. `ModalActualizaciones` centraliza sus superficies, bordes, textos, botones y estados en un objeto de tema; las tarjetas conservan el color de categoría y el indicador «No leído» en ambos modos.
+
 ---
 
 ## 12. Paneles administrativos — diferencias (resumen)
@@ -368,6 +376,15 @@ Los paneles comparten amber + azul noche, pero cambian densidad y layout:
 | Estadísticas | — | `TarjetaStat`, gráficas (Recharts) con tooltips `bg-[#0e162c]` |
 
 Al diseñar pantallas de panel, reutilizar `ThemeContext` (`sbBg`, `tableBg`, `inputCls`) y no el lenguaje de hero/tarjetas del catálogo.
+
+### 12.1 Gráficas ejecutivas (Verificado en navegador con datos de prueba)
+
+- Motor: Recharts ya instalado. `MarcoGrafica` y `graficas.css` comparten superficies azul noche/blanco, títulos en caja normal, rejilla discreta y acentos ámbar/azul según el tema. Los colores se definen dentro de `.grafica-unid`.
+- Barras horizontales para comparar clubes, asistencia y respuestas; barras agrupadas para las series mensuales. Los valores se muestran directamente y los nombres completos permanecen en el tooltip y en **Ver datos**. Desde nueve categorías se muestran ocho y el botón **Ver todos** permite consultar el resto.
+- Pastel para participación en clubes y preguntas de opción única o licenciatura cuya suma coincide con las respuestas de la pregunta. Las preguntas de opción múltiple conservan barras y explican su base; los porcentajes pueden superar 100 % al sumarse. Se cuentan envíos de respuestas, sin afirmar que sean personas distintas.
+- El pastel muestra cantidades y porcentajes junto a la leyenda. Más de seis categorías positivas se agrupan en cinco opciones y **Otras opciones**, conservando el total y todas las filas en **Ver datos**. Cero respuestas y base desconocida tienen mensajes diferenciados, sin sectores ficticios.
+- Ocupación: eje fijo de 0 a 100 %, cantidades y cupo en el tooltip. La etiqueta conserva el porcentaje real cuando existe sobrecupo. Los ceros conservan su etiqueta sin dibujar una barra artificial; una base no disponible se presenta como **Sin registros**.
+- Verificación: resumen en claro/oscuro; encuestas y evolución mensual a 320, 390, 768 y 1440 px sin desbordamiento de página. Se probaron el selector Barras/Pastel, tooltips, tablas, expansión, opciones múltiples, cero respuestas y sobrecupo con rutas API interceptadas. Esta revisión no valida registros de producción.
 
 ---
 
@@ -444,7 +461,7 @@ Medido (CDP, `scrollHeight` vs `clientHeight`):
 | Panel del editor | 714 / 714 | 564 / 564 | 332 / 332 |
 | Contenido de la pestaña | 622 / 622 (cabe) | 439 / 761 | 168 / 788 |
 
-> **Scroll global del panel padre (preexistente, no del editor):** el documento mide 72 px más que la ventana en escritorio (972 vs 900) y 124 px en móvil. La causa está en el contenedor del panel de administración, no en el editor: la raíz reserva `pt-[var(--navbar-height)]` (72 px) para la navbar fija y la fila del panel usa `min-h-screen` (900 px), así que siempre sobra ese trozo. Es el mismo comportamiento en el dashboard y en las demás secciones, y no se tocó por mantener el alcance en el editor.
+> **Scroll global del panel padre (preexistente, no del editor):** el documento mide 72 px más que la ventana en escritorio (972 vs 900) y 124 px en móvil. La causa está en el contenedor del panel de administración, no en el editor: la raíz reserva `pt-[var(--navbar-height)]` (72 px) para la navbar fija y la fila del panel usa `min-h-screen` (900 px), así que siempre sobra ese trozo. Es el mismo comportamiento en el panel y en las demás secciones, y no se tocó por mantener el alcance en el editor.
 
 ### 14.3 Pestañas: la línea de la fila (Verificado)
 

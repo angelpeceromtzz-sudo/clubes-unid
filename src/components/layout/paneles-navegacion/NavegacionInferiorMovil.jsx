@@ -9,7 +9,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
   const { modoOscuro } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const { esAdmin, esPresidente } = useAutenticacion();
+  const { esAdmin, esResponsableClub, esResponsableMural, esRectoria } = useAutenticacion();
 
   const [mostrarNav, setMostrarNav] = useState(true);
   const ultimoScrollY = useRef(0);
@@ -28,22 +28,24 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const enPanel = location.pathname !== '/';
+  const enPanel = location.pathname !== '/campus/campeche/portal';
 
   function irPanel() {
-    if (esAdmin) navigate('/admin/dashboard');
-    else if (esPresidente) navigate('/presidente/dashboard');
-    else navigate('/dashboard');
+    if (esAdmin) navigate('/admin/panel');
+    else if (esRectoria) navigate('/rectoria/panel');
+    else if (esResponsableClub) navigate('/campus/campeche/portal/responsable-de-club/panel');
+    else if (esResponsableMural) navigate('/mural/panel');
+    else navigate('/panel');
   }
 
   return (
     /* Tema oscuro: azul marino #080d18 — un paso más oscuro que el fondo de
        página #0b111e y del mismo tono azulado de la paleta (sustituye al
        negro puro anterior). Tema claro sin cambios. */
-    <nav className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom border-t transition-transform duration-300 ${mostrarNav ? 'translate-y-0' : 'translate-y-full'} ${modoOscuro ? 'bg-[#080d18] border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
+    <nav className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom border-t transition-transform duration-300 ${mostrarNav ? 'translate-y-0' : 'translate-y-full'} ${modoOscuro ? 'bg-[#0b111e] border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
       <div className="flex items-center justify-around py-2 px-4">
         <button
-          onClick={() => { onInicioClick?.(); navigate('/'); }}
+          onClick={() => { onInicioClick?.(); navigate('/campus/campeche/portal'); }}
           className={`flex flex-col items-center gap-0.5 transition-colors duration-200 cursor-pointer ${!enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
         >
           <Icono nombre="home" strokeWidth={2} className="h-5 w-5" />
@@ -56,7 +58,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
             className={`flex flex-col items-center gap-0.5 transition-colors duration-200 cursor-pointer ${enPanel ? 'text-amber-400' : modoOscuro ? 'text-white' : 'text-slate-600'}`}
           >
             <Icono nombre="clipboard" strokeWidth={2} className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Mi Club</span>
+            <span className="text-[10px] font-medium">Mi panel</span>
           </button>
         )}
 
@@ -70,7 +72,7 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
             ) : (
               <Icono nombre="logout" strokeWidth={2} className="h-5 w-5" />
             )}
-            <span className="text-[10px] font-medium">{estaAutenticado ? (esAdmin || esPresidente ? 'Panel' : 'Mis Postulaciones') : 'Iniciar Sesión'}</span>
+            <span className="text-[10px] font-medium">{estaAutenticado ? 'Mi panel' : 'Iniciar Sesión'}</span>
           </button>
         )}
       </div>

@@ -10,6 +10,8 @@ export const NIVELES = [
   { id_nivel: 3, nombre_nivel: 'avanzado', etiqueta: 'Avanzado' },
 ];
 
+export const CUPOS_CLUB = [10, 15, 20, 25, 30, 40, 50];
+
 export function etiquetaParticipacion(valor) {
   return PARTICIPACION.find((p) => p.valor === valor)?.etiqueta || valor || '';
 }

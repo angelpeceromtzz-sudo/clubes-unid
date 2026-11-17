@@ -68,8 +68,8 @@ export function ProveedorNotificacion({ children: hijos }) {
     } catch { /* Silenciar error al marcar como le�da */ }
   }, []);
 
-  const crearNotificacion = useCallback(async (titulo, mensaje, audiencia, id_club, id_destinatario) => {
-    const data = await api.createNotificacion(titulo, mensaje, audiencia, id_club, id_destinatario);
+  const crearNotificacion = useCallback(async (titulo, mensaje, audiencia, id_club, id_destinatario, opciones) => {
+    const data = await api.createNotificacion(titulo, mensaje, audiencia, id_club, id_destinatario, opciones);
     obtenerNotificaciones().catch(() => {});
     return data;
   }, [obtenerNotificaciones]);

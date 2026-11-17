@@ -11,5 +11,5 @@ ALTER TABLE convocatorias DROP COLUMN IF EXISTS id_formulario;
 ALTER TABLE convocatorias ALTER COLUMN fecha DROP NOT NULL;
 ALTER TABLE convocatorias ALTER COLUMN hora DROP NOT NULL;
 
--- id_presidente es derivable desde clubes
-ALTER TABLE convocatorias ALTER COLUMN id_presidente DROP NOT NULL;
+-- id_responsable_club es derivable desde clubes
+ALTER TABLE convocatorias ALTER COLUMN id_responsable_club DROP NOT NULL;
