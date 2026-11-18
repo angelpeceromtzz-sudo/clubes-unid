@@ -171,6 +171,11 @@ export function validarPreferencias(body, indice) {
     throw new ErrorValidacion('La disposición no es válida');
   }
 
+  const telefono = body.telefono_contacto ?? null;
+  if (telefono !== null && telefono !== '' && !/^\d{10}$/.test(String(telefono))) {
+    throw new ErrorValidacion('El teléfono debe ser de 10 dígitos');
+  }
+
   const correo = validarCorreo(body.correo);
 
   const propuestasEntrada = body.propuestas ?? [];
@@ -192,6 +197,7 @@ export function validarPreferencias(body, indice) {
     motivaciones,
     genero,
     disposicion_responsable: disposicion,
+    telefono_contacto: telefono || null,
     correo,
     propuestas,
   };
@@ -253,6 +259,7 @@ export function serializarPreferencias({ fila, categorias, actividades, motivaci
   return {
     estado_onboarding: fila?.estado_onboarding ?? 'pendiente',
     genero: fila?.genero ?? null,
+    telefono_contacto: fila?.telefono_contacto ?? null,
     disposicion_responsable: fila?.disposicion_responsable ?? null,
     categorias,
     actividades,

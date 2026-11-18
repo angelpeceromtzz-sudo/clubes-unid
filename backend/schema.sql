@@ -2204,6 +2204,7 @@ CREATE TABLE IF NOT EXISTS preferencias_usuario (
     correo_eventos              BOOLEAN NOT NULL DEFAULT FALSE,
     correo_noticias             BOOLEAN NOT NULL DEFAULT FALSE,
     correo_recordatorios        BOOLEAN NOT NULL DEFAULT FALSE,
+    telefono_contacto          VARCHAR(20),
     disposicion_responsable    VARCHAR(20),
     onboarding_completado_en    TIMESTAMPTZ,
     onboarding_omitido_en       TIMESTAMPTZ,
