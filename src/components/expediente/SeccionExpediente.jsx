@@ -1,7 +1,8 @@
 /* Expediente estudiantil: búsqueda de alumnos y consulta de su historial completo de participación en clubes. */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useExpediente } from '../../hooks/useExpediente';
+import { api } from '../../services/api';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { Th, Td } from '../ui/CeldasTabla';
@@ -192,10 +193,30 @@ export function SeccionExpediente() {
   const { modoOscuro } = useTheme();
   const d = useExpediente();
   const [entrada, setEntrada] = useState('');
+  const [licenciaturas, setLicenciaturas] = useState([]);
+  const [cargandoLicenciaturas, setCargandoLicenciaturas] = useState(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    setCargandoLicenciaturas(true);
+    api.getLicenciaturas()
+      .then((data) => { if (!cancelado) setLicenciaturas(Array.isArray(data) ? data : []); })
+      .catch(() => { if (!cancelado) setLicenciaturas([]); })
+      .finally(() => { if (!cancelado) setCargandoLicenciaturas(false); });
+    return () => { cancelado = true; };
+  }, []);
 
   function enviarBusqueda(e) {
-    e.preventDefault();
-    d.buscar(entrada);
+    if (e) e.preventDefault();
+    d.buscar(entrada, d.filtros);
+  }
+
+  function cambiarFiltro(cambios) {
+    const siguientes = { ...d.filtros, ...cambios };
+    d.actualizarFiltros(siguientes);
+    if (entrada.trim().length >= 3) {
+      d.buscar(entrada, siguientes);
+    }
   }
 
   if (d.cargandoExpediente) return <Spinner className="py-10" />;
@@ -213,6 +234,29 @@ export function SeccionExpediente() {
             placeholder="Nombre, matrícula o correo (mín. 3 caracteres)"
             className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-80`} />
         </div>
+        <div>
+          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Licenciatura</label>
+          <select
+            value={d.filtros.id_licenciatura}
+            onChange={e => cambiarFiltro({ id_licenciatura: e.target.value })}
+            disabled={cargandoLicenciaturas}
+            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-72`}
+          >
+            <option value="">Todas las licenciaturas</option>
+            {licenciaturas.map((l) => (
+              <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <label className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} cursor-pointer select-none`}>
+          <input
+            type="checkbox"
+            checked={d.filtros.con_expediente}
+            onChange={e => cambiarFiltro({ con_expediente: e.target.checked })}
+            className="h-4 w-4 accent-amber-500"
+          />
+          Solo con expediente
+        </label>
         <button type="submit" disabled={d.buscando}
           className="bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-900 text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-all cursor-pointer">
           Buscar
@@ -236,7 +280,7 @@ export function SeccionExpediente() {
           <table className="w-full text-sm">
             <thead>
               <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                <Th>Nombre</Th><Th>Matrícula</Th><Th>Correo</Th><Th>Cuenta</Th><Th></Th>
+                <Th>Nombre</Th><Th>Matrícula</Th><Th>Licenciatura</Th><Th>Correo</Th><Th>Cuenta</Th><Th></Th>
               </tr>
             </thead>
             <tbody>
@@ -244,6 +288,7 @@ export function SeccionExpediente() {
                 <tr key={a.id_usuario} className={`border-b ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/20' : 'border-slate-100 hover:bg-slate-50'} transition-colors`}>
                   <Td className="font-medium">{formatearNombre(a.nombre_completo)}</Td>
                   <Td className="font-mono text-xs">{a.matricula || a.institutional_id || '—'}</Td>
+                  <Td>{a.licenciatura || '—'}</Td>
                   <Td>{a.correo_institucional}</Td>
                   <Td>{a.cuenta_desactivada ? <Badge texto="Desactivada" color="red" /> : <Badge texto="Activa" color="emerald" />}</Td>
                   <Td>
