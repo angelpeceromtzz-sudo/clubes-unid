@@ -59,26 +59,63 @@ router.get('/buscar', limitadorLecturasPesadas, async (req, res) => {
     }
 
     const patron = `%${escaparLike(termino)}%`;
+    const idLicenciatura =
+      req.query.id_licenciatura !== undefined && esIdEntero(req.query.id_licenciatura)
+        ? Number(req.query.id_licenciatura)
+        : null;
+    const conExpediente =
+      req.query.con_expediente === 'true' || req.query.con_expediente === '1';
+
+    const condiciones = [
+      'u.id_rol = $1',
+      `(u.nombre_completo ILIKE $2
+        OR u.correo_institucional ILIKE $2
+        OR u.institutional_id ILIKE $2
+        OR EXISTS (
+          SELECT 1 FROM formularios f
+          WHERE f.id_alumno = u.id_usuario AND f.matricula ILIKE $2
+        ))`,
+    ];
+    const params = [ROL_ALUMNO, patron];
+
+    if (idLicenciatura !== null) {
+      params.push(idLicenciatura);
+      condiciones.push(
+        `(SELECT f.id_licenciatura FROM formularios f
+           WHERE f.id_alumno = u.id_usuario
+           ORDER BY f.fecha_envio DESC LIMIT 1) = $${params.length}`,
+      );
+    }
+
+    if (conExpediente) {
+      condiciones.push(
+        `(EXISTS (SELECT 1 FROM inscripciones i WHERE i.id_usuario = u.id_usuario)
+           OR EXISTS (SELECT 1 FROM formularios f WHERE f.id_alumno = u.id_usuario)
+           OR EXISTS (SELECT 1 FROM asistencias a WHERE a.id_usuario = u.id_usuario))`,
+      );
+    }
+
+    params.push(MAX_RESULTADOS);
+    const limite = `$${params.length}`;
+
     const result = await pool.query(`
       SELECT u.id_usuario, u.nombre_completo, u.correo_institucional, u.institutional_id,
         (u.deleted_at IS NOT NULL) AS cuenta_desactivada,
         (SELECT f.matricula FROM formularios f
           WHERE f.id_alumno = u.id_usuario
-          ORDER BY f.fecha_envio DESC LIMIT 1) AS matricula
+          ORDER BY f.fecha_envio DESC LIMIT 1) AS matricula,
+        (SELECT f.id_licenciatura FROM formularios f
+          WHERE f.id_alumno = u.id_usuario
+          ORDER BY f.fecha_envio DESC LIMIT 1) AS id_licenciatura,
+        (SELECT l.nombre FROM formularios f
+          LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
+          WHERE f.id_alumno = u.id_usuario
+          ORDER BY f.fecha_envio DESC LIMIT 1) AS licenciatura
       FROM usuarios u
-      WHERE u.id_rol = $1
-        AND (
-          u.nombre_completo ILIKE $2
-          OR u.correo_institucional ILIKE $2
-          OR u.institutional_id ILIKE $2
-          OR EXISTS (
-            SELECT 1 FROM formularios f
-            WHERE f.id_alumno = u.id_usuario AND f.matricula ILIKE $2
-          )
-        )
+      WHERE ${condiciones.join(' AND ')}
       ORDER BY u.nombre_completo
-      LIMIT $3`,
-      [ROL_ALUMNO, patron, MAX_RESULTADOS]
+      LIMIT ${limite}`,
+      params
     );
     res.json(result.rows);
   } catch (err) {
