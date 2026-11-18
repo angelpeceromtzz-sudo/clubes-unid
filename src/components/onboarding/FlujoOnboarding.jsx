@@ -16,6 +16,7 @@ import { PasoMotivaciones } from './PasoMotivaciones';
 import { PasoGenero } from './PasoGenero';
 import { PasoLicenciatura } from './PasoLicenciatura';
 import { PasoFechaNacimiento } from './PasoFechaNacimiento';
+import { PasoDisposicion } from './PasoDisposicion';
 import { PasoCorreo } from './PasoCorreo';
 import { PasoConfirmacion } from './PasoConfirmacion';
 import { TOTAL_PASOS_ONBOARDING } from '../../constants/onboarding';
@@ -132,7 +133,8 @@ export function FlujoOnboarding({ onCompletar }) {
       else if (paso === 4) setAviso('Selecciona una opción para continuar.');
       else if (paso === 5) setAviso('Selecciona tu licenciatura para continuar.');
       else if (paso === 6) setAviso('Indica tu fecha de nacimiento para continuar.');
-      else if (paso === 7) setAviso('Indica si quieres recibir correos opcionales.');
+      else if (paso === 7) setAviso('Indica tu disposición para continuar.');
+      else if (paso === 8) setAviso('Indica si quieres recibir correos opcionales.');
       return;
     }
     if (paso === TOTAL_PASOS_ONBOARDING) {
@@ -238,6 +240,13 @@ export function FlujoOnboarding({ onCompletar }) {
       />
     );
   } else if (paso === 7) {
+    contenido = (
+      <PasoDisposicion
+        valor={respuestas.disposicion}
+        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, disposicion: valor }))}
+      />
+    );
+  } else if (paso === 8) {
     contenido = (
       <PasoCorreo
         correo={respuestas.correo}

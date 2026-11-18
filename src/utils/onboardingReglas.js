@@ -35,6 +35,7 @@ export function respuestasIniciales() {
     propuesta: '',
     licenciatura: null,
     fechaNacimiento: null,
+    disposicion: null,
   };
 }
 
@@ -75,7 +76,8 @@ export function pasoEsValido(paso, respuestas) {
   if (paso === 4) return respuestas.genero !== null && respuestas.genero !== undefined;
   if (paso === 5) return respuestas.licenciatura !== null && respuestas.licenciatura !== undefined;
   if (paso === 6) return !!respuestas.fechaNacimiento;
-  if (paso === 7) {
+  if (paso === 7) return respuestas.disposicion !== null && respuestas.disposicion !== undefined;
+  if (paso === 8) {
     const decision = respuestas.correo?.decision;
     if (decision !== 'aceptar' && decision !== 'rechazar') return false;
     if (decision === 'aceptar') {
@@ -123,6 +125,7 @@ export function construirPayload(respuestas, origen) {
     actividades: [...respuestas.actividades],
     motivaciones: [...respuestas.motivaciones],
     genero: respuestas.genero ?? null,
+    disposicion_responsable: respuestas.disposicion ?? null,
     correo: {
       activo: respuestas.correo.decision === 'aceptar',
       frecuencia: respuestas.correo.frecuencia,
