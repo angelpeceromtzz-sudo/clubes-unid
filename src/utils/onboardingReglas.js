@@ -33,6 +33,8 @@ export function respuestasIniciales() {
     genero: null,
     correo: correoInicial(),
     propuesta: '',
+    licenciatura: null,
+    fechaNacimiento: null,
   };
 }
 
@@ -71,7 +73,17 @@ export function pasoEsValido(paso, respuestas) {
   }
   if (paso === 3) return Array.isArray(respuestas.motivaciones) && respuestas.motivaciones.length > 0;
   if (paso === 4) return respuestas.genero !== null && respuestas.genero !== undefined;
-  if (paso === 5) return respuestas.correo?.decision === 'aceptar' || respuestas.correo?.decision === 'rechazar';
+  if (paso === 5) return respuestas.licenciatura !== null && respuestas.licenciatura !== undefined;
+  if (paso === 6) return !!respuestas.fechaNacimiento;
+  if (paso === 7) {
+    const decision = respuestas.correo?.decision;
+    if (decision !== 'aceptar' && decision !== 'rechazar') return false;
+    if (decision === 'aceptar') {
+      const tipos = respuestas.correo?.tipos || {};
+      return Object.values(tipos).some((v) => v === true);
+    }
+    return true;
+  }
   return true;
 }
 
