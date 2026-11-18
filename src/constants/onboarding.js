@@ -2,7 +2,7 @@
 // actividades y motivaciones) llegan del backend; aquí solo viven iconos y
 // textos asociados por nombre o código.
 
-export const TOTAL_PASOS_ONBOARDING = 8;
+export const TOTAL_PASOS_ONBOARDING = 9;
 
 export const ICONO_CATEGORIA = Object.freeze({
   Deportivos: 'trophy',

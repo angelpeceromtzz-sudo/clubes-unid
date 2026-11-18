@@ -36,6 +36,7 @@ export function respuestasIniciales() {
     licenciatura: null,
     fechaNacimiento: null,
     disposicion: null,
+    telefono: null,
   };
 }
 
@@ -76,8 +77,9 @@ export function pasoEsValido(paso, respuestas) {
   if (paso === 4) return respuestas.genero !== null && respuestas.genero !== undefined;
   if (paso === 5) return respuestas.licenciatura !== null && respuestas.licenciatura !== undefined;
   if (paso === 6) return !!respuestas.fechaNacimiento;
-  if (paso === 7) return respuestas.disposicion !== null && respuestas.disposicion !== undefined;
-  if (paso === 8) {
+  if (paso === 7) return true; // teléfono opcional
+  if (paso === 8) return respuestas.disposicion !== null && respuestas.disposicion !== undefined;
+  if (paso === 9) {
     const decision = respuestas.correo?.decision;
     if (decision !== 'aceptar' && decision !== 'rechazar') return false;
     if (decision === 'aceptar') {
@@ -126,6 +128,7 @@ export function construirPayload(respuestas, origen) {
     motivaciones: [...respuestas.motivaciones],
     genero: respuestas.genero ?? null,
     disposicion_responsable: respuestas.disposicion ?? null,
+    telefono_contacto: respuestas.telefono ?? null,
     correo: {
       activo: respuestas.correo.decision === 'aceptar',
       frecuencia: respuestas.correo.frecuencia,
