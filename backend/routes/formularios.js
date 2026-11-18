@@ -322,7 +322,7 @@ router.get('/pendientes/:id_club', authenticate, requireClubLeader, async (req, 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
 f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
-               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
+               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.respuestas_extra, f.status,
                f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
                (SELECT json_agg(json_build_object(
                  'status_anterior', hp.status_anterior,
@@ -364,7 +364,7 @@ router.get('/todos/:id_club', authenticate, requireClubLeader, async (req, res) 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
                f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
-               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
+               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.respuestas_extra, f.status,
                f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
                (SELECT json_agg(json_build_object(
                  'status_anterior', hp.status_anterior,
