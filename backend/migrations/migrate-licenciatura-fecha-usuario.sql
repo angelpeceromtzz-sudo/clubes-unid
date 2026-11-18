@@ -11,13 +11,13 @@ ALTER TABLE cat_licenciaturas
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_licenciatura_modalidad'
-  ) THEN
-    ALTER TABLE cat_licenciaturas
-      ADD CONSTRAINT chk_licenciatura_modalidad
-      CHECK (modalidad IN ('escolarizada', 'ejecutiva'));
+  -- Eliminar constraint viejo si existe y recrear con las nuevas modalidades.
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_licenciatura_modalidad') THEN
+    ALTER TABLE cat_licenciaturas DROP CONSTRAINT chk_licenciatura_modalidad;
   END IF;
+  ALTER TABLE cat_licenciaturas
+    ADD CONSTRAINT chk_licenciatura_modalidad
+    CHECK (modalidad IN ('escolarizada', 'ejecutiva', 'dual', 'maestria'));
 END $$;
 
 -- Marcar las licenciaturas ejecutivas (RVOE distintos, programas separados).
@@ -29,6 +29,13 @@ WHERE nombre IN (
   'Licenciatura en Derecho',
   'Licenciatura en Educación y Tecnologías para el Aprendizaje'
 );
+
+-- Insertar licenciaturas adicionales (idempotente).
+INSERT INTO cat_licenciaturas (nombre, orden, modalidad) VALUES
+  ('Licenciatura Modelo Dual', 15, 'dual'),
+  ('Licenciatura en Administración y Dirección Empresarial Modelo Dual', 16, 'dual'),
+  ('Maestría en Derecho Constitucional y Amparo', 17, 'maestria')
+ON CONFLICT (nombre) DO UPDATE SET orden = EXCLUDED.orden, modalidad = EXCLUDED.modalidad;
 
 -- 2) Licenciatura y fecha de nacimiento en usuarios.
 ALTER TABLE usuarios

@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS cat_licenciaturas (
     nombre         VARCHAR(120) NOT NULL UNIQUE,
     orden          INT NOT NULL DEFAULT 0,
     modalidad      VARCHAR(20) NOT NULL DEFAULT 'escolarizada'
-                   CONSTRAINT chk_licenciatura_modalidad CHECK (modalidad IN ('escolarizada', 'ejecutiva'))
+                   CONSTRAINT chk_licenciatura_modalidad CHECK (modalidad IN ('escolarizada', 'ejecutiva', 'dual', 'maestria'))
 );
 
 INSERT INTO cat_licenciaturas (nombre, orden, modalidad) VALUES
@@ -114,8 +114,11 @@ INSERT INTO cat_licenciaturas (nombre, orden, modalidad) VALUES
     ('Licenciatura en Administración de Empresas', 11, 'ejecutiva'),
     ('Licenciatura en Contabilidad Financiera', 12, 'ejecutiva'),
     ('Licenciatura en Derecho', 13, 'ejecutiva'),
-    ('Licenciatura en Educación y Tecnologías para el Aprendizaje', 14, 'ejecutiva')
-ON CONFLICT (nombre) DO UPDATE SET orden = EXCLUDED.orden;
+    ('Licenciatura en Educación y Tecnologías para el Aprendizaje', 14, 'ejecutiva'),
+    ('Licenciatura Modelo Dual', 15, 'dual'),
+    ('Licenciatura en Administración y Dirección Empresarial Modelo Dual', 16, 'dual'),
+    ('Maestría en Derecho Constitucional y Amparo', 17, 'maestria')
+ON CONFLICT (nombre) DO UPDATE SET orden = EXCLUDED.orden, modalidad = EXCLUDED.modalidad;
 
 -- ============================================================
 -- TABLAS PRINCIPALES
