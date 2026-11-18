@@ -42,7 +42,7 @@ import calendarioRoutes from './routes/calendario.js';
 import muralRoutes from './routes/mural.js';
 import actividadesRoutes from './routes/actividades.js';
 import preferenciasRoutes from './routes/preferencias.js';
-
+import expedienteRoutes from './routes/expediente.js';
 const app = express();
 // Render termina TLS y reenvía con X-Forwarded-For (un solo proxy).
 // Pendiente de verificar en Render: si algún día hay un proxy adicional
@@ -117,7 +117,7 @@ app.use('/api/calendario', calendarioRoutes);
 app.use('/api/mural', muralRoutes);
 app.use('/api/actividades', actividadesRoutes);
 app.use('/api/me', preferenciasRoutes);
-
+app.use('/api/expediente', expedienteRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/api/health', (req, res) => {
