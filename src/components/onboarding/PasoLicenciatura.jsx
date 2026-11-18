@@ -6,8 +6,10 @@ export function PasoLicenciatura({ valor, onCambiar }) {
   const { licenciaturas, loading, error } = useLicenciaturas();
   const textoSecundario = modoOscuro ? 'text-slate-400' : 'text-slate-600';
 
-  const escolarizadas = licenciaturas.filter((l) => l.modalidad !== 'ejecutiva');
+  const escolarizadas = licenciaturas.filter((l) => l.modalidad === 'escolarizada');
   const ejecutivas = licenciaturas.filter((l) => l.modalidad === 'ejecutiva');
+  const duales = licenciaturas.filter((l) => l.modalidad === 'dual');
+  const maestrias = licenciaturas.filter((l) => l.modalidad === 'maestria');
 
   return (
     <div>
@@ -41,6 +43,16 @@ export function PasoLicenciatura({ valor, onCambiar }) {
             </optgroup>
             <optgroup label="Ejecutivas">
               {ejecutivas.map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Duales">
+              {duales.map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Maestrías">
+              {maestrias.map((l) => (
                 <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
               ))}
             </optgroup>

@@ -275,9 +275,26 @@ export function SeccionExpediente() {
             className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-72`}
           >
             <option value="">Todas las licenciaturas</option>
-            {licenciaturas.map((l) => (
-              <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
-            ))}
+            <optgroup label="Escolarizadas">
+              {licenciaturas.filter((l) => l.modalidad === 'escolarizada').map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Ejecutivas">
+              {licenciaturas.filter((l) => l.modalidad === 'ejecutiva').map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Duales">
+              {licenciaturas.filter((l) => l.modalidad === 'dual').map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Maestrías">
+              {licenciaturas.filter((l) => l.modalidad === 'maestria').map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
           </select>
         </div>
         <label className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} cursor-pointer select-none`}>
