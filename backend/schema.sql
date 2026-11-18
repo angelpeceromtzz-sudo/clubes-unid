@@ -2185,12 +2185,14 @@ CREATE TABLE IF NOT EXISTS preferencias_usuario (
     correo_eventos              BOOLEAN NOT NULL DEFAULT FALSE,
     correo_noticias             BOOLEAN NOT NULL DEFAULT FALSE,
     correo_recordatorios        BOOLEAN NOT NULL DEFAULT FALSE,
+    disposicion_responsable    VARCHAR(20),
     onboarding_completado_en    TIMESTAMPTZ,
     onboarding_omitido_en       TIMESTAMPTZ,
     actualizado_en              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_pref_estado CHECK (estado_onboarding IN ('pendiente', 'completado', 'omitido')),
     CONSTRAINT chk_pref_genero CHECK (genero IS NULL OR genero IN ('mujer', 'hombre', 'otra_identidad', 'prefiero_no_responder')),
-    CONSTRAINT chk_pref_frecuencia CHECK (correo_frecuencia IN ('inmediata', 'diaria', 'semanal'))
+    CONSTRAINT chk_pref_frecuencia CHECK (correo_frecuencia IN ('inmediata', 'diaria', 'semanal')),
+    CONSTRAINT chk_pref_disposicion CHECK (disposicion_responsable IS NULL OR disposicion_responsable IN ('responsable', 'miembro', 'indeciso'))
 );
 
 -- ------------------------------------------------------------

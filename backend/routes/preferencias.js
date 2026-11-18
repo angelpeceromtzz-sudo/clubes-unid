@@ -109,6 +109,7 @@ async function guardarPreferencias(client, idUsuario, datos) {
   await client.query(
     `UPDATE preferencias_usuario SET
        genero = $2,
+       disposicion_responsable = $10,
        estado_onboarding = 'completado',
        onboarding_completado_en = COALESCE(onboarding_completado_en, CURRENT_TIMESTAMP),
        correo_activo = $3,
@@ -124,6 +125,7 @@ async function guardarPreferencias(client, idUsuario, datos) {
       idUsuario, datos.genero, correo.activo, correo.frecuencia,
       correo.tipos.clubes_convocatorias, correo.tipos.mis_clubes, correo.tipos.eventos,
       correo.tipos.noticias, correo.tipos.recordatorios,
+      datos.disposicion_responsable,
     ],
   );
 

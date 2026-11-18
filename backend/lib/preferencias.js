@@ -3,6 +3,7 @@
 import { TIPOS_CORREO_OPCIONAL, FRECUENCIAS_CORREO } from './preferenciasCorreo.js';
 
 export const GENEROS = Object.freeze(['mujer', 'hombre', 'otra_identidad', 'prefiero_no_responder']);
+export const DISPOSICIONES_RESPONSABLE = Object.freeze(['responsable', 'miembro', 'indeciso']);
 export const ORIGENES = Object.freeze(['onboarding', 'perfil']);
 export const ESTADOS_ONBOARDING = Object.freeze(['pendiente', 'completado', 'omitido']);
 
@@ -165,6 +166,11 @@ export function validarPreferencias(body, indice) {
     throw new ErrorValidacion('La opción de género no es válida');
   }
 
+  const disposicion = body.disposicion_responsable ?? null;
+  if (disposicion !== null && !DISPOSICIONES_RESPONSABLE.includes(disposicion)) {
+    throw new ErrorValidacion('La disposición no es válida');
+  }
+
   const correo = validarCorreo(body.correo);
 
   const propuestasEntrada = body.propuestas ?? [];
@@ -185,6 +191,7 @@ export function validarPreferencias(body, indice) {
     actividades,
     motivaciones,
     genero,
+    disposicion_responsable: disposicion,
     correo,
     propuestas,
   };
@@ -246,6 +253,7 @@ export function serializarPreferencias({ fila, categorias, actividades, motivaci
   return {
     estado_onboarding: fila?.estado_onboarding ?? 'pendiente',
     genero: fila?.genero ?? null,
+    disposicion_responsable: fila?.disposicion_responsable ?? null,
     categorias,
     actividades,
     motivaciones,
