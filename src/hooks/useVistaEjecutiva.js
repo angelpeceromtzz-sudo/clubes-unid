@@ -12,6 +12,7 @@ export function useVistaEjecutiva() {
   const [asistencia, setAsistencia] = useState(null);
   const [encuestas, setEncuestas] = useState(null);
   const [listaEncuestas, setListaEncuestas] = useState([]);
+  const [preferencias, setPreferencias] = useState(null);
   const [encuestaSeleccionada, setEncuestaSeleccionada] = useState('');
   const [preguntaSeleccionada, setPreguntaSeleccionada] = useState('');
   const [resultadosEncuesta, setResultadosEncuesta] = useState(null);
@@ -56,7 +57,7 @@ export function useVistaEjecutiva() {
     const qs = (p) => p.toString() ? `?${p.toString()}` : '';
 
     try {
-      const [datosStats, ocupacion, top, clubes, panel, datosAsistencia, datosEncuestas, datosListaEncuestas, datosPeriodos, datosLicenciaturas] = await Promise.all([
+      const [datosStats, ocupacion, top, clubes, panel, datosAsistencia, datosEncuestas, datosListaEncuestas, datosPeriodos, datosLicenciaturas, datosPreferencias] = await Promise.all([
         api.get(`/estadisticas/panel${qs(paramsPanel)}`),
         api.get(`/estadisticas/ocupacion-clubes${qs(paramsOcupacion)}`),
         api.get(`/estadisticas/top-clubes${qs(paramsTop)}`),
@@ -67,6 +68,7 @@ export function useVistaEjecutiva() {
         api.get('/encuestas/admin'),
         api.get('/asistencia/periodos'),
         api.get('/catalogos/licenciaturas'),
+        api.get('/me/resumen'),
       ]);
       setStats(datosStats);
       setOcupacionClubes(ocupacion);
@@ -78,6 +80,7 @@ export function useVistaEjecutiva() {
       setListaEncuestas(Array.isArray(datosListaEncuestas) ? datosListaEncuestas : []);
       setPeriodos(Array.isArray(datosPeriodos) ? datosPeriodos : []);
       setLicenciaturas(Array.isArray(datosLicenciaturas) ? datosLicenciaturas : []);
+      setPreferencias(datosPreferencias || null);
     } catch (err) {
       console.error('Error al cargar vista ejecutiva:', err);
       setError('Error al cargar la vista ejecutiva');
@@ -159,6 +162,7 @@ export function useVistaEjecutiva() {
     seleccionarPregunta,
     periodos,
     licenciaturas,
+    preferencias,
     cargando,
     error,
     filtros,

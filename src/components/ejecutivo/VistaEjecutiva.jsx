@@ -10,6 +10,7 @@ import { SeccionClubes } from './SeccionClubes';
 import { SeccionAsistencia } from './SeccionAsistencia';
 import { SeccionEncuestas } from './SeccionEncuestas';
 import { SeccionPostulaciones } from './SeccionPostulaciones';
+import { SeccionPreferencias } from './SeccionPreferencias';
 import { formatearFecha } from '../../utils/formatoPanel';
 import { crearReportePDF, nombreArchivoReporte, TITULOS_REPORTE } from './exportaciones.utils';
 
@@ -114,6 +115,7 @@ export function VistaEjecutiva({ d }) {
         <TabsContent value="asistencia" className="mt-6"><SeccionAsistencia d={d} /></TabsContent>
         <TabsContent value="encuestas" className="mt-6"><SeccionEncuestas d={d} /></TabsContent>
         <TabsContent value="postulaciones" className="mt-6"><SeccionPostulaciones d={d} /></TabsContent>
+        <TabsContent value="preferencias" className="mt-6"><SeccionPreferencias d={d} /></TabsContent>
       </Tabs>
     </div>
   );
