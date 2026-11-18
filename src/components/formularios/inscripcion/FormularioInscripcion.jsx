@@ -22,8 +22,9 @@ export function FormularioInscripcion({ club, onClose }) {
 
     telefono_contacto: '',
     motivo_ingreso: '',
-    experiencia_previa: '',
   });
+  const [preguntasExtra, setPreguntasExtra] = useState([]);
+  const [respuestasExtra, setRespuestasExtra] = useState({});
   // La licenciatura se guarda como id del catálogo, no como texto: el backend lo
   // valida contra cat_licenciaturas y todas las lecturas lo traen con
   // LEFT JOIN ... AS carrera.
@@ -40,6 +41,22 @@ export function FormularioInscripcion({ club, onClose }) {
   const limiteAlcanzado = clubesPostulados.length >= 3;
   const bloqueado = yaPostulado || limiteAlcanzado;
   const datosPrecargados = !!usuario?.institutional_id;
+
+  useEffect(() => {
+    const idClub = club.id_club || club.id;
+    if (!idClub) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const data = await api.get(`/clubes/${idClub}/preguntas`);
+        if (cancelado) return;
+        setPreguntasExtra(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelado) setPreguntasExtra([]);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [club.id_club, club.id]);
 
   useEffect(() => {
     if (usuario?.id_licenciatura) return;
@@ -96,6 +113,7 @@ export function FormularioInscripcion({ club, onClose }) {
         ...formulario,
         id_licenciatura: Number(formulario.id_licenciatura),
         cuatrimestre: parseInt(formulario.cuatrimestre, 10),
+        respuestas_extra: respuestasExtra,
       });
       await refrescarInscripcionActiva();
       actualizarClubesPostulados((prev) => [...prev, idClubActual]);
@@ -194,6 +212,60 @@ export function FormularioInscripcion({ club, onClose }) {
             <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} maxLength={200} />
 
             <CampoTexto label="Experiencia Previa" name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} placeholder="¿Has participado en algo similar antes?" type="textarea" maxLength={200} />
+
+            {preguntasExtra.map((p) => (
+              <div key={p.id_pregunta} className="space-y-1">
+                <label className={`block text-sm font-bold ${tema.isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                  {p.etiqueta}{p.obligatorio ? ' *' : ''}
+                </label>
+                {p.tipo === 'textarea' ? (
+                  <textarea
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  />
+                ) : p.tipo === 'seleccion' ? (
+                  <select
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  >
+                    <option value="">Selecciona una opción</option>
+                    {(p.configuracion?.opciones || []).map((op, i) => (
+                      <option key={i} value={op}>{op}</option>
+                    ))}
+                  </select>
+                ) : p.tipo === 'numero' ? (
+                  <input
+                    type="number"
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    min={p.configuracion?.min}
+                    max={p.configuracion?.max}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  />
+                ) : p.tipo === 'fecha' ? (
+                  <input
+                    type="date"
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  />
+                )}
+              </div>
+            ))}
 
             <Alerta tipo="error" mensaje={errorApi} />
 
