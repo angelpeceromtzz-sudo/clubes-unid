@@ -41,7 +41,7 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
               u.institutional_id, u.password_hash, u.id_rol, u.deleted_at,
-              r.nombre_rol as rol
+              u.id_licenciatura, r.nombre_rol as rol
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
        WHERE u.correo_institucional = $1`,
@@ -79,6 +79,7 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
         correo_institucional: user.correo_institucional,
         institutional_id: user.institutional_id,
         id_rol: user.id_rol,
+        id_licenciatura: user.id_licenciatura ?? null,
         rol: user.rol,
       },
     });
@@ -142,7 +143,7 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
     // vez — en ese escenario el microsoft_id aún es null en la DB.
     let existing = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
-              u.id_rol, r.nombre_rol as rol, u.institutional_id, u.deleted_at
+              u.id_rol, r.nombre_rol as rol, u.institutional_id, u.deleted_at, u.id_licenciatura
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
        WHERE u.microsoft_id = $1`,
@@ -152,7 +153,7 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
     if (existing.rows.length === 0) {
       existing = await pool.query(
         `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
-                u.id_rol, r.nombre_rol as rol, u.institutional_id, u.deleted_at
+                u.id_rol, r.nombre_rol as rol, u.institutional_id, u.deleted_at, u.id_licenciatura
          FROM usuarios u
          JOIN cat_roles r ON r.id_rol = u.id_rol
          WHERE u.correo_institucional = $1`,
@@ -233,6 +234,7 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
         correo_institucional: row.correo_institucional,
         institutional_id: institutionalId || row.institutional_id,
         id_rol: row.id_rol,
+        id_licenciatura: row.id_licenciatura ?? null,
         rol: row.rol,
       };
     }
@@ -247,6 +249,7 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
         correo_institucional: user.correo_institucional,
         institutional_id: user.institutional_id,
         id_rol: user.id_rol,
+        id_licenciatura: user.id_licenciatura ?? null,
         rol: user.rol,
       },
     });
@@ -328,6 +331,8 @@ router.get('/me', authenticate, async (req, res) => {
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
               u.institutional_id, u.id_rol, r.nombre_rol as rol,
+              u.id_licenciatura, u.fecha_nacimiento,
+              (SELECT l.nombre FROM cat_licenciaturas l WHERE l.id_licenciatura = u.id_licenciatura) AS licenciatura,
               COALESCE(cp.id_club, cv.id_club, i.id_club) AS id_club,
               COALESCE(cp.nombre_club, cv.nombre_club, c.nombre_club) AS nombre_club,
               COALESCE(cp.categoria, cv.categoria, c.categoria) AS categoria,
@@ -351,6 +356,63 @@ router.get('/me', authenticate, async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error al obtener perfil:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Actualiza la licenciatura y/o fecha de nacimiento del usuario autenticado
+// (usado por el onboarding y el perfil). Solo el propio usuario puede modificarlos.
+router.patch('/me/perfil-academico', authenticate, async (req, res) => {
+  try {
+    const idUsuario = req.user.id;
+    const { id_licenciatura, fecha_nacimiento } = req.body || {};
+
+    const campos = [];
+    const valores = [];
+    let idx = 1;
+
+    if (id_licenciatura !== undefined) {
+      if (id_licenciatura === null) {
+        campos.push(`id_licenciatura = NULL`);
+      } else {
+        const lic = await pool.query(
+          'SELECT 1 FROM cat_licenciaturas WHERE id_licenciatura = $1',
+          [id_licenciatura],
+        );
+        if (lic.rows.length === 0) {
+          return res.status(400).json({ error: 'Licenciatura inválida' });
+        }
+        campos.push(`id_licenciatura = $${idx++}`);
+        valores.push(id_licenciatura);
+      }
+    }
+
+    if (fecha_nacimiento !== undefined) {
+      if (fecha_nacimiento === null) {
+        campos.push(`fecha_nacimiento = NULL`);
+      } else {
+        // Validación básica de formato YYYY-MM-DD
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fecha_nacimiento))) {
+          return res.status(400).json({ error: 'Fecha de nacimiento inválida' });
+        }
+        campos.push(`fecha_nacimiento = $${idx++}`);
+        valores.push(fecha_nacimiento);
+      }
+    }
+
+    if (campos.length === 0) {
+      return res.status(400).json({ error: 'Nada que actualizar' });
+    }
+
+    valores.push(idUsuario);
+    await pool.query(
+      `UPDATE usuarios SET ${campos.join(', ')} WHERE id_usuario = $${idx}`,
+      valores,
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error al actualizar perfil académico:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

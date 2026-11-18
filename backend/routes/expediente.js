@@ -91,7 +91,8 @@ router.get('/buscar', limitadorLecturasPesadas, async (req, res) => {
       condiciones.push(
         `(EXISTS (SELECT 1 FROM inscripciones i WHERE i.id_usuario = u.id_usuario)
            OR EXISTS (SELECT 1 FROM formularios f WHERE f.id_alumno = u.id_usuario)
-           OR EXISTS (SELECT 1 FROM asistencias a WHERE a.id_usuario = u.id_usuario))`,
+           OR EXISTS (SELECT 1 FROM asistencias a WHERE a.id_usuario = u.id_usuario)
+           OR EXISTS (SELECT 1 FROM actividades_registros ar WHERE ar.id_usuario = u.id_usuario))`,
       );
     }
 
@@ -133,7 +134,7 @@ router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
 
     const perfilResult = await pool.query(`
       SELECT u.id_usuario, u.nombre_completo, u.correo_institucional, u.institutional_id,
-        u.fecha_registro, u.last_login, (u.deleted_at IS NOT NULL) AS cuenta_desactivada,
+        u.fecha_registro, u.last_login, u.fecha_nacimiento, (u.deleted_at IS NOT NULL) AS cuenta_desactivada,
         f.matricula, f.cuatrimestre, l.nombre AS licenciatura
       FROM usuarios u
       LEFT JOIN LATERAL (
@@ -151,7 +152,7 @@ router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
       return res.status(404).json({ error: 'Alumno no encontrado' });
     }
 
-    const [membresias, postulaciones, asistencia, sesiones] = await Promise.all([
+    const [membresias, postulaciones, asistencia, sesiones, actividadesAsistencia] = await Promise.all([
       pool.query(`
         SELECT i.id_inscripcion, i.id_club, c.nombre_club, ei.nombre_estatus AS estatus,
           i.fecha_inscripcion, i.fecha_baja
@@ -199,6 +200,18 @@ router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
         ORDER BY s.fecha DESC, s.hora_inicio DESC`,
         [id]
       ),
+      pool.query(`
+        SELECT aa.id_registro, ae.id_edicion, c.nombre_club AS actividad,
+               ae.nombre AS edicion, ae.fecha_inicio, ae.fecha_fin,
+               aa.estado, aa.origen, aa.registrada_en
+        FROM actividades_asistencias aa
+        JOIN actividades_registros ar ON ar.id_registro = aa.id_registro
+        JOIN actividades_ediciones ae ON ae.id_edicion = ar.id_edicion
+        JOIN clubes c ON c.id_club = ae.id_actividad
+        WHERE ar.id_usuario = $1
+        ORDER BY ae.fecha_inicio DESC NULLS LAST, aa.registrada_en DESC`,
+        [id]
+      ),
     ]);
 
     const datos = {
@@ -207,13 +220,19 @@ router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
       asistencia: asistencia.rows,
     };
 
+    const actividadesAsistidas = actividadesAsistencia.rows.filter((r) => r.estado === 'presente').length;
+    const resumen = resumirTrayectoria(datos);
+    resumen.actividades_registradas = actividadesAsistencia.rows.length;
+    resumen.actividades_asistidas = actividadesAsistidas;
+
     res.json({
       alumno: perfilResult.rows[0],
-      resumen: resumirTrayectoria(datos),
+      resumen,
       membresias: datos.membresias,
       postulaciones: datos.postulaciones,
       asistencia_por_club: datos.asistencia,
       sesiones: sesiones.rows,
+      actividades_asistencia: actividadesAsistencia.rows,
     });
   } catch (err) {
     console.error('Error al obtener expediente:', err);
