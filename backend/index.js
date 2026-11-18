@@ -43,6 +43,7 @@ import muralRoutes from './routes/mural.js';
 import actividadesRoutes from './routes/actividades.js';
 import preferenciasRoutes from './routes/preferencias.js';
 import expedienteRoutes from './routes/expediente.js';
+import clubFormularioRoutes from './routes/clubFormulario.js';
 const app = express();
 // Render termina TLS y reenvía con X-Forwarded-For (un solo proxy).
 // Pendiente de verificar en Render: si algún día hay un proxy adicional
@@ -96,6 +97,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/clubes', clubesRoutes);
+app.use('/api/clubes', clubFormularioRoutes);
 app.use('/api/inscripciones', inscripcionesRoutes);
 app.use('/api/formularios', formulariosRoutes);
 app.use('/api/avisos', avisosRoutes);
