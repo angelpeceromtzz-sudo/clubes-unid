@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { ModalExito } from '../../modals/ModalExito';
 import { api } from '../../../services/api';
@@ -18,8 +18,7 @@ export function FormularioInscripcion({ club, onClose }) {
     id_club: club.id_club || club.id,
     nombre_completo: usuario?.nombre_completo || '',
     matricula: usuario?.institutional_id || '',
-    id_licenciatura: '',
-    cuatrimestre: '',
+    id_licenciatura: usuario?.id_licenciatura ? String(usuario.id_licenciatura) : '',    cuatrimestre: '',
 
     telefono_contacto: '',
     motivo_ingreso: '',
@@ -42,6 +41,24 @@ export function FormularioInscripcion({ club, onClose }) {
   const bloqueado = yaPostulado || limiteAlcanzado;
   const datosPrecargados = !!usuario?.institutional_id;
 
+  useEffect(() => {
+    if (usuario?.id_licenciatura) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const data = await api.get('/auth/me');
+        if (cancelado) return;
+        const lic = data?.id_licenciatura;
+        if (lic) {
+          setFormulario((prev) => (prev.id_licenciatura ? prev : { ...prev, id_licenciatura: String(lic) }));
+        }
+      } catch {
+        // Ignorar: el campo quedará editable.
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [usuario?.id_licenciatura]);
+
   const [errores, setErrores] = useState({});
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -55,6 +72,7 @@ export function FormularioInscripcion({ club, onClose }) {
 
   function manejarCambio(e) {
     const { name, value } = e.target;
+    if (name === 'id_licenciatura' && usuario?.id_licenciatura) return;
     if (name === 'matricula' || name === 'telefono_contacto') {
       if (!/^\d*$/.test(value)) return;
     }
@@ -152,7 +170,7 @@ export function FormularioInscripcion({ club, onClose }) {
                 onChange={manejarCambio}
                 opciones={opcionesLicenciatura}
                 placeholder={cargandoCatalogos ? 'Cargando...' : 'Selecciona tu licenciatura'}
-                disabled={cargandoCatalogos}
+                disabled={cargandoCatalogos || !!usuario?.id_licenciatura}
                 required
                 error={errores.id_licenciatura}
               />

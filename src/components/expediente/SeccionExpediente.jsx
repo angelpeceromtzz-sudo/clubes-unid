@@ -47,7 +47,7 @@ function Bloque({ titulo, children }) {
 
 function VistaDetalle({ expediente, onVolver }) {
   const { modoOscuro } = useTheme();
-  const { alumno, resumen, membresias, postulaciones, asistencia_por_club, sesiones } = expediente;
+  const { alumno, resumen, membresias, postulaciones, asistencia_por_club, sesiones, actividades_asistencia } = expediente;
   const filaCls = `border-b ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/20' : 'border-slate-100 hover:bg-slate-50'} transition-colors`;
 
   return (
@@ -69,6 +69,11 @@ function VistaDetalle({ expediente, onVolver }) {
               {alumno.licenciatura || 'Sin carrera registrada'}
               {alumno.cuatrimestre ? ` · Cuatrimestre ${alumno.cuatrimestre}` : ''}
             </p>
+            {alumno.fecha_nacimiento && (
+              <p className="text-sm text-slate-500">
+                Edad: {Math.floor((Date.now() - new Date(alumno.fecha_nacimiento + 'T00:00:00').getTime()) / (365.25 * 24 * 60 * 60 * 1000))} años
+              </p>
+            )}
           </div>
           {alumno.cuenta_desactivada && <Badge texto="Cuenta desactivada" color="red" size="md" />}
         </div>
@@ -83,6 +88,7 @@ function VistaDetalle({ expediente, onVolver }) {
           valor={resumen.porcentaje_asistencia === null ? '—' : `${resumen.porcentaje_asistencia}%`}
           detalle={resumen.primer_registro ? `Desde ${fechaCorta(resumen.primer_registro)}` : 'Sin registros'}
         />
+        <Tarjeta titulo="Actividades" valor={resumen.actividades_asistidas ?? 0} detalle={`${resumen.actividades_registradas ?? 0} registro(s)`} />
       </div>
 
       <Bloque titulo="Membresías en clubes">
@@ -180,6 +186,32 @@ function VistaDetalle({ expediente, onVolver }) {
                     <p className="text-xs text-slate-500 mt-1">{s.motivo_justificacion}</p>
                   )}
                 </Td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Bloque>
+
+      <Bloque titulo="Asistencia a actividades">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
+              <Th>Actividad</Th><Th>Edición</Th><Th>Fecha</Th><Th>Estado</Th><Th>Origen</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {(actividades_asistencia || []).length === 0 && (
+              <tr><td colSpan={5} className="text-center py-6 text-slate-500">Sin asistencias a actividades</td></tr>
+            )}
+            {(actividades_asistencia || []).map(a => (
+              <tr key={a.id_registro} className={filaCls}>
+                <Td className="font-medium">{a.actividad}</Td>
+                <Td>{a.edicion}</Td>
+                <Td>{a.fecha_inicio ? fechaEventoCorta(a.fecha_inicio) : '—'}</Td>
+                <Td>
+                  <Badge texto={a.estado} color={a.estado === 'presente' ? 'emerald' : 'red'} />
+                </Td>
+                <Td>{a.origen}</Td>
               </tr>
             ))}
           </tbody>
