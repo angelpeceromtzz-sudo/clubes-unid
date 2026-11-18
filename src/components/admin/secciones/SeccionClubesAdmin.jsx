@@ -1,8 +1,11 @@
 import { TablaClubes } from '../tablas/TablaClubes';
+import { useState } from 'react';
 import { BotonAccion } from '../../ui/BotonAccion';
 import { Icono } from '../../ui/Icono';
+import { ModalConfigurarFormulario } from '../modales/ModalConfigurarFormulario';
 
 export function SeccionClubesAdmin({ d, onPublicacion }) {
+  const [clubFormulario, setClubFormulario] = useState(null);
   return (
     <div>
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -37,8 +40,12 @@ export function SeccionClubesAdmin({ d, onPublicacion }) {
         onStatusChange={d.handleStatusChange}
         onEditar={d.abrirModalEditar}
         onPublicacion={onPublicacion}
+        onConfigurarFormulario={setClubFormulario}
         currentUser={d.user}
       />
+      {clubFormulario && (
+        <ModalConfigurarFormulario club={clubFormulario} onClose={() => setClubFormulario(null)} />
+      )}
     </div>
   );
 }
