@@ -228,6 +228,7 @@ CREATE TABLE IF NOT EXISTS formularios (
     telefono_contacto VARCHAR(20) NOT NULL,
     motivo_ingreso TEXT NOT NULL,
     experiencia_previa TEXT DEFAULT '',
+    respuestas_extra JSONB NOT NULL DEFAULT '{}'::jsonb,
     status VARCHAR(20) NOT NULL DEFAULT 'En revisión',
     fecha_oferta TIMESTAMPTZ,
     fecha_expiracion TIMESTAMPTZ,
@@ -243,6 +244,21 @@ CREATE TABLE IF NOT EXISTS formularios (
         'Oferta enviada', 'Miembro oficial', 'Rechazado'
     ))
 );
+
+CREATE TABLE IF NOT EXISTS club_formulario_preguntas (
+    id_pregunta SERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    etiqueta VARCHAR(200) NOT NULL,
+    tipo VARCHAR(30) NOT NULL DEFAULT 'texto',
+    configuracion JSONB NOT NULL DEFAULT '{}'::jsonb,
+    obligatorio BOOLEAN NOT NULL DEFAULT FALSE,
+    orden INT NOT NULL DEFAULT 0,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_club_formulario_preguntas_club
+  ON club_formulario_preguntas(id_club, orden);
 
 -- Migración de 'carrera VARCHAR(100)' a 'id_licenciatura INT REFERENCES'.
 --
