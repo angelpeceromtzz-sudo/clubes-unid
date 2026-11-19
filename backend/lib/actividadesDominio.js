@@ -1,9 +1,10 @@
-import { camposMisiones, campoActividadVisible, normalizarConfiguracionMisiones, validarCamposMisiones } from './misionesDominio.js';
+import { camposMisiones, campoActividadVisible, normalizarConfiguracionMisiones, validarCamposMisiones, validarTelefonoMisiones } from './misionesDominio.js';
 import { normalizarEnlaceMapa } from './ubicacionMaps.js';
 export * from './misionesDominio.js';
 // Contrato compartido entre la API, los formularios y las pruebas del módulo.
 export const ROLES_CREAN_ACTIVIDADES = [3, 4, 7];
 export const ROLES_SUPERVISAN_ACTIVIDADES = [3, 4, 7];
+export const ROLES_APRUEBAN_EDICIONES = [4, 7];
 export const REACCIONES_ACTIVIDAD = ['like', 'love', 'clap'];
 export const ESTADOS_ACTIVIDAD = ['borrador', 'pendiente', 'publicada', 'rechazada', 'archivada'];
 
@@ -123,7 +124,7 @@ export function normalizarRecursoCatalogo(datos) {
 }
 
 export function camposPlantillaActividad(plantilla = 'general', configuracion = null) {
-  if (plantilla === 'misiones' && configuracion?.version === 2) return camposMisiones();
+  if (plantilla === 'misiones' && configuracion?.version === 2) return camposMisiones(configuracion);
   if (!['trineo', 'misiones'].includes(plantilla)) return [];
   return [
     { clave: 'edad', etiqueta: 'Edad', tipo: 'numero', obligatorio: true, minimo: 1, maximo: 120, opciones: [] },
@@ -140,7 +141,7 @@ export function normalizarCamposActividad(valor, plantilla = 'general', configur
     const clave = textoActividad(campo.clave, 50, 'Clave del campo', true);
     if (!/^[a-z][a-z0-9_]*$/.test(clave) || claves.has(clave)) throw errorActividad('Cada campo necesita una clave única y válida');
     claves.add(clave);
-    if (!['texto', 'texto_largo', 'numero', 'seleccion', 'licenciatura'].includes(campo.tipo)) throw errorActividad('Tipo de campo no válido');
+    if (!['texto', 'texto_largo', 'numero', 'seleccion', 'licenciatura', 'fecha'].includes(campo.tipo)) throw errorActividad('Tipo de campo no válido');
     const opciones = campo.tipo === 'seleccion' ? campo.opciones : [];
     if (!Array.isArray(opciones) || opciones.length > 80) throw errorActividad('Opciones del campo no válidas');
     const resultado = {
@@ -155,7 +156,7 @@ export function normalizarCamposActividad(valor, plantilla = 'general', configur
     }
     return resultado;
   });
-  if (plantilla === 'misiones' && configuracion?.version === 2) return validarCamposMisiones(campos);
+  if (plantilla === 'misiones' && configuracion?.version === 2) return validarCamposMisiones(campos, configuracion);
   for (const obligatorio of camposPlantillaActividad(plantilla)) {
     const campo = campos.find((item) => item.clave === obligatorio.clave);
     if (!campo || campo.tipo !== obligatorio.tipo || campo.obligatorio !== obligatorio.obligatorio) throw errorActividad('Esta actividad requiere edad y talla obligatorias, y licenciatura opcional');
@@ -231,7 +232,7 @@ export function estadoRegistroActividad(edicion, hoy) {
   return 'abierta';
 }
 
-export function validarRespuestasActividad(campos, respuestas) {
+export function validarRespuestasActividad(campos, respuestas, hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())) {
   if (!respuestas || typeof respuestas !== 'object' || Array.isArray(respuestas)) throw errorActividad('Revisa tus respuestas');
   const resultado = {};
   for (const campo of campos) {
@@ -245,6 +246,10 @@ export function validarRespuestasActividad(campos, respuestas) {
       const numero = typeof valor === 'number' || typeof valor === 'string' ? Number(valor) : NaN;
       if (!Number.isFinite(numero) || !Number.isInteger(numero) || numero < campo.minimo || numero > campo.maximo) throw errorActividad('Revisa: ' + campo.etiqueta);
       resultado[campo.clave] = numero;
+    } else if (campo.tipo === 'fecha') {
+      const fecha = fechaActividad(valor);
+      if (!fecha || (campo.no_futura && fecha > hoy)) throw errorActividad('Revisa: ' + campo.etiqueta + '. La fecha no puede ser futura');
+      resultado[campo.clave] = fecha;
     } else if (campo.tipo === 'licenciatura') {
       const numero = Number(valor);
       if (!Number.isSafeInteger(numero) || numero < 1) throw errorActividad('Selecciona una licenciatura válida');
@@ -252,7 +257,7 @@ export function validarRespuestasActividad(campos, respuestas) {
     } else {
       const texto = textoActividad(valor, campo.tipo === 'texto_largo' ? 2000 : 500, campo.etiqueta, campo.obligatorio);
       if (campo.tipo === 'seleccion' && !campo.opciones.includes(texto)) throw errorActividad('Selecciona una opción válida: ' + campo.etiqueta);
-      resultado[campo.clave] = texto;
+      resultado[campo.clave] = campo.validacion === 'telefono' ? validarTelefonoMisiones(texto) : texto;
     }
   }
   return resultado;

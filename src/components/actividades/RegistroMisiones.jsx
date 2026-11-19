@@ -2,16 +2,15 @@ import { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useLicenciaturas } from '../../hooks/useLicenciaturas';
-import { campoActividadVisible, cotizarPedidoMisiones, validarRespuestasActividad, validarContactoInvitado } from '../../../shared/actividades';
+import { campoActividadVisible, cotizarPedidoMisiones, validarRespuestasActividad, validarContactoInvitado, esFormatoMegamisiones, validarTelefonoMisiones } from '../../../shared/actividades';
 import { misionesService } from '../../services/misiones.service';
 import { actividadService } from '../../services/actividad.service';
 import { BotonAccion } from '../ui/BotonAccion';
 import { EstadoActividad } from './ActividadUI';
 import { DocumentoMisiones } from './DocumentoMisiones';
-import { GRUPOS_PREGUNTAS_MISIONES } from '../../constants/preguntasMisiones';
+import { gruposPreguntasMisiones } from '../../constants/preguntasMisiones';
 
 const dinero = (centavos) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(centavos / 100);
-const SECCIONES = GRUPOS_PREGUNTAS_MISIONES.map(({ titulo, claves }) => [titulo, claves]);
 
 export function ResumenRegistroMisiones({ registro, acceso, licenciaturas = [], mostrarAportaciones = true }) {
   const { tema } = useTheme();
@@ -21,7 +20,7 @@ export function ResumenRegistroMisiones({ registro, acceso, licenciaturas = [], 
     {registro.correo && <p className="break-words text-sm">{registro.correo}{registro.telefono ? ' · ' + registro.telefono : ''}</p>}
     <dl className="grid gap-3 sm:grid-cols-2">{registro.formulario_snapshot.filter((campo) => campoActividadVisible(campo, registro.respuestas)).map((campo) => <div key={campo.clave}>
       <dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt>
-      <dd className="whitespace-pre-wrap break-words font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : registro.respuestas[campo.clave] ?? 'Sin especificar'}</dd>
+      <dd className="whitespace-pre-wrap break-words font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : campo.tipo === 'fecha' && registro.respuestas[campo.clave] ? registro.respuestas[campo.clave].split('-').reverse().join('/') : registro.respuestas[campo.clave] ?? 'Sin especificar'}</dd>
     </div>)}</dl>
     {registro.pedido?.lineas.length > 0 && <section className="rounded-xl border border-slate-400/25 p-4 space-y-2"><h4 className="font-bold">Tu pedido</h4>{registro.pedido.lineas.map((linea) => <p key={linea.id_producto + linea.talla} className="text-sm">{linea.cantidad} × {linea.nombre}{linea.talla ? ' · Talla ' + linea.talla : ''} · {dinero(linea.subtotal_centavos)}</p>)}<p className="font-bold">Total: {dinero(registro.pedido.total_centavos)} MXN</p><p className="text-sm">El pago se acuerda con el encargado.</p></section>}
     {mostrarAportaciones && registro.aportaciones?.filter((aporte) => aporte.estado !== 'cancelada').map((aporte) => <p key={aporte.id_aportacion} className="text-sm">{aporte.nombre}: {Number(aporte.cantidad)} {aporte.unidad} · {aporte.estado}</p>)}
@@ -44,6 +43,10 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   const [error, setError] = useState('');
   const [cancelando, setCancelando] = useState(false);
   const config = registro?.misiones_snapshot || edicion.configuracion_misiones;
+  const mega = esFormatoMegamisiones(config);
+  const secciones = gruposPreguntasMisiones(config);
+  const etiquetaCampo = mega ? 'block space-y-2 text-sm font-semibold ' + tema.title : labelCls;
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const campos = (registro?.estado === 'confirmado' ? registro.formulario_snapshot : edicion.campos_registro).filter((campo) => !invitado || campo.tipo !== 'licenciatura');
   const abierta = edicion.estado_registro === 'abierta';
   const responder = (clave, valor) => setRespuestas((actual) => ({ ...actual, [clave]: valor }));
@@ -62,8 +65,9 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
     if (pendiente) return;
     setError('');
     try {
-      validarRespuestasActividad(campos, respuestas);
+      validarRespuestasActividad(campos, respuestas, hoy);
       if (invitado) validarContactoInvitado(contacto);
+      if (mega) validarTelefonoMisiones(contacto.telefono);
       if (errorPedido) throw new Error(errorPedido);
       if (config.codigo_obligatorio && !pdf && !registro?.codigo_firmado_id) throw new Error('Adjunta el PDF firmado del código de conducta');
       if (pdf && (pdf.type !== 'application/pdf' || pdf.size > 10 * 1024 * 1024)) throw new Error('Adjunta un PDF de hasta 10 MB');
@@ -82,35 +86,8 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
     finally { setPendiente(false); }
   }
 
-  function dibujarCampo(campo) {
-    if (!campoActividadVisible(campo, respuestas)) return null;
-    const comunes = { id: 'mision-' + campo.clave, 'aria-label': campo.etiqueta + (campo.obligatorio ? ' *' : ' (opcional)'), className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
-    return <label className={labelCls + (campo.tipo === 'texto_largo' ? ' sm:col-span-2' : '')} key={campo.clave}>{campo.etiqueta}{campo.obligatorio ? ' *' : ' (opcional)'}
-      {['seleccion', 'licenciatura'].includes(campo.tipo) ? <select {...comunes} disabled={campo.tipo === 'licenciatura' && loading}>
-        <option value="">Selecciona una opción</option>
-        {(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ valor: item.id_licenciatura, texto: item.nombre })) : campo.opciones.map((opcion) => ({ valor: opcion, texto: opcion }))).map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.texto}</option>)}
-      </select> : campo.tipo === 'texto_largo' ? <textarea {...comunes} maxLength={2000} rows={4} /> : <input {...comunes} type={campo.tipo === 'numero' ? 'number' : campo.clave.endsWith('_telefono') ? 'tel' : 'text'} min={campo.minimo} max={campo.maximo} step={campo.tipo === 'numero' ? 1 : undefined} maxLength={500} />}
-    </label>;
-  }
-
-  if (registro && !editando) return <section aria-label="Tu inscripción a Misiones" className="space-y-4">
-    <ResumenRegistroMisiones registro={registro} acceso={acceso} licenciaturas={licenciaturas} />
-    {abierta && registro.estado !== 'cancelado' && <div className="flex flex-wrap gap-3"><BotonAccion onClick={() => setEditando(true)}>Editar mi registro</BotonAccion>{!invitado && <BotonAccion variant="outline" onClick={() => setCancelando(true)}>Cancelar inscripción</BotonAccion>}</div>}
-    {cancelando && <div role="alert" className="space-y-3"><p>¿Confirmas la cancelación? Tus aportaciones recibidas y asistencias conservarán su historial.</p><BotonAccion variant="danger" disabled={pendiente} onClick={cancelar}>Confirmar cancelación</BotonAccion> <BotonAccion variant="outline" onClick={() => setCancelando(false)}>Conservar mi inscripción</BotonAccion></div>}
-    {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
-  </section>;
-  if (!abierta) return <p className={tema.subtitle}>{edicion.estado_registro === 'proxima' ? 'El formulario estará disponible al abrir las inscripciones.' : 'El periodo de inscripción y edición está cerrado.'}</p>;
-  if (registro?.estado === 'cancelado' && invitado) return <p>Tu inscripción está cancelada. Consulta al encargado.</p>;
-  const clavesBase = SECCIONES.flatMap(([, claves]) => claves);
-  return <form aria-label="Registro a Misiones" onSubmit={guardar} className="space-y-6">
-    <fieldset disabled={pendiente} className="space-y-6">
-      <section className="space-y-3"><h4 className="text-lg font-bold">{invitado ? 'Registro de invitado' : 'Participante UNID'}</h4>
-        <div className="grid gap-4 sm:grid-cols-2">{invitado ? [['nombre_completo', 'Nombre completo', 'text'], ['correo', 'Correo electrónico', 'email'], ['telefono', 'Teléfono', 'tel']].map(([clave, etiqueta, tipo]) => <label className={labelCls} key={clave}>{etiqueta} *<input className={inputCls} type={tipo} required maxLength={clave === 'correo' ? 254 : clave === 'telefono' ? 40 : 150} value={contacto[clave]} onChange={(evento) => setContacto((actual) => ({ ...actual, [clave]: evento.target.value }))} /></label>) : <><label className={labelCls}>Nombre completo<input className={inputCls} value={usuario?.nombre_completo || ''} readOnly /></label><label className={labelCls}>Matrícula *<input className={inputCls} value={matricula} readOnly={Boolean(usuario?.institutional_id)} inputMode="numeric" pattern="[0-9]+" maxLength={30} required onChange={(evento) => setMatricula(evento.target.value)} /></label></>}</div>
-      </section>
-      {SECCIONES.map(([titulo, claves]) => <section className="space-y-3 border-t border-slate-400/25 pt-5" key={titulo}><h4 className="text-lg font-bold">{titulo}</h4><div className="grid gap-4 sm:grid-cols-2">{campos.filter((campo) => claves.includes(campo.clave)).map(dibujarCampo)}</div></section>)}
-      {campos.some((campo) => !clavesBase.includes(campo.clave)) && <div className="grid gap-4 sm:grid-cols-2">{campos.filter((campo) => !clavesBase.includes(campo.clave)).map(dibujarCampo)}</div>}
-      {!invitado && errorLicenciaturas && <div role="alert"><p>No se pudieron cargar las licenciaturas.</p><BotonAccion variant="outline" onClick={recargar}>Volver a cargar</BotonAccion></div>}
-      {(edicion.configuracion_misiones.productos.some((producto) => producto.activo) || seleccion.length > 0) && <section aria-label="Tu pedido" className="space-y-4 border-t border-slate-400/25 pt-5">
+  const seccionPedido = (
+    (edicion.configuracion_misiones.productos.some((producto) => producto.activo) || seleccion.length > 0) && <section aria-label="Tu pedido" className="space-y-4 border-t border-slate-400/25 pt-5">
         <h4 className="text-lg font-bold">Artículos que quieres adquirir (opcional)</h4>
         <p className={'text-sm ' + tema.subtitle}>Elige los artículos y cantidades. La talla de sudadera se pide al agregar esa prenda. El pago se acuerda con el encargado.</p>
         {seleccion.map((linea, indice) => {
@@ -126,7 +103,53 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
         })}
         <div className="flex flex-wrap gap-3">{edicion.configuracion_misiones.productos.filter((producto) => producto.activo).map((producto) => <BotonAccion key={producto.id_producto} variant="outline" size="sm" disabled={seleccion.length >= 40} onClick={() => agregarProducto(producto)}>Agregar {producto.nombre} · {dinero(producto.precio_centavos)}</BotonAccion>)}</div>
         {errorPedido ? <p role="alert" className="text-red-600 dark:text-red-400">{errorPedido}</p> : <p className="text-lg font-bold" aria-live="polite">Total: {dinero(pedido.total_centavos)} MXN</p>}
+      </section>
+  );
+  const identificacionUnid = <><label className={etiquetaCampo}>Nombre completo<input className={inputCls} value={usuario?.nombre_completo || ''} readOnly /></label><label className={etiquetaCampo}>Matrícula *<input className={inputCls} value={matricula} readOnly={Boolean(usuario?.institutional_id)} inputMode="numeric" pattern="[0-9]+" maxLength={30} required onChange={(evento) => setMatricula(evento.target.value)} /></label></>;
+  const contactoCampo = (clave, etiqueta, tipo) => <label className={etiquetaCampo} key={clave}>{etiqueta} *<input className={inputCls} type={tipo} required maxLength={clave === 'correo' ? 254 : clave === 'telefono' ? 40 : 150} value={contacto[clave]} onChange={(evento) => setContacto((actual) => ({ ...actual, [clave]: evento.target.value }))} /></label>;
+
+  function dibujarCampo(campo) {
+    if (!campoActividadVisible(campo, respuestas)) return null;
+    const comunes = { id: 'mision-' + campo.clave, 'aria-label': campo.etiqueta + (campo.obligatorio ? ' *' : ' (opcional)'), className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
+    return <label className={etiquetaCampo + (campo.tipo === 'texto_largo' ? ' sm:col-span-2' : '')} key={campo.clave}>{campo.etiqueta}{campo.obligatorio ? ' *' : ' (opcional)'}
+      {['seleccion', 'licenciatura'].includes(campo.tipo) ? <select {...comunes} disabled={campo.tipo === 'licenciatura' && loading}>
+        <option value="">Selecciona una opción</option>
+        {(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ valor: item.id_licenciatura, texto: item.nombre })) : campo.opciones.map((opcion) => ({ valor: opcion, texto: opcion }))).map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.texto}</option>)}
+      </select> : campo.tipo === 'texto_largo' ? <textarea {...comunes} maxLength={2000} rows={4} /> : <input {...comunes} type={campo.tipo === 'fecha' ? 'date' : campo.tipo === 'numero' ? 'number' : campo.clave.endsWith('_telefono') ? 'tel' : 'text'} min={campo.minimo} max={campo.tipo === 'fecha' && campo.no_futura ? hoy : campo.maximo} step={campo.tipo === 'numero' ? 1 : undefined} maxLength={500} />}
+      {campo.ayuda && <span className={"block text-xs font-normal normal-case tracking-normal " + tema.subtitle}>{campo.ayuda}</span>}
+    </label>;
+  }
+
+  if (registro && !editando) return <section aria-label="Tu inscripción a Misiones" className="space-y-4">
+    <ResumenRegistroMisiones registro={registro} acceso={acceso} licenciaturas={licenciaturas} />
+    {abierta && registro.estado !== 'cancelado' && <div className="flex flex-wrap gap-3"><BotonAccion onClick={() => setEditando(true)}>Editar mi registro</BotonAccion>{!invitado && <BotonAccion variant="outline" onClick={() => setCancelando(true)}>Cancelar inscripción</BotonAccion>}</div>}
+    {cancelando && <div role="alert" className="space-y-3"><p>¿Confirmas la cancelación? Tus aportaciones recibidas y asistencias conservarán su historial.</p><BotonAccion variant="danger" disabled={pendiente} onClick={cancelar}>Confirmar cancelación</BotonAccion> <BotonAccion variant="outline" onClick={() => setCancelando(false)}>Conservar mi inscripción</BotonAccion></div>}
+    {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
+  </section>;
+  if (!abierta) return <p className={tema.subtitle}>{edicion.estado_registro === 'proxima' ? 'El formulario estará disponible al abrir las inscripciones.' : 'El periodo de inscripción y edición está cerrado.'}</p>;
+  if (registro?.estado === 'cancelado' && invitado) return <p>Tu inscripción está cancelada. Consulta al encargado.</p>;
+  const clavesBase = secciones.flatMap(({ claves }) => claves);
+  return <form aria-label="Registro a Misiones" onSubmit={guardar} className="space-y-6">
+    <fieldset disabled={pendiente} className="space-y-6">
+      {!mega && <section className="space-y-3"><h4 className="text-lg font-bold">{invitado ? 'Registro de invitado' : 'Participante UNID'}</h4>
+        <div className="grid gap-4 sm:grid-cols-2">{invitado ? [['nombre_completo', 'Nombre completo', 'text'], ['correo', 'Correo electrónico', 'email'], ['telefono', 'Teléfono', 'tel']].map(([clave, etiqueta, tipo]) => contactoCampo(clave, etiqueta, tipo)) : identificacionUnid}</div>
       </section>}
+      {secciones.map((grupo, indice) => <section aria-label={grupo.titulo} className="space-y-4 border-t border-slate-400/25 pt-5" key={grupo.titulo}>
+        <header className="space-y-1">{mega && <p className="text-xs font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">MEGAMISIONES · {indice + 1} de 5</p>}<h4 className="text-lg font-bold">{grupo.titulo}</h4>{mega && <p className={'text-sm ' + tema.subtitle}>{grupo.descripcion}</p>}</header>
+        {mega && grupo.id === 'contacto' && <>
+          <p className={'text-sm leading-relaxed ' + tema.subtitle}>Tus datos se usarán para tu inscripción y la organización de la misión. El equipo puede contactarte por correo o WhatsApp con información de esta actividad.</p>
+          {invitado ? contactoCampo('correo', 'Correo electrónico', 'email') : <label className={etiquetaCampo}>Correo institucional<input className={inputCls} type="email" value={usuario?.correo_institucional || registro?.correo || ''} readOnly/><span className={'block text-xs font-normal ' + tema.subtitle}>Usamos el correo de tu cuenta UNID.</span></label>}
+        </>}
+        {mega && grupo.id === 'personales' && <div className="grid gap-4 sm:grid-cols-2">{invitado ? contactoCampo('nombre_completo', 'Nombre completo', 'text') : identificacionUnid}{contactoCampo('telefono', 'Teléfono celular', 'tel')}</div>}
+        <div className="grid gap-4 sm:grid-cols-2">{campos.filter((campo) => grupo.claves.includes(campo.clave)).map(dibujarCampo)}</div>
+        {mega && grupo.id === 'logistica' && <>
+          {config.informacion_kit && <p className={'whitespace-pre-line text-sm ' + tema.subtitle}>{config.informacion_kit}</p>}
+          {seccionPedido || <p className={'text-sm ' + tema.subtitle}>Los artículos extra se mostrarán cuando el encargado publique el catálogo con sus precios y tallas.</p>}
+        </>}
+      </section>)}
+      {campos.some((campo) => !clavesBase.includes(campo.clave)) && <div className="grid gap-4 sm:grid-cols-2">{campos.filter((campo) => !clavesBase.includes(campo.clave)).map(dibujarCampo)}</div>}
+      {!invitado && campos.some((campo) => campo.tipo === 'licenciatura') && errorLicenciaturas && <div role="alert"><p>No se pudieron cargar las licenciaturas.</p><BotonAccion variant="outline" onClick={recargar}>Volver a cargar</BotonAccion></div>}
+      {!mega && seccionPedido}
       {(edicion.requiere_aportacion || edicion.catalogo?.length > 0 || registro?.aportaciones?.length > 0) && <section className="space-y-3"><h4 className="font-bold">Aportaciones para la actividad{edicion.requiere_aportacion ? ' (obligatorias)' : ' (opcionales)'}</h4><p className="text-sm">Comida, globos u otros materiales para la actividad.</p>{[...(edicion.catalogo || []), ...(registro?.aportaciones || []).filter((aporte) => aporte.estado !== 'cancelada' && !(edicion.catalogo || []).some((opcion) => opcion.id_opcion === aporte.id_opcion))].map((opcion) => {
         const seleccionada = aportaciones.find((aporte) => aporte.id_opcion === opcion.id_opcion);
         const anterior = registro?.aportaciones?.find((aporte) => aporte.id_opcion === opcion.id_opcion && aporte.estado !== 'cancelada');

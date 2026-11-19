@@ -4,7 +4,7 @@ import { camposPlantillaActividad, configuracionMisionesInicial, normalizarEdici
 import { pendientesEdicion, prepararDatosEdicion, resolverPasoEdicion } from '../src/utils/edicionActividad.js';
 
 function datosMisiones() {
-  const config = configuracionMisionesInicial();
+  const config = configuracionMisionesInicial(null);
   return {
     nombre: 'Misiones de prueba', lugar: 'Campus de prueba', ubicacion_maps: 'https://www.google.com/maps/search/?api=1&query=19.83,-90.53', descripcion: 'Información capturada',
     fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', hora_inicio: '09:00',

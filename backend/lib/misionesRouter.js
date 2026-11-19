@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
   esMisionesNueva, UUID_MISIONES, errorActividad, estadoRegistroActividad,
-  validarRespuestasActividad, validarContactoInvitado, cotizarPedidoMisiones,
+  validarRespuestasActividad, validarContactoInvitado, cotizarPedidoMisiones, esFormatoMegamisiones, validarTelefonoMisiones,
   validarAportacionesActividad, disponibilidadAsistenciaActividad, normalizarCodigoAsistencia,
 } from './actividadesDominio.js';
 import { consultarAsistencia, asistenciaPropia } from './actividadesAsistencia.js';
@@ -85,11 +85,12 @@ export function montarMisiones(router, {
     const invitado = !usuario;
     const config = anterior?.misiones_snapshot || edicion.configuracion_misiones;
     const campos = (anterior?.estado === 'confirmado' ? anterior.formulario_snapshot : edicion.campos_registro).filter((campo) => !invitado || campo.tipo !== 'licenciatura');
-    const respuestas = validarRespuestasActividad(campos, req.body.respuestas || {});
+    const respuestas = validarRespuestasActividad(campos, req.body.respuestas || {}, hoy());
     for (const campo of campos.filter((item) => item.tipo === 'licenciatura' && respuestas[item.clave])) {
       if (!(await cliente.query('SELECT 1 FROM cat_licenciaturas WHERE id_licenciatura=$1', [respuestas[campo.clave]])).rows.length) throw errorActividad('La licenciatura seleccionada no está disponible');
     }
     const contacto = invitado ? validarContactoInvitado(req.body) : { nombre_completo: usuario.nombre_completo, correo: usuario.correo_institucional, telefono: null };
+    if (esFormatoMegamisiones(config)) contacto.telefono = validarTelefonoMisiones(invitado ? contacto.telefono : req.body.telefono ?? anterior?.telefono);
     const pedido = cotizarPedidoMisiones(edicion.configuracion_misiones.productos, req.body.pedido ?? anterior?.pedido?.lineas ?? [], anterior?.pedido);
     if (req.body.total_centavos !== undefined && req.body.total_centavos !== pedido.total_centavos) throw errorActividad('Los precios cambiaron. Actualiza y revisa el total antes de confirmar', 409);
     if (config.codigo_obligatorio && !req.file && !anterior?.codigo_firmado_id) throw errorActividad('Adjunta el PDF firmado del código de conducta');

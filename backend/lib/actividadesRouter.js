@@ -6,13 +6,13 @@ import { montarAsistenciaActividades, consultarAsistencia, asistenciaPropia } fr
 import { montarMisiones, registroMisionesSeguro, validarDocumentoConfiguracion } from './misionesRouter.js';
 import { montarCartasTrineo, completarCartasRegistros, prepararReservaCarta, guardarReservaCarta, liberarCartaPendiente, recibirRegaloCarta } from './trineoCartas.js';
 import {
-  ROLES_CREAN_ACTIVIDADES, ROLES_SUPERVISAN_ACTIVIDADES, REACCIONES_ACTIVIDAD,
+  ROLES_CREAN_ACTIVIDADES, ROLES_SUPERVISAN_ACTIVIDADES, ROLES_APRUEBAN_EDICIONES, REACCIONES_ACTIVIDAD,
   errorActividad, textoActividad, normalizarRecursoCatalogo, normalizarEdicionActividad,
   validarPublicacionEdicion, esDestacadaActividad, estadoRegistroActividad,
   validarRespuestasActividad, validarAportacionesActividad,
   normalizarOpcionAportacion,
   disponibilidadAsistenciaActividad,
-  configuracionMisionesInicial, camposMisiones,
+  configuracionMisionesInicial, camposMisiones, esFormatoMegamisiones,
 } from './actividadesDominio.js';
 
 const FECHAS = ['fecha_inicio', 'fecha_fin', 'inscripcion_desde', 'inscripcion_hasta', 'destacada_desde', 'destacada_hasta'];
@@ -21,6 +21,7 @@ const DESDE_EDICION = ' FROM actividades_ediciones e JOIN catalogo_recursos a ON
 const TABLAS = { actividad: ['catalogo_recursos', 'id_actividad'], edicion: ['actividades_ediciones', 'id_edicion'] };
 const supervisa = (usuario) => ROLES_SUPERVISAN_ACTIVIDADES.includes(usuario.id_rol);
 const aprueba = (usuario) => usuario.id_rol === 4;
+const apruebaEdicion = (usuario) => ROLES_APRUEBAN_EDICIONES.includes(usuario.id_rol);
 const puedeGestionar = (usuario, actividad) => supervisa(usuario) || actividad.id_responsable === usuario.id || (!actividad.id_responsable && actividad.id_autor === usuario.id);
 
 function comprobarGestion(usuario, actividad) {
@@ -177,7 +178,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const actividad = await actividadAsignada(req);
     actividad.responsable_nombre = (await db.query('SELECT nombre_completo FROM usuarios WHERE id_usuario=$1', [req.user.id])).rows[0]?.nombre_completo || null;
     const ediciones = (await db.query('SELECT ' + SELECT_EDICION + DESDE_EDICION + 'WHERE e.id_actividad=$1 ORDER BY e.id_edicion DESC', [actividad.id_actividad])).rows;
-    res.json({ actividad, ediciones, puede_aprobar: aprueba(req.user) });
+    res.json({ actividad, ediciones, puede_aprobar: aprueba(req.user), puede_aprobar_ediciones: apruebaEdicion(req.user) });
   });
 
   router.get('/gestion/asignadas/:idActividad/historial', async (req, res) => {
@@ -198,7 +199,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     for (const actividad of actividades) actividad.niveles = (await db.query('SELECT id_nivel FROM clubes_niveles WHERE id_club=$1 ORDER BY id_nivel', [actividad.id_actividad])).rows.map((fila) => fila.id_nivel);
     const ids = actividades.map((item) => item.id_actividad);
     const ediciones = ids.length ? (await db.query('SELECT ' + SELECT_EDICION + DESDE_EDICION + 'WHERE e.id_actividad = ANY($1::int[]) ORDER BY e.id_edicion DESC', [ids])).rows : [];
-    res.json({ actividades, ediciones, puede_crear: ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol), puede_crear_club: [3,7].includes(req.user.id_rol), puede_asignar: supervisa(req.user), puede_aprobar: aprueba(req.user) });
+    res.json({ actividades, ediciones, puede_crear: ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol), puede_crear_club: [3,7].includes(req.user.id_rol), puede_asignar: supervisa(req.user), puede_aprobar: aprueba(req.user), puede_aprobar_ediciones: apruebaEdicion(req.user) });
   });
 
   router.get('/gestion/encargados', async (req, res) => {
@@ -272,7 +273,10 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       if (actividad.plantilla === 'misiones') {
         entrada = { ...req.body, configuracion_misiones: req.body.configuracion_misiones || configuracionMisionesInicial() };
         // Compatibilidad con clientes anteriores: toda edición recién creada recibe v2.
-        if (!req.body.configuracion_misiones) entrada.campos_registro = camposMisiones().map((base) => ({ ...base, ...(req.body.campos_registro || []).find((campo) => campo.clave === base.clave) }));
+        if (!req.body.configuracion_misiones) entrada.campos_registro = camposMisiones(entrada.configuracion_misiones).map((base) => {
+          const anterior = (req.body.campos_registro || []).find((campo) => campo.clave === base.clave && campo.tipo === base.tipo);
+          return anterior ? { ...anterior, ...base, ...(base.clave === 'talla' && anterior.opciones?.length ? { opciones: anterior.opciones } : {}) } : base;
+        });
       }
       const datos = normalizarEdicionActividad(entrada, actividad.plantilla);
       await validarDocumentoConfiguracion(cliente, datos, actividad.id_actividad);
@@ -296,9 +300,9 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const parametro = tipo === 'actividad' ? 'idActividad' : 'idEdicion';
     const ruta = '/gestion/' + (tipo === 'actividad' ? 'actividades' : 'ediciones') + '/:' + parametro;
     const obtener = tipo === 'actividad' ? obtenerActividad : obtenerEdicion;
-    const normalizar = (datos, entidad) => {
+    const normalizar = (datos, entidad, adoptando = false) => {
       if (tipo === 'actividad') return normalizarRecursoCatalogo(datos);
-      if (Boolean(datos.configuracion_misiones) !== Boolean(entidad.configuracion_misiones)) throw errorActividad('La versión del formulario se conserva para cada edición');
+      if (!adoptando && (Boolean(datos.configuracion_misiones) !== Boolean(entidad.configuracion_misiones) || datos.configuracion_misiones?.formato !== entidad.configuracion_misiones?.formato)) throw errorActividad('La versión del formulario se conserva para cada edición');
       return normalizarEdicionActividad(datos, entidad.plantilla);
     };
 
@@ -309,7 +313,13 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
         if (tipo === 'actividad' && req.body.tipo && req.body.tipo !== entidad.tipo) throw errorActividad('El tipo se elige al crear. Para registros existentes utiliza el traslado revisado', 409);
         if (entidad.estado === 'archivada') throw errorActividad('Esta actividad está archivada', 409);
         if (entidad.estado === 'pendiente' || entidad.estado_propuesta === 'pendiente') throw errorActividad('Retira la propuesta de revisión antes de editarla', 409);
-        const datos = normalizar({ ...entidad, ...entidad.propuesta, ...req.body }, entidad);
+        const entrada = { ...entidad, ...entidad.propuesta, ...req.body };
+        const adoptando = tipo === 'edicion' && !esFormatoMegamisiones(entidad.configuracion_misiones) && esFormatoMegamisiones(entrada.configuracion_misiones);
+        if (adoptando) {
+          if (entidad.plantilla !== 'misiones' || entidad.estado !== 'borrador' || entidad.propuesta) throw errorActividad('El formato MEGAMISIONES solo se puede adoptar en borradores sin inscripciones', 409);
+          if ((await cliente.query('SELECT 1 FROM actividades_registros WHERE id_edicion=$1 LIMIT 1', [entidad.id_edicion])).rows.length) throw errorActividad('Esta edición ya tiene registros; conserva su formulario anterior', 409);
+        }
+        const datos = normalizar(entrada, entidad, adoptando);
         if (tipo === 'edicion') await validarDocumentoConfiguracion(cliente, datos, entidad.id_actividad);
         if (tipo === 'actividad' && entidad.plantilla !== 'general' && datos.slug !== entidad.slug) throw errorActividad('La dirección de esta actividad institucional se conserva');
         let resultado;
@@ -343,7 +353,9 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     });
 
     router.post(ruta + '/decision', async (req, res) => {
-      if (!aprueba(req.user)) throw errorActividad('Rectoría autoriza la publicación', 403);
+      if (!(tipo === 'edicion' ? apruebaEdicion(req.user) : aprueba(req.user))) {
+        throw errorActividad(tipo === 'edicion' ? 'Coordinación o Rectoría autorizan la publicación de ediciones' : 'Rectoría autoriza la publicación', 403);
+      }
       if (typeof req.body.aprobar !== 'boolean') throw errorActividad('Indica la decisión');
       const motivo = textoActividad(req.body.motivo, 1000, 'Observaciones', !req.body.aprobar);
       res.json(await transaccion(async (cliente) => {
@@ -385,7 +397,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const aportes = (await db.query(`SELECT p.*,EXISTS(SELECT 1 FROM actividades_cartas_reservas v WHERE v.id_aportacion=p.id_aportacion) AS es_regalo_carta
       FROM actividades_aportaciones p JOIN actividades_registros r ON r.id_registro=p.id_registro WHERE r.id_edicion=$1 ORDER BY p.id_aportacion`, [edicion.id_edicion])).rows;
     const fotos = (await db.query("SELECT * FROM actividades_fotos WHERE id_edicion = $1 AND estado <> 'eliminada' ORDER BY id_foto DESC", [edicion.id_edicion])).rows;
-    res.json({ edicion, catalogo: await catalogoEdicion(db, edicion.id_edicion), registros: registros.map((registro) => ({ ...registroMisionesSeguro(registro), aportaciones: aportes.filter((aporte) => aporte.id_registro === registro.id_registro) })), fotos });
+    res.json({ edicion, puede_adoptar_formato: edicion.plantilla === 'misiones' && edicion.estado === 'borrador' && !edicion.propuesta && !registros.length && !esFormatoMegamisiones(edicion.configuracion_misiones), catalogo: await catalogoEdicion(db, edicion.id_edicion), registros: registros.map((registro) => ({ ...registroMisionesSeguro(registro), aportaciones: aportes.filter((aporte) => aporte.id_registro === registro.id_registro) })), fotos });
   });
 
   router.put('/gestion/ediciones/:idEdicion/inscripciones', async (req, res) => {

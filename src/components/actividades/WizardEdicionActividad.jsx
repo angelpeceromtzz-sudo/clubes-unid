@@ -3,7 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useActividadRecurso } from '../../hooks/useActividadRecurso';
 import { actividadService } from '../../services/actividad.service';
-import { camposPlantillaActividad, configuracionMisionesInicial, normalizarEdicionActividad, normalizarOpcionAportacion, validarPublicacionEdicion } from '../../../shared/actividades';
+import { camposPlantillaActividad, configuracionMisionesInicial, normalizarEdicionActividad, normalizarOpcionAportacion, validarPublicacionEdicion, esFormatoMegamisiones, adoptarFormatoMegamisiones } from '../../../shared/actividades';
 import { PASOS_EDICION, pendientesEdicion, prepararDatosEdicion, resolverPasoEdicion } from '../../utils/edicionActividad';
 import { ConfiguracionMisiones } from './ConfiguracionMisiones';
 import { EditorCamposActividad } from './EditoresActividad';
@@ -85,6 +85,14 @@ export function FormularioEdicionActividad({ actividad, edicion, onGuardado, onC
   const fecha = (clave, titulo, obligatoria = false) => <label className={labelCls} key={clave}>{titulo}<input type="date" className={inputCls} required={obligatoria} value={datos[clave] || ''} onChange={(evento) => cambiar(clave, evento.target.value)} /></label>;
 
   return <form noValidate aria-label="Configurar edición" className="space-y-6" onSubmit={(evento) => { evento.preventDefault(); if (paso < 3) irAPaso(paso + 1); else guardar(); }}>
+    {operacion?.puede_adoptar_formato && !esFormatoMegamisiones(datos.configuracion_misiones) && <aside className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-400/10 p-4">
+      <h4 className="font-bold">Formato MEGAMISIONES</h4><p className="text-sm">Este borrador no tiene inscripciones. Puedes preparar las cinco secciones del formulario de referencia conservando su catálogo y sus documentos. El cambio se aplicará al guardar.</p>
+      <BotonAccion variant="outline" disabled={ocupado || bloqueado} onClick={() => {
+        try { const formato = adoptarFormatoMegamisiones(datos); setDatos((actual) => ({ ...actual, ...formato })); setError(''); }
+        catch (fallo) { setError(fallo.message); }
+      }}>Usar formato MEGAMISIONES</BotonAccion>
+    </aside>}
+    {edicion && !esFormatoMegamisiones(edicion.configuracion_misiones) && esFormatoMegamisiones(datos.configuracion_misiones) && <p role="status" className="rounded-xl bg-amber-400/10 p-4 text-sm">Formato MEGAMISIONES preparado. Se aplicará al guardar este borrador.</p>}
     <nav aria-label="Pasos para crear la edición" className="space-y-3">
       <ol className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {PASOS_EDICION.map(({ titulo }, indice) => {
@@ -164,7 +172,7 @@ export function FormularioEdicionActividad({ actividad, edicion, onGuardado, onC
           {pendientes.map((errores, indice) => errores.length > 0 && <div key={indice} className="space-y-1"><button type="button" className="text-left font-bold underline underline-offset-4" onClick={() => irAPaso(indice)}>{indice + 1}. {PASOS_EDICION[indice].titulo}</button><ul className="list-disc pl-5 space-y-1">{errores.map((mensaje) => <li key={mensaje}>{mensaje}</li>)}</ul></div>)}
         </aside>}
         <VistaPreviaActividad actividad={actividad} edicion={entrada} catalogo={catalogo} />
-        <p className="rounded-xl bg-amber-400/10 p-4 text-sm">{edicion?.estado === 'publicada' ? 'Guardar creará una propuesta. La versión aprobada seguirá visible hasta que Rectoría autorice el cambio.' : 'Se guardará como borrador. Después podrás enviarla a revisión desde su detalle.'}</p>
+        <p className="rounded-xl bg-amber-400/10 p-4 text-sm">{edicion?.estado === 'publicada' ? 'Guardar creará una propuesta. La versión aprobada seguirá visible hasta que Coordinación o Rectoría autoricen el cambio.' : 'Se guardará como borrador. Después podrás enviarla a revisión desde su detalle.'}</p>
       </>}
     </fieldset>
     <fieldset disabled={ocupado || bloqueado} className="flex flex-wrap gap-3 border-t border-slate-400/25 pt-5">

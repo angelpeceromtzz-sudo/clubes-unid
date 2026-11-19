@@ -12,6 +12,7 @@ import { Spinner } from '../components/ui/Spinner';
 import { FormularioAsistenciaActividad } from '../components/actividades/AsistenciaActividad';
 import { RegistroInvitadoMisiones } from '../components/actividades/RegistroInvitadoMisiones';
 import { UbicacionEdicionActividad } from '../components/actividades/LugarEdicionActividad';
+import { ReaccionesCatalogo } from '../components/actividades/ReaccionesCatalogo';
 
 function ParticipacionEdicion({ edicion, onLoginClick }) {
   const { usuario, authReady } = useAutenticacion();
@@ -19,25 +20,11 @@ function ParticipacionEdicion({ edicion, onLoginClick }) {
   const { datos, cargando, error, recargar } = useActividadRecurso(usuario ? '/ediciones/' + edicion.id_edicion + '/mi-registro' : null, identidad);
   const { tema, cardCls } = useTheme();
   const [mensaje, setMensaje] = useState('');
-  const [errorReaccion, setErrorReaccion] = useState('');
-  const [reaccionando, setReaccionando] = useState(false);
-  const [cambioReaccion, setCambioReaccion] = useState(null);
-  const totales = cambioReaccion?.totales || edicion.reacciones;
-  const seleccionada = cambioReaccion ? cambioReaccion.reaccion : datos?.reaccion;
-
-  async function reaccionar(reaccion) {
-    if (!usuario) return onLoginClick();
-    if (reaccionando || cargando || error) return;
-    setReaccionando(true); setErrorReaccion('');
-    try { setCambioReaccion(await actividadService.reaccionar(edicion.id_edicion, seleccionada === reaccion ? null : reaccion)); }
-    catch (fallo) { setErrorReaccion(fallo.mensajeServidor || fallo.message); }
-    finally { setReaccionando(false); }
-  }
 
   return <>
-    <section className="space-y-3" aria-label="Reacciones de la actividad"><h3 className={'text-lg font-bold ' + tema.title}>Comparte tu reacción</h3><div className="flex flex-wrap gap-3">
-      {[['like', '👍', 'Me gusta'], ['love', '❤️', 'Me encanta'], ['clap', '👏', 'Aplausos']].map(([valor, emoji, etiqueta]) => <BotonAccion key={valor} variant={seleccionada === valor ? 'primary' : 'outline'} aria-pressed={seleccionada === valor} aria-label={etiqueta} disabled={reaccionando || Boolean(usuario && cargando)} onClick={() => reaccionar(valor)}>{emoji} {etiqueta} · {totales.find((item) => item.reaccion === valor)?.total || 0}</BotonAccion>)}
-    </div>{errorReaccion && <p role="alert">{errorReaccion}</p>}</section>
+    <ReaccionesCatalogo etiqueta="Reacciones de la actividad" totales={edicion.reacciones} reaccion={datos?.reaccion}
+      autenticado={Boolean(usuario)} cargando={!authReady || Boolean(usuario && cargando)} errorCarga={error} onRecargar={recargar}
+      guardarReaccion={(reaccion) => actividadService.reaccionar(edicion.id_edicion, reaccion)} onLoginClick={onLoginClick}/>
     {edicion.requiere_registro && <section className={'rounded-2xl border p-5 sm:p-7 space-y-5 ' + cardCls} aria-label="Inscripción"><h3 className={'text-xl font-bold ' + tema.title}>Participa en esta edición</h3>
       {mensaje && <p role="status" className="text-emerald-700 dark:text-emerald-300">{mensaje}</p>}
       {!authReady || cargando ? <Spinner /> : !usuario ? edicion.configuracion_misiones?.version===2 ? <RegistroInvitadoMisiones edicion={edicion} onLoginClick={onLoginClick}/> : <><p className={tema.subtitle}>Inicia sesión con tu cuenta institucional para consultar o completar tu registro.</p><BotonAccion onClick={onLoginClick}>Iniciar sesión para registrarme</BotonAccion></> : error ? <div role="alert"><p>{error}</p><BotonAccion onClick={recargar}>Volver a intentar</BotonAccion></div> : <RegistroActividad key={edicion.id_edicion + ':' + identidad + ':' + (datos?.registro?.actualizado_en || 'nuevo')} edicion={edicion} registro={datos?.registro} onGuardado={(texto) => { setMensaje(texto); recargar(); }} />}

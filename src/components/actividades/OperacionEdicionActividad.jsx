@@ -16,7 +16,7 @@ import {ResumenRegistroMisiones} from './RegistroMisiones';
 import {GestionCartasTrineo} from './GestionCartasTrineo';
 import {ResumenCartaTrineo} from './CartaTrineo';
 
-export function OperacionEdicionActividad({ actividad, edicion, puedeAprobar, operarRevision, pendienteRevision, seccion = 'todo' }) {
+export function OperacionEdicionActividad({ actividad, edicion, puedeAprobar, puedeAprobarEdicion=puedeAprobar, operarRevision, pendienteRevision, seccion = 'todo' }) {
   const { usuario } = useAutenticacion();
   const { datos, cargando, error, recargar } = useActividadRecurso('/gestion/ediciones/' + edicion.id_edicion, usuario.id_usuario || usuario.id);
   const { tema, inputCls, labelCls } = useTheme();
@@ -48,7 +48,7 @@ export function OperacionEdicionActividad({ actividad, edicion, puedeAprobar, op
   const contexto=actividad;
   return <div className="space-y-8">
     {visible('ediciones') && <section className="space-y-4"><div className="flex flex-wrap items-center gap-3"><h3 className="text-lg font-bold">Vista previa de esta edición</h3>{datos.edicion.propuesta && <BotonAccion variant="outline" size="sm" onClick={()=>setVerPublicada((actual)=>!actual)}>{verPublicada ? 'Ver propuesta' : 'Comparar con la versión publicada'}</BotonAccion>}</div><p className="text-sm">{verPublicada ? 'Estás consultando la versión publicada.' : 'Revisa lo que verán los alumnos al abrir esta edición.'}</p><VistaPreviaActividad actividad={contexto} edicion={version} catalogo={datos.catalogo}/></section>}
-    {visible('ediciones') && <section aria-label="Revisión de la edición" className="space-y-3 rounded-xl bg-amber-400/10 p-4"><h3 className="font-bold">Publicación de la edición: {edicion.nombre}</h3><p className="text-sm">Rectoría revisa las fechas, el formulario y las aportaciones de esta edición.</p><fieldset disabled={pendienteRevision}><AccionesRevisionActividad tipo="ediciones" entidad={edicion} puedeAprobar={puedeAprobar} operar={operarRevision} bloqueoPublicacion={actividad.estado!=='publicada' ? 'Aprueba primero la información general de la actividad.' : verPublicada && datos.edicion.propuesta ? 'Abre la propuesta para revisarla antes de aprobar.' : ''}/></fieldset></section>}
+    {visible('ediciones') && <section aria-label="Revisión de la edición" className="space-y-3 rounded-xl bg-amber-400/10 p-4"><h3 className="font-bold">Publicación de la edición: {edicion.nombre}</h3><p className="text-sm">Coordinación o Rectoría revisan las fechas, el formulario y las aportaciones de esta edición.</p><fieldset disabled={pendienteRevision}><AccionesRevisionActividad tipo="ediciones" entidad={edicion} puedeAprobar={puedeAprobarEdicion} puedeArchivar={puedeAprobar} operar={operarRevision} bloqueoPublicacion={actividad.estado!=='publicada' ? 'Rectoría debe publicar primero la información general de la actividad.' : verPublicada && datos.edicion.propuesta ? 'Abre la propuesta para revisarla antes de aprobar.' : ''}/></fieldset></section>}
     {mensaje && <p role="status" className="text-emerald-700 dark:text-emerald-300">{mensaje}</p>}{errorOperacion && <p role="alert" className="text-red-600 dark:text-red-400">{errorOperacion}</p>}
     <fieldset disabled={pendiente} className="space-y-8">
       {visible('aportaciones') && datos.edicion.plantilla === 'trineo' && <GestionCartasTrineo idEdicion={edicion.id_edicion} onActualizar={recargar} />}

@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import express from 'express';
 import pg from 'pg';
 import { crearRouterActividades } from '../lib/actividadesRouter.js';
-import { camposMisiones, configuracionMisionesInicial } from '../lib/actividadesDominio.js';
+import { camposMisiones, configuracionMisionesInicial, adoptarFormatoMegamisiones, FORMATO_MEGAMISIONES } from '../lib/actividadesDominio.js';
 
 const connectionString = process.env.ACTIVIDADES_TEST_DATABASE_URL;
 describe('Misiones v2: invitados, PDF, pedidos y QR con PostgreSQL', { skip: !connectionString }, () => {
@@ -16,7 +16,7 @@ describe('Misiones v2: invitados, PDF, pedidos y QR con PostgreSQL', { skip: !co
   const correos = [];
   const pdf = Buffer.from('%PDF-1.4\nDocumento ficticio de QA\n%%EOF');
   const idProducto = randomUUID();
-  let db, servidor, base, misiones, trineo, antigua, nueva, configuracion, registro, token, documentoOriginal, fallarCorreo = false;
+  let db, servidor, base, misiones, trineo, antigua, nueva, mega, configuracion, registro, token, documentoOriginal, fallarCorreo = false;
   let fecha = '2026-11-18';
   const respuestas = () => ({ talla: 'M', tipo_sangre: 'O+', rol_mision: 'Responsable', alergias: 'No', participacion_previa: 'No' });
   const contacto = (correo = 'invitado@example.test') => ({ nombre_completo: 'Invitado QA', correo, telefono: '9811234567', respuestas: respuestas(), pedido: [{ id_producto: idProducto, cantidad: 1, talla: 'M' }], total_centavos: 35000 });
@@ -81,7 +81,7 @@ describe('Misiones v2: invitados, PDF, pedidos y QR con PostgreSQL', { skip: !co
   });
 
   test('solo las nuevas ediciones usan v2, sin convertir anteriores ni abrir otros programas a invitados', async () => {
-    configuracion = { ...configuracionMisionesInicial(), codigo_obligatorio: true, productos: [{ id_producto: idProducto, nombre: 'Sudadera QA', precio_centavos: 35000, requiere_talla: true, tallas: ['M', 'G'], activo: true }] };
+    configuracion = { ...configuracionMisionesInicial(null), codigo_obligatorio: true, productos: [{ id_producto: idProducto, nombre: 'Sudadera QA', precio_centavos: 35000, requiere_talla: true, tallas: ['M', 'G'], activo: true }] };
     const campos = camposMisiones().map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['M', 'G'] } : campo.clave === 'tipo_sangre' ? { ...campo, obligatorio: true } : campo);
     nueva = (await enviar(2, 'POST', '/gestion/actividades/' + misiones + '/ediciones', { nombre: 'Misiones nuevas QA', lugar: 'Campus QA', fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', inscripcion_desde: '2026-11-01', inscripcion_hasta: '2026-12-04', requiere_registro: true, configuracion_misiones: configuracion, campos_registro: campos }, 201)).id_edicion;
     assert.equal((await db.query('SELECT configuracion_misiones FROM actividades_ediciones WHERE id_edicion=$1', [antigua])).rows[0].configuracion_misiones, null);
@@ -207,5 +207,103 @@ describe('Misiones v2: invitados, PDF, pedidos y QR con PostgreSQL', { skip: !co
       VALUES($1,'Invitado fuera de alcance','invitado',$2,'fuera@example.test','9811234567',$3)`, [antigua, randomUUID(), 'a'.repeat(64)]), { code: '23514' });
     const datos = await enviar(null, 'GET', '/invitados/' + registro.folio, undefined, 200, token);
     assert.equal(datos.asistencia.estado, 'presente');
+  });
+
+  const datosMega = () => ({ nombre: 'MEGAMISIONES QA', lugar: 'Campus QA', fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', inscripcion_desde: '2026-11-01', inscripcion_hasta: '2026-12-04', requiere_registro: true });
+  const respuestasMega = () => ({ fecha_nacimiento: '2004-02-29', sexo: 'Mujer', rol_mision: 'Misionero', campus: 'Campeche', familia_unid: 'Invitado', cuatrimestre: 'N/A', tipo_sangre: 'A+', alergias_medicamentos: 'Ninguna', alergias_alimentos: 'Ninguna', enfermedades: 'Ninguna', tutor_nombre: 'Contacto QA', tutor_telefono: '+52 (981) 123-4567', talla: 'Mediana', religion: 'Ninguna', grupo_juvenil: 'No pertenezco', conocimientos_misiones: 'Servicio en comunidad.', participacion_previa: 'Nunca' });
+
+  test('las nuevas ediciones reciben MEGAMISIONES y conservan disponibles las ediciones anteriores', async () => {
+    fecha = '2026-11-18';
+    const creada = await enviar(2, 'POST', '/gestion/actividades/' + misiones + '/ediciones', datosMega(), 201);
+    mega = creada.id_edicion;
+    assert.equal(creada.configuracion_misiones.formato, FORMATO_MEGAMISIONES);
+    assert.equal(creada.configuracion_misiones.version, 2);
+    assert.equal(creada.campos_registro.length, 21);
+    assert.ok(creada.campos_registro.some((campo) => campo.clave === 'fecha_nacimiento' && campo.tipo === 'fecha' && campo.no_futura));
+    assert.equal((await enviar(2, 'GET', '/gestion/ediciones/' + mega)).puede_adoptar_formato, false);
+    await enviar(2, 'POST', '/gestion/ediciones/' + mega + '/revision', {});
+    await enviar(4, 'POST', '/gestion/ediciones/' + mega + '/decision', { aprobar: true });
+    assert.equal((await enviar(null, 'GET', '/ediciones/' + mega + '/acceso-invitados')).habilitado, true);
+    const anteriores = (await db.query('SELECT configuracion_misiones FROM actividades_ediciones WHERE id_edicion=ANY($1::int[]) ORDER BY id_edicion', [[antigua, nueva]])).rows;
+    assert.equal(anteriores[0].configuracion_misiones, null);
+    assert.equal(anteriores[1].configuracion_misiones.formato, undefined);
+  });
+
+  test('MEGAMISIONES exige fecha y teléfonos y guarda la identidad UNID sin otorgar permisos por el rol declarado', async () => {
+    const ruta = '/ediciones/' + mega + '/registro';
+    const body = { respuestas: respuestasMega(), telefono: '+52 981 222 3344', nombre_completo: 'Nombre alterado', correo: 'otro@example.test', matricula: '999', pedido: [] };
+    for (const cambio of [{ telefono: '' }, { telefono: 'letras' }, { respuestas: { ...respuestasMega(), fecha_nacimiento: '2026-11-19' } }, { respuestas: { ...respuestasMega(), fecha_nacimiento: '2005-02-29' } }, { respuestas: { ...respuestasMega(), tutor_telefono: 'texto' } }]) await enviar(1, 'PUT', ruta, { ...body, ...cambio }, 400);
+    assert.equal((await db.query('SELECT COUNT(*)::int AS total FROM actividades_registros WHERE id_edicion=$1', [mega])).rows[0].total, 0);
+    const unid = await enviar(1, 'PUT', ruta, { ...body, respuestas: { ...respuestasMega(), rol_mision: 'Responsable de equipo', id_rol: 3 } });
+    assert.equal(unid.nombre_completo, 'Alumno QA');
+    assert.equal(unid.correo, 'alumno@example.test');
+    assert.equal(unid.matricula, '00000001');
+    assert.equal(unid.telefono, '529812223344');
+    assert.equal(unid.respuestas.tutor_telefono, '529811234567');
+    assert.equal(unid.respuestas.id_rol, undefined);
+    assert.equal(unid.misiones_snapshot.formato, FORMATO_MEGAMISIONES);
+    assert.equal((await db.query('SELECT id_rol FROM usuarios WHERE id_usuario=1')).rows[0].id_rol, 1);
+    await enviar(1, 'GET', '/gestion/ediciones/' + mega, undefined, 403);
+  });
+
+  test('el invitado completa y corrige MEGAMISIONES con su enlace y se descartan campos condicionales ocultos', async () => {
+    const body = { nombre_completo: 'Invitada MEGA QA', correo: 'mega@example.test', telefono: '+52 981 333 4455', respuestas: { ...respuestasMega(), participacion_previa: 'Sí' }, pedido: [] };
+    await enviar(null, 'POST', '/ediciones/' + mega + '/invitados', body, 400);
+    const creada = await enviar(null, 'POST', '/ediciones/' + mega + '/invitados', { ...body, respuestas: { ...respuestasMega(), participacion_previa: 'Sí', participaciones_veces: '5 o más ocasiones', grupo_juvenil: 'Otro', grupo_juvenil_otro: 'Grupo QA', parroquia: 'Comunidad QA' } }, 201);
+    assert.equal(creada.registro.telefono, '529813334455');
+    assert.equal(creada.registro.misiones_snapshot.formato, FORMATO_MEGAMISIONES);
+    const editada = await enviar(null, 'PUT', '/invitados/' + creada.registro.folio, { ...body, respuestas: { ...respuestasMega(), grupo_juvenil_otro: 'Ya no corresponde', parroquia: 'Ya no corresponde', participaciones_veces: '5 o más ocasiones' } }, 200, creada.token);
+    for (const clave of ['grupo_juvenil_otro', 'parroquia', 'participaciones_veces']) assert.equal(editada.registro.respuestas[clave], undefined);
+    await enviar(null, 'GET', '/invitados/' + creada.registro.folio, undefined, 401, token);
+    const publica = await enviar(null, 'GET', '/detalle/misiones');
+    assert.equal(JSON.stringify(publica).includes('mega@example.test'), false);
+    const antes = (await db.query('SELECT formulario_snapshot,misiones_snapshot FROM actividades_registros WHERE id_registro=$1', [creada.registro.id_registro])).rows[0];
+    const edicion = (await enviar(2, 'GET', '/gestion/ediciones/' + mega)).edicion;
+    await enviar(2, 'PUT', '/gestion/ediciones/' + mega, { campos_registro: edicion.campos_registro.map((campo) => campo.clave === 'sexo' ? { ...campo, etiqueta: 'Sexo de la persona participante' } : campo) });
+    await enviar(2, 'POST', '/gestion/ediciones/' + mega + '/revision', {});
+    await enviar(4, 'POST', '/gestion/ediciones/' + mega + '/decision', { aprobar: true });
+    assert.deepEqual((await db.query('SELECT formulario_snapshot,misiones_snapshot FROM actividades_registros WHERE id_registro=$1', [creada.registro.id_registro])).rows[0], antes);
+  });
+
+  test('la adopción explícita funciona desde borradores clásicos y v2, conservando documentos y catálogo', async () => {
+    const borradorV2 = await enviar(2, 'POST', '/gestion/actividades/' + misiones + '/ediciones', { ...datosMega(), configuracion_misiones: configuracion, campos_registro: camposMisiones().map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['M', 'G'] } : campo) }, 201);
+    const borradorClasico = (await db.query("INSERT INTO actividades_ediciones(id_actividad,nombre,estado) VALUES($1,'Borrador clásico QA','borrador') RETURNING id_edicion", [misiones])).rows[0];
+    for (const id of [borradorV2.id_edicion, borradorClasico.id_edicion]) {
+      const detalle = await enviar(2, 'GET', '/gestion/ediciones/' + id);
+      assert.equal(detalle.puede_adoptar_formato, true);
+      const adaptada = adoptarFormatoMegamisiones(detalle.edicion);
+      await enviar(9, 'PUT', '/gestion/ediciones/' + id, adaptada, 403);
+      const guardada = await enviar(2, 'PUT', '/gestion/ediciones/' + id, adaptada);
+      assert.equal(guardada.configuracion_misiones.formato, FORMATO_MEGAMISIONES);
+      assert.equal((await enviar(2, 'GET', '/gestion/ediciones/' + id)).puede_adoptar_formato, false);
+      if (id === borradorV2.id_edicion) {
+        assert.deepEqual(guardada.configuracion_misiones.productos, configuracion.productos);
+        assert.equal(guardada.configuracion_misiones.codigo_documento, documentoOriginal);
+      }
+    }
+  });
+
+  test('API y SQL impiden cambiar formatos publicados o con registros, incluso cancelados', async () => {
+    const configMega = configuracionMisionesInicial();
+    const payload = { configuracion_misiones: configMega, campos_registro: camposMisiones(configMega) };
+    const datos = (await db.query("INSERT INTO actividades_ediciones(id_actividad,nombre,estado) VALUES($1,'Borrador con historial QA','borrador') RETURNING id_edicion", [misiones])).rows[0];
+    await db.query("INSERT INTO actividades_registros(id_edicion,id_usuario,nombre_completo,matricula,estado) VALUES($1,9,'Historial QA','00000009','cancelado')", [datos.id_edicion]);
+    for (const id of [antigua, nueva, datos.id_edicion]) {
+      assert.equal((await enviar(2, 'GET', '/gestion/ediciones/' + id)).puede_adoptar_formato, false);
+      await enviar(2, 'PUT', '/gestion/ediciones/' + id, payload, 409);
+      await assert.rejects(db.query('UPDATE actividades_ediciones SET configuracion_misiones=$1,campos_registro=$2 WHERE id_edicion=$3', [configMega, JSON.stringify(payload.campos_registro), id]), { code: '23514' });
+    }
+    await enviar(2, 'PUT', '/gestion/ediciones/' + mega, { configuracion_misiones: { ...configMega, formato: 'otro' } }, 400);
+    await assert.rejects(db.query("UPDATE actividades_ediciones SET configuracion_misiones=jsonb_set(configuracion_misiones,'{formato}','\"otro\"') WHERE id_edicion=$1", [mega]), { code: '23514' });
+  });
+
+  test('la migración de MEGAMISIONES es repetible y conserva todas las respuestas y formatos', async () => {
+    const antes = (await db.query('SELECT * FROM actividades_registros ORDER BY id_registro')).rows;
+    const ediciones = (await db.query('SELECT * FROM actividades_ediciones ORDER BY id_edicion')).rows;
+    const migracion = await readFile(new URL('../migrations/migrate-misiones-megamisiones.sql', import.meta.url), 'utf8');
+    await db.query(migracion); await db.query(migracion);
+    await db.query(await readFile(new URL('../schema.sql', import.meta.url), 'utf8'));
+    assert.deepEqual((await db.query('SELECT * FROM actividades_registros ORDER BY id_registro')).rows, antes);
+    assert.deepEqual((await db.query('SELECT * FROM actividades_ediciones ORDER BY id_edicion')).rows, ediciones);
   });
 });
