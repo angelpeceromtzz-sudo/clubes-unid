@@ -48,7 +48,7 @@ export function PaseListaActividad({ edicion }) {
   const base = (import.meta.env.VITE_PUBLIC_URL || window.location.origin).replace(/\/+$/, '');
   const enlace = codigo ? base + '/actividades/asistencia/' + edicion.id_edicion + '?codigo=' + codigo : '';
   const visibles = datos.registros.filter((registro) =>
-    (registro.nombre_completo + ' ' + registro.matricula).toLocaleLowerCase().includes(busqueda.toLocaleLowerCase()));
+    (registro.nombre_completo + ' ' + (registro.matricula || '') + ' ' + (registro.folio || '')).toLocaleLowerCase().includes(busqueda.toLocaleLowerCase()));
   const origenes = { qr: 'QR', codigo: 'Código', manual: 'Registro manual' };
 
   return <section className="space-y-6" aria-label="Pase de lista de la edición">
@@ -80,11 +80,11 @@ export function PaseListaActividad({ edicion }) {
     </div>}
     {mensaje && <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{mensaje}</p>}
     {errorOperacion && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{errorOperacion}</p>}
-    <label className={labelCls}>Buscar en el pase de lista<input className={inputCls + ' mt-2'} value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} placeholder="Nombre o matrícula" /></label>
+    <label className={labelCls}>Buscar en el pase de lista<input className={inputCls + ' mt-2'} value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} placeholder="Nombre, matrícula o folio" /></label>
     <div className="space-y-4">
       {!visibles.length && <p className={tema.subtitle}>No hay participantes que coincidan.</p>}
       {visibles.map((registro) => <article key={registro.id_registro} className={'space-y-3 rounded-xl border p-4 ' + cardCls}>
-        <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h4 className={'break-words font-bold ' + tema.title}>{registro.nombre_completo}</h4><p className={'text-sm ' + tema.subtitle}>Matrícula {registro.matricula}</p></div><EstadoActividad estado={registro.estado_inscripcion} /></div>
+        <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h4 className={'break-words font-bold ' + tema.title}>{registro.nombre_completo}</h4><p className={'text-sm break-words ' + tema.subtitle}>{registro.tipo_participante==='invitado' ? 'Invitado · ' + registro.folio : 'Matrícula ' + registro.matricula}</p></div><EstadoActividad estado={registro.estado_inscripcion} /></div>
         <ResumenAsistenciaActividad asistencia={registro.asistencia} />
         {registro.asistencia && <div className={'space-y-1 text-xs ' + tema.subtitle}>
           <p>{origenes[registro.asistencia.origen]}{registro.asistencia.actor_nombre ? ' · ' + registro.asistencia.actor_nombre : ''}</p>

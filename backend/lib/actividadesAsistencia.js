@@ -25,13 +25,13 @@ export function montarAsistenciaActividades(router, {
   router.get('/gestion/ediciones/:idEdicion/asistencia', async (req, res) => {
     const edicion = await obtenerEdicion(db, req.params.idEdicion);
     comprobarGestion(req.user, edicion);
-    const registros = (await db.query(`SELECT r.id_registro,r.nombre_completo,r.matricula,
-      r.estado AS estado_inscripcion,u.deleted_at IS NULL AS cuenta_activa,
+    const registros = (await db.query(`SELECT r.id_registro,r.nombre_completo,r.matricula,r.tipo_participante,r.folio,
+      r.estado AS estado_inscripcion,(r.tipo_participante='invitado' OR (u.id_usuario IS NOT NULL AND u.deleted_at IS NULL)) AS cuenta_activa,
       CASE WHEN a.id_registro IS NULL THEN NULL ELSE json_build_object(
         'estado',a.estado,'registrada_en',a.registrada_en,'origen',a.origen,
         'motivo_correccion',a.motivo_correccion,'actualizada_en',a.actualizada_en,
         'actor_nombre',actor.nombre_completo) END AS asistencia
-      FROM actividades_registros r JOIN usuarios u ON u.id_usuario=r.id_usuario
+      FROM actividades_registros r LEFT JOIN usuarios u ON u.id_usuario=r.id_usuario
       LEFT JOIN actividades_asistencias a ON a.id_registro=r.id_registro
       LEFT JOIN usuarios actor ON actor.id_usuario=a.id_actor
       WHERE r.id_edicion=$1 AND (r.estado='confirmado' OR a.id_registro IS NOT NULL)
@@ -109,8 +109,8 @@ export function montarAsistenciaActividades(router, {
       const edicion = await obtenerEdicion(cliente, req.params.idEdicion, true);
       comprobarGestion(req.user, edicion);
       if (!edicion.requiere_registro) throw errorActividad('Esta edición no requiere inscripciones', 409);
-      const registro = (await cliente.query(`SELECT r.id_registro,r.estado,u.deleted_at IS NULL AS cuenta_activa
-        FROM actividades_registros r JOIN usuarios u ON u.id_usuario=r.id_usuario
+      const registro = (await cliente.query(`SELECT r.id_registro,r.estado,(r.tipo_participante='invitado' OR (u.id_usuario IS NOT NULL AND u.deleted_at IS NULL)) AS cuenta_activa
+        FROM actividades_registros r LEFT JOIN usuarios u ON u.id_usuario=r.id_usuario
         WHERE r.id_edicion=$1 AND r.id_registro=$2 FOR UPDATE OF r`, [edicion.id_edicion, req.params.idRegistro])).rows[0];
       if (!registro) throw errorActividad('Inscripción no encontrada en esta edición', 404);
       if (req.body.estado === 'presente' && (registro.estado !== 'confirmado' || !registro.cuenta_activa)) throw errorActividad('Solo puedes registrar la llegada de un inscrito confirmado con cuenta activa', 409);

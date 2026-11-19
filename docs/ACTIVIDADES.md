@@ -1,6 +1,69 @@
 # Catálogo unificado de clubes y actividades
 
+## Trineo: cartas y regalos
+
+En **Aportaciones → Cartas de regalo del Trineo**, el encargado captura nombre del niño, edad de 1 a 18 años y deseo de cada carta física. La carta de regalo es obligatoria en las nuevas inscripciones de Trineo y en las reactivaciones. Misiones no utiliza cartas. Si no hay cartas disponibles, el alumno debe consultar al encargado antes de inscribirse. Los registros confirmados anteriores sin carta se conservan y pueden corregir sus datos sin asignaciones inventadas.
+
+Las **aportaciones para la actividad** son independientes del regalo: comida, globos u otros materiales. El encargado decide si son obligatorias en cada edición de Trineo o Misiones. En nuevas ediciones son opcionales por defecto. Las ediciones existentes conservan su configuración y los cambios publicados siguen su revisión habitual. Se pueden ofrecer opciones del catálogo aunque sean opcionales; si se exige aportar, debe existir al menos una opción disponible con su mínimo.
+
+El alumno busca al niño por nombre o número de carta. **Elegir este niño** selecciona la carta y **Confirmar inscripción** la reserva en una transacción. No necesita seleccionar un artículo del catálogo para registrar el regalo. Puede comprometerse aparte con cero, una o varias aportaciones, según la configuración. Los datos de niños requieren sesión y no se incluyen en el detalle público.
+
+Cada carta tiene como máximo una reserva vigente y cada inscripción una carta. Los índices únicos y el bloqueo transaccional evitan reservas duplicadas. Cambiar de niño o cancelar libera la carta si su regalo sigue pendiente. Una entrega de comida u otros materiales no impide cambiar la carta pendiente. El historial conserva los datos originales de cada carta liberada.
+
+**Confirmar recepción del regalo** guarda el estado de entrega, el encargado y la fecha en la reserva. **Confirmar recepción de aportación** registra por separado los materiales de la actividad. Ambos procesos son idempotentes. Una carta con regalo recibido conserva su reserva incluso al cancelar la inscripción. Los regalos vinculados anteriormente a aportaciones mantienen su referencia histórica y no se muestran duplicados como aportaciones adicionales.
+
+La estructura usa `actividades_cartas` y `actividades_cartas_reservas`. La segunda admite reservas sin `id_aportacion` y guarda `recibida`, `recibida_en` y `recibida_por`. La actualización copia las entregas históricas únicamente a la reserva vigente; conserva como desconocidas las fechas que no estaban registradas. `cartas_habilitadas` se conserva por compatibilidad, pero no decide la obligación de elegir carta.
+
+Antes de desplegar sobre una base que ya tiene cartas, aplicar manualmente `backend/migrations/migrate-trineo-aportaciones-independientes.sql`. Si todavía no tiene cartas, la versión actual de `backend/migrations/migrate-trineo-cartas.sql` incluye toda la estructura. Las instalaciones nuevas y la actualización mediante el esquema completo lo incluyen en `schema.sql`. No se eliminan registros ni se sincroniza automáticamente SharePoint.
+
+| Interfaz de cartas | Acceso |
+| --- | --- |
+| `GET /api/actividades/ediciones/:idEdicion/cartas` | Cuenta institucional; cartas disponibles de Trineo publicado |
+| `GET /api/actividades/gestion/ediciones/:idEdicion/cartas` | Encargado asignado o supervisor; cartas, estado y alumno responsable |
+| `POST /api/actividades/gestion/ediciones/:idEdicion/cartas` | Gestión autorizada; captura de cartas |
+| `PUT /api/actividades/gestion/ediciones/:idEdicion/cartas/:idCarta` | Gestión autorizada; corrige o retira cartas sin reserva vigente |
+| `POST /api/actividades/gestion/cartas-reservas/:idReserva/recibir` | Gestión autorizada; confirma el regalo de esa reserva, sin recibir otra si la carta fue reasignada |
+| `PUT /api/actividades/ediciones/:idEdicion/registro` | Carta obligatoria en nuevas inscripciones de Trineo; aportaciones según la configuración |
+
+`npm run test:trineo` cubre reservas simultáneas, aportaciones independientes, permisos, cancelaciones, recepciones, reversión ante fallos y actualización de datos anteriores. La integración requiere `ACTIVIDADES_TEST_DATABASE_URL`, usa esquemas temporales y no lee `.env`. También forma parte de `npm run test:actividades`.
+
+## Misiones: formulario ampliado
+
+Las ediciones de Misiones creadas después de esta actualización usan `configuracion_misiones.version=2`. Las anteriores mantienen configuración nula y las reglas anteriores; no se convierten al editarlas. El servidor asigna la versión al crear la edición y la base impide cambiarla después.
+
+En el paso **Inscripción y requisitos** aparecen edad, talla de camisa, licenciatura, procedencia, sangre, alergias, contacto de emergencia, religión, grupo juvenil, conocimientos, participación previa y rol. La talla de camisa es obligatoria; el encargado decide la obligatoriedad de las demás preguntas. Los detalles de alergias, Otro y experiencia se exigen únicamente cuando su respuesta anterior los habilita. Sangre ofrece exclusivamente `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+`, `O-`. Las listas de religión y grupo juvenil conservan Ninguna/No pertenezco y Otra/Otro, además de las opciones configuradas. Responsable/Misionero describe la participación y conserva los permisos de la cuenta.
+
+Los artículos se configuran por edición con precio en centavos de MXN, disponibilidad y, para sudaderas u otras prendas, tallas. El servidor calcula cantidades, subtotales y total. Cada pedido guarda nombres y precios; editar otros datos no altera su cotización. Si cambia el pedido se cotiza con el catálogo vigente y se comprueba el total mostrado. El pago es externo. Retirar un artículo conserva los pedidos anteriores. Catálogo, formulario y documento forman parte de la propuesta de edición revisada por Rectoría.
+
+El encargado puede cargar el PDF original desde el asistente, incluso antes de guardar la nueva edición, y decidir si exige adjuntarlo firmado. El participante lo firma electrónicamente por fuera y sube un PDF de hasta 10 MB. Se comprueban tipo, cabecera y cierre; no se certifica su firma electrónica. Se guarda la configuración original respondida y cada PDF firmado queda asociado al participante. Los recursos se almacenan en Cloudinary como `raw/authenticated` y se descargan a través de la API después de comprobar acceso. Las firmas no tienen URL pública. Una operación fallida revierte sus datos y limpia las cargas incompletas.
+
+El participante UNID usa su cuenta y matrícula. **Soy invitado** abre el formulario sin cuenta, con nombre, correo y teléfono obligatorios; no pide matrícula ni licenciatura. El enlace privado se muestra al confirmar y se envía por correo. Solo su poseedor puede consultar/editar ese registro o registrar su asistencia, además de los gestores autorizados. La edición se permite durante el mismo periodo aprobado de inscripción. Los duplicados por edición/correo no sobrescriben la inscripción ni devuelven su acceso. Si falla el correo, el registro se conserva y se ofrece reenviarlo desde el enlace privado.
+
+El enlace usa `/actividades/misiones/registro/:folio#acceso=SECRETO`; el secreto no se envía en la dirección de la petición, se elimina del fragmento tras comprobarlo y solo se almacena su hash en la base. El navegador conserva la credencial por folio y edición, sin respuestas personales. Las peticiones privadas usan `Authorization: Registro SECRETO`; esta credencial no es una sesión institucional ni da acceso a otros módulos. Al escanear el QR habitual se recupera la credencial de esa edición; en otro navegador se pega el enlace recibido conservando el código del QR. Se exige inscripción confirmada, publicación, código y fechas; los reintentos conservan una sola marca y el encargado puede corregirla con motivo.
+
+### Preparación y pruebas
+
+Sobre una base existente ya unificada, aplicar manualmente `backend/migrations/migrate-misiones-registro-v2.sql` antes del despliegue. La instalación nueva lo incluye en `schema.sql`. La migración amplía ediciones e inscripciones y añade `misiones_documentos` a las diez tablas originales del catálogo. No se ejecuta al arrancar ni crea ediciones, artículos, firmas o participantes ficticios.
+
+Configurar `MISIONES_PUBLIC_URL` con el origen HTTPS del frontend y `MISIONES_MAIL_PROVIDER=resend` o `smtp`. Se reutilizan las credenciales existentes de ese proveedor, manteniendo la restricción institucional de OTP. Como alternativa, el proveedor se hereda de `OTP_MAIL_PROVIDER` y el origen del primer `CORS_ORIGIN`. `mock` solo se admite en desarrollo. `CLOUDINARY_URL` configura el almacenamiento de PDFs privados.
+
+`npm run test:misiones` cubre reglas, correo y flujos HTTP; `npm run test:actividades` incluye también las regresiones y migraciones. La integración solo usa `ACTIVIDADES_TEST_DATABASE_URL`, en esquemas temporales que elimina al terminar, sin leer las credenciales de la aplicación. Los servicios de correo y archivos se sustituyen por dobles de prueba para no realizar envíos ni cargas reales.
+
+| Interfaz de Misiones | Acceso |
+|---|---|
+| `POST /api/actividades/ediciones/:idEdicion/invitados` | Registro público, únicamente para nuevas Misiones publicadas y abiertas; multipart con `formulario` JSON y `pdf` opcional |
+| `GET/PUT /api/actividades/invitados/:folio` | Credencial privada del mismo registro; PUT admite el mismo multipart |
+| `POST /api/actividades/invitados/:folio/reenviar-enlace` | Credencial privada, con límite de reenvíos |
+| `POST /api/actividades/invitados/:folio/asistencia` | Credencial privada, con código y origen QR/código |
+| `PUT /api/actividades/ediciones/:idEdicion/registro` | Cuenta UNID; conserva JSON para formularios anteriores y admite multipart en Misiones v2 |
+| `POST /api/actividades/gestion/actividades/:idActividad/codigo-conducta` | Gestor autorizado; multipart `pdf` |
+| `GET /api/actividades/documentos-misiones/:idDocumento` | Plantilla vigente publicada, participante propietario o gestor autorizado según corresponda |
+
 ## Alcance y acceso
+
+El asistente de ediciones separa los datos esenciales del punto de encuentro y distingue los campos opcionales. En **¿Dónde será?** se puede escribir una referencia, marcar un punto en el mapa o pegar un enlace de Google Maps u OpenStreetMap. El mapa es opcional; no reemplaza el nombre del lugar. La ubicación se conserva entre pasos, borradores y propuestas. Aparece en la revisión y en el detalle público después de aprobarse. Los enlaces compartidos cortos se abren en su proveedor; el mapa integrado solo se muestra cuando el enlace contiene coordenadas del punto. No se realizan búsquedas automáticas de direcciones.
+
+La ubicación usa `actividades_ediciones.ubicacion_maps`, con máximo de 2048 caracteres y vacío para ediciones anteriores. En bases existentes, aplicar `backend/migrations/migrate-actividades-ubicacion.sql` antes de desplegar la API; la instalación nueva y la actualización mediante `schema.sql` ya incluyen la columna. La migración es aditiva e idempotente. El mapa integrado se carga al abrirlo y utiliza [OpenStreetMap](https://operations.osmfoundation.org/policies/tiles/) con atribución visible. Los puntos generan [enlaces oficiales de Google Maps](https://developers.google.com/maps/documentation/urls/get-started), sin credenciales de Google.
 
 - `/actividades`: catálogo y ediciones destacadas automáticamente.
 - `/oferta`: descripciones estables de clubes y actividades publicados seleccionados para Oferta.
@@ -86,11 +149,11 @@ Cada club ofrece la misma galería general y el mismo visor que una actividad. S
 ## Organizar una edición
 
 1. Coordinación abre una actividad en su panel y asigna al encargado desde el apartado Responsable.
-2. El encargado selecciona **Agregar edición**. El asistente tiene cuatro pasos: **Información**, **Fechas**, **Inscripción y aportaciones** y **Resumen**. Anterior y Continuar conservan los datos introducidos.
+2. El encargado selecciona **Agregar edición**. El asistente tiene cuatro pasos: **Información de la edición**, **Fechas y destacado**, **Inscripción y requisitos** y **Revisión final**. Sus encabezados permiten volver directamente a los pasos alcanzados y conservan los datos introducidos. Al corregir un paso no se pierde el avance: los pendientes se señalan y se pueden revisar sin bloquear la navegación entre pasos alcanzados. Continuar valida antes de abrir un paso nuevo; Guardar revisa todo y lleva al primer apartado pendiente. El avance se conserva mientras permanezca abierto el formulario y no se guarda automáticamente al cambiar de paso.
 3. Información reúne nombre, lugar y descripción; Fechas reúne el evento y el periodo opcional de destacado. Este último es independiente del periodo de inscripción. Las fechas son inclusivas y se evalúan con la fecha del campus (`America/Mexico_City`).
-4. En Inscripción y aportaciones configura las preguntas y el periodo de registro. En Trineo y Misiones, edad y talla son obligatorias y licenciatura es opcional. Debe completar las tallas disponibles. Nombre y matrícula se incluyen siempre; la API toma los datos institucionales de la cuenta cuando existen.
-5. En Trineo agrega al menos una opción de aportación, con nombre, unidad y cantidad mínima. En actividades generales se habilita cuando la edición lo requiere. Las opciones nuevas y la edición se guardan en una sola transacción. Al editar ediciones existentes se conserva su catálogo, que se administra desde Aportaciones en el detalle.
-6. Resumen muestra una vista previa antes de guardar. **Guardar edición** deja un borrador; **Guardar borrador y salir** permite continuar después. Guardar cambios sobre una edición publicada crea una propuesta y conserva la versión vigente.
+4. En Inscripción y requisitos configura el periodo de registro, las preguntas, los artículos promocionales, el código de conducta y las aportaciones que correspondan. En Misiones, las preguntas se agrupan en datos personales, salud y emergencia, religión y grupo juvenil, y experiencia y rol. En Trineo y las ediciones anteriores de Misiones, edad y talla son obligatorias y licenciatura es opcional. Las nuevas Misiones usan el formulario ampliado descrito al inicio de esta guía. Debe completar las tallas disponibles. Para cuentas UNID, nombre y matrícula se incluyen siempre; la API toma los datos institucionales de la cuenta cuando existen.
+5. Configura las aportaciones para la actividad con nombre, unidad y cantidad mínima, y decide si serán obligatorias. Son independientes de la carta de regalo, que se exige solo en Trineo. Las opciones y la edición se guardan juntas, también cuando son opcionales. Al editar ediciones existentes, su catálogo se administra desde Aportaciones en el detalle.
+6. Revisión final muestra la vista previa y los enlaces a los apartados pendientes antes de guardar. **Guardar edición** deja un borrador; **Guardar borrador y salir** permite continuar después. Guardar cambios sobre una edición publicada crea una propuesta y conserva la versión vigente.
 7. Envía la edición a revisión desde su detalle. Rectoría abre la misma actividad en su panel y revisa la vista previa. La descripción general y cada edición tienen su propia sección de revisión. Puede **Aprobar y publicar** o **Solicitar cambios**, con motivo obligatorio. Una edición requiere que la descripción general esté publicada primero.
 
 Cuando hay una propuesta sobre una edición publicada, Rectoría puede comparar ambas versiones. Para aprobar debe volver a la propuesta. La vista previa de la edición utiliza la descripción general vigente; los cambios pendientes de esa descripción se revisan en su propio apartado. Los controles de inscripciones, aportaciones, participantes y fotografías se presentan en apartados desplegables para separar la operación de la revisión.
@@ -149,7 +212,7 @@ Tras revisar esa correspondencia, agregar `--aplicar`:
 node backend/scripts/migrar-actividades-legado.mjs --club ID_CLUB --edicion ID_EDICION --aplicar
 ```
 
-Toda la transición es una transacción. Conserva los datos y estados originales en `migraciones_catalogo` con `tipo = 'traslado_club'` y mantiene las tablas originales de participantes. Importa integrantes activos y solicitudes no rechazadas como `pendiente_completar`; el alumno debe completar los datos nuevos y, en Trineo, su aportación para confirmar. No convierte solicitudes rechazadas en asistentes. Las cuentas sin matrícula o desactivadas conservan su historial sin recibir una inscripción inventada.
+Toda la transición es una transacción. Conserva los datos y estados originales en `migraciones_catalogo` con `tipo = 'traslado_club'` y mantiene las tablas originales de participantes. Importa integrantes activos y solicitudes no rechazadas como `pendiente_completar`; el alumno debe completar los datos nuevos y, en Trineo, elegir su carta de regalo para confirmar. Las aportaciones adicionales dependen de la configuración de la edición. No convierte solicitudes rechazadas en asistentes. Las cuentas sin matrícula o desactivadas conservan su historial sin recibir una inscripción inventada.
 
 Al aplicar, el club anterior queda inactivo y cerrado, sus membresías activas pasan a baja y se cierran las solicitudes pendientes. Se libera su vínculo con la convocatoria actual para que no siga ocupando postulaciones. No se tocan otros clubes. Los enlaces antiguos al detalle del club redirigen a la edición publicada. Una segunda aplicación de la misma correspondencia no duplica registros; una correspondencia diferente para el mismo club se rechaza.
 
