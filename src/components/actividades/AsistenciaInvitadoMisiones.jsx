@@ -7,37 +7,36 @@ import { BotonAccion } from '../ui/BotonAccion';
 import { Spinner } from '../ui/Spinner';
 
 export function AsistenciaInvitadoMisiones({ idEdicion, codigo }) {
-  const { cardCls, inputCls, labelCls } = useTheme();
-  const [disponible, setDisponible] = useState(false);
+  const { tema, cardCls, inputCls, labelCls } = useTheme();
   const [acceso, setAcceso] = useState(() => leerAccesoMisiones('edicion_' + idEdicion));
   const [enlace, setEnlace] = useState('');
-  const [datos, setDatos] = useState(null);
-  const [error, setError] = useState('');
+  const [version, setVersion] = useState(0);
+  const [estado, setEstado] = useState({ clave: null, datos: null, error: '' });
+  const [errorEnlace, setErrorEnlace] = useState('');
+  const clave = idEdicion + ':' + acceso?.folio + ':' + version;
   useEffect(() => {
     let activo = true;
-    misionesService.disponibilidadInvitados(idEdicion).then((resultado) => { if (activo) setDisponible(resultado.habilitado); }).catch(() => {});
-    return () => { activo = false; };
-  }, [idEdicion]);
-  useEffect(() => {
-    let activo = true;
-    if (!disponible || !acceso) return;
+    if (!acceso) return;
     misionesService.consultarInvitado(acceso).then((resultado) => {
       if (!activo) return;
       if (resultado.registro.id_edicion !== Number(idEdicion)) throw new Error('Ese enlace pertenece a otra edición de Misiones. Usa el enlace de esta edición.');
       guardarAccesoMisiones(acceso, idEdicion);
-      setDatos(resultado);
-    }).catch((fallo) => { if (activo) setError(fallo.message); });
+      setEstado({ clave, datos: resultado, error: '' });
+    }).catch((fallo) => { if (activo) setEstado({ clave, datos: null, error: fallo.message }); });
     return () => { activo = false; };
-  }, [disponible, acceso, idEdicion]);
-  if (!disponible) return null;
+  }, [acceso, idEdicion, clave]);
+  const vigente = estado.clave === clave;
+  const datos = acceso && vigente ? estado.datos : null;
+  const error = acceso && vigente ? estado.error : '';
+  const cargando = Boolean(acceso && !vigente);
   return <section aria-label="Asistencia de invitados" className={'rounded-2xl border p-5 space-y-4 ' + cardCls}>
-    <h2 className="text-xl font-bold">Me inscribí como invitado</h2>
-    {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
-    {datos ? <><p className="font-semibold">{datos.registro.nombre_completo} · {datos.edicion.nombre}</p><FormularioAsistenciaActividad key={acceso.folio + ':' + codigo} idEdicion={idEdicion} estadoInscripcion={datos.registro.estado} asistencia={datos.asistencia} disponibilidad={datos.disponibilidad_asistencia} codigoInicial={codigo} origenInicial={codigo ? 'qr' : 'codigo'} accesoInvitado={acceso} /><BotonAccion variant="outline" size="sm" onClick={() => { setDatos(null); setAcceso(null); setError(''); }}>Usar otro enlace de invitado</BotonAccion></> : acceso && !error ? <Spinner /> : <form className="space-y-3" onSubmit={(evento) => {
+    <div className="space-y-2"><h2 className={'text-xl font-bold ' + tema.title}>Asistencia de invitado</h2><p className={'text-sm ' + tema.subtitle}>No necesitas iniciar sesión. Tu enlace privado nos permite reconocer tu inscripción.</p></div>
+    {error && <div role="alert" className="space-y-3"><p className="text-red-600 dark:text-red-400">{error}</p><BotonAccion variant="outline" onClick={() => setVersion((actual) => actual + 1)}>Volver a intentar</BotonAccion></div>}
+    {datos ? <><p className="font-semibold">{datos.registro.nombre_completo} · {datos.edicion.nombre}</p><FormularioAsistenciaActividad key={idEdicion + ':' + acceso.folio + ':' + codigo} idEdicion={idEdicion} estadoInscripcion={datos.registro.estado} asistencia={datos.asistencia} disponibilidad={datos.disponibilidad_asistencia} codigoInicial={codigo} origenInicial={codigo ? 'qr' : 'codigo'} accesoInvitado={acceso} /><BotonAccion variant="outline" size="sm" onClick={() => { setAcceso(null); setEnlace(''); setErrorEnlace(''); }}>Usar otro enlace de invitado</BotonAccion></> : cargando ? <><Spinner /><p className={'text-sm ' + tema.subtitle}>Buscando tu inscripción de invitado…</p></> : <form className="space-y-3" onSubmit={(evento) => {
       evento.preventDefault();
       const encontrado = extraerAccesoMisiones(enlace, window.location.origin);
-      if (!encontrado) { setError('Pega el enlace privado completo que recibiste al inscribirte o por correo.'); return; }
-      setError(''); setAcceso(encontrado);
-    }}><p className="text-sm">Pega tu enlace privado de inscripción para identificarte. El código del QR se conservará.</p><label className={labelCls}>Mi enlace privado<input className={inputCls} required type="text" maxLength={2048} autoComplete="off" value={enlace} onChange={(evento) => setEnlace(evento.target.value)} /></label><BotonAccion type="submit">Continuar como invitado</BotonAccion></form>}
+      if (!encontrado) { setErrorEnlace('Pega el enlace privado completo que recibiste al inscribirte o por correo.'); return; }
+      setErrorEnlace(''); setAcceso(encontrado); setVersion((actual) => actual + 1);
+    }}><p className="text-sm">{codigo ? 'El código del QR ya está listo. Pega tu enlace privado para identificarte.' : 'Pega el enlace privado que recibiste al inscribirte o por correo.'}</p><label className={labelCls}>Mi enlace privado de inscripción<input className={inputCls} required type="text" inputMode="url" maxLength={2048} autoComplete="off" value={enlace} onChange={(evento) => setEnlace(evento.target.value)} /></label>{errorEnlace && <p role="alert" className="text-red-600 dark:text-red-400">{errorEnlace}</p>}<BotonAccion type="submit">Buscar mi inscripción</BotonAccion><p className={'text-xs leading-relaxed ' + tema.subtitle}>El enlace está en tu correo de confirmación y en la pantalla que viste al inscribirte. Si no lo encuentras, pide ayuda al encargado.</p></form>}
   </section>;
 }
