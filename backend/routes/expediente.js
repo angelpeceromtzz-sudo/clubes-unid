@@ -54,20 +54,29 @@ function resumirTrayectoria({ membresias, postulaciones, asistencia }) {
 router.get('/buscar', limitadorLecturasPesadas, async (req, res) => {
   try {
     const termino = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-    if (termino.length < MIN_BUSQUEDA) {
-      return res.status(400).json({ error: `Escribe al menos ${MIN_BUSQUEDA} caracteres para buscar` });
-    }
-
-    const patron = `%${escaparLike(termino)}%`;
     const idLicenciatura =
       req.query.id_licenciatura !== undefined && esIdEntero(req.query.id_licenciatura)
         ? Number(req.query.id_licenciatura)
         : null;
     const conExpediente =
-      req.query.con_expediente === 'true' || req.query.con_expediente === '1';
+      req.query.con_expediente !== 'false' && req.query.con_expediente !== '0';
+
+    const terminoVacio = termino.length === 0;
+    if (termino.length > 0 && termino.length < MIN_BUSQUEDA) {
+      return res.status(400).json({ error: `Escribe al menos ${MIN_BUSQUEDA} caracteres para buscar` });
+    }
+    const patron = terminoVacio ? '%' : `%${escaparLike(termino)}%`;
+
+    const ordenParam = String(
+      req.query.orden || req.query.ordenar || req.query.sort ||
+      req.query.ordenar_por || req.query.sort_by || req.query.sortBy || ''
+    ).toLowerCase();
+    const ordenarPorRegistros =
+      ['registros', 'registros_desc', 'mayor', 'mayor_menor', 'mayor-menor', 'desc', 'descendente', 'total_registros', 'total_registros_desc'].includes(ordenParam) ||
+      ordenParam.includes('registro') || ordenParam.includes('mayor') || ordenParam.startsWith('desc');
 
     const condiciones = [
-      'u.id_rol = $1',
+      '(u.id_rol = $1 OR u.id_rol IN (2, 5, 6))',
       `(u.nombre_completo ILIKE $2
         OR u.correo_institucional ILIKE $2
         OR u.institutional_id ILIKE $2
@@ -111,10 +120,14 @@ router.get('/buscar', limitadorLecturasPesadas, async (req, res) => {
         (SELECT l.nombre FROM formularios f
           LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
           WHERE f.id_alumno = u.id_usuario
-          ORDER BY f.fecha_envio DESC LIMIT 1) AS licenciatura
+          ORDER BY f.fecha_envio DESC LIMIT 1) AS licenciatura,
+        ((SELECT COUNT(*)::int FROM inscripciones i WHERE i.id_usuario = u.id_usuario) +
+         (SELECT COUNT(*)::int FROM formularios f WHERE f.id_alumno = u.id_usuario) +
+         (SELECT COUNT(*)::int FROM asistencias a WHERE a.id_usuario = u.id_usuario) +
+         (SELECT COUNT(*)::int FROM actividades_registros ar WHERE ar.id_usuario = u.id_usuario)) AS total_registros
       FROM usuarios u
       WHERE ${condiciones.join(' AND ')}
-      ORDER BY u.nombre_completo
+      ORDER BY ${ordenarPorRegistros ? 'total_registros DESC, u.nombre_completo' : 'u.nombre_completo'}
       LIMIT ${limite}`,
       params
     );
@@ -145,7 +158,7 @@ router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
         LIMIT 1
       ) f ON TRUE
       LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = f.id_licenciatura
-      WHERE u.id_usuario = $1 AND u.id_rol = $2`,
+      WHERE u.id_usuario = $1 AND (u.id_rol = $2 OR u.id_rol IN (2, 5, 6))`,
       [id, ROL_ALUMNO]
     );
     if (perfilResult.rows.length === 0) {

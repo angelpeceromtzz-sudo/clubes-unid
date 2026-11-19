@@ -11,25 +11,29 @@ export function useExpediente() {
   const [buscando, setBuscando] = useState(false);
   const [cargandoExpediente, setCargandoExpediente] = useState(false);
   const [error, setError] = useState('');
-  const [filtros, setFiltros] = useState({ id_licenciatura: '', con_expediente: false });
+  const [filtros, setFiltros] = useState({ id_licenciatura: '', con_expediente: true, orden: '' });
 
   const buscar = useCallback(async (texto, filtrosOverride) => {
     const limpio = (texto ?? termino).trim();
     const filtrosActivos = filtrosOverride ?? filtros;
     setTermino(texto ?? termino);
     setError('');
-    if (limpio.length < MIN_BUSQUEDA) {
+    if (limpio.length > 0 && limpio.length < MIN_BUSQUEDA) {
       setResultados([]);
       return;
     }
     setBuscando(true);
     try {
-      const params = new URLSearchParams({ q: limpio });
+      const params = new URLSearchParams();
+      if (limpio) params.set('q', limpio);
       if (filtrosActivos?.id_licenciatura) {
         params.set('id_licenciatura', filtrosActivos.id_licenciatura);
       }
       if (filtrosActivos?.con_expediente) {
         params.set('con_expediente', 'true');
+      }
+      if (filtrosActivos?.orden) {
+        params.set('orden', filtrosActivos.orden);
       }
       const data = await api.get(`/expediente/buscar?${params.toString()}`);
       setResultados(data);
