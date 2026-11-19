@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { actividadService } from '../../services/actividad.service';
-import { camposPlantillaActividad } from '../../../shared/actividades';
+import { camposPlantillaActividad, esFormatoMegamisiones } from '../../../shared/actividades';
 import { BotonAccion } from '../ui/BotonAccion';
 import { NIVELES, PARTICIPACION, CUPOS_CLUB } from '../../constants/clubes';
+import { gruposPreguntasMisiones } from '../../constants/preguntasMisiones';
 
 export function FormularioActividad({ actividad, puedeCrearClub = false, tipoInicial='actividad', onGuardado, onCancelar }) {
   const [datos, setDatos] = useState({ tipo: tipoInicial, nombre: '', descripcion: '', categoria: '', url_imagen: '', mostrar_en_oferta: true, cupo_maximo: 10, participacion: 'mixta', niveles: [], lugar_actividades: '', password: '', ...actividad, ...actividad?.propuesta });
@@ -66,32 +67,51 @@ export function AsignarEncargadoActividad({ actividad, onGuardado }) {
   </section>;
 }
 
-export function EditorCamposActividad({ campos, plantilla, onChange }) {
-  const { inputCls, labelCls } = useTheme();
-  const fijos = camposPlantillaActividad(plantilla).map((campo) => campo.clave);
+export function EditorCamposActividad({ campos, plantilla, configuracion, onChange }) {
+  const { tema, inputCls, labelCls } = useTheme();
+  const nuevos = plantilla === 'misiones' && configuracion?.version === 2;
+  const mega = esFormatoMegamisiones(configuracion);
+  const fijos = camposPlantillaActividad(plantilla, configuracion).map((campo) => campo.clave);
+  const opcionesFijas = nuevos ? ['tipo_sangre', 'rol_mision', 'alergias', 'participacion_previa', ...(mega ? ['sexo', 'campus', 'familia_unid', 'cuatrimestre', 'participaciones_veces'] : [])] : [];
   const cambiar = (indice, clave, valor) => onChange(campos.map((campo, posicion) => posicion === indice ? { ...campo, [clave]: valor } : campo));
-  return <fieldset className="space-y-4"><legend className="font-bold mb-3">Preguntas del formulario</legend>
-    <p className="text-sm">Nombre y matrícula se incluyen automáticamente. Agrega las preguntas que necesita esta edición.</p>
-    {campos.map((campo, indice) => <div key={campo.clave} className="space-y-3 border-l-2 border-amber-400/40 pl-4">
-      <div className="grid gap-3 sm:grid-cols-2"><label className={labelCls}>Pregunta<input className={inputCls} value={campo.etiqueta} maxLength={120} required onChange={(evento) => cambiar(indice, 'etiqueta', evento.target.value)} /></label><label className={labelCls}>Tipo de respuesta<select className={inputCls} value={campo.tipo} disabled={fijos.includes(campo.clave)} onChange={(evento) => cambiar(indice, 'tipo', evento.target.value)}><option value="texto">Texto breve</option><option value="numero">Número entero</option><option value="seleccion">Lista de opciones</option><option value="licenciatura">Catálogo de licenciaturas</option></select></label></div>
-      <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={campo.obligatorio} disabled={fijos.includes(campo.clave)} onChange={(evento) => cambiar(indice, 'obligatorio', evento.target.checked)} />Respuesta obligatoria</label>
-      {campo.tipo === 'seleccion' && <label className={labelCls}>Opciones, una por línea<textarea className={inputCls} value={campo.textoOpciones ?? (campo.opciones || []).join('\n')} rows={3} onChange={(evento) => cambiar(indice, 'textoOpciones', evento.target.value)} placeholder={campo.clave === 'talla' ? 'Escribe las tallas disponibles para esta edición' : 'Una opción por línea'} /></label>}
-      {campo.tipo === 'numero' && <div className="grid gap-3 sm:grid-cols-2">{[['minimo', 'Mínimo'], ['maximo', 'Máximo']].map(([clave, titulo]) => <label className={labelCls} key={clave}>{titulo}<input className={inputCls} type="number" disabled={campo.clave === 'edad' && fijos.includes('edad')} value={campo[clave] ?? ''} onChange={(evento) => cambiar(indice, clave, evento.target.value)} /></label>)}</div>}
+  const grupos = nuevos ? [...gruposPreguntasMisiones(configuracion), { titulo: 'Otras preguntas', descripcion: 'Preguntas adicionales de esta edición.', claves: campos.filter((campo) => !fijos.includes(campo.clave)).map((campo) => campo.clave) }] : [{ titulo: '', claves: campos.map((campo) => campo.clave) }];
+
+  function pregunta(campo, indice) {
+    return <fieldset key={campo.clave} className="min-w-0 space-y-3 rounded-xl border border-slate-400/25 p-4">
+      <legend className="max-w-full px-1 text-sm font-bold">{indice + 1}. {campo.etiqueta || 'Nueva pregunta'}</legend>
+      <div className="grid gap-3 sm:grid-cols-2"><label className={labelCls}>Pregunta<input className={inputCls} value={campo.etiqueta} maxLength={120} required onChange={(evento) => cambiar(indice, 'etiqueta', evento.target.value)} /></label><label className={labelCls}>Tipo de respuesta<select className={inputCls} value={campo.tipo} disabled={fijos.includes(campo.clave)} onChange={(evento) => cambiar(indice, 'tipo', evento.target.value)}><option value="texto">Texto breve</option><option value="texto_largo">Texto extenso</option><option value="numero">Número entero</option><option value="fecha">Fecha</option><option value="seleccion">Lista de opciones</option><option value="licenciatura">Catálogo de licenciaturas</option></select></label></div>
+      <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={campo.obligatorio} disabled={mega ? fijos.includes(campo.clave) : nuevos ? campo.clave === 'talla' || Boolean(campo.visible_si) : fijos.includes(campo.clave)} onChange={(evento) => cambiar(indice, 'obligatorio', evento.target.checked)} />Respuesta obligatoria{campo.visible_si ? ' cuando se muestre la pregunta' : ''}</label>
+      {campo.ayuda && <p className={'text-sm ' + tema.subtitle}>{campo.ayuda}</p>}
+      {campo.visible_si && <p className={'text-sm ' + tema.subtitle}>Se muestra cuando “{campos.find((item) => item.clave === campo.visible_si.campo)?.etiqueta}” {campo.visible_si.distinto !== undefined ? <>tenga una respuesta distinta de “{campo.visible_si.distinto}”</> : <>sea “{campo.visible_si.valor}”</>}.</p>}
+      {campo.tipo === 'seleccion' && <label className={labelCls}>Opciones, una por línea<textarea className={inputCls} readOnly={opcionesFijas.includes(campo.clave)} value={campo.textoOpciones ?? (campo.opciones || []).join('\n')} rows={3} onChange={(evento) => cambiar(indice, 'textoOpciones', evento.target.value)} placeholder={campo.clave === 'talla' ? 'Escribe las tallas disponibles para esta edición' : 'Una opción por línea'} /></label>}
+      {campo.tipo === 'numero' && <div className="grid gap-3 sm:grid-cols-2">{[['minimo', 'Mínimo'], ['maximo', 'Máximo']].map(([clave, titulo]) => <label className={labelCls} key={clave}>{titulo}<input className={inputCls} type="number" disabled={fijos.includes(campo.clave)} value={campo[clave] ?? ''} onChange={(evento) => cambiar(indice, clave, evento.target.value)} /></label>)}</div>}
       {!fijos.includes(campo.clave) && <BotonAccion variant="outline" size="sm" onClick={() => onChange(campos.filter((_item, posicion) => posicion !== indice))}>Quitar pregunta</BotonAccion>}
-    </div>)}
+    </fieldset>;
+  }
+
+  return <fieldset className="min-w-0 space-y-5"><legend className="sr-only">Configurar preguntas del formulario</legend>
+    <p className={'text-sm ' + tema.subtitle}>{mega ? 'Formato MEGAMISIONES: cinco secciones, nombre y correo de la cuenta UNID o datos del invitado, y teléfono celular para todos. Las preguntas base obligatorias y sus condiciones se conservan.' : nuevos ? 'UNID utiliza su nombre y matrícula; los invitados proporcionan nombre, correo y teléfono. La talla de camisa es obligatoria. Configura las demás preguntas para esta edición.' : 'Nombre y matrícula se incluyen automáticamente. Agrega las preguntas que necesita esta edición.'}</p>
+    {grupos.map((grupo) => {
+      const elementos = campos.map((campo, indice) => ({ campo, indice })).filter(({ campo }) => grupo.claves.includes(campo.clave));
+      if (!elementos.length) return null;
+      return <section key={grupo.titulo || 'generales'} aria-label={grupo.titulo || 'Preguntas de la edición'} className="space-y-4">
+        {grupo.titulo && <header className="space-y-1"><h5 className="font-bold">{grupo.titulo}</h5><p className={'text-sm ' + tema.subtitle}>{grupo.descripcion}</p></header>}
+        {elementos.map(({ campo, indice }) => pregunta(campo, indice))}
+      </section>;
+    })}
     <BotonAccion variant="outline" onClick={() => onChange([...campos, { clave: 'pregunta_' + Date.now(), etiqueta: '', tipo: 'texto', obligatorio: false, opciones: [] }])} disabled={campos.length >= 25}>Agregar pregunta</BotonAccion>
   </fieldset>;
 }
 
-export function AccionesRevisionActividad({ tipo, entidad, puedeAprobar, operar, bloqueoPublicacion='' }) {
+export function AccionesRevisionActividad({ tipo, entidad, puedeAprobar, puedeArchivar=puedeAprobar, operar, bloqueoPublicacion='' }) {
   const [motivo, setMotivo] = useState('');
   const { inputCls, labelCls } = useTheme();
   const id = entidad.id_actividad && tipo === 'actividades' ? entidad.id_actividad : entidad.id_edicion;
   const estado = entidad.estado_propuesta || entidad.estado;
   const hayCambios = entidad.estado !== 'publicada' || Boolean(entidad.propuesta);
-  if (entidad.estado === 'archivada') return puedeAprobar ? <BotonAccion variant="outline" onClick={() => operar(() => actividadService.archivar(tipo, id, false))}>Restaurar como borrador</BotonAccion> : <p>Esta publicación está archivada.</p>;
+  if (entidad.estado === 'archivada') return puedeArchivar ? <BotonAccion variant="outline" onClick={() => operar(() => actividadService.archivar(tipo, id, false))}>Restaurar como borrador</BotonAccion> : <p>Esta publicación está archivada.</p>;
   return <div className="space-y-3">
-    {puedeAprobar && entidad.estado === 'publicada' && <BotonAccion variant="outline" onClick={() => operar(() => actividadService.archivar(tipo, id, true))}>Archivar publicación</BotonAccion>}
+    {puedeArchivar && entidad.estado === 'publicada' && <BotonAccion variant="outline" onClick={() => operar(() => actividadService.archivar(tipo, id, true))}>Archivar publicación</BotonAccion>}
     {entidad.propuesta && <p className="text-sm">La versión publicada sigue visible mientras se revisan estos cambios.</p>}
     {entidad.motivo_rechazo && <p className="text-sm text-amber-700 dark:text-amber-300">Observaciones: {entidad.motivo_rechazo}</p>}
     {hayCambios && estado !== 'pendiente' && <BotonAccion variant="outline" onClick={() => operar(() => actividadService.revision(tipo, id))}>Enviar a revisión</BotonAccion>}

@@ -83,7 +83,10 @@ for (const origen of ['schema', 'migracion']) test('catálogo compacto desde onc
   const actualizar = origen === 'schema' ? sql : (await leer('../migrations/migrate-catalogo-unificado.sql')) + '\n' + (await leer('../migrations/migrate-actividades-asistencia.sql'));
   await db.query(actualizar);
   await comprobarModelo(db);
-  assert.deepEqual((await db.query('SELECT * FROM actividades_registros')).rows, registros);
+  // Las columnas nuevas tienen valores vacíos; todos los datos históricos se conservan.
+  const registrosActualizados = (await db.query('SELECT * FROM actividades_registros')).rows;
+  assert.deepEqual(registrosActualizados.map((fila) => Object.fromEntries(Object.keys(registros[0]).map((clave) => [clave, fila[clave]]))), registros);
+  if (origen === 'schema') assert.ok(registrosActualizados.every((fila) => fila.tipo_participante === 'unid' && fila.misiones_snapshot === null && fila.pedido === null && fila.codigo_firmado_id === null));
   assert.deepEqual((await db.query('SELECT * FROM actividades_aportaciones')).rows, aportaciones);
   assert.deepEqual((await db.query('SELECT * FROM publicaciones_imagenes')).rows, fotos);
   assert.deepEqual((await db.query('SELECT * FROM publicaciones_oferta')).rows, publicaciones);

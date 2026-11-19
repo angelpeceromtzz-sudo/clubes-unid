@@ -6,6 +6,7 @@ import { FormularioAsistenciaActividad } from '../components/actividades/Asisten
 import { NavegacionActividades, FechaActividad } from '../components/actividades/ActividadUI';
 import { BotonAccion } from '../components/ui/BotonAccion';
 import { Spinner } from '../components/ui/Spinner';
+import { AsistenciaInvitadoMisiones } from '../components/actividades/AsistenciaInvitadoMisiones';
 
 export function PaginaAsistenciaActividad({ onLoginClick }) {
   const { idEdicion } = useParams();
@@ -21,7 +22,7 @@ export function PaginaAsistenciaActividad({ onLoginClick }) {
     <header className="space-y-2"><p className="text-sm font-bold text-amber-600 dark:text-amber-400">Actividades UNID</p><h1 className={'text-3xl font-black ' + tema.title}>Registra tu llegada</h1></header>
     <section className={'space-y-5 rounded-2xl border p-5 sm:p-7 ' + cardCls}>
       {!valido ? <p role="alert">El enlace de asistencia no es válido.</p> : !authReady || cargando ? <Spinner /> : !usuario ? <>
-        <p className={tema.subtitle}>Inicia sesión con la cuenta que usaste para inscribirte. Después podrás confirmar tu asistencia aquí.</p>
+        <p className={tema.subtitle}>Si te inscribiste con tu cuenta UNID, inicia sesión con esa cuenta para confirmar tu asistencia.</p>
         <BotonAccion onClick={onLoginClick}>Iniciar sesión para registrar mi llegada</BotonAccion>
       </> : error ? <div role="alert" className="space-y-3"><p>{error}</p><BotonAccion variant="outline" onClick={recargar}>Volver a intentar</BotonAccion></div> : datos && <>
         <div className="space-y-2"><h2 className={'text-xl font-bold ' + tema.title}>{datos.edicion.actividad_nombre}</h2><p className="font-semibold">{datos.edicion.nombre}</p><p className={'text-sm ' + tema.subtitle}><FechaActividad fecha={datos.edicion.fecha_inicio} /></p></div>
@@ -30,5 +31,6 @@ export function PaginaAsistenciaActividad({ onLoginClick }) {
           codigoInicial={codigo} origenInicial={codigo ? 'qr' : 'codigo'} />
       </>}
     </section>
+    {valido && <AsistenciaInvitadoMisiones idEdicion={idEdicion} codigo={codigo} />}
   </main>;
 }

@@ -31,6 +31,21 @@ export function describirFiltros(d, tab) {
 }
 
 export function crearReportePDF(d, tab, fecha = new Date()) {
+  return crearSeccionPDF(d, tab, fecha);
+}
+
+export function crearReporteCompletoPDF(d, fecha = new Date()) {
+  const secciones = Object.keys(TITULOS_REPORTE).map((tab) => crearSeccionPDF(d, tab, fecha, true));
+  return {
+    titulo: 'Reporte completo de estadísticas',
+    generadoEn: secciones[0].generadoEn,
+    actualizadoEn: secciones[0].actualizadoEn,
+    nota: 'Incluye Resumen ejecutivo, Clubes, Asistencia, Encuestas y Postulaciones. Cada bloque indica los filtros que le corresponden.',
+    secciones,
+  };
+}
+
+function crearSeccionPDF(d, tab, fecha, todasLasPreguntas = false) {
   const activos = (d.clubesDetalle || []).filter((fila) => fila.estatus === 'activo');
   const clubes = activos.filter((fila) => !d.filtros?.id_club || String(fila.id_club) === String(d.filtros.id_club));
   const global = d.asistencia?.global || {};
@@ -86,9 +101,9 @@ export function crearReportePDF(d, tab, fecha = new Date()) {
     reporte.tablas = [{ titulo: 'Respuestas por licenciatura', encabezados: ['Licenciatura', 'Respuestas'], pesos: [4, 1], filas: licenciaturas.map((fila) => [fila.nombre, entero(fila.valor)]) }];
     reporte.graficas = [{ titulo: 'Respuestas por licenciatura', filas: licenciaturas }];
     const encuesta = (d.listaEncuestas || []).find((fila) => String(fila.id_encuesta) === String(d.encuestaSeleccionada));
-    const pregunta = (d.resultadosEncuesta?.preguntas || []).find((fila) => String(fila.id_pregunta) === String(d.preguntaSeleccionada));
+    const preguntas = (d.resultadosEncuesta?.preguntas || []).filter((fila) => todasLasPreguntas || String(fila.id_pregunta) === String(d.preguntaSeleccionada));
     if (encuesta) reporte.filtros.push(`Encuesta: ${encuesta.titulo}`);
-    if (pregunta) {
+    for (const pregunta of preguntas) {
       const titulo = pregunta.texto;
       if (['texto_corto', 'texto_largo'].includes(pregunta.tipo)) {
         const textos = pregunta.textos || [];
@@ -101,10 +116,14 @@ export function crearReportePDF(d, tab, fecha = new Date()) {
         const descripcion = multiple ? `${entero(pregunta.respondientes)} respondientes. Cada persona puede elegir varias opciones.` : `${entero(pregunta.respuestas)} respuestas a esta pregunta.`;
         reporte.tablas.push({ titulo, descripcion, encabezados: [escala ? 'Valor de escala' : 'Opción', 'Respuestas', 'Porcentaje'], pesos: [4, 1.2, 1.2], filas: opciones.map((fila) => [String(escala ? fila.valor : fila.texto), entero(fila.conteo), fila.porcentaje == null ? 'Sin base' : `${numero(fila.porcentaje).toFixed(1)}%`]) });
         reporte.graficas.push({ titulo, filas: opciones.map((fila) => ({ nombre: String(escala ? fila.valor : fila.texto), valor: numero(fila.conteo) })) });
-        if (escala) reporte.indicadores.push(['Promedio de escala', pregunta.promedio == null ? 'Sin base' : String(pregunta.promedio)]);
+        if (escala) reporte.tablas[reporte.tablas.length - 1].descripcion += ` Promedio de escala: ${pregunta.promedio == null ? 'Sin base' : pregunta.promedio}.`;
+        if (escala && !todasLasPreguntas) reporte.indicadores.push(['Promedio de escala', pregunta.promedio == null ? 'Sin base' : String(pregunta.promedio)]);
       }
     }
-    reporte.nota = 'La distribución por licenciatura incluye el conjunto de encuestas. El detalle por pregunta corresponde a la encuesta y pregunta seleccionadas. En opción múltiple los porcentajes pueden sumar más de 100%.';
+    const detalle = todasLasPreguntas
+      ? (preguntas.length ? 'El detalle incluye todas las preguntas de la encuesta seleccionada.' : 'Selecciona una encuesta en el panel para incluir también sus preguntas.')
+      : 'El detalle por pregunta corresponde a la encuesta y pregunta seleccionadas.';
+    reporte.nota = `La distribución por licenciatura incluye el conjunto de encuestas. ${detalle} En opción múltiple los porcentajes pueden sumar más de 100%.`;
   } else if (tab === 'postulaciones') {
     const meses = new Map();
     for (const fila of d.panelData?.postulacionesPorMes || []) meses.set(fila.clave, [fila.clave, numero(fila.total), 0]);

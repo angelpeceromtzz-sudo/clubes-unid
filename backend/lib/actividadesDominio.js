@@ -1,6 +1,10 @@
+import { camposMisiones, campoActividadVisible, normalizarConfiguracionMisiones, validarCamposMisiones, validarTelefonoMisiones } from './misionesDominio.js';
+import { normalizarEnlaceMapa } from './ubicacionMaps.js';
+export * from './misionesDominio.js';
 // Contrato compartido entre la API, los formularios y las pruebas del módulo.
 export const ROLES_CREAN_ACTIVIDADES = [3, 4, 7];
 export const ROLES_SUPERVISAN_ACTIVIDADES = [3, 4, 7];
+export const ROLES_APRUEBAN_EDICIONES = [4, 7];
 export const REACCIONES_ACTIVIDAD = ['like', 'love', 'clap'];
 export const ESTADOS_ACTIVIDAD = ['borrador', 'pendiente', 'publicada', 'rechazada', 'archivada'];
 
@@ -26,6 +30,11 @@ export const ETIQUETAS_ACTIVIDAD_CATALOGO = {
   opcion_aportacion_creada: 'Opción de aportación creada',
   catalogo_actualizado: 'Opción de aportación actualizada',
   aportacion_recibida: 'Recepción de aportación confirmada',
+  carta_creada: 'Carta del Trineo capturada',
+  carta_actualizada: 'Carta del Trineo actualizada',
+  carta_reservada: 'Carta del Trineo reservada',
+  carta_liberada: 'Reserva de carta liberada',
+  regalo_carta_recibido: 'Regalo de la carta recibido',
   portada_actualizada: 'Imagen de presentación actualizada',
   fotos_agregadas: 'Fotografías agregadas',
   foto_publicada: 'Fotografía aprobada',
@@ -33,6 +42,8 @@ export const ETIQUETAS_ACTIVIDAD_CATALOGO = {
   foto_eliminada: 'Fotografía retirada',
   registro_confirmado: 'Inscripción confirmada',
   registro_cancelado: 'Inscripción cancelada',
+  registro_editado: 'Inscripción actualizada',
+  codigo_conducta_cargado: 'Código de conducta cargado',
   asistencia_acceso_creado: 'Acceso al pase de lista generado',
   asistencia_registrada: 'Asistencia registrada',
   asistencia_corregida: 'Asistencia corregida por el encargado',
@@ -112,7 +123,8 @@ export function normalizarRecursoCatalogo(datos) {
   return { ...comun, tipo, cupo_maximo: cupo, participacion, niveles: [...new Set(datos.niveles.map(Number))], lugar_actividades: textoActividad(datos.lugar_actividades, 255, 'Lugar del club') };
 }
 
-export function camposPlantillaActividad(plantilla = 'general') {
+export function camposPlantillaActividad(plantilla = 'general', configuracion = null) {
+  if (plantilla === 'misiones' && configuracion?.version === 2) return camposMisiones(configuracion);
   if (!['trineo', 'misiones'].includes(plantilla)) return [];
   return [
     { clave: 'edad', etiqueta: 'Edad', tipo: 'numero', obligatorio: true, minimo: 1, maximo: 120, opciones: [] },
@@ -121,7 +133,7 @@ export function camposPlantillaActividad(plantilla = 'general') {
   ];
 }
 
-export function normalizarCamposActividad(valor, plantilla = 'general') {
+export function normalizarCamposActividad(valor, plantilla = 'general', configuracion = null) {
   if (!Array.isArray(valor) || valor.length > 25) throw errorActividad('Configura hasta 25 campos de registro');
   const claves = new Set(['nombre_completo', 'matricula', '__proto__', 'constructor', 'prototype']);
   const campos = valor.map((campo) => {
@@ -129,7 +141,7 @@ export function normalizarCamposActividad(valor, plantilla = 'general') {
     const clave = textoActividad(campo.clave, 50, 'Clave del campo', true);
     if (!/^[a-z][a-z0-9_]*$/.test(clave) || claves.has(clave)) throw errorActividad('Cada campo necesita una clave única y válida');
     claves.add(clave);
-    if (!['texto', 'numero', 'seleccion', 'licenciatura'].includes(campo.tipo)) throw errorActividad('Tipo de campo no válido');
+    if (!['texto', 'texto_largo', 'numero', 'seleccion', 'licenciatura', 'fecha'].includes(campo.tipo)) throw errorActividad('Tipo de campo no válido');
     const opciones = campo.tipo === 'seleccion' ? campo.opciones : [];
     if (!Array.isArray(opciones) || opciones.length > 80) throw errorActividad('Opciones del campo no válidas');
     const resultado = {
@@ -144,6 +156,7 @@ export function normalizarCamposActividad(valor, plantilla = 'general') {
     }
     return resultado;
   });
+  if (plantilla === 'misiones' && configuracion?.version === 2) return validarCamposMisiones(campos, configuracion);
   for (const obligatorio of camposPlantillaActividad(plantilla)) {
     const campo = campos.find((item) => item.clave === obligatorio.clave);
     if (!campo || campo.tipo !== obligatorio.tipo || campo.obligatorio !== obligatorio.obligatorio) throw errorActividad('Esta actividad requiere edad y talla obligatorias, y licenciatura opcional');
@@ -157,16 +170,19 @@ export function normalizarCamposActividad(valor, plantilla = 'general') {
 
 export function normalizarEdicionActividad(datos, plantilla = 'general') {
   if (!datos || typeof datos !== 'object' || Array.isArray(datos)) throw errorActividad('Revisa los datos de la edición');
+  const configuracion = plantilla === 'misiones' && datos.configuracion_misiones != null ? normalizarConfiguracionMisiones(datos.configuracion_misiones) : null;
   const resultado = {
     nombre: textoActividad(datos.nombre, 160, 'Nombre de la edición', true),
     descripcion: textoActividad(datos.descripcion, 5000, 'Información de la edición'),
     lugar: textoActividad(datos.lugar, 240, 'Lugar'),
+    ubicacion_maps: normalizarEnlaceMapa(datos.ubicacion_maps),
     hora_inicio: textoActividad(datos.hora_inicio, 5, 'Hora'),
     requiere_registro: datos.requiere_registro === true,
-    requiere_aportacion: plantilla === 'trineo' || datos.requiere_aportacion === true,
+    requiere_aportacion: datos.requiere_aportacion === true,
     destacable: datos.destacable === true,
-    campos_registro: normalizarCamposActividad(datos.campos_registro || camposPlantillaActividad(plantilla), plantilla),
+    campos_registro: normalizarCamposActividad(datos.campos_registro || camposPlantillaActividad(plantilla, configuracion), plantilla, configuracion),
   };
+  if (configuracion) resultado.configuracion_misiones = configuracion;
   if (['trineo', 'misiones'].includes(plantilla)) resultado.requiere_registro = true;
   if (!resultado.requiere_registro) resultado.requiere_aportacion = false;
   if (resultado.hora_inicio && !/^([01]\d|2[0-3]):[0-5]\d$/.test(resultado.hora_inicio)) throw errorActividad('Hora no válida');
@@ -188,6 +204,11 @@ export function validarPublicacionEdicion(edicion, catalogo = []) {
   }
   if (edicion.destacable && (!edicion.destacada_desde || !edicion.destacada_hasta)) throw errorActividad('Configura desde cuándo y hasta cuándo se destaca');
   if (edicion.requiere_aportacion && (!edicion.requiere_registro || !catalogo.some((opcion) => opcion.activa && Number(opcion.cantidad_minima) > 0))) throw errorActividad('Configura al menos una aportación disponible con su mínimo');
+  if (edicion.configuracion_misiones?.version === 2) {
+    const config = edicion.configuracion_misiones;
+    if (config.codigo_obligatorio && !config.codigo_documento) throw errorActividad('Adjunta el PDF del código de conducta antes de enviar a revisión');
+    if (config.productos.some((producto) => producto.activo && producto.requiere_talla && !producto.tallas.length)) throw errorActividad('Configura las tallas de los artículos disponibles');
+  }
 }
 
 export function normalizarOpcionAportacion(datos) {
@@ -211,10 +232,11 @@ export function estadoRegistroActividad(edicion, hoy) {
   return 'abierta';
 }
 
-export function validarRespuestasActividad(campos, respuestas) {
+export function validarRespuestasActividad(campos, respuestas, hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())) {
   if (!respuestas || typeof respuestas !== 'object' || Array.isArray(respuestas)) throw errorActividad('Revisa tus respuestas');
   const resultado = {};
   for (const campo of campos) {
+    if (!campoActividadVisible(campo, respuestas)) continue;
     const valor = respuestas[campo.clave];
     if (valor == null || valor === '') {
       if (campo.obligatorio) throw errorActividad('Completa: ' + campo.etiqueta);
@@ -224,14 +246,18 @@ export function validarRespuestasActividad(campos, respuestas) {
       const numero = typeof valor === 'number' || typeof valor === 'string' ? Number(valor) : NaN;
       if (!Number.isFinite(numero) || !Number.isInteger(numero) || numero < campo.minimo || numero > campo.maximo) throw errorActividad('Revisa: ' + campo.etiqueta);
       resultado[campo.clave] = numero;
+    } else if (campo.tipo === 'fecha') {
+      const fecha = fechaActividad(valor);
+      if (!fecha || (campo.no_futura && fecha > hoy)) throw errorActividad('Revisa: ' + campo.etiqueta + '. La fecha no puede ser futura');
+      resultado[campo.clave] = fecha;
     } else if (campo.tipo === 'licenciatura') {
       const numero = Number(valor);
       if (!Number.isSafeInteger(numero) || numero < 1) throw errorActividad('Selecciona una licenciatura válida');
       resultado[campo.clave] = numero;
     } else {
-      const texto = textoActividad(valor, 500, campo.etiqueta, campo.obligatorio);
+      const texto = textoActividad(valor, campo.tipo === 'texto_largo' ? 2000 : 500, campo.etiqueta, campo.obligatorio);
       if (campo.tipo === 'seleccion' && !campo.opciones.includes(texto)) throw errorActividad('Selecciona una opción válida: ' + campo.etiqueta);
-      resultado[campo.clave] = texto;
+      resultado[campo.clave] = campo.validacion === 'telefono' ? validarTelefonoMisiones(texto) : texto;
     }
   }
   return resultado;

@@ -55,7 +55,7 @@ export function claveUsuario(req) {
   if (req.user?.id != null) {
     return `usuario:${req.user.id}`;
   }
-  return `ip:${ipKeyGenerator(req, 56)}`;
+  return `ip:${ipKeyGenerator(req.ip, 56)}`;
 }
 
 // Clave por cuenta para intentos de login: el correo del body, normalizado.
@@ -66,7 +66,7 @@ export function claveUsuario(req) {
 export function claveCuentaLogin(req) {
   const correo = typeof req.body?.correo === 'string' ? req.body.correo.trim().toLowerCase() : '';
   if (correo === '') {
-    return `ip:${ipKeyGenerator(req, 56)}`;
+    return `ip:${ipKeyGenerator(req.ip, 56)}`;
   }
   return `cuenta:${correo.slice(0, 180)}`;
 }
@@ -207,4 +207,15 @@ export const limitadorEscritura = crearLimitador({
   // Solo se aplica a operaciones de escritura; las lecturas ya tienen el
   // global y, en su caso, limitadores específicos (lecturas pesadas).
   skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
+});
+
+// Registro sin cuenta: cuota por IP; el reenvío además se limita por inscripción.
+export const limitadorMisionesRegistro = crearLimitador({
+  identifier: 'misiones-registro', windowMs: 60 * 60 * 1000,
+  limit: enteroPositivo(process.env.RATE_LIMIT_MISIONES_REGISTRO_HORA, 60),
+});
+export const limitadorMisionesReenvio = crearLimitador({
+  identifier: 'misiones-reenvio', windowMs: 15 * 60 * 1000,
+  limit: enteroPositivo(process.env.RATE_LIMIT_MISIONES_REENVIO_15MIN, 3),
+  keyGenerator: (req) => `misiones:${String(req.params.folio || '').slice(0, 36)}:${ipKeyGenerator(req.ip, 56)}`,
 });

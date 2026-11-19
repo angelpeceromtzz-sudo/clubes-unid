@@ -3,13 +3,16 @@ import { guardarPublicacionFotos } from './mediosOferta.js';
 import { migrarLegadoActividades } from './actividadesLegado.js';
 import { registrarActividadCatalogo } from './actividadCatalogo.js';
 import { montarAsistenciaActividades, consultarAsistencia, asistenciaPropia } from './actividadesAsistencia.js';
+import { montarMisiones, registroMisionesSeguro, validarDocumentoConfiguracion } from './misionesRouter.js';
+import { montarCartasTrineo, completarCartasRegistros, prepararReservaCarta, guardarReservaCarta, liberarCartaPendiente, recibirRegaloCarta } from './trineoCartas.js';
 import {
-  ROLES_CREAN_ACTIVIDADES, ROLES_SUPERVISAN_ACTIVIDADES, REACCIONES_ACTIVIDAD,
+  ROLES_CREAN_ACTIVIDADES, ROLES_SUPERVISAN_ACTIVIDADES, ROLES_APRUEBAN_EDICIONES, REACCIONES_ACTIVIDAD,
   errorActividad, textoActividad, normalizarRecursoCatalogo, normalizarEdicionActividad,
   validarPublicacionEdicion, esDestacadaActividad, estadoRegistroActividad,
   validarRespuestasActividad, validarAportacionesActividad,
   normalizarOpcionAportacion,
   disponibilidadAsistenciaActividad,
+  configuracionMisionesInicial, camposMisiones, esFormatoMegamisiones,
 } from './actividadesDominio.js';
 
 const FECHAS = ['fecha_inicio', 'fecha_fin', 'inscripcion_desde', 'inscripcion_hasta', 'destacada_desde', 'destacada_hasta'];
@@ -18,6 +21,7 @@ const DESDE_EDICION = ' FROM actividades_ediciones e JOIN catalogo_recursos a ON
 const TABLAS = { actividad: ['catalogo_recursos', 'id_actividad'], edicion: ['actividades_ediciones', 'id_edicion'] };
 const supervisa = (usuario) => ROLES_SUPERVISAN_ACTIVIDADES.includes(usuario.id_rol);
 const aprueba = (usuario) => usuario.id_rol === 4;
+const apruebaEdicion = (usuario) => ROLES_APRUEBAN_EDICIONES.includes(usuario.id_rol);
 const puedeGestionar = (usuario, actividad) => supervisa(usuario) || actividad.id_responsable === usuario.id || (!actividad.id_responsable && actividad.id_autor === usuario.id);
 
 function comprobarGestion(usuario, actividad) {
@@ -51,7 +55,8 @@ async function catalogoEdicion(db, id) {
 }
 
 async function aportesRegistro(db, id) {
-  return (await db.query('SELECT * FROM actividades_aportaciones WHERE id_registro = $1 ORDER BY id_aportacion', [id])).rows;
+  return (await db.query(`SELECT p.*,EXISTS(SELECT 1 FROM actividades_cartas_reservas v WHERE v.id_aportacion=p.id_aportacion) AS es_regalo_carta
+    FROM actividades_aportaciones p WHERE p.id_registro=$1 ORDER BY p.id_aportacion`, [id])).rows;
 }
 
 async function guardarColumnas(db, tabla, idCampo, id, datos) {
@@ -60,7 +65,7 @@ async function guardarColumnas(db, tabla, idCampo, id, datos) {
     const activos = (await db.query('SELECT COUNT(*)::int AS total FROM inscripciones WHERE id_club=$1 AND id_estatus_inscripcion=1', [id])).rows[0].total;
     if (activos > datos.cupo_maximo) throw errorActividad('El cupo no puede ser menor que la cantidad de miembros activos', 409);
   }
-  const valores = claves.map((clave) => clave === 'campos_registro' ? JSON.stringify(datos[clave]) : datos[clave]);
+  const valores = claves.map((clave) => ['campos_registro', 'configuracion_misiones'].includes(clave) ? JSON.stringify(datos[clave]) : datos[clave]);
   const cambios = claves.map((clave, indice) => clave + ' = $' + (indice + 1)).join(', ');
   const resultado = (await db.query('UPDATE ' + tabla + ' SET ' + cambios + ', actualizado_en = NOW() WHERE ' + idCampo + ' = $' + (valores.length + 1) + ' RETURNING *', [...valores, id])).rows[0];
   if (tabla === 'catalogo_recursos' && datos.niveles) {
@@ -74,10 +79,10 @@ async function auditar(db, usuario, accion, detalle) {
   await registrarActividadCatalogo(db, { idActor: usuario.id, accion, detalle });
 }
 
-export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secretoAdmin, limpiarImagenes = async () => {}, limitarEscritura = (_req, _res, next) => next(), limitarSubida = (_req, _res, next) => next() }) {
+export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secretoAdmin, limpiarImagenes = async () => {}, limitarEscritura = (_req, _res, next) => next(), limitarSubida = (_req, _res, next) => next(), limitarRegistro = limitarEscritura, limitarReenvio = limitarEscritura, almacenPdf, correoMisiones }) {
   const router = Router();
   router.use((_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
-  for (const parametro of ['idActividad', 'idEdicion', 'idFoto', 'idAporte', 'idOpcion', 'idClub', 'idRegistro']) {
+  for (const parametro of ['idActividad', 'idEdicion', 'idFoto', 'idAporte', 'idOpcion', 'idClub', 'idRegistro', 'idCarta', 'idReserva']) {
     router.param(parametro, (_req, _res, next, valor) => {
       if (!/^[1-9]\d*$/.test(valor) || !Number.isSafeInteger(Number(valor))) return next(errorActividad('Identificador no válido'));
       next();
@@ -153,6 +158,8 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   router.use('/gestion', autenticar);
   router.use('/gestion', (req, res, next) => req.method === 'GET' ? next() : limitarEscritura(req, res, next));
 
+  montarCartasTrineo(router, { db, autenticar, obtenerEdicion, comprobarPublica, comprobarGestion, transaccion, auditar });
+
   router.get('/gestion/asignadas', async (req, res) => {
     const { rows } = await db.query(`SELECT id_actividad,nombre,descripcion,categoria,estado,slug
       FROM catalogo_recursos WHERE tipo='actividad' AND id_responsable=$1
@@ -171,7 +178,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const actividad = await actividadAsignada(req);
     actividad.responsable_nombre = (await db.query('SELECT nombre_completo FROM usuarios WHERE id_usuario=$1', [req.user.id])).rows[0]?.nombre_completo || null;
     const ediciones = (await db.query('SELECT ' + SELECT_EDICION + DESDE_EDICION + 'WHERE e.id_actividad=$1 ORDER BY e.id_edicion DESC', [actividad.id_actividad])).rows;
-    res.json({ actividad, ediciones, puede_aprobar: aprueba(req.user) });
+    res.json({ actividad, ediciones, puede_aprobar: aprueba(req.user), puede_aprobar_ediciones: apruebaEdicion(req.user) });
   });
 
   router.get('/gestion/asignadas/:idActividad/historial', async (req, res) => {
@@ -192,7 +199,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     for (const actividad of actividades) actividad.niveles = (await db.query('SELECT id_nivel FROM clubes_niveles WHERE id_club=$1 ORDER BY id_nivel', [actividad.id_actividad])).rows.map((fila) => fila.id_nivel);
     const ids = actividades.map((item) => item.id_actividad);
     const ediciones = ids.length ? (await db.query('SELECT ' + SELECT_EDICION + DESDE_EDICION + 'WHERE e.id_actividad = ANY($1::int[]) ORDER BY e.id_edicion DESC', [ids])).rows : [];
-    res.json({ actividades, ediciones, puede_crear: ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol), puede_crear_club: [3,7].includes(req.user.id_rol), puede_asignar: supervisa(req.user), puede_aprobar: aprueba(req.user) });
+    res.json({ actividades, ediciones, puede_crear: ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol), puede_crear_club: [3,7].includes(req.user.id_rol), puede_asignar: supervisa(req.user), puede_aprobar: aprueba(req.user), puede_aprobar_ediciones: apruebaEdicion(req.user) });
   });
 
   router.get('/gestion/encargados', async (req, res) => {
@@ -262,16 +269,26 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       const actividad = await obtenerActividad(cliente, req.params.idActividad, true);
       comprobarGestion(req.user, actividad);
       if (actividad.tipo !== 'actividad') throw errorActividad('Los clubes usan sus convocatorias y horarios; las ediciones corresponden a actividades');
-      const datos = normalizarEdicionActividad(req.body, actividad.plantilla);
+      let entrada = req.body;
+      if (actividad.plantilla === 'misiones') {
+        entrada = { ...req.body, configuracion_misiones: req.body.configuracion_misiones || configuracionMisionesInicial() };
+        // Compatibilidad con clientes anteriores: toda edición recién creada recibe v2.
+        if (!req.body.configuracion_misiones) entrada.campos_registro = camposMisiones(entrada.configuracion_misiones).map((base) => {
+          const anterior = (req.body.campos_registro || []).find((campo) => campo.clave === base.clave && campo.tipo === base.tipo);
+          return anterior ? { ...anterior, ...base, ...(base.clave === 'talla' && anterior.opciones?.length ? { opciones: anterior.opciones } : {}) } : base;
+        });
+      }
+      const datos = normalizarEdicionActividad(entrada, actividad.plantilla);
+      await validarDocumentoConfiguracion(cliente, datos, actividad.id_actividad);
       let opciones=[];
       if(req.body.catalogo_aportaciones!==undefined) {
         if(!Array.isArray(req.body.catalogo_aportaciones) || req.body.catalogo_aportaciones.length>50) throw errorActividad('Configura hasta 50 opciones de aportación');
         opciones=req.body.catalogo_aportaciones.map(normalizarOpcionAportacion);
         if(datos.requiere_aportacion && !opciones.length) throw errorActividad('Agrega al menos una aportación para esta edición');
-        if(!datos.requiere_aportacion && opciones.length) throw errorActividad('Habilita las aportaciones antes de configurar sus opciones');
+        if(!datos.requiere_registro && opciones.length) throw errorActividad('Habilita las inscripciones antes de configurar aportaciones');
       }
       const claves = Object.keys(datos);
-      const valores = claves.map((clave) => clave === 'campos_registro' ? JSON.stringify(datos[clave]) : datos[clave]);
+      const valores = claves.map((clave) => ['campos_registro', 'configuracion_misiones'].includes(clave) ? JSON.stringify(datos[clave]) : datos[clave]);
       const { rows } = await cliente.query('INSERT INTO actividades_ediciones (id_actividad,' + claves.join(',') + ') VALUES ($1,' + claves.map((_clave, indice) => '$' + (indice + 2)).join(',') + ') RETURNING *', [actividad.id_actividad, ...valores]);
       for(const opcion of opciones) await cliente.query('INSERT INTO actividades_aportes_catalogo(id_edicion,nombre,unidad,descripcion,cantidad_minima) VALUES($1,$2,$3,$4,$5)',[rows[0].id_edicion,opcion.nombre,opcion.unidad,opcion.descripcion,opcion.cantidad_minima]);
       await auditar(cliente, req.user, 'edicion_creada', { id_edicion: rows[0].id_edicion });
@@ -283,7 +300,11 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const parametro = tipo === 'actividad' ? 'idActividad' : 'idEdicion';
     const ruta = '/gestion/' + (tipo === 'actividad' ? 'actividades' : 'ediciones') + '/:' + parametro;
     const obtener = tipo === 'actividad' ? obtenerActividad : obtenerEdicion;
-    const normalizar = (datos, entidad) => tipo === 'actividad' ? normalizarRecursoCatalogo(datos) : normalizarEdicionActividad(datos, entidad.plantilla);
+    const normalizar = (datos, entidad, adoptando = false) => {
+      if (tipo === 'actividad') return normalizarRecursoCatalogo(datos);
+      if (!adoptando && (Boolean(datos.configuracion_misiones) !== Boolean(entidad.configuracion_misiones) || datos.configuracion_misiones?.formato !== entidad.configuracion_misiones?.formato)) throw errorActividad('La versión del formulario se conserva para cada edición');
+      return normalizarEdicionActividad(datos, entidad.plantilla);
+    };
 
     router.put(ruta, async (req, res) => {
       res.json(await transaccion(async (cliente) => {
@@ -292,7 +313,14 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
         if (tipo === 'actividad' && req.body.tipo && req.body.tipo !== entidad.tipo) throw errorActividad('El tipo se elige al crear. Para registros existentes utiliza el traslado revisado', 409);
         if (entidad.estado === 'archivada') throw errorActividad('Esta actividad está archivada', 409);
         if (entidad.estado === 'pendiente' || entidad.estado_propuesta === 'pendiente') throw errorActividad('Retira la propuesta de revisión antes de editarla', 409);
-        const datos = normalizar({ ...entidad, ...entidad.propuesta, ...req.body }, entidad);
+        const entrada = { ...entidad, ...entidad.propuesta, ...req.body };
+        const adoptando = tipo === 'edicion' && !esFormatoMegamisiones(entidad.configuracion_misiones) && esFormatoMegamisiones(entrada.configuracion_misiones);
+        if (adoptando) {
+          if (entidad.plantilla !== 'misiones' || entidad.estado !== 'borrador' || entidad.propuesta) throw errorActividad('El formato MEGAMISIONES solo se puede adoptar en borradores sin inscripciones', 409);
+          if ((await cliente.query('SELECT 1 FROM actividades_registros WHERE id_edicion=$1 LIMIT 1', [entidad.id_edicion])).rows.length) throw errorActividad('Esta edición ya tiene registros; conserva su formulario anterior', 409);
+        }
+        const datos = normalizar(entrada, entidad, adoptando);
+        if (tipo === 'edicion') await validarDocumentoConfiguracion(cliente, datos, entidad.id_actividad);
         if (tipo === 'actividad' && entidad.plantilla !== 'general' && datos.slug !== entidad.slug) throw errorActividad('La dirección de esta actividad institucional se conserva');
         let resultado;
         if (entidad.estado === 'publicada') {
@@ -325,7 +353,9 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     });
 
     router.post(ruta + '/decision', async (req, res) => {
-      if (!aprueba(req.user)) throw errorActividad('Rectoría autoriza la publicación', 403);
+      if (!(tipo === 'edicion' ? apruebaEdicion(req.user) : aprueba(req.user))) {
+        throw errorActividad(tipo === 'edicion' ? 'Coordinación o Rectoría autorizan la publicación de ediciones' : 'Rectoría autoriza la publicación', 403);
+      }
       if (typeof req.body.aprobar !== 'boolean') throw errorActividad('Indica la decisión');
       const motivo = textoActividad(req.body.motivo, 1000, 'Observaciones', !req.body.aprobar);
       res.json(await transaccion(async (cliente) => {
@@ -363,9 +393,11 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const edicion = await obtenerEdicion(db, req.params.idEdicion);
     comprobarGestion(req.user, edicion);
     const registros = (await db.query('SELECT * FROM actividades_registros WHERE id_edicion = $1 ORDER BY nombre_completo, id_registro', [edicion.id_edicion])).rows;
-    const aportes = (await db.query('SELECT p.* FROM actividades_aportaciones p JOIN actividades_registros r ON r.id_registro = p.id_registro WHERE r.id_edicion = $1 ORDER BY p.id_aportacion', [edicion.id_edicion])).rows;
+    if (edicion.plantilla === 'trineo') await completarCartasRegistros(db, registros);
+    const aportes = (await db.query(`SELECT p.*,EXISTS(SELECT 1 FROM actividades_cartas_reservas v WHERE v.id_aportacion=p.id_aportacion) AS es_regalo_carta
+      FROM actividades_aportaciones p JOIN actividades_registros r ON r.id_registro=p.id_registro WHERE r.id_edicion=$1 ORDER BY p.id_aportacion`, [edicion.id_edicion])).rows;
     const fotos = (await db.query("SELECT * FROM actividades_fotos WHERE id_edicion = $1 AND estado <> 'eliminada' ORDER BY id_foto DESC", [edicion.id_edicion])).rows;
-    res.json({ edicion, catalogo: await catalogoEdicion(db, edicion.id_edicion), registros: registros.map((registro) => ({ ...registro, aportaciones: aportes.filter((aporte) => aporte.id_registro === registro.id_registro) })), fotos });
+    res.json({ edicion, puede_adoptar_formato: edicion.plantilla === 'misiones' && edicion.estado === 'borrador' && !edicion.propuesta && !registros.length && !esFormatoMegamisiones(edicion.configuracion_misiones), catalogo: await catalogoEdicion(db, edicion.id_edicion), registros: registros.map((registro) => ({ ...registroMisionesSeguro(registro), aportaciones: aportes.filter((aporte) => aporte.id_registro === registro.id_registro) })), fotos });
   });
 
   router.put('/gestion/ediciones/:idEdicion/inscripciones', async (req, res) => {
@@ -421,8 +453,15 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       if (!referencia) throw errorActividad('Aportación no encontrada', 404);
       const edicion = await obtenerEdicion(cliente, referencia.id_edicion, true);
       comprobarGestion(req.user, edicion);
+      const regalo = (await cliente.query('SELECT id_reserva,cancelada_en FROM actividades_cartas_reservas WHERE id_aportacion=$1 ORDER BY cancelada_en DESC NULLS FIRST,id_reserva DESC LIMIT 1', [req.params.idAporte])).rows[0];
+      if (regalo) {
+        if (regalo.cancelada_en) throw errorActividad('La reserva del regalo ya fue liberada', 409);
+        await recibirRegaloCarta(cliente, { idReserva: regalo.id_reserva, usuario: req.user, obtenerEdicion, comprobarGestion, auditar });
+        return (await cliente.query('SELECT * FROM actividades_aportaciones WHERE id_aportacion=$1', [req.params.idAporte])).rows[0];
+      }
       const aporte = (await cliente.query('SELECT p.*, r.estado AS estado_registro FROM actividades_aportaciones p JOIN actividades_registros r ON r.id_registro = p.id_registro WHERE p.id_aportacion = $1 FOR UPDATE OF r, p', [req.params.idAporte])).rows[0];
       if (aporte.estado === 'cancelada' || aporte.estado_registro !== 'confirmado') throw errorActividad('El compromiso ya no está activo', 409);
+      if (aporte.estado === 'recibida') return aporte;
       const resultado = (await cliente.query("UPDATE actividades_aportaciones SET estado = 'recibida', recibida_por = COALESCE(recibida_por,$1), recibida_en = COALESCE(recibida_en,NOW()) WHERE id_aportacion = $2 AND estado <> 'cancelada' RETURNING *", [req.user.id, aporte.id_aportacion])).rows[0];
       await auditar(cliente, req.user, 'aportacion_recibida', { id_aportacion: aporte.id_aportacion });
       return resultado;
@@ -521,6 +560,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       registro.asistencia = asistenciaPropia(registro.asistencia);
       registro.disponibilidad_asistencia = disponibilidadAsistenciaActividad({ ...registro, estado: registro.estado_edicion }, hoy());
     }
+    await completarCartasRegistros(db, registros);
     res.json(registros);
   });
 
@@ -528,10 +568,18 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const edicion = await obtenerEdicion(db, req.params.idEdicion);
     comprobarPublica(edicion);
     const registro = (await db.query('SELECT * FROM actividades_registros WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id])).rows[0] || null;
-    if (registro) registro.aportaciones = await aportesRegistro(db, registro.id_registro);
+    if (registro) {
+      registro.aportaciones = await aportesRegistro(db, registro.id_registro);
+      if (edicion.plantilla === 'trineo') await completarCartasRegistros(db, [registro]);
+    }
     const reaccion = (await db.query('SELECT reaccion FROM reacciones_catalogo WHERE id_edicion = $1 AND id_usuario = $2', [edicion.id_edicion, req.user.id])).rows[0]?.reaccion || null;
     res.json({ registro, reaccion, asistencia: await consultarAsistencia(db, registro?.id_registro),
       disponibilidad_asistencia: disponibilidadAsistenciaActividad(edicion, hoy()) });
+  });
+
+  montarMisiones(router, {
+    db, autenticar, hoy, obtenerActividad, obtenerEdicion, comprobarGestion, comprobarPublica, edicionPublica,
+    transaccion, auditar, catalogoEdicion, aportesRegistro, limitarEscritura, limitarSubida, limitarRegistro, limitarReenvio, almacenPdf, correoMisiones,
   });
 
   router.put('/ediciones/:idEdicion/registro', autenticar, limitarEscritura, async (req, res) => {
@@ -552,14 +600,24 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
         if (!existe.rows.length) throw errorActividad('La licenciatura seleccionada no está disponible');
       }
       const previos = anterior ? await aportesRegistro(cliente, anterior.id_registro) : [];
-      const aportes = validarAportacionesActividad(req.body.aportaciones || [], await catalogoEdicion(cliente, edicion.id_edicion), edicion.requiere_aportacion, previos);
-      if (previos.some((aporte) => aporte.estado === 'recibida' && !aportes.some((nuevo) => nuevo.id_opcion === aporte.id_opcion))) throw errorActividad('Conserva las aportaciones que ya fueron recibidas');
+      const regalosAnteriores = new Set(previos.filter((aporte) => aporte.es_regalo_carta).map((aporte) => aporte.id_opcion));
+      const seleccion = req.body.aportaciones || [];
+      // Los clientes anteriores pueden reenviar el regalo como aporte; se conserva solo como historial.
+      const adicionales = Array.isArray(seleccion) ? seleccion.filter((aporte) => !regalosAnteriores.has(Number(aporte?.id_opcion))) : seleccion;
+      const previosAdicionales = previos.filter((aporte) => !aporte.es_regalo_carta);
+      const aportes = validarAportacionesActividad(adicionales, await catalogoEdicion(cliente, edicion.id_edicion), edicion.requiere_aportacion, previosAdicionales);
+      if (previosAdicionales.some((aporte) => aporte.estado === 'recibida' && !aportes.some((nuevo) => nuevo.id_opcion === aporte.id_opcion))) throw errorActividad('Conserva las aportaciones que ya fueron recibidas');
+      const reserva = await prepararReservaCarta(cliente, { edicion, anterior, idCarta: req.body.id_carta });
       const { rows } = await cliente.query("INSERT INTO actividades_registros (id_edicion,id_usuario,nombre_completo,matricula,respuestas,formulario_snapshot) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id_edicion,id_usuario) DO UPDATE SET nombre_completo = EXCLUDED.nombre_completo, matricula = EXCLUDED.matricula, respuestas = EXCLUDED.respuestas, formulario_snapshot = EXCLUDED.formulario_snapshot, estado = 'confirmado', actualizado_en = NOW() RETURNING *", [edicion.id_edicion, req.user.id, nombre, matricula, JSON.stringify(respuestas), JSON.stringify(campos)]);
       const registro = rows[0];
-      await cliente.query("UPDATE actividades_aportaciones SET estado = 'cancelada' WHERE id_registro = $1 AND estado = 'comprometida' AND NOT (id_opcion = ANY($2::int[]))", [registro.id_registro, aportes.map((item) => item.id_opcion)]);
+      await cliente.query("UPDATE actividades_aportaciones p SET estado = 'cancelada' WHERE id_registro = $1 AND estado = 'comprometida' AND NOT (id_opcion = ANY($2::int[])) AND NOT EXISTS(SELECT 1 FROM actividades_cartas_reservas v WHERE v.id_aportacion=p.id_aportacion)", [registro.id_registro, aportes.map((item) => item.id_opcion)]);
       for (const aporte of aportes) await cliente.query("INSERT INTO actividades_aportaciones (id_registro,id_opcion,nombre,unidad,cantidad,cantidad_minima) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id_registro,id_opcion) DO UPDATE SET nombre = EXCLUDED.nombre, unidad = EXCLUDED.unidad, cantidad = EXCLUDED.cantidad, cantidad_minima = EXCLUDED.cantidad_minima, estado = 'comprometida' WHERE actividades_aportaciones.estado <> 'recibida'", [registro.id_registro, aporte.id_opcion, aporte.nombre, aporte.unidad, aporte.cantidad, aporte.cantidad_minima]);
+      registro.aportaciones = await aportesRegistro(cliente, registro.id_registro);
+      await guardarReservaCarta(cliente, { registro, reserva, usuario: req.user, auditar });
+      registro.aportaciones = await aportesRegistro(cliente, registro.id_registro);
+      if (edicion.plantilla === 'trineo') await completarCartasRegistros(cliente, [registro]);
       await auditar(cliente, req.user, 'registro_confirmado', { id_registro: registro.id_registro });
-      return { ...registro, aportaciones: await aportesRegistro(cliente, registro.id_registro) };
+      return registro;
     }));
   });
 
@@ -571,6 +629,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       if (registro.estado === 'cancelado') return registro;
       comprobarPublica(edicion);
       if (estadoRegistroActividad(edicion, hoy()) !== 'abierta') throw errorActividad('El periodo para cancelar ya terminó', 409);
+      if (edicion.plantilla === 'trineo') await liberarCartaPendiente(cliente, registro, req.user, auditar);
       await cliente.query("UPDATE actividades_aportaciones SET estado = 'cancelada' WHERE id_registro = $1 AND estado = 'comprometida'", [registro.id_registro]);
       const { rows } = await cliente.query("UPDATE actividades_registros SET estado = 'cancelado', actualizado_en = NOW() WHERE id_registro = $1 RETURNING *", [registro.id_registro]);
       await auditar(cliente, req.user, 'registro_cancelado', { id_registro: registro.id_registro });
@@ -594,6 +653,10 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   });
 
   router.use(async (error, req, res, _next) => {
+    if (req.pdfsMisionesEnProceso?.length && !req.pdfsMisionesConfirmados) {
+      const resultados = await Promise.allSettled(req.pdfsMisionesEnProceso.map((archivo) => almacenPdf.eliminar(archivo)));
+      if (resultados.some((resultado) => resultado.status === 'rejected')) console.error('[misiones] No se pudo limpiar un PDF de una operación incompleta');
+    }
     if (req.fotosActividadEnProceso && !req.fotosActividadGuardadas) {
       try { await limpiarImagenes(Array.isArray(req.files) ? req.files : (req.file ? [req.file] : [])); }
       catch { console.error('[actividades] No se pudieron limpiar las imágenes de una carga incompleta'); }
@@ -603,7 +666,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     if (error.code === '23514' || error.code === '23503') return res.status(400).json({error:'La operación no corresponde al tipo de registro o a sus relaciones actuales'});
     if (error.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'La imagen debe pesar hasta 5 MB' });
     if (error.code === 'LIMIT_UNEXPECTED_FILE' || error.code === 'LIMIT_FILE_COUNT') return res.status(400).json({ error: 'Selecciona hasta 10 imágenes por publicación' });
-    if (error.code === '42P01') return res.status(503).json({ error: 'El apartado de actividades aún no está disponible' });
+    if (['42P01', '42703'].includes(error.code)) return res.status(503).json({ error: 'El apartado de actividades requiere actualizar su estructura' });
     console.error('[actividades] Error interno:', error.code || error.name);
     res.status(500).json({ error: 'No se pudo completar la operación de actividades' });
   });
