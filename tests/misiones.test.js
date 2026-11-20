@@ -4,6 +4,7 @@ import { camposMisiones, configuracionMisionesInicial, normalizarEdicionActivida
 import { extraerAccesoMisiones, guardarAccesoMisiones, leerAccesoMisiones, enlacePrivadoMisiones } from '../src/utils/accesoMisiones.js';
 import { FORMATO_MEGAMISIONES, esFormatoMegamisiones, adoptarFormatoMegamisiones, normalizarConfiguracionMisiones, validarTelefonoMisiones } from '../shared/actividades.js';
 import { gruposPreguntasMisiones } from '../src/constants/preguntasMisiones.js';
+import { quitarPreguntaMisiones, recuperarPreguntaMisiones } from '../src/utils/preguntasMisiones.js';
 
 const config = configuracionMisionesInicial(null);
 const campos = () => camposMisiones().map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['CH', 'M', 'G'] } : campo);
@@ -66,8 +67,75 @@ test('el invitado proporciona contacto y su enlace privado no admite otro origen
   assert.equal(memoria.size, 2);
 });
 
+test('el correo del invitado conserva normalización, subdominios y límite de longitud', () => {
+  const contacto = { nombre_completo: 'Invitado QA', telefono: '9811234567' };
+  for (const correo of ['QA+Misiones@Sub.Example.Test', 'a'.repeat(241) + '@example.test']) {
+    assert.equal(validarContactoInvitado({ ...contacto, correo: ' ' + correo + ' ' }).correo, correo.toLowerCase());
+  }
+  assert.throws(() => validarContactoInvitado({ ...contacto, correo: 'a'.repeat(242) + '@example.test' }), { status: 400 });
+});
+
+test('el correo del invitado rechaza separadores inválidos, espacios y entradas repetitivas', () => {
+  const contacto = { nombre_completo: 'Invitado QA', telefono: '9811234567' };
+  for (const correo of [
+    'sin-arroba.example.test', '@example.test', 'qa@', 'qa@@example.test', 'qa@example@test.test',
+    'qa@example', 'qa@.test', 'qa@example.', 'qa @example.test', 'qa@exam ple.test',
+    'qa@example.test\ntexto', 'qa@exam\u00a0ple.test',
+    'qa@' + '!.'.repeat(120) + '!\nx', 'qa@' + '!.'.repeat(100000) + '!\nx',
+  ]) assert.throws(() => validarContactoInvitado({ ...contacto, correo }), { status: 400 }, correo.slice(0, 60));
+});
+
 const configuracionMega = () => configuracionMisionesInicial();
 const camposMega = () => normalizarEdicionActividad({ ...edicion(), configuracion_misiones: configuracionMega(), campos_registro: camposMisiones(configuracionMega()) }, 'misiones').campos_registro;
+
+test('cada edición de Misiones permite quitar cualquier pregunta del formato, incluida talla', () => {
+  for (const configuracion of [config, configuracionMega()]) {
+    const originales = esFormatoMegamisiones(configuracion) ? camposMisiones(configuracion) : campos();
+    for (const base of originales) {
+      const reducidos = quitarPreguntaMisiones(originales, base.clave);
+      const normalizada = normalizarEdicionActividad({ ...edicion(), configuracion_misiones: configuracion, campos_registro: reducidos }, 'misiones');
+      assert.ok(!normalizada.campos_registro.some((campo) => campo.clave === base.clave), base.clave);
+      assert.doesNotThrow(() => validarPublicacionEdicion(normalizada));
+    }
+    const vacia = normalizarEdicionActividad({ ...edicion(), configuracion_misiones: configuracion, campos_registro: [] }, 'misiones');
+    assert.deepEqual(vacia.campos_registro, []);
+    assert.deepEqual(validarRespuestasActividad(vacia.campos_registro, { talla: 'M', religion: 'Otra' }), {});
+  }
+});
+
+test('quitar preguntas condicionales retira sus dependientes y permite recuperarlas sin duplicar', () => {
+  const originales = camposMega();
+  const antes = structuredClone(originales);
+  for (const [clave, dependientes] of [['religion', ['religion_otro']], ['grupo_juvenil', ['grupo_juvenil_otro', 'parroquia']], ['participacion_previa', ['participaciones_veces']]]) {
+    const reducidas = quitarPreguntaMisiones(originales, clave);
+    for (const quitada of [clave, ...dependientes]) assert.ok(!reducidas.some((campo) => campo.clave === quitada));
+    const recuperadas = recuperarPreguntaMisiones(reducidas, dependientes[0], camposMisiones(configuracionMega()));
+    assert.ok(recuperadas.some((campo) => campo.clave === clave));
+    assert.ok(recuperadas.some((campo) => campo.clave === dependientes[0]));
+    assert.equal(new Set(recuperadas.map((campo) => campo.clave)).size, recuperadas.length);
+    assert.doesNotThrow(() => normalizarEdicionActividad({ ...edicion(), configuracion_misiones: configuracionMega(), campos_registro: recuperadas }, 'misiones'));
+  }
+  assert.deepEqual(originales, antes);
+  const extras = Array.from({ length: 25 }, (_, i) => ({ clave: 'extra_' + i }));
+  assert.throws(() => recuperarPreguntaMisiones(extras, 'religion_otro', camposMisiones(configuracionMega())), /25 preguntas/);
+  assert.equal(extras.length, 25);
+});
+
+test('el servidor rechaza dependencias huérfanas y conserva la validación de las preguntas incluidas', () => {
+  const datos = { ...edicion(), configuracion_misiones: configuracionMega() };
+  assert.throws(() => normalizarEdicionActividad({ ...datos, campos_registro: camposMega().filter((campo) => campo.clave !== 'religion') }, 'misiones'), /dependen/);
+  assert.throws(() => normalizarEdicionActividad({ ...datos, campos_registro: [{ ...camposMega()[0], tipo: 'texto' }] }, 'misiones'), /tipo de respuesta/);
+  const reducida = normalizarEdicionActividad({ ...datos, campos_registro: camposMega().filter((campo) => ['sexo', 'fecha_nacimiento'].includes(campo.clave)) }, 'misiones');
+  assert.throws(() => validarRespuestasActividad(reducida.campos_registro, { sexo: 'Mujer' }), /nacimiento/);
+  assert.throws(() => validarRespuestasActividad(reducida.campos_registro, { sexo: 'Inventado', fecha_nacimiento: '2004-02-29' }), /opción válida/);
+});
+
+test('el registro de Misiones omite las secciones sin preguntas y conserva identificación y artículos', () => {
+  assert.deepEqual(gruposPreguntasMisiones(configuracionMega(), []).map((grupo) => grupo.id), ['contacto', 'personales']);
+  assert.deepEqual(gruposPreguntasMisiones(configuracionMega(), camposMega().filter((campo) => campo.clave === 'tipo_sangre')).map((grupo) => grupo.id), ['contacto', 'personales', 'salud']);
+  assert.ok(gruposPreguntasMisiones({ ...configuracionMega(), productos: [producto] }, []).some((grupo) => grupo.id === 'logistica'));
+  assert.deepEqual(gruposPreguntasMisiones(config, []), []);
+});
 const respuestasMega = () => ({
   fecha_nacimiento: '2004-02-29', sexo: 'Mujer', rol_mision: 'Misionero', campus: 'Campeche',
   familia_unid: 'Estudiante de Licenciatura', cuatrimestre: '3° cuatrimestre', tipo_sangre: 'O+',

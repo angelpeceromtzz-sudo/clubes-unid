@@ -15,6 +15,13 @@ const GRUPOS_MEGAMISIONES = [
   { id: 'experiencia', titulo: 'Datos religiosos y experiencia', descripcion: 'Tu comunidad, motivación y experiencia en Misiones.', claves: ['religion', 'religion_otro', 'grupo_juvenil', 'grupo_juvenil_otro', 'parroquia', 'conocimientos_misiones', 'participacion_previa', 'participaciones_veces'] },
 ];
 
-export function gruposPreguntasMisiones(configuracion) {
-  return esFormatoMegamisiones(configuracion) ? GRUPOS_MEGAMISIONES : GRUPOS_PREGUNTAS_MISIONES;
+export function gruposPreguntasMisiones(configuracion, campos) {
+  const mega = esFormatoMegamisiones(configuracion);
+  const grupos = mega ? GRUPOS_MEGAMISIONES : GRUPOS_PREGUNTAS_MISIONES;
+  if (!campos) return grupos;
+  return grupos.filter((grupo) =>
+    (mega && ['contacto', 'personales'].includes(grupo.id))
+    || campos.some((campo) => grupo.claves.includes(campo.clave))
+    || (mega && grupo.id === 'logistica' && (configuracion.informacion_kit || configuracion.productos?.some((producto) => producto.activo))),
+  );
 }

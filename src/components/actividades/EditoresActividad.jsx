@@ -5,6 +5,7 @@ import { camposPlantillaActividad, esFormatoMegamisiones } from '../../../shared
 import { BotonAccion } from '../ui/BotonAccion';
 import { NIVELES, PARTICIPACION, CUPOS_CLUB } from '../../constants/clubes';
 import { gruposPreguntasMisiones } from '../../constants/preguntasMisiones';
+import { quitarPreguntaMisiones, recuperarPreguntaMisiones } from '../../utils/preguntasMisiones';
 
 export function FormularioActividad({ actividad, puedeCrearClub = false, tipoInicial='actividad', onGuardado, onCancelar }) {
   const [datos, setDatos] = useState({ tipo: tipoInicial, nombre: '', descripcion: '', categoria: '', url_imagen: '', mostrar_en_oferta: true, cupo_maximo: 10, participacion: 'mixta', niveles: [], lugar_actividades: '', password: '', ...actividad, ...actividad?.propuesta });
@@ -69,9 +70,14 @@ export function AsignarEncargadoActividad({ actividad, onGuardado }) {
 
 export function EditorCamposActividad({ campos, plantilla, configuracion, onChange }) {
   const { tema, inputCls, labelCls } = useTheme();
+  const [preguntaRecuperada, setPreguntaRecuperada] = useState('');
+  const [errorPreguntas, setErrorPreguntas] = useState('');
+  const esMisiones = plantilla === 'misiones';
   const nuevos = plantilla === 'misiones' && configuracion?.version === 2;
   const mega = esFormatoMegamisiones(configuracion);
-  const fijos = camposPlantillaActividad(plantilla, configuracion).map((campo) => campo.clave);
+  const preguntasBase = camposPlantillaActividad(plantilla, configuracion);
+  const fijos = preguntasBase.map((campo) => campo.clave);
+  const preguntasQuitadas = preguntasBase.filter((base) => !campos.some((campo) => campo.clave === base.clave));
   const opcionesFijas = nuevos ? ['tipo_sangre', 'rol_mision', 'alergias', 'participacion_previa', ...(mega ? ['sexo', 'campus', 'familia_unid', 'cuatrimestre', 'participaciones_veces'] : [])] : [];
   const cambiar = (indice, clave, valor) => onChange(campos.map((campo, posicion) => posicion === indice ? { ...campo, [clave]: valor } : campo));
   const grupos = nuevos ? [...gruposPreguntasMisiones(configuracion), { titulo: 'Otras preguntas', descripcion: 'Preguntas adicionales de esta edición.', claves: campos.filter((campo) => !fijos.includes(campo.clave)).map((campo) => campo.clave) }] : [{ titulo: '', claves: campos.map((campo) => campo.clave) }];
@@ -85,12 +91,12 @@ export function EditorCamposActividad({ campos, plantilla, configuracion, onChan
       {campo.visible_si && <p className={'text-sm ' + tema.subtitle}>Se muestra cuando “{campos.find((item) => item.clave === campo.visible_si.campo)?.etiqueta}” {campo.visible_si.distinto !== undefined ? <>tenga una respuesta distinta de “{campo.visible_si.distinto}”</> : <>sea “{campo.visible_si.valor}”</>}.</p>}
       {campo.tipo === 'seleccion' && <label className={labelCls}>Opciones, una por línea<textarea className={inputCls} readOnly={opcionesFijas.includes(campo.clave)} value={campo.textoOpciones ?? (campo.opciones || []).join('\n')} rows={3} onChange={(evento) => cambiar(indice, 'textoOpciones', evento.target.value)} placeholder={campo.clave === 'talla' ? 'Escribe las tallas disponibles para esta edición' : 'Una opción por línea'} /></label>}
       {campo.tipo === 'numero' && <div className="grid gap-3 sm:grid-cols-2">{[['minimo', 'Mínimo'], ['maximo', 'Máximo']].map(([clave, titulo]) => <label className={labelCls} key={clave}>{titulo}<input className={inputCls} type="number" disabled={fijos.includes(campo.clave)} value={campo[clave] ?? ''} onChange={(evento) => cambiar(indice, clave, evento.target.value)} /></label>)}</div>}
-      {!fijos.includes(campo.clave) && <BotonAccion variant="outline" size="sm" onClick={() => onChange(campos.filter((_item, posicion) => posicion !== indice))}>Quitar pregunta</BotonAccion>}
+      {(esMisiones || !fijos.includes(campo.clave)) && <BotonAccion variant="outline" size="sm" onClick={() => { setErrorPreguntas(''); onChange(esMisiones ? quitarPreguntaMisiones(campos, campo.clave) : campos.filter((_item, posicion) => posicion !== indice)); }}>Quitar pregunta</BotonAccion>}
     </fieldset>;
   }
 
   return <fieldset className="min-w-0 space-y-5"><legend className="sr-only">Configurar preguntas del formulario</legend>
-    <p className={'text-sm ' + tema.subtitle}>{mega ? 'Formato MEGAMISIONES: cinco secciones, nombre y correo de la cuenta UNID o datos del invitado, y teléfono celular para todos. Las preguntas base obligatorias y sus condiciones se conservan.' : nuevos ? 'UNID utiliza su nombre y matrícula; los invitados proporcionan nombre, correo y teléfono. La talla de camisa es obligatoria. Configura las demás preguntas para esta edición.' : 'Nombre y matrícula se incluyen automáticamente. Agrega las preguntas que necesita esta edición.'}</p>
+    <p className={'text-sm ' + tema.subtitle}>{esMisiones ? 'Conserva solo las preguntas que necesita esta edición. Puedes quitar cualquiera, incluida la talla. Al quitar una pregunta también se quitan las que dependen de su respuesta. Los datos de identificación del participante se incluyen automáticamente.' : 'Nombre y matrícula se incluyen automáticamente. Agrega las preguntas que necesita esta edición.'}</p>
     {grupos.map((grupo) => {
       const elementos = campos.map((campo, indice) => ({ campo, indice })).filter(({ campo }) => grupo.claves.includes(campo.clave));
       if (!elementos.length) return null;
@@ -99,6 +105,15 @@ export function EditorCamposActividad({ campos, plantilla, configuracion, onChan
         {elementos.map(({ campo, indice }) => pregunta(campo, indice))}
       </section>;
     })}
+    {esMisiones && preguntasQuitadas.length > 0 && <div className="space-y-3 rounded-xl border border-slate-400/25 p-4">
+      <label className={labelCls}>Recuperar una pregunta del formato<select aria-label="Recuperar una pregunta del formato" className={inputCls} value={preguntaRecuperada} onChange={(evento) => setPreguntaRecuperada(evento.target.value)}><option value="">Selecciona una pregunta</option>{preguntasQuitadas.map((campo) => <option key={campo.clave} value={campo.clave}>{campo.etiqueta}</option>)}</select></label>
+      <BotonAccion variant="outline" disabled={!preguntaRecuperada} onClick={() => {
+        try { onChange(recuperarPreguntaMisiones(campos, preguntaRecuperada, preguntasBase)); setPreguntaRecuperada(''); setErrorPreguntas(''); }
+        catch (error) { setErrorPreguntas(error.message); }
+      }}>Recuperar pregunta</BotonAccion>
+      <p className={'text-xs ' + tema.subtitle}>Si depende de otra pregunta, también se recuperará la pregunta anterior.</p>
+    </div>}
+    {errorPreguntas && <p role="alert" className="text-red-600 dark:text-red-400">{errorPreguntas}</p>}
     <BotonAccion variant="outline" onClick={() => onChange([...campos, { clave: 'pregunta_' + Date.now(), etiqueta: '', tipo: 'texto', obligatorio: false, opciones: [] }])} disabled={campos.length >= 25}>Agregar pregunta</BotonAccion>
   </fieldset>;
 }

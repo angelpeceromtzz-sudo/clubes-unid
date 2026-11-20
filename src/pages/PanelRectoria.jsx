@@ -20,6 +20,7 @@ import { SeccionMuralAdmin } from '../components/admin/secciones/SeccionMuralAdm
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
 import { SeccionGestionClubs } from '../components/actividades/SeccionGestionClubs';
+import { GestionActividades } from './GestionActividades';
 import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
 import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
 import { SeccionExpediente } from '../components/expediente/SeccionExpediente';
@@ -46,8 +47,7 @@ export function PanelRectoria() {
       {d.vistaActiva === 'clubes' && <SeccionGestionClubs onVolver={d.recargarClubes}>
         {(props) => <SeccionClubes clubesDetalle={d.clubesDetalle} cargando={d.cargando} onPublicacion={props.onPublicacion} />}
       </SeccionGestionClubs>}
-
-
+      {d.vistaActiva === 'revision-actividades' && <GestionActividades integrada tipoFijo="actividad" estadoInicial="pendiente"/>}
 
         {d.error && (
           <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">

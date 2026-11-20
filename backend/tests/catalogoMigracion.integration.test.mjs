@@ -14,6 +14,18 @@ test('schema.sql prepara todo el catálogo desde cero y admite el seed local sin
     await db.query('SET search_path TO '+esquema);
     const sql=await readFile(new URL('../schema.sql',import.meta.url),'utf8');
     await db.query(sql);
+    const tablasActividades = [
+      'actividades_ediciones', 'actividades_registros', 'actividades_aportes_catalogo',
+      'actividades_aportaciones', 'publicaciones_oferta', 'publicaciones_imagenes',
+      'reacciones_catalogo', 'migraciones_catalogo', 'actividades_asistencia_accesos',
+      'actividades_asistencias', 'misiones_documentos', 'actividades_cartas',
+      'actividades_cartas_reservas',
+    ].sort();
+    const comprobarTablasActividades = async () => assert.deepEqual(
+      (await db.query("SELECT relname FROM pg_class WHERE relnamespace=current_schema()::regnamespace AND relkind='r' AND relname=ANY($1::text[]) ORDER BY relname", [tablasActividades])).rows.map((fila) => fila.relname),
+      tablasActividades,
+    );
+    await comprobarTablasActividades();
     assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM usuarios')).rows[0].n,0);
     assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM actividades_ediciones')).rows[0].n,0);
     assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM catalogo_equivalencias_actividades')).rows[0].n,0);
@@ -30,12 +42,32 @@ test('schema.sql prepara todo el catálogo desde cero y admite el seed local sin
     assert.equal((await db.query("SELECT u.id_rol FROM usuarios u JOIN clubes c ON c.id_responsable_club=u.id_usuario WHERE c.nombre_club='Equipo de Basketball'")).rows[0].id_rol,2);
     assert.equal((await db.query("SELECT COUNT(*)::int AS n FROM clubes WHERE tipo='club' AND estado_publicacion='borrador'")).rows[0].n,0);
     await db.query(sql);
+    await comprobarTablasActividades();
     await db.query(seed);
     assert.deepEqual((await db.query("SELECT (SELECT COUNT(*)::int FROM usuarios) AS usuarios,(SELECT COUNT(*)::int FROM clubes WHERE tipo='club') AS clubes,(SELECT COUNT(*)::int FROM inscripciones) AS miembros,(SELECT COUNT(*)::int FROM formularios) AS formularios")).rows[0],cantidades);
     assert.deepEqual((await db.query("SELECT id_club,nombre_club,slug,plantilla FROM clubes WHERE tipo='actividad' ORDER BY id_club")).rows,institucionales);
   } finally {
     await db.query('ROLLBACK');
     await db.query('DROP SCHEMA IF EXISTS '+esquema+' CASCADE');
+    await db.end();
+  }
+});
+
+test('schema.sql revierte todas las tablas si falla el último bloque', { skip: !connectionString }, async () => {
+  const esquema = 'schema_atomico_' + randomBytes(6).toString('hex');
+  const db = new pg.Client({ connectionString });
+  await db.connect();
+  try {
+    await db.query('CREATE SCHEMA ' + esquema);
+    await db.query('SET search_path TO ' + esquema);
+    const sql = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
+    assert.match(sql, /COMMIT;\s*$/);
+    await assert.rejects(db.query(sql.replace(/COMMIT;\s*$/, 'SELECT 1 / 0;\nCOMMIT;')), { code: '22012' });
+    await db.query('ROLLBACK');
+    assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM pg_class WHERE relnamespace=current_schema()::regnamespace')).rows[0].n, 0);
+  } finally {
+    await db.query('ROLLBACK');
+    await db.query('DROP SCHEMA IF EXISTS ' + esquema + ' CASCADE');
     await db.end();
   }
 });
