@@ -65,7 +65,9 @@ for(const origen of ['migracion','schema']) test('unificación mediante '+origen
     assert.equal((await db.query('SELECT estado_publicacion FROM clubes WHERE id_club=8')).rows[0].estado_publicacion,'archivada');
     assert.equal((await db.query('SELECT slug FROM clubes WHERE id_club=101')).rows[0].slug,'trineo-de-los-suenos-actividad-1');
     assert.deepEqual((await db.query('SELECT id_foto,id_edicion,url_imagen,pie,estado,id_autor,creado_en FROM actividades_fotos ORDER BY id_foto')).rows,fotos);
-    assert.deepEqual((await db.query('SELECT * FROM actividades_registros')).rows,registro);
+    const registrosActualizados=(await db.query('SELECT * FROM actividades_registros')).rows;
+    assert.deepEqual(registrosActualizados.map((fila)=>Object.fromEntries(Object.keys(registro[0]).map((clave)=>[clave,fila[clave]]))),registro);
+    if(origen==='schema') assert.ok(registrosActualizados.every((fila)=>fila.tipo_participante==='unid' && fila.misiones_snapshot===null && fila.pedido===null && fila.codigo_firmado_id===null));
     assert.deepEqual((await db.query('SELECT * FROM actividades_aportaciones')).rows,aportes);
     assert.deepEqual((await db.query('SELECT id_edicion,id_actividad FROM actividades_ediciones ORDER BY id_edicion')).rows,[{id_edicion:41,id_actividad:101},{id_edicion:42,id_actividad:102}]);
     assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM actividades_reacciones')).rows[0].n,1);

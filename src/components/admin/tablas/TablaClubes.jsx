@@ -7,6 +7,7 @@ export function TablaClubes({
   onStatusChange,
   onEditar,
   onPublicacion,
+  onConfigurarFormulario,
   currentUser,
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls, tema } = useTheme();
@@ -64,6 +65,7 @@ export function TablaClubes({
                         Editar
                       </button>
                       {onPublicacion && <button type="button" onClick={() => onPublicacion(c)} className="text-xs font-bold text-amber-600 dark:text-amber-400 px-2 py-1.5 rounded-lg border border-amber-400/30 cursor-pointer">Publicación</button>}
+                      {onConfigurarFormulario && <button type="button" onClick={() => onConfigurarFormulario(c)} className="text-xs font-bold text-emerald-600 dark:text-emerald-400 px-2 py-1.5 rounded-lg border border-emerald-400/30 cursor-pointer">Formulario</button>}
                       <button
                         onClick={() => onStatusChange(c.id_club, 3)}
                         className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors px-2 py-1.5 rounded-lg border border-red-400/30 bg-red-400/10 cursor-pointer active:scale-95 flex items-center gap-1"

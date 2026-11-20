@@ -10,8 +10,9 @@ import { SeccionClubes } from './SeccionClubes';
 import { SeccionAsistencia } from './SeccionAsistencia';
 import { SeccionEncuestas } from './SeccionEncuestas';
 import { SeccionPostulaciones } from './SeccionPostulaciones';
+import { SeccionPreferencias } from './SeccionPreferencias';
 import { formatearFecha } from '../../utils/formatoPanel';
-import { crearReportePDF, nombreArchivoReporte, TITULOS_REPORTE } from './exportaciones.utils';
+import { crearReporteCompletoPDF, nombreArchivoReporte, TITULOS_REPORTE } from './exportaciones.utils';
 
 export function VistaEjecutiva({ d }) {
   const { modoOscuro, cardCls } = useTheme();
@@ -29,9 +30,9 @@ export function VistaEjecutiva({ d }) {
       if (formato === 'excel') {
         await descargarExcelEjecutivo(d.filtros);
       } else {
-        const reporte = crearReportePDF(d, tab);
+        const reporte = crearReporteCompletoPDF(d);
         const { generarPDF } = await import('./exportarPDF');
-        await generarPDF(reporte).save(nombreArchivoReporte('pdf', tab), { returnPromise: true });
+        await generarPDF(reporte).save(nombreArchivoReporte('pdf'), { returnPromise: true });
       }
       setAviso({ tipo: 'exito', texto: `${formato === 'excel' ? 'Excel' : 'PDF'} listo. Se inició la descarga.` });
     } catch (error) {
@@ -52,7 +53,9 @@ export function VistaEjecutiva({ d }) {
 
   const subtextoCls = modoOscuro ? 'text-slate-400' : 'text-slate-500';
   const botonBase = 'group flex min-h-16 min-w-0 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-wait disabled:opacity-50 motion-reduce:transition-none';
-  const pdfPendiente = tab === 'encuestas' && d.cargandoResultados;
+  const botonExportarCls = `${botonBase} focus-visible:ring-emerald-500 ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400/50 focus-visible:ring-offset-[#0e162c]' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-400 focus-visible:ring-offset-white'}`;
+  const iconoExportarCls = `flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${modoOscuro ? 'bg-emerald-500/15' : 'bg-white'}`;
+  const pdfPendiente = d.cargandoResultados;
   const IconoAviso = aviso?.tipo === 'error' ? AlertCircle : CheckCircle2;
 
   return (
@@ -69,8 +72,8 @@ export function VistaEjecutiva({ d }) {
           <div role="group" aria-label="Exportar estadísticas" className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3 xl:min-w-[440px]">
             <button type="button" onClick={() => exportar('excel')} disabled={Boolean(exportando)} aria-busy={exportando === 'excel'}
               aria-label={exportando === 'excel' ? 'Preparando Excel' : 'Exportar Excel: todas las secciones'}
-              className={`${botonBase} focus-visible:ring-emerald-500 ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400/50 focus-visible:ring-offset-[#0e162c]' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-400 focus-visible:ring-offset-white'}`}>
-              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${modoOscuro ? 'bg-emerald-500/15' : 'bg-white'}`}>
+              className={botonExportarCls}>
+              <span className={iconoExportarCls}>
                 {exportando === 'excel' ? <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none" /> : <FileSpreadsheet aria-hidden="true" className="h-5 w-5" />}
               </span>
               <span className="min-w-0 flex-1">
@@ -80,15 +83,15 @@ export function VistaEjecutiva({ d }) {
               <Download aria-hidden="true" className="h-4 w-4 shrink-0 opacity-60 group-hover:opacity-100" />
             </button>
             <button type="button" onClick={() => exportar('pdf')} disabled={Boolean(exportando) || pdfPendiente} aria-busy={exportando === 'pdf'}
-              aria-label={exportando === 'pdf' ? 'Preparando PDF' : `Exportar PDF: ${TITULOS_REPORTE[tab]}`}
-              title={pdfPendiente ? 'Espera a que terminen de cargar los resultados de la encuesta.' : `Descargar la pestaña ${TITULOS_REPORTE[tab]}`}
-              className={`${botonBase} focus-visible:ring-rose-500 ${modoOscuro ? 'bg-rose-500/10 border-rose-500/25 text-rose-300 hover:bg-rose-500/20 hover:border-rose-400/50 focus-visible:ring-offset-[#0e162c]' : 'bg-rose-50 border-rose-200 text-rose-800 hover:bg-rose-100 hover:border-rose-400 focus-visible:ring-offset-white'}`}>
-              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${modoOscuro ? 'bg-rose-500/15' : 'bg-white'}`}>
+              aria-label={exportando === 'pdf' ? 'Preparando PDF completo' : 'Exportar PDF: todos los bloques'}
+              title={pdfPendiente ? 'Espera a que terminen de cargar los resultados de la encuesta.' : 'Descargar todos los bloques del panel con los filtros aplicados'}
+              className={botonExportarCls}>
+              <span className={iconoExportarCls}>
                 {exportando === 'pdf' ? <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none" /> : <FileText aria-hidden="true" className="h-5 w-5" />}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-bold">{exportando === 'pdf' ? 'Preparando…' : 'Exportar PDF'}</span>
-                <span className={`block mt-0.5 text-[11px] ${subtextoCls}`}>{TITULOS_REPORTE[tab]}</span>
+                <span className={`block mt-0.5 text-[11px] ${subtextoCls}`}>Todos los bloques</span>
               </span>
               <Download aria-hidden="true" className="h-4 w-4 shrink-0 opacity-60 group-hover:opacity-100" />
             </button>
@@ -97,7 +100,7 @@ export function VistaEjecutiva({ d }) {
         <div aria-live="polite" aria-atomic="true">
           {(exportando || aviso) && <div className={`mt-4 flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${aviso?.tipo === 'error' ? (modoOscuro ? 'bg-red-500/10 text-red-300' : 'bg-red-50 text-red-700') : subtextoCls}`}>
             {exportando ? <LoaderCircle aria-hidden="true" className="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none" /> : <IconoAviso aria-hidden="true" className="h-4 w-4 shrink-0" />}
-            <span>{exportando ? `Preparando ${exportando === 'excel' ? 'Excel con todas las secciones' : `PDF de ${TITULOS_REPORTE[tab]}`}…` : aviso.texto}</span>
+            <span>{exportando ? `Preparando ${exportando === 'excel' ? 'Excel con todas las secciones' : 'PDF con todos los bloques'}…` : aviso.texto}</span>
           </div>}
         </div>
       </div>
@@ -114,6 +117,7 @@ export function VistaEjecutiva({ d }) {
         <TabsContent value="asistencia" className="mt-6"><SeccionAsistencia d={d} /></TabsContent>
         <TabsContent value="encuestas" className="mt-6"><SeccionEncuestas d={d} /></TabsContent>
         <TabsContent value="postulaciones" className="mt-6"><SeccionPostulaciones d={d} /></TabsContent>
+        <TabsContent value="preferencias" className="mt-6"><SeccionPreferencias d={d} /></TabsContent>
       </Tabs>
     </div>
   );

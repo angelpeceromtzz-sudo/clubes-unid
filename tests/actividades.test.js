@@ -58,11 +58,12 @@ test('las actividades generales no heredan requisitos específicos de Trineo', (
   assert.equal(normalizarEdicionActividad({ nombre: 'Informativa', requiere_aportacion: true }).requiere_aportacion, false);
 });
 
-test('Trineo y Misiones exigen edad y talla; Trineo fuerza la aportación', () => {
+test('Trineo y Misiones exigen edad y talla y permiten configurar las aportaciones por separado', () => {
   for (const plantilla of ['trineo', 'misiones']) {
     const datos = normalizarEdicionActividad({ ...edicion, requiere_registro: false, requiere_aportacion: false }, plantilla);
     assert.equal(datos.requiere_registro, true);
-    assert.equal(datos.requiere_aportacion, plantilla === 'trineo');
+    assert.equal(datos.requiere_aportacion, false);
+    assert.equal(normalizarEdicionActividad({ ...edicion, requiere_aportacion: true }, plantilla).requiere_aportacion, true);
     assert.throws(() => normalizarEdicionActividad({ ...edicion, campos_registro: campos.filter((campo) => campo.clave !== 'talla') }, plantilla), /edad y talla/);
     assert.throws(() => normalizarEdicionActividad({ ...edicion, campos_registro: campos.map((campo) => campo.clave === 'edad' ? { ...campo, obligatorio: false } : campo) }, plantilla));
   }
@@ -80,10 +81,11 @@ test('el catálogo exige la configuración del club y mantiene libres las activi
   assert.equal('cupo_maximo' in normalizarRecursoCatalogo({...club,tipo:'actividad'}),false);
 });
 
-test('no publica Trineo sin catálogo o sin tallas configuradas', () => {
-  const datos = normalizarEdicionActividad(edicion, 'trineo');
+test('exige catálogo solo cuando las aportaciones son obligatorias y conserva la validación de tallas', () => {
+  const datos = normalizarEdicionActividad({ ...edicion, requiere_aportacion: true }, 'trineo');
   assert.throws(() => validarPublicacionEdicion(datos, []), /aportación/);
   assert.doesNotThrow(() => validarPublicacionEdicion(datos, catalogo));
+  assert.doesNotThrow(() => validarPublicacionEdicion({ ...datos, requiere_aportacion: false }, []));
   const sinTallas = normalizarEdicionActividad({ ...edicion, campos_registro: camposPlantillaActividad('trineo') }, 'trineo');
   assert.throws(() => validarPublicacionEdicion(sinTallas, catalogo), /tallas/);
 });

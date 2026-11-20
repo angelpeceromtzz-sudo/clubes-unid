@@ -4,7 +4,7 @@ export function formatearNombre(nombre) {
   if (!nombre) return '';
   return nombre
     .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replace(/(?:^|\s)\p{L}/gu, (m) => m.toUpperCase());
 }
 
 export function fechaRelativa(fecha) {

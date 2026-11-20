@@ -3,6 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { actividadService } from '../../services/actividad.service';
 import { normalizarCodigoAsistencia } from '../../../shared/actividades';
 import { BotonAccion } from '../ui/BotonAccion';
+import { misionesService } from '../../services/misiones.service';
 
 export function ResumenAsistenciaActividad({ asistencia }) {
   if (asistencia?.estado !== 'presente') return <p className="text-sm">Sin asistencia registrada</p>;
@@ -16,7 +17,7 @@ export function ResumenAsistenciaActividad({ asistencia }) {
 }
 
 export function FormularioAsistenciaActividad({
-  idEdicion, estadoInscripcion, asistencia, disponibilidad, codigoInicial = '', origenInicial = 'codigo',
+  idEdicion, estadoInscripcion, asistencia, disponibilidad, codigoInicial = '', origenInicial = 'codigo', accesoInvitado,
 }) {
   const { tema, inputCls, labelCls } = useTheme();
   const [codigo, setCodigo] = useState(codigoInicial);
@@ -32,8 +33,8 @@ export function FormularioAsistenciaActividad({
     try {
       const normalizado = normalizarCodigoAsistencia(codigo);
       setPendiente(true);
-      const respuesta = await actividadService.registrarAsistencia(idEdicion, normalizado,
-        codigo === codigoInicial ? origenInicial : 'codigo');
+      const origen = codigo === codigoInicial ? origenInicial : 'codigo';
+      const respuesta = accesoInvitado ? await misionesService.asistencia(accesoInvitado, normalizado, origen) : await actividadService.registrarAsistencia(idEdicion, normalizado, origen);
       setResultado(respuesta.asistencia);
     } catch (fallo) {
       setError(fallo.message);
@@ -52,7 +53,7 @@ export function FormularioAsistenciaActividad({
     return <p className={'text-sm ' + tema.subtitle}>{mensajes[disponibilidad] || mensajes.no_disponible}</p>;
   }
   return <form onSubmit={registrar} className="space-y-3" aria-label="Registrar mi asistencia">
-    <p className={'text-sm ' + tema.subtitle}>Escribe el código que comparte el encargado en la actividad para registrar tu llegada.</p>
+    <p className={'text-sm ' + tema.subtitle}>{codigoInicial && origenInicial === 'qr' ? 'El código del QR ya está cargado. Confirma tu llegada para registrar tu asistencia.' : 'Escribe el código que comparte el encargado en la actividad para registrar tu llegada.'}</p>
     <label className={labelCls}>Código de asistencia
       <input className={inputCls + ' mt-2 max-w-xs font-mono uppercase tracking-widest'} value={codigo}
         onChange={(evento) => setCodigo(evento.target.value)} placeholder="ABCD 2345" maxLength={11}

@@ -225,7 +225,7 @@ La licenciatura del ejemplo es un identificador del catálogo de licenciaturas. 
 
 El registro conserva además `formulario_snapshot`, una copia de las preguntas que respondió. Si luego cambia el formulario de la edición, puede interpretarse el registro con su configuración histórica.
 
-Trineo y Misiones exigen edad y talla; licenciatura es opcional. Trineo también exige una aportación. Estas reglas se aplican en [actividadesDominio.js](../backend/lib/actividadesDominio.js), junto con la validación de opciones y respuestas.
+Trineo y las ediciones anteriores de Misiones exigen edad y talla; licenciatura es opcional. Las nuevas inscripciones de Trineo exigen elegir una carta de regalo. Las aportaciones para la actividad, como comida o globos, son independientes y configurables en ambas actividades. Estas reglas se aplican en [actividadesDominio.js](../backend/lib/actividadesDominio.js) y [trineoCartas.js](../backend/lib/trineoCartas.js), junto con la validación de opciones y respuestas. Las reservas guardan su propia recepción y admiten una referencia opcional a aportaciones históricas.
 
 ### Opciones y compromisos de aportación
 

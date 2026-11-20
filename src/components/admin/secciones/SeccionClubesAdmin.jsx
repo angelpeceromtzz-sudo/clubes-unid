@@ -1,11 +1,25 @@
 import { TablaClubes } from '../tablas/TablaClubes';
+import { useState } from 'react';
 import { BotonAccion } from '../../ui/BotonAccion';
 import { Icono } from '../../ui/Icono';
+import { ModalConfigurarFormulario } from '../modales/ModalConfigurarFormulario';
 
-export function SeccionClubesAdmin({ d, onPublicacion }) {
+export function SeccionClubesAdmin({ d, onPublicacion, tipo, onCambiarTipo }) {
+  const [clubFormulario, setClubFormulario] = useState(null);
   return (
     <div>
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        {onCambiarTipo && (
+          <select
+            aria-label="Mostrar"
+            value={tipo || 'club'}
+            onChange={(e) => onCambiarTipo(e.target.value)}
+            className={`h-11 rounded-lg border text-sm px-3 ${d.isDark ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}
+          >
+            <option value="club">Clubs</option>
+            <option value="actividad">Actividades</option>
+          </select>
+        )}
         <div className="relative flex-1">
           <span className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${d.isDark ? 'text-slate-500' : 'text-slate-400'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
@@ -37,8 +51,12 @@ export function SeccionClubesAdmin({ d, onPublicacion }) {
         onStatusChange={d.handleStatusChange}
         onEditar={d.abrirModalEditar}
         onPublicacion={onPublicacion}
+        onConfigurarFormulario={setClubFormulario}
         currentUser={d.user}
       />
+      {clubFormulario && (
+        <ModalConfigurarFormulario club={clubFormulario} onClose={() => setClubFormulario(null)} />
+      )}
     </div>
   );
 }

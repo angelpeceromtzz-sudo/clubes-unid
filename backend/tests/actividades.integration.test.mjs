@@ -7,7 +7,7 @@ import pg from 'pg';
 import { crearRouterActividades } from '../lib/actividadesRouter.js';
 import { migrarLegadoActividades } from '../lib/actividadesLegado.js';
 import { crearRouterConsultaActividad } from '../lib/actividadConsultaRouter.js';
-import { camposPlantillaActividad } from '../../shared/actividades.js';
+import { camposPlantillaActividad, configuracionMisionesInicial } from '../../shared/actividades.js';
 
 // Únicamente una conexión de pruebas explícita. No importa db.js ni lee .env.
 const connectionString = process.env.ACTIVIDADES_TEST_DATABASE_URL;
@@ -16,8 +16,9 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
   const bootstrap = new pg.Client({ connectionString });
   let db, servidor, base, trineo, misiones, edicionTrineo, edicionMisiones, opcion1, opcion2, aporteRecibido, subidas = 0;
   const limpiadas = [];
-  const datosEdicion = (plantilla) => ({ nombre: 'Edición QA', descripcion: 'Edición ficticia de pruebas', lugar: 'Campus QA', fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', hora_inicio: '10:00', requiere_registro: true, requiere_aportacion: plantilla === 'trineo', campos_registro: camposPlantillaActividad(plantilla).map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['CH', 'M', 'G'] } : campo), inscripcion_desde: '2026-11-01', inscripcion_hasta: '2026-12-04', destacable: true, destacada_desde: '2026-11-10', destacada_hasta: '2026-12-06' });
-  const inscripcion = (aportes = true) => ({ matricula: '99999999', respuestas: { edad: 20, talla: 'M', licenciatura: 1 }, aportaciones: aportes ? [{ id_opcion: opcion1, cantidad: 1 }, { id_opcion: opcion2, cantidad: 2 }] : [] });
+  const datosEdicion = (plantilla) => ({ nombre: 'Edición QA', descripcion: 'Edición ficticia de pruebas', lugar: 'Campus QA', fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', hora_inicio: '10:00', requiere_registro: true, requiere_aportacion: plantilla === 'trineo', ...(plantilla === 'misiones' ? { configuracion_misiones: configuracionMisionesInicial(null) } : {}), campos_registro: camposPlantillaActividad(plantilla, plantilla === 'misiones' ? configuracionMisionesInicial(null) : null).map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['CH', 'M', 'G'] } : campo), inscripcion_desde: '2026-11-01', inscripcion_hasta: '2026-12-04', destacable: true, destacada_desde: '2026-11-10', destacada_hasta: '2026-12-06' });
+  const cartasQa = {};
+  const inscripcion = (aportes = true, usuario = 1) => ({ matricula: '99999999', respuestas: { edad: 20, talla: 'M', licenciatura: 1 }, ...(aportes ? { id_carta: cartasQa[usuario] } : {}), aportaciones: aportes ? [{ id_opcion: opcion1, cantidad: 1 }, { id_opcion: opcion2, cantidad: 2 }] : [] });
 
   async function enviar(usuario, metodo, ruta, datos, esperado = 200) {
     const respuesta = await fetch(base + ruta, { method: metodo, headers: { 'Content-Type': 'application/json', ...(usuario ? { 'x-usuario-qa': String(usuario) } : {}) }, ...(datos === undefined ? {} : { body: JSON.stringify(datos) }) });
@@ -112,6 +113,52 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     assert.equal((await enviar(null, 'GET', '/')).actividades.some((item) => item.id_actividad === actividad.id_actividad), false);
   });
 
+  test('Coordinación aprueba ediciones y propuestas con las mismas validaciones y una sola decisión concurrente', async () => {
+    const actividad = await enviar(7, 'POST', '/gestion/actividades', { nombre: 'Ediciones de Coordinación QA', descripcion: 'Permisos de revisión', categoria: 'Servicio' }, 201);
+    const datos = { nombre: 'Edición de Coordinación QA', descripcion: 'Información original', lugar: 'Campus QA', fecha_inicio: '2026-12-05', requiere_registro: false };
+    const edicion = await enviar(7, 'POST', '/gestion/actividades/' + actividad.id_actividad + '/ediciones', datos, 201);
+    const ruta = '/gestion/ediciones/' + edicion.id_edicion;
+    const publica = async () => (await enviar(null, 'GET', '/detalle/' + actividad.slug)).ediciones.find((item) => item.id_edicion === edicion.id_edicion);
+    for (const rol of [1, 2, 3, 4, 5, 6, 7]) {
+      const gestion = await enviar(rol, 'GET', '/gestion');
+      assert.equal(gestion.puede_aprobar, rol === 4);
+      assert.equal(gestion.puede_aprobar_ediciones, [4, 7].includes(rol));
+    }
+    await enviar(7, 'POST', ruta + '/revision', {});
+    for (const rol of [null, 1, 2, 3, 5, 6]) await enviar(rol, 'POST', ruta + '/decision', { aprobar: true }, rol ? 403 : 401);
+    await enviar(7, 'POST', ruta + '/decision', { aprobar: true }, 400);
+    await publicar(7, 'actividades', actividad.id_actividad);
+    assert.equal((await enviar(7, 'POST', ruta + '/decision', { aprobar: true })).estado, 'publicada');
+    await enviar(7, 'POST', ruta + '/decision', { aprobar: true }, 409);
+
+    await enviar(7, 'PUT', ruta, { descripcion: 'Información propuesta' });
+    await enviar(7, 'POST', ruta + '/revision', {});
+    assert.equal((await publica()).descripcion, 'Información original');
+    await enviar(7, 'POST', ruta + '/decision', { aprobar: false, motivo: ' ' }, 400);
+    await enviar(7, 'POST', ruta + '/decision', { aprobar: false, motivo: 'Completar el programa' });
+    assert.equal((await publica()).descripcion, 'Información original');
+    await enviar(7, 'PUT', ruta, { descripcion: 'Programa corregido' });
+    await enviar(7, 'POST', ruta + '/revision', {});
+    await enviar(7, 'POST', ruta + '/decision', { aprobar: true });
+    assert.equal((await publica()).descripcion, 'Programa corregido');
+    const eventos = (await db.query("SELECT tipo_evento,id_actor FROM actividad_clubes WHERE id_edicion=$1 AND tipo_evento IN ('edicion_publicada','edicion_rechazada') ORDER BY id_evento", [edicion.id_edicion])).rows;
+    assert.deepEqual(eventos, [{ tipo_evento: 'edicion_publicada', id_actor: 7 }, { tipo_evento: 'edicion_rechazada', id_actor: 7 }, { tipo_evento: 'edicion_publicada', id_actor: 7 }]);
+
+    for (const archivar of [true, false]) await enviar(7, 'POST', ruta + '/archivo', { archivar }, 403);
+    await enviar(7, 'POST', ruta + '/catalogo', { nombre: 'Aporte QA', unidad: 'piezas', cantidad_minima: 1 }, 403);
+    const foto = await enviar(7, 'POST', ruta + '/fotos', { pie: 'Revisión por Rectoría' }, 201);
+    assert.equal(foto.estado, 'pendiente');
+    await enviar(7, 'PUT', '/gestion/fotos/' + foto.id_foto, { estado: 'publicada' }, 403);
+
+    const concurrente = await enviar(7, 'POST', '/gestion/actividades/' + actividad.id_actividad + '/ediciones', { ...datos, nombre: 'Decisión concurrente QA' }, 201);
+    const decidir = '/gestion/ediciones/' + concurrente.id_edicion;
+    await enviar(7, 'POST', decidir + '/revision', {});
+    const respuestas = await Promise.all([4, 7].map((rol) => fetch(base + decidir + '/decision', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-usuario-qa': String(rol) }, body: JSON.stringify({ aprobar: true }) })));
+    assert.deepEqual(respuestas.map((respuesta) => respuesta.status).sort(), [200, 409]);
+    await Promise.all(respuestas.map((respuesta) => respuesta.text()));
+    assert.equal((await db.query("SELECT COUNT(*)::int AS total FROM actividad_clubes WHERE id_edicion=$1 AND tipo_evento='edicion_publicada'", [concurrente.id_edicion])).rows[0].total, 1);
+  });
+
   test('guarda una edición con sus aportaciones desde el asistente y rechaza lotes incompletos',async()=>{
     const actividad=await enviar(7,'POST','/gestion/actividades',{nombre:'Actividad del asistente QA',descripcion:'Prueba de guardado conjunto',categoria:'Servicio'},201);
     await enviar(7,'PUT','/gestion/actividades/'+actividad.id_actividad+'/responsable',{id_responsable:2});
@@ -165,6 +212,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     const publico=await enviar(null,'GET','/clubes/101/galeria');
     assert.equal(publico.fotos.length,1); assert.equal('id_autor' in publico.fotos[0],false);
     await enviar(1,'PUT','/clubes/101/reaccion',{reaccion:'love'});
+    assert.deepEqual((await enviar(1,'PUT','/clubes/101/reaccion',{reaccion:'love'})).totales,[{reaccion:'love',total:1}]);
     assert.equal((await enviar(1,'GET','/clubes/101/mi-reaccion')).reaccion,'love');
     assert.deepEqual((await enviar(1,'PUT','/clubes/101/reaccion',{reaccion:'clap'})).totales,[{reaccion:'clap',total:1}]);
     assert.deepEqual((await enviar(1,'PUT','/clubes/101/reaccion',{reaccion:null})).totales,[]);
@@ -248,6 +296,19 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     await enviar(7, 'PUT', '/gestion/actividades/' + ajena.id_actividad + '/responsable', { id_responsable: 7 });
   });
 
+  test('permite ofrecer comida y materiales opcionales al crear ediciones de Trineo y Misiones', async () => {
+    for (const [idActividad, plantilla] of [[trineo, 'trineo'], [misiones, 'misiones']]) {
+      const creada = await enviar(7, 'POST', '/gestion/actividades/' + idActividad + '/ediciones', {
+        ...datosEdicion(plantilla), requiere_aportacion: false,
+        catalogo_aportaciones: [{ nombre: 'Comida QA', unidad: 'paquetes', cantidad_minima: 1 }, { nombre: 'Globos QA', unidad: 'bolsas', cantidad_minima: 2 }],
+      }, 201);
+      assert.equal(creada.requiere_aportacion, false);
+      const detalle = await enviar(7, 'GET', '/gestion/ediciones/' + creada.id_edicion);
+      assert.equal(detalle.catalogo.length, 2);
+      assert.equal(detalle.edicion.requiere_aportacion, false);
+    }
+  });
+
   test('asigna encargados y exige configuración completa antes de revisar', async () => {
     await enviar(7, 'PUT', '/gestion/actividades/' + trineo + '/responsable', { id_responsable: 2 });
     await enviar(7, 'PUT', '/gestion/actividades/' + misiones + '/responsable', { id_responsable: 22 });
@@ -256,6 +317,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     await enviar(2, 'POST', '/gestion/ediciones/' + edicionTrineo + '/revision', {}, 400);
     opcion1 = (await enviar(2, 'POST', '/gestion/ediciones/' + edicionTrineo + '/catalogo', { nombre: 'Prueba A', unidad: 'piezas', cantidad_minima: 1 }, 201)).id_opcion;
     opcion2 = (await enviar(2, 'POST', '/gestion/ediciones/' + edicionTrineo + '/catalogo', { nombre: 'Prueba B', unidad: 'piezas', cantidad_minima: 2 }, 201)).id_opcion;
+    for (const usuario of [1, 11, 12]) cartasQa[usuario] = (await enviar(2, 'POST', '/gestion/ediciones/' + edicionTrineo + '/cartas', { nombre: 'Niño QA ' + usuario, edad: 7, deseo: 'Un juguete de prueba' }, 201)).id_carta;
     await publicar(2, 'ediciones', edicionTrineo);
     edicionMisiones = (await enviar(22, 'POST', '/gestion/actividades/' + misiones + '/ediciones', datosEdicion('misiones'), 201)).id_edicion;
     await publicar(22, 'ediciones', edicionMisiones);
@@ -279,14 +341,14 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
 
   test('doble envío concurrente conserva una inscripción y sus aportaciones', async () => {
     const ruta = '/ediciones/' + edicionTrineo + '/registro';
-    const resultados = await Promise.all([enviar(11, 'PUT', ruta, inscripcion()), enviar(11, 'PUT', ruta, inscripcion())]);
+    const resultados = await Promise.all([enviar(11, 'PUT', ruta, inscripcion(true, 11)), enviar(11, 'PUT', ruta, inscripcion(true, 11))]);
     assert.equal(resultados[0].id_registro, resultados[1].id_registro);
     assert.equal((await db.query('SELECT COUNT(*)::int AS total FROM actividades_registros WHERE id_usuario = 11 AND id_edicion = $1', [edicionTrineo])).rows[0].total, 1);
   });
 
   test('los mínimos nuevos no alteran compromisos anteriores', async () => {
     await enviar(4, 'PUT', '/gestion/catalogo/' + opcion1, { cantidad_minima: 3, nombre: 'Prueba A actualizada' });
-    const registro = await enviar(11, 'PUT', '/ediciones/' + edicionTrineo + '/registro', inscripcion());
+    const registro = await enviar(11, 'PUT', '/ediciones/' + edicionTrineo + '/registro', inscripcion(true, 11));
     assert.equal(Number(registro.aportaciones.find((item) => item.id_opcion === opcion1).cantidad_minima), 1);
     await enviar(12, 'PUT', '/ediciones/' + edicionTrineo + '/registro', inscripcion(), 400);
   });
@@ -317,10 +379,19 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
   test('reacciones únicas por alumno: cambiar y retirar actualiza los totales', async () => {
     const ruta = '/ediciones/' + edicionTrineo + '/reaccion';
     await enviar(null, 'PUT', ruta, { reaccion: 'love' }, 401);
-    await enviar(1, 'PUT', ruta, { reaccion: 'love' });
+    const repetidas = await Promise.all([1, 2, 3].map(() => enviar(1, 'PUT', ruta, { reaccion: 'love' })));
+    assert.ok(repetidas.every((respuesta) => respuesta.reaccion === 'love' && respuesta.totales.length === 1 && respuesta.totales[0].total === 1));
+    assert.equal((await enviar(1, 'GET', '/ediciones/' + edicionTrineo + '/mi-registro')).reaccion, 'love');
+    await enviar(1, 'PUT', '/clubes/101/reaccion', { reaccion: 'like' });
+    await enviar(11, 'PUT', ruta, { reaccion: 'love' });
+    assert.equal((await enviar(1, 'PUT', ruta, { reaccion: 'love' })).totales[0].total, 2);
+    await enviar(11, 'PUT', ruta, { reaccion: null });
     const cambio = await enviar(1, 'PUT', ruta, { reaccion: 'clap' });
     assert.deepEqual(cambio.totales, [{ reaccion: 'clap', total: 1 }]);
+    assert.equal((await enviar(1, 'GET', '/clubes/101/mi-reaccion')).reaccion, 'like');
     assert.deepEqual((await enviar(1, 'PUT', ruta, { reaccion: null })).totales, []);
+    assert.equal((await enviar(1, 'GET', '/ediciones/' + edicionTrineo + '/mi-registro')).reaccion, null);
+    await enviar(1, 'PUT', '/clubes/101/reaccion', { reaccion: null });
   });
 
   test('autoriza antes de subir fotos y solo publica las aprobadas', async () => {
@@ -460,5 +531,45 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     assert.equal((await enviar(null, 'GET', '/detalle/trineo-de-los-suenos')).ediciones.length, 0);
     assert.equal((await enviar(1, 'GET', '/mis-registros')).length, 2);
     await enviar(11, 'PUT', '/ediciones/' + edicionTrineo + '/reaccion', { reaccion: 'love' }, 404);
+  });
+
+  test('la ubicación se guarda, se edita mediante propuesta y se publica después de aprobarla', async () => {
+    const actividad = await enviar(7, 'POST', '/gestion/actividades', { nombre: 'Actividad con mapa QA', descripcion: 'Ubicación de prueba', categoria: 'Servicio' }, 201);
+    await enviar(7, 'PUT', '/gestion/actividades/' + actividad.id_actividad + '/responsable', { id_responsable: 2 });
+    await publicar(2, 'actividades', actividad.id_actividad);
+    const original = 'https://www.google.com/maps/search/?api=1&query=19.83,-90.53';
+    const compartido = 'https://maps.app.goo.gl/puntoDePrueba';
+    const datos = { ...datosEdicion('general'), requiere_registro: false, ubicacion_maps: original };
+    const edicion = await enviar(2, 'POST', '/gestion/actividades/' + actividad.id_actividad + '/ediciones', datos, 201);
+    const ruta = '/gestion/ediciones/' + edicion.id_edicion;
+    const publica = async () => (await enviar(null, 'GET', '/detalle/' + actividad.slug)).ediciones[0];
+    assert.equal(edicion.ubicacion_maps, original);
+    assert.equal((await enviar(2, 'GET', ruta)).edicion.ubicacion_maps, original);
+    await publicar(2, 'ediciones', edicion.id_edicion);
+    assert.equal((await publica()).ubicacion_maps, original);
+    await enviar(2, 'PUT', ruta, { ...datos, ubicacion_maps: compartido });
+    assert.equal((await publica()).ubicacion_maps, original);
+    assert.equal((await enviar(2, 'GET', ruta)).edicion.propuesta.ubicacion_maps, compartido);
+    await publicar(2, 'ediciones', edicion.id_edicion);
+    assert.equal((await publica()).ubicacion_maps, compartido);
+    await enviar(2, 'PUT', ruta, { ...datos, ubicacion_maps: 'javascript:alert(1)' }, 400);
+    assert.equal((await publica()).ubicacion_maps, compartido);
+    await enviar(2, 'PUT', ruta, { ...datos, ubicacion_maps: '' });
+    await publicar(2, 'ediciones', edicion.id_edicion);
+    assert.equal((await publica()).ubicacion_maps, '');
+  });
+
+  test('la migración de ubicación es repetible y conserva los datos de las ediciones', async () => {
+    const cliente = new pg.Client({ connectionString });
+    await cliente.connect();
+    try {
+      await cliente.query("CREATE TEMP TABLE actividades_ediciones (id_edicion INT PRIMARY KEY, lugar TEXT); INSERT INTO actividades_ediciones VALUES (1, 'Punto anterior')");
+      const migracion = await readFile(new URL('../migrations/migrate-actividades-ubicacion.sql', import.meta.url), 'utf8');
+      await cliente.query(migracion);
+      assert.deepEqual((await cliente.query('SELECT * FROM actividades_ediciones')).rows, [{ id_edicion: 1, lugar: 'Punto anterior', ubicacion_maps: '' }]);
+      await cliente.query("UPDATE actividades_ediciones SET ubicacion_maps='https://maps.app.goo.gl/prueba'");
+      await cliente.query(migracion);
+      assert.equal((await cliente.query('SELECT ubicacion_maps FROM actividades_ediciones')).rows[0].ubicacion_maps, 'https://maps.app.goo.gl/prueba');
+    } finally { await cliente.end(); }
   });
 });

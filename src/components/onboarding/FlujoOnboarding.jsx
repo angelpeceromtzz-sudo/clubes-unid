@@ -3,7 +3,7 @@
    está montado (no se guardan en el navegador) y se envían con un único PUT
    al terminar el paso 5. Lo montará la fase D tras el inicio de sesión. */
 import { useEffect, useRef, useState } from 'react';
-import { api } from '../../services/api';
+import { api, request } from '../../services/api';
 import { useCatalogoIntereses } from '../../hooks/useCatalogoIntereses';
 import { Alerta } from '../ui/Alerta';
 import { BotonAccion } from '../ui/BotonAccion';
@@ -14,6 +14,10 @@ import { PasoCategorias } from './PasoCategorias';
 import { PasoActividades } from './PasoActividades';
 import { PasoMotivaciones } from './PasoMotivaciones';
 import { PasoGenero } from './PasoGenero';
+import { PasoLicenciatura } from './PasoLicenciatura';
+import { PasoFechaNacimiento } from './PasoFechaNacimiento';
+import { PasoTelefono } from './PasoTelefono';
+import { PasoDisposicion } from './PasoDisposicion';
 import { PasoCorreo } from './PasoCorreo';
 import { PasoConfirmacion } from './PasoConfirmacion';
 import { TOTAL_PASOS_ONBOARDING } from '../../constants/onboarding';
@@ -88,6 +92,19 @@ export function FlujoOnboarding({ onCompletar }) {
     setError('');
     try {
       const datos = await api.guardarPreferenciasOnboarding(construirPayload(respuestas, 'onboarding'));
+      // Guarda datos académicos (licenciatura y fecha de nacimiento) en el perfil del usuario.
+      try {
+        await request('/auth/me/perfil-academico', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            id_licenciatura: respuestas.licenciatura ?? null,
+            fecha_nacimiento: respuestas.fechaNacimiento ?? null,
+          }),
+        });
+      } catch (errAcad) {
+        // No bloquea el onboarding si falla el guardado académico.
+        console.warn('No se pudo guardar el perfil académico:', errAcad?.message);
+      }
       setResumen(construirResumen(datos));
       setPaso('confirmacion');
     } catch (err) {
@@ -115,7 +132,11 @@ export function FlujoOnboarding({ onCompletar }) {
       else if (paso === 2) setAviso('Selecciona al menos una actividad o propón una nueva.');
       else if (paso === 3) setAviso('Selecciona al menos una motivación para continuar.');
       else if (paso === 4) setAviso('Selecciona una opción para continuar.');
-      else if (paso === 5) setAviso('Indica si quieres recibir correos opcionales.');
+      else if (paso === 5) setAviso('Selecciona tu licenciatura para continuar.');
+      else if (paso === 6) setAviso('Indica tu fecha de nacimiento para continuar.');
+      else if (paso === 7) setAviso(''); // teléfono opcional, no bloquea
+      else if (paso === 8) setAviso('Indica tu disposición para continuar.');
+      else if (paso === 9) setAviso('Indica si quieres recibir correos opcionales.');
       return;
     }
     if (paso === TOTAL_PASOS_ONBOARDING) {
@@ -207,6 +228,34 @@ export function FlujoOnboarding({ onCompletar }) {
       />
     );
   } else if (paso === 5) {
+    contenido = (
+      <PasoLicenciatura
+        valor={respuestas.licenciatura}
+        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, licenciatura: valor }))}
+      />
+    );
+  } else if (paso === 6) {
+    contenido = (
+      <PasoFechaNacimiento
+        valor={respuestas.fechaNacimiento}
+        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, fechaNacimiento: valor }))}
+      />
+    );
+  } else if (paso === 7) {
+    contenido = (
+      <PasoTelefono
+        valor={respuestas.telefono}
+        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, telefono: valor }))}
+      />
+    );
+  } else if (paso === 8) {
+    contenido = (
+      <PasoDisposicion
+        valor={respuestas.disposicion}
+        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, disposicion: valor }))}
+      />
+    );
+  } else if (paso === 9) {
     contenido = (
       <PasoCorreo
         correo={respuestas.correo}

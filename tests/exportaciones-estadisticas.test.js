@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { crearReportePDF, describirFiltros, nombreArchivoReporte, TITULOS_REPORTE } from '../src/components/ejecutivo/exportaciones.utils.js';
+import { crearReportePDF, crearReporteCompletoPDF, describirFiltros, nombreArchivoReporte, TITULOS_REPORTE } from '../src/components/ejecutivo/exportaciones.utils.js';
 import { generarPDF } from '../src/components/ejecutivo/exportarPDF.js';
 
 const datos = {
@@ -72,4 +72,41 @@ test('el PDF identifica las muestras abiertas y conserva la base de preguntas m�
   const escala = preparar({ tipo: 'escala', respuestas: 4, promedio: 3.5, distribucion: [{ valor: 3, conteo: 2, porcentaje: 50 }, { valor: 4, conteo: 2, porcentaje: 50 }] });
   assert.deepEqual(escala.indicadores.at(-1), ['Promedio de escala', '3.5']);
   assert.deepEqual(escala.tablas[1].filas[0], ['3', '2', '50.0%']);
+});
+
+test('el PDF completo reúne todos los bloques en orden, con sus filtros y una sola fecha', () => {
+  const copia = structuredClone(datos);
+  const fecha = new Date('2026-11-04T02:00:00Z');
+  const reporte = crearReporteCompletoPDF(datos, fecha);
+  assert.deepEqual(reporte.secciones.map((seccion) => seccion.titulo), Object.values(TITULOS_REPORTE));
+  assert.ok(reporte.secciones.every((seccion) => seccion.generadoEn === reporte.generadoEn));
+  assert.deepEqual(reporte.secciones[1].filtros, ['Club: Robótica & diseño']);
+  assert.deepEqual(reporte.secciones[2].filtros, ['Club: Robótica & diseño', 'Periodo: Otoño 2026']);
+  assert.deepEqual(reporte.secciones[3].filtros, ['Licenciatura: Ingeniería']);
+  assert.deepEqual(reporte.secciones[4].filtros, ['Club: Robótica & diseño', 'Periodo: Otoño 2026', 'Licenciatura: Ingeniería', 'Estado: Pendiente']);
+  assert.deepEqual(datos, copia);
+  assert.equal(nombreArchivoReporte('pdf', undefined, fecha), 'clubs-unid_estadisticas_completo_2026-11-03.pdf');
+  assert.ok(generarPDF(reporte).getNumberOfPages() >= 5);
+});
+
+test('el reporte completo incluye todas las preguntas cargadas aunque solo una esté visible', () => {
+  const preguntas = [
+    { id_pregunta: 1, texto: 'Comentarios', tipo: 'texto_largo', total_textos: 1, textos: [{ texto: 'Una sugerencia' }] },
+    { id_pregunta: 2, texto: 'Satisfacción', tipo: 'escala', respuestas: 2, promedio: 4.5, distribucion: [{ valor: 4, conteo: 1, porcentaje: 50 }, { valor: 5, conteo: 1, porcentaje: 50 }] },
+    { id_pregunta: 3, texto: 'Intereses', tipo: 'opcion_multiple', respondientes: 2, opciones: [{ texto: 'Deporte', conteo: 2, porcentaje: 100 }] },
+  ];
+  const reporte = crearReporteCompletoPDF({ ...datos, preguntaSeleccionada: '1', encuestaSeleccionada: '4', listaEncuestas: [{ id_encuesta: 4, titulo: 'Encuesta general' }], resultadosEncuesta: { preguntas } });
+  const encuestas = reporte.secciones[3];
+  assert.deepEqual(encuestas.tablas.slice(1).map((tabla) => tabla.titulo), preguntas.map((pregunta) => pregunta.texto));
+  assert.ok(encuestas.filtros.includes('Encuesta: Encuesta general'));
+  assert.match(encuestas.tablas[2].descripcion, /Promedio de escala: 4.5/);
+  assert.match(encuestas.tablas[3].descripcion, /2 respondientes/);
+  assert.match(encuestas.nota, /todas las preguntas/);
+});
+
+test('el PDF completo conserva todos los bloques cuando no hay datos', () => {
+  const reporte = crearReporteCompletoPDF({ filtros: {} });
+  assert.equal(reporte.secciones.length, 5);
+  assert.ok(reporte.secciones.every((seccion) => seccion.tablas.length > 0));
+  assert.equal(generarPDF(reporte).getNumberOfPages(), 5);
 });
