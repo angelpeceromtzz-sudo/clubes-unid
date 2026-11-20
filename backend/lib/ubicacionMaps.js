@@ -1,4 +1,5 @@
 const MENSAJE_ENLACE = 'Pega un enlace válido de Google Maps u OpenStreetMap, o deja el mapa vacío.';
+const HOSTS_OPENSTREETMAP = new Set(['openstreetmap.org', 'www.openstreetmap.org']);
 
 export function normalizarEnlaceMapa(valor) {
   if (valor == null || valor === '') return '';
@@ -13,7 +14,7 @@ export function normalizarEnlaceMapa(valor) {
     && (host.startsWith('maps.') || /^\/maps(?:\/|$)/.test(url.pathname));
   const compartido = (host === 'maps.app.goo.gl' && url.pathname.length > 1)
     || (host === 'goo.gl' && /^\/maps\/.+/.test(url.pathname));
-  const osm = ['openstreetmap.org', 'www.openstreetmap.org'].includes(host);
+  const osm = HOSTS_OPENSTREETMAP.has(host);
   if (url.protocol !== 'https:' || url.username || url.password || url.port || !(google || compartido || osm)) throw fallo();
   return enlace;
 }
@@ -29,7 +30,7 @@ export function coordenadasEnlaceMapa(valor) {
   try { enlace = normalizarEnlaceMapa(valor); } catch { return null; }
   if (!enlace) return null;
   const url = new URL(enlace);
-  if (url.hostname.endsWith('openstreetmap.org')) return parCoordenadas(url.searchParams.get('mlat'), url.searchParams.get('mlon'));
+  if (HOSTS_OPENSTREETMAP.has(url.hostname)) return parCoordenadas(url.searchParams.get('mlat'), url.searchParams.get('mlon'));
   // En los enlaces de lugares, @ suele ser el centro de la cámara, no el destino.
   const punto = enlace.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
   if (punto) return parCoordenadas(punto[1], punto[2]);

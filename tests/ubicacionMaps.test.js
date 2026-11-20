@@ -32,6 +32,25 @@ test('rechaza enlaces ajenos, credenciales, protocolos y estructuras no válidas
   assert.match(pendientes[0][0], /enlace válido/);
 });
 
+test('OpenStreetMap exige el dominio completo tanto para enlaces como para coordenadas', () => {
+  for (const host of ['openstreetmap.org', 'www.openstreetmap.org']) {
+    const enlace = 'https://' + host + '/?mlat=19.83&mlon=-90.53';
+    assert.equal(normalizarEnlaceMapa(enlace), enlace);
+    assert.deepEqual(coordenadasEnlaceMapa(enlace), [19.83, -90.53]);
+  }
+  for (const host of [
+    'evilopenstreetmap.org', 'example.testopenstreetmap.org', 'evil.openstreetmap.org',
+    'openstreetmap.org.example.test', 'www.openstreetmap.org.example.test',
+  ]) {
+    const enlace = 'https://' + host + '/?mlat=19.83&mlon=-90.53';
+    assert.throws(() => normalizarEnlaceMapa(enlace), { status: 400 });
+    assert.equal(coordenadasEnlaceMapa(enlace), null);
+  }
+  const credenciales = 'https://openstreetmap.org@example.test/?mlat=19.83&mlon=-90.53';
+  assert.throws(() => normalizarEnlaceMapa(credenciales), { status: 400 });
+  assert.equal(coordenadasEnlaceMapa(credenciales), null);
+});
+
 test('el punto conserva sus coordenadas y el destino tiene prioridad sobre el centro de cámara', () => {
   const enlace = enlaceMapaCoordenadas(19.832561328, -90.556675538);
   assert.deepEqual(coordenadasEnlaceMapa(enlace), [19.832561, -90.556676]);

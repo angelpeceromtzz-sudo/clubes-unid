@@ -66,6 +66,24 @@ test('el invitado proporciona contacto y su enlace privado no admite otro origen
   assert.equal(memoria.size, 2);
 });
 
+test('el correo del invitado conserva normalización, subdominios y límite de longitud', () => {
+  const contacto = { nombre_completo: 'Invitado QA', telefono: '9811234567' };
+  for (const correo of ['QA+Misiones@Sub.Example.Test', 'a'.repeat(241) + '@example.test']) {
+    assert.equal(validarContactoInvitado({ ...contacto, correo: ' ' + correo + ' ' }).correo, correo.toLowerCase());
+  }
+  assert.throws(() => validarContactoInvitado({ ...contacto, correo: 'a'.repeat(242) + '@example.test' }), { status: 400 });
+});
+
+test('el correo del invitado rechaza separadores inválidos, espacios y entradas repetitivas', () => {
+  const contacto = { nombre_completo: 'Invitado QA', telefono: '9811234567' };
+  for (const correo of [
+    'sin-arroba.example.test', '@example.test', 'qa@', 'qa@@example.test', 'qa@example@test.test',
+    'qa@example', 'qa@.test', 'qa@example.', 'qa @example.test', 'qa@exam ple.test',
+    'qa@example.test\ntexto', 'qa@exam\u00a0ple.test',
+    'qa@' + '!.'.repeat(120) + '!\nx', 'qa@' + '!.'.repeat(100000) + '!\nx',
+  ]) assert.throws(() => validarContactoInvitado({ ...contacto, correo }), { status: 400 }, correo.slice(0, 60));
+});
+
 const configuracionMega = () => configuracionMisionesInicial();
 const camposMega = () => normalizarEdicionActividad({ ...edicion(), configuracion_misiones: configuracionMega(), campos_registro: camposMisiones(configuracionMega()) }, 'misiones').campos_registro;
 const respuestasMega = () => ({

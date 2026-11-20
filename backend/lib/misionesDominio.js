@@ -157,7 +157,12 @@ export function validarContactoInvitado(datos) {
   const nombre_completo = texto(datos.nombre_completo, 150, 'tu nombre completo', true);
   const correo = texto(datos.correo, 254, 'tu correo', true).toLowerCase();
   const telefono = texto(datos.telefono, 40, 'tu teléfono', true);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) throw fallo('Escribe un correo válido');
+  // Buscar los separadores evita el retroceso entre grupos de una expresión regular.
+  const arroba = correo.indexOf('@');
+  const dominio = correo.slice(arroba + 1);
+  const punto = dominio.indexOf('.', 1);
+  if (arroba < 1 || correo.indexOf('@', arroba + 1) !== -1 || /\s/.test(correo)
+    || punto < 1 || punto >= dominio.length - 1) throw fallo('Escribe un correo válido');
   if (!/^[+\d\s().-]{7,40}$/.test(telefono) || telefono.replace(/\D/g, '').length < 7) throw fallo('Escribe un teléfono válido');
   return { nombre_completo, correo, telefono };
 }
