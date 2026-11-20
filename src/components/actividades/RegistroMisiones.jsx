@@ -44,10 +44,10 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   const [cancelando, setCancelando] = useState(false);
   const config = registro?.misiones_snapshot || edicion.configuracion_misiones;
   const mega = esFormatoMegamisiones(config);
-  const secciones = gruposPreguntasMisiones(config);
   const etiquetaCampo = mega ? 'block space-y-2 text-sm font-semibold ' + tema.title : labelCls;
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const campos = (registro?.estado === 'confirmado' ? registro.formulario_snapshot : edicion.campos_registro).filter((campo) => !invitado || campo.tipo !== 'licenciatura');
+  const secciones = gruposPreguntasMisiones(config, campos);
   const abierta = edicion.estado_registro === 'abierta';
   const responder = (clave, valor) => setRespuestas((actual) => ({ ...actual, [clave]: valor }));
   let pedido;
@@ -135,7 +135,7 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
         <div className="grid gap-4 sm:grid-cols-2">{invitado ? [['nombre_completo', 'Nombre completo', 'text'], ['correo', 'Correo electrónico', 'email'], ['telefono', 'Teléfono', 'tel']].map(([clave, etiqueta, tipo]) => contactoCampo(clave, etiqueta, tipo)) : identificacionUnid}</div>
       </section>}
       {secciones.map((grupo, indice) => <section aria-label={grupo.titulo} className="space-y-4 border-t border-slate-400/25 pt-5" key={grupo.titulo}>
-        <header className="space-y-1">{mega && <p className="text-xs font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">MEGAMISIONES · {indice + 1} de 5</p>}<h4 className="text-lg font-bold">{grupo.titulo}</h4>{mega && <p className={'text-sm ' + tema.subtitle}>{grupo.descripcion}</p>}</header>
+        <header className="space-y-1">{mega && <p className="text-xs font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">MEGAMISIONES · {indice + 1} de {secciones.length}</p>}<h4 className="text-lg font-bold">{grupo.titulo}</h4>{mega && <p className={'text-sm ' + tema.subtitle}>{grupo.descripcion}</p>}</header>
         {mega && grupo.id === 'contacto' && <>
           <p className={'text-sm leading-relaxed ' + tema.subtitle}>Tus datos se usarán para tu inscripción y la organización de la misión. El equipo puede contactarte por correo o WhatsApp con información de esta actividad.</p>
           {invitado ? contactoCampo('correo', 'Correo electrónico', 'email') : <label className={etiquetaCampo}>Correo institucional<input className={inputCls} type="email" value={usuario?.correo_institucional || registro?.correo || ''} readOnly/><span className={'block text-xs font-normal ' + tema.subtitle}>Usamos el correo de tu cuenta UNID.</span></label>}

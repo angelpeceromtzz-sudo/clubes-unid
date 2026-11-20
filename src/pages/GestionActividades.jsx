@@ -12,16 +12,17 @@ import { BotonAccion } from '../components/ui/BotonAccion';
 import { Spinner } from '../components/ui/Spinner';
 import { GestionFotosClub } from '../components/actividades/GestionCatalogoExtra';
 import { ROLES_CREAN_ACTIVIDADES } from '../../shared/actividades';
+import { filtrarCatalogoGestion, seleccionarEdicionGestion, tieneRevisionPendiente } from '../utils/catalogoGestion';
 
-export function GestionActividades({onLoginClick,integrada=false,tipoFijo,soloDetalle=false}) {
+export function GestionActividades({onLoginClick,integrada=false,tipoFijo,soloDetalle=false,estadoInicial='todos'}) {
   const {usuario,authReady}=useAutenticacion();
-  const {datos,error,cargando,recargar}=useActividadRecurso(usuario ? '/gestion' : null,usuario?.id_usuario || usuario?.id);
+  const {datos,error,cargando,recargar}=useActividadRecurso(usuario ? '/gestion' : null,usuario?.id_usuario || usuario?.id,true);
   const {tema,cardCls,inputCls,labelCls}=useTheme();
   const [parametros]=useSearchParams();
   const [seleccion,setSeleccion]=useState(Number(parametros.get('registro')) || null);
   const [seleccionEdicion,setSeleccionEdicion]=useState(null);
   const [filtroTipo,setFiltroTipo]=useState('todos');
-  const [filtroEstado,setFiltroEstado]=useState('todos');
+  const [filtroEstado,setFiltroEstado]=useState(estadoInicial);
   const [creando,setCreando]=useState(!soloDetalle && parametros.get('crear')==='1');
   const puedeCrearActividad=ROLES_CREAN_ACTIVIDADES.includes(usuario?.id_rol) && Boolean(datos?.puede_crear);
   const mostrarCreacion=creando && puedeCrearActividad;
@@ -29,10 +30,10 @@ export function GestionActividades({onLoginClick,integrada=false,tipoFijo,soloDe
   const [pendiente,setPendiente]=useState(false);
   const [errorOperacion,setErrorOperacion]=useState('');
   const tipoVisible=tipoFijo || filtroTipo;
-  const visibles=(datos?.actividades || []).filter((item)=>(tipoVisible==='todos' || item.tipo===tipoVisible) && (filtroEstado==='todos' || (item.estado_propuesta || item.estado)===filtroEstado));
+  const visibles=filtrarCatalogoGestion(datos?.actividades || [],datos?.ediciones || [],tipoVisible,filtroEstado);
   const actividad=visibles.find((item)=>item.id_actividad===seleccion) || (!soloDetalle && visibles[0]);
   const ediciones=(datos?.ediciones || []).filter((item)=>item.id_actividad===actividad?.id_actividad);
-  const edicion=ediciones.find((item)=>item.id_edicion===seleccionEdicion) || ediciones[0];
+  const edicion=seleccionarEdicionGestion(ediciones,seleccionEdicion,filtroEstado==='pendiente');
   const Contenedor=integrada ? 'section' : 'main';
   const Titulo=integrada ? 'h2' : 'h1';
   async function operar(trabajo) {
@@ -50,8 +51,11 @@ export function GestionActividades({onLoginClick,integrada=false,tipoFijo,soloDe
         <div className="flex min-w-0 flex-col gap-2 sm:w-72 lg:w-80"><label htmlFor="filtro-publicacion-catalogo" className={labelCls+' !mb-0'}>Filtrar por publicación</label><select id="filtro-publicacion-catalogo" aria-label="Filtrar por publicación" className={inputCls+' h-11'} value={filtroEstado} onChange={(evento)=>{setFiltroEstado(evento.target.value);elegir(null);}}><option value="todos">Todos los estados</option><option value="borrador">Borrador</option><option value="pendiente">En revisión</option><option value="publicada">Publicada</option><option value="rechazada">Con observaciones</option><option value="archivada">Archivada</option></select></div>
       </div>}
       {errorOperacion && <p role="alert" className="text-red-600 dark:text-red-400">{errorOperacion}</p>}
-      {mostrarCreacion ? <section className={'max-w-3xl rounded-2xl border p-6 space-y-5 '+cardCls}><h3 className="text-xl font-bold">Información general para Oferta</h3><p className="text-sm">Primero crea la descripción. Después podrás agregar ediciones con sus fechas e inscripciones.</p><FormularioActividad tipoInicial={datos.puede_crear_club && tipoFijo!=='actividad' && parametros.get('tipo')==='club' ? 'club' : 'actividad'} puedeCrearClub={datos.puede_crear_club && tipoFijo!=='actividad'} onCancelar={()=>setCreando(false)} onGuardado={(id)=>{elegir(id);setCreando(false);setFiltroTipo('todos');setFiltroEstado('todos');recargar();}}/></section> : !actividad ? <p className={tema.subtitle}>No hay registros asignados que coincidan con los filtros.</p> : <div className={editor || soloDetalle ? 'max-w-3xl mx-auto w-full' : 'grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)]'}>
-        {!editor && !soloDetalle && <aside aria-label="Seleccionar actividad" className="flex min-w-0 gap-3 overflow-x-auto pb-2 xl:block xl:space-y-3">{visibles.map((item)=><button type="button" key={item.id_actividad} aria-pressed={item.id_actividad===actividad.id_actividad} onClick={()=>elegir(item.id_actividad)} className={'block w-52 shrink-0 rounded-xl border p-4 text-left xl:w-full '+(item.id_actividad===actividad.id_actividad ? 'border-amber-400 bg-amber-400/10' : cardCls)}><span className="block text-xs uppercase mb-1">{item.tipo==='club' ? 'Club' : 'Actividad'}</span><span className="block font-bold mb-2">{item.nombre}</span><EstadoActividad estado={item.estado_propuesta || item.estado}/></button>)}</aside>}
+      {mostrarCreacion ? <section className={'max-w-3xl rounded-2xl border p-6 space-y-5 '+cardCls}><h3 className="text-xl font-bold">Información general para Oferta</h3><p className="text-sm">Primero crea la descripción. Después podrás agregar ediciones con sus fechas e inscripciones.</p><FormularioActividad tipoInicial={datos.puede_crear_club && tipoFijo!=='actividad' && parametros.get('tipo')==='club' ? 'club' : 'actividad'} puedeCrearClub={datos.puede_crear_club && tipoFijo!=='actividad'} onCancelar={()=>setCreando(false)} onGuardado={(id)=>{elegir(id);setCreando(false);setFiltroTipo('todos');setFiltroEstado('todos');recargar();}}/></section> : !actividad ? <p className={tema.subtitle}>{filtroEstado==='pendiente' ? 'No hay publicaciones ni ediciones pendientes de revisión.' : 'No hay registros que coincidan con los filtros.'}</p> : <div className={editor || soloDetalle ? 'max-w-3xl mx-auto w-full' : 'grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)]'}>
+        {!editor && !soloDetalle && <aside aria-label="Seleccionar actividad" className="flex min-w-0 gap-3 overflow-x-auto pb-2 xl:block xl:space-y-3">{visibles.map((item)=>{
+          const pendientes=(datos.ediciones || []).filter((candidata)=>candidata.id_actividad===item.id_actividad && tieneRevisionPendiente(candidata)).length;
+          return <button type="button" key={item.id_actividad} aria-pressed={item.id_actividad===actividad.id_actividad} onClick={()=>elegir(item.id_actividad)} className={'block w-52 shrink-0 rounded-xl border p-4 text-left xl:w-full '+(item.id_actividad===actividad.id_actividad ? 'border-amber-400 bg-amber-400/10' : cardCls)}><span className="block text-xs uppercase mb-1">{item.tipo==='club' ? 'Club' : 'Actividad'}</span><span className="block font-bold mb-2">{item.nombre}</span><EstadoActividad estado={item.estado_propuesta || item.estado}/>{pendientes>0 && <span className="mt-2 block text-xs font-semibold text-amber-700 dark:text-amber-300">{pendientes} {pendientes===1 ? 'edición por revisar' : 'ediciones por revisar'}</span>}</button>;
+        })}</aside>}
         <div className="min-w-0 space-y-6">
           {editor ? <section className={'rounded-2xl border p-5 sm:p-7 space-y-5 '+cardCls}><h3 className="text-2xl font-bold">{editor==='nueva' ? 'Nueva edición' : 'Editar edición'}</h3><FormularioEdicionActividad key={actividad.id_actividad+':'+(editor==='nueva' ? 'nueva' : edicion.id_edicion)} actividad={actividad} edicion={editor==='nueva' ? null : edicion} onCancelar={()=>setEditor(null)} onGuardado={(id)=>{setSeleccionEdicion(id);setEditor(null);recargar();}}/></section> : <>
             <DetalleRevisionActividad key={actividad.id_actividad+':'+actividad.actualizado_en} actividad={actividad} puedeAprobar={datos.puede_aprobar} puedeAsignar={datos.puede_asignar && (actividad.tipo!=='club' || datos.puede_crear_club)} pendiente={pendiente} operar={operar} onActualizar={recargar}/>

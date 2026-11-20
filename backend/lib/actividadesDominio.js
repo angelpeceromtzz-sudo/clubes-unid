@@ -159,6 +159,7 @@ export function normalizarCamposActividad(valor, plantilla = 'general', configur
   if (plantilla === 'misiones' && configuracion?.version === 2) return validarCamposMisiones(campos, configuracion);
   for (const obligatorio of camposPlantillaActividad(plantilla)) {
     const campo = campos.find((item) => item.clave === obligatorio.clave);
+    if (!campo && plantilla === 'misiones') continue;
     if (!campo || campo.tipo !== obligatorio.tipo || campo.obligatorio !== obligatorio.obligatorio) throw errorActividad('Esta actividad requiere edad y talla obligatorias, y licenciatura opcional');
     if (campo.clave === 'edad') {
       campo.minimo = 1;

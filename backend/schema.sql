@@ -1529,6 +1529,19 @@ GROUP BY cl.id_club;
 
 -- Este bloque forma parte del esquema completo; no requiere ejecutar archivos adicionales.
 -- También incorpora las versiones anteriores del módulo conservando sus correspondencias e historial.
+-- Inventario actual: 13 tablas físicas del módulo.
+--   Ediciones y registros: actividades_ediciones, actividades_registros.
+--   Aportaciones: actividades_aportes_catalogo, actividades_aportaciones.
+--   Publicaciones: publicaciones_oferta, publicaciones_imagenes, reacciones_catalogo.
+--   Migración: migraciones_catalogo.
+--   Asistencia: actividades_asistencia_accesos, actividades_asistencias.
+--   Misiones: misiones_documentos.
+--   Trineo: actividades_cartas, actividades_cartas_reservas.
+-- Se reutilizan clubes y actividad_clubes. Los nombres anteriores actividades,
+-- actividades_fotos, actividades_reacciones, actividades_historial y
+-- actividades_legado_clubes se conservan como vistas sobre el modelo compartido.
+-- Las tablas de intereses y actividades_propuestas pertenecen al onboarding,
+-- definido después de este bloque.
 
 LOCK TABLE clubes IN SHARE ROW EXCLUSIVE MODE;
 DROP VIEW IF EXISTS clubes_con_estado;
@@ -1646,6 +1659,8 @@ CREATE TABLE IF NOT EXISTS actividades_ediciones (
   hora_inicio VARCHAR(5) NOT NULL DEFAULT '',
   requiere_registro BOOLEAN NOT NULL DEFAULT FALSE,
   campos_registro JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(campos_registro) = 'array'),
+  configuracion_misiones JSONB,
+  cartas_habilitadas BOOLEAN NOT NULL DEFAULT FALSE,
   requiere_aportacion BOOLEAN NOT NULL DEFAULT FALSE,
   inscripcion_desde DATE,
   inscripcion_hasta DATE,
@@ -1749,9 +1764,18 @@ CREATE TABLE IF NOT EXISTS actividades_aportes_catalogo (
 CREATE TABLE IF NOT EXISTS actividades_registros (
   id_registro SERIAL PRIMARY KEY,
   id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
-  id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+  id_usuario INT REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
   nombre_completo VARCHAR(150) NOT NULL,
-  matricula VARCHAR(50) NOT NULL,
+  matricula VARCHAR(50),
+  tipo_participante VARCHAR(10) NOT NULL DEFAULT 'unid',
+  folio UUID,
+  correo VARCHAR(254),
+  telefono VARCHAR(40),
+  invitado_token_hash VARCHAR(64),
+  pedido JSONB,
+  misiones_snapshot JSONB,
+  -- La FK se agrega después de crear misiones_documentos (referencia circular).
+  codigo_firmado_id UUID,
   respuestas JSONB NOT NULL DEFAULT '{}'::jsonb,
   formulario_snapshot JSONB NOT NULL DEFAULT '[]'::jsonb,
   estado VARCHAR(30) NOT NULL DEFAULT 'confirmado' CHECK (estado IN ('confirmado','cancelado','pendiente_completar')),
@@ -2063,7 +2087,168 @@ CREATE TABLE IF NOT EXISTS actividades_asistencias (
     CHECK (origen <> 'manual' OR motivo_correccion IS NOT NULL)
 );
 
-COMMIT;
+-- MISIONES: registro v2 para nuevas ediciones
+
+ALTER TABLE actividades_ediciones ADD COLUMN IF NOT EXISTS configuracion_misiones JSONB;
+ALTER TABLE actividades_ediciones DROP CONSTRAINT IF EXISTS chk_configuracion_misiones;
+ALTER TABLE actividades_ediciones ADD CONSTRAINT chk_configuracion_misiones CHECK (
+  configuracion_misiones IS NULL OR
+  ((jsonb_typeof(configuracion_misiones)='object' AND configuracion_misiones->>'version'='2'
+    AND (NOT (configuracion_misiones ? 'formato') OR configuracion_misiones->>'formato'='megamisiones-2026')) IS TRUE)
+);
+
+ALTER TABLE actividades_registros ALTER COLUMN id_usuario DROP NOT NULL;
+ALTER TABLE actividades_registros ALTER COLUMN matricula DROP NOT NULL;
+ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS tipo_participante VARCHAR(10) NOT NULL DEFAULT 'unid';
+ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS folio UUID;
+ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS correo VARCHAR(254);
+ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS telefono VARCHAR(40);
+ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS invitado_token_hash VARCHAR(64);
+ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS pedido JSONB;
+ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS misiones_snapshot JSONB;
+ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS codigo_firmado_id UUID;
+ALTER TABLE actividades_registros DROP CONSTRAINT IF EXISTS chk_registro_identidad;
+ALTER TABLE actividades_registros ADD CONSTRAINT chk_registro_identidad CHECK (
+  (tipo_participante='unid' AND id_usuario IS NOT NULL AND matricula IS NOT NULL AND folio IS NULL AND invitado_token_hash IS NULL)
+  OR
+  (tipo_participante='invitado' AND id_usuario IS NULL AND matricula IS NULL AND folio IS NOT NULL
+   AND correo IS NOT NULL AND correo=lower(correo) AND length(correo)>3
+   AND telefono IS NOT NULL AND length(telefono)>=7
+   AND invitado_token_hash IS NOT NULL AND invitado_token_hash ~ '^[a-f0-9]{64}$')
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_misiones_folio ON actividades_registros(folio) WHERE folio IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_misiones_invitado_correo ON actividades_registros(id_edicion,correo) WHERE tipo_participante='invitado';
+
+CREATE TABLE IF NOT EXISTS misiones_documentos (
+  id_documento UUID PRIMARY KEY,
+  id_actividad INT NOT NULL REFERENCES clubes(id_club) ON DELETE RESTRICT,
+  id_edicion INT REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
+  id_registro INT REFERENCES actividades_registros(id_registro) ON DELETE RESTRICT,
+  tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('plantilla','firmado')),
+  public_id TEXT NOT NULL UNIQUE,
+  nombre VARCHAR(200) NOT NULL,
+  bytes INT NOT NULL CHECK (bytes>0 AND bytes<=10485760),
+  sha256 VARCHAR(64) NOT NULL,
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK ((tipo='plantilla' AND id_registro IS NULL) OR (tipo='firmado' AND id_edicion IS NOT NULL AND id_registro IS NOT NULL))
+);
+ALTER TABLE actividades_registros DROP CONSTRAINT IF EXISTS fk_misiones_codigo_firmado;
+ALTER TABLE actividades_registros ADD CONSTRAINT fk_misiones_codigo_firmado FOREIGN KEY(codigo_firmado_id) REFERENCES misiones_documentos(id_documento) ON DELETE RESTRICT;
+
+CREATE OR REPLACE FUNCTION fn_misiones_version_edicion() RETURNS trigger AS $$
+BEGIN
+  IF TG_OP='UPDATE' AND (
+    (OLD.configuracion_misiones IS NULL) IS DISTINCT FROM (NEW.configuracion_misiones IS NULL)
+    OR (OLD.configuracion_misiones->>'formato') IS DISTINCT FROM (NEW.configuracion_misiones->>'formato')
+  ) THEN
+    IF NOT (OLD.estado='borrador' AND NEW.estado='borrador'
+      AND (NEW.configuracion_misiones->>'formato'='megamisiones-2026') IS TRUE
+      AND NOT EXISTS (SELECT 1 FROM actividades_registros WHERE id_edicion=OLD.id_edicion)) THEN
+      RAISE EXCEPTION 'El formato solo cambia a MEGAMISIONES en borradores sin registros' USING ERRCODE='23514';
+    END IF;
+  END IF;
+  IF NEW.configuracion_misiones IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM clubes WHERE id_club=NEW.id_actividad AND tipo='actividad' AND plantilla='misiones'
+  ) THEN RAISE EXCEPTION 'El formulario corresponde únicamente a Misiones' USING ERRCODE='23514'; END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_misiones_version_edicion ON actividades_ediciones;
+CREATE TRIGGER trg_misiones_version_edicion BEFORE INSERT OR UPDATE OF configuracion_misiones,id_actividad ON actividades_ediciones FOR EACH ROW EXECUTE FUNCTION fn_misiones_version_edicion();
+
+CREATE OR REPLACE FUNCTION fn_registro_invitado_misiones() RETURNS trigger AS $$
+BEGIN
+  IF NEW.tipo_participante='invitado' AND NOT EXISTS (
+    SELECT 1 FROM actividades_ediciones e JOIN clubes c ON c.id_club=e.id_actividad
+    WHERE e.id_edicion=NEW.id_edicion AND c.tipo='actividad' AND c.plantilla='misiones'
+      AND e.configuracion_misiones @> '{"version":2}'::jsonb
+  ) THEN RAISE EXCEPTION 'Los invitados solo se inscriben a nuevas ediciones de Misiones' USING ERRCODE='23514'; END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_registro_invitado_misiones ON actividades_registros;
+CREATE TRIGGER trg_registro_invitado_misiones BEFORE INSERT OR UPDATE ON actividades_registros FOR EACH ROW EXECUTE FUNCTION fn_registro_invitado_misiones();
+
+-- TRINEO: cartas y reservas exclusivas por edición
+ALTER TABLE actividades_ediciones ADD COLUMN IF NOT EXISTS cartas_habilitadas BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS actividades_cartas (
+  id_carta SERIAL PRIMARY KEY,
+  id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
+  nombre VARCHAR(150) NOT NULL CHECK (length(trim(nombre))>0),
+  edad INT NOT NULL CHECK (edad BETWEEN 1 AND 18),
+  deseo TEXT NOT NULL CHECK (length(trim(deseo)) BETWEEN 1 AND 2000),
+  activa BOOLEAN NOT NULL DEFAULT TRUE,
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cartas_edicion ON actividades_cartas(id_edicion);
+
+CREATE TABLE IF NOT EXISTS actividades_cartas_reservas (
+  id_reserva SERIAL PRIMARY KEY,
+  id_carta INT NOT NULL REFERENCES actividades_cartas(id_carta) ON DELETE RESTRICT,
+  id_registro INT NOT NULL REFERENCES actividades_registros(id_registro) ON DELETE RESTRICT,
+  id_aportacion INT REFERENCES actividades_aportaciones(id_aportacion) ON DELETE RESTRICT,
+  recibida BOOLEAN NOT NULL DEFAULT FALSE,
+  recibida_en TIMESTAMPTZ,
+  recibida_por INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+  carta_snapshot JSONB NOT NULL CHECK (jsonb_typeof(carta_snapshot)='object'),
+  reservada_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  cancelada_en TIMESTAMPTZ
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_carta_reserva_activa ON actividades_cartas_reservas(id_carta) WHERE cancelada_en IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_registro_carta_activa ON actividades_cartas_reservas(id_registro) WHERE cancelada_en IS NULL;
+CREATE INDEX IF NOT EXISTS idx_cartas_reservas_registro ON actividades_cartas_reservas(id_registro);
+
+ALTER TABLE actividades_cartas_reservas ALTER COLUMN id_aportacion DROP NOT NULL;
+ALTER TABLE actividades_cartas_reservas ADD COLUMN IF NOT EXISTS recibida BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE actividades_cartas_reservas ADD COLUMN IF NOT EXISTS recibida_en TIMESTAMPTZ;
+ALTER TABLE actividades_cartas_reservas ADD COLUMN IF NOT EXISTS recibida_por INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+
+-- Solo la reserva vigente hereda la entrega: un aporte antiguo puede tener varias reservas históricas.
+UPDATE actividades_cartas_reservas SET recibida=TRUE WHERE recibida_en IS NOT NULL AND NOT recibida;
+UPDATE actividades_cartas_reservas v SET recibida=TRUE,recibida_en=a.recibida_en,recibida_por=a.recibida_por
+FROM actividades_aportaciones a WHERE v.id_aportacion=a.id_aportacion
+  AND v.cancelada_en IS NULL AND NOT v.recibida AND a.estado='recibida';
+
+ALTER TABLE actividades_cartas_reservas DROP CONSTRAINT IF EXISTS chk_carta_entrega_vigente;
+ALTER TABLE actividades_cartas_reservas ADD CONSTRAINT chk_carta_entrega_vigente CHECK (cancelada_en IS NULL OR NOT recibida);
+
+CREATE OR REPLACE FUNCTION fn_trineo_carta() RETURNS trigger AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM actividades_ediciones e JOIN clubes c ON c.id_club=e.id_actividad
+    WHERE e.id_edicion=NEW.id_edicion AND c.tipo='actividad' AND c.plantilla='trineo') THEN
+    RAISE EXCEPTION 'Las cartas corresponden a una edición del Trineo' USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_trineo_carta ON actividades_cartas;
+CREATE TRIGGER trg_trineo_carta BEFORE INSERT OR UPDATE ON actividades_cartas FOR EACH ROW EXECUTE FUNCTION fn_trineo_carta();
+
+CREATE OR REPLACE FUNCTION fn_trineo_reserva() RETURNS trigger AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM actividades_cartas c
+    JOIN actividades_registros r ON r.id_edicion=c.id_edicion
+    WHERE c.id_carta=NEW.id_carta AND r.id_registro=NEW.id_registro AND r.id_usuario IS NOT NULL) THEN
+    RAISE EXCEPTION 'La carta y el alumno deben pertenecer a la misma edición del Trineo' USING ERRCODE='23514';
+  END IF;
+  IF NEW.id_aportacion IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM actividades_aportaciones a
+    JOIN actividades_aportes_catalogo o USING(id_opcion)
+    JOIN actividades_cartas c ON c.id_edicion=o.id_edicion
+    WHERE a.id_aportacion=NEW.id_aportacion AND a.id_registro=NEW.id_registro AND c.id_carta=NEW.id_carta
+  ) THEN RAISE EXCEPTION 'La referencia histórica del regalo corresponde a otra inscripción' USING ERRCODE='23514'; END IF;
+  IF NEW.cancelada_en IS NOT NULL AND NEW.recibida THEN
+    RAISE EXCEPTION 'Una carta con regalo recibido conserva su reserva' USING ERRCODE='23514';
+  END IF;
+  IF TG_OP='UPDATE' AND OLD.recibida AND
+    (NEW.id_carta,NEW.id_registro,NEW.id_aportacion,NEW.carta_snapshot,NEW.cancelada_en,NEW.recibida,NEW.recibida_en)
+    IS DISTINCT FROM
+    (OLD.id_carta,OLD.id_registro,OLD.id_aportacion,OLD.carta_snapshot,OLD.cancelada_en,OLD.recibida,OLD.recibida_en) THEN
+    RAISE EXCEPTION 'El regalo recibido conserva sus datos y fecha de entrega' USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_trineo_reserva ON actividades_cartas_reservas;
+CREATE TRIGGER trg_trineo_reserva BEFORE INSERT OR UPDATE ON actividades_cartas_reservas FOR EACH ROW EXECUTE FUNCTION fn_trineo_reserva();
 
 
 -- ============================================================
@@ -2086,7 +2271,6 @@ COMMIT;
 -- (ON CONFLICT DO NOTHING): volver a ejecutar la migración no revierte ediciones.
 -- ============================================================
 
-BEGIN;
 
 -- ------------------------------------------------------------
 -- Catálogos
@@ -2275,168 +2459,4 @@ CREATE TABLE IF NOT EXISTS historial_consentimiento_correo (
 CREATE INDEX IF NOT EXISTS idx_consentimiento_usuario_tipo_fecha
     ON historial_consentimiento_correo(id_usuario, tipo, creado_en DESC);
 
--- MISIONES: registro v2 para nuevas ediciones
-
-ALTER TABLE actividades_ediciones ADD COLUMN IF NOT EXISTS configuracion_misiones JSONB;
-ALTER TABLE actividades_ediciones DROP CONSTRAINT IF EXISTS chk_configuracion_misiones;
-ALTER TABLE actividades_ediciones ADD CONSTRAINT chk_configuracion_misiones CHECK (
-  configuracion_misiones IS NULL OR
-  ((jsonb_typeof(configuracion_misiones)='object' AND configuracion_misiones->>'version'='2'
-    AND (NOT (configuracion_misiones ? 'formato') OR configuracion_misiones->>'formato'='megamisiones-2026')) IS TRUE)
-);
-
-ALTER TABLE actividades_registros ALTER COLUMN id_usuario DROP NOT NULL;
-ALTER TABLE actividades_registros ALTER COLUMN matricula DROP NOT NULL;
-ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS tipo_participante VARCHAR(10) NOT NULL DEFAULT 'unid';
-ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS folio UUID;
-ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS correo VARCHAR(254);
-ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS telefono VARCHAR(40);
-ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS invitado_token_hash VARCHAR(64);
-ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS pedido JSONB;
-ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS misiones_snapshot JSONB;
-ALTER TABLE actividades_registros ADD COLUMN IF NOT EXISTS codigo_firmado_id UUID;
-ALTER TABLE actividades_registros DROP CONSTRAINT IF EXISTS chk_registro_identidad;
-ALTER TABLE actividades_registros ADD CONSTRAINT chk_registro_identidad CHECK (
-  (tipo_participante='unid' AND id_usuario IS NOT NULL AND matricula IS NOT NULL AND folio IS NULL AND invitado_token_hash IS NULL)
-  OR
-  (tipo_participante='invitado' AND id_usuario IS NULL AND matricula IS NULL AND folio IS NOT NULL
-   AND correo IS NOT NULL AND correo=lower(correo) AND length(correo)>3
-   AND telefono IS NOT NULL AND length(telefono)>=7
-   AND invitado_token_hash IS NOT NULL AND invitado_token_hash ~ '^[a-f0-9]{64}$')
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_misiones_folio ON actividades_registros(folio) WHERE folio IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS uq_misiones_invitado_correo ON actividades_registros(id_edicion,correo) WHERE tipo_participante='invitado';
-
-CREATE TABLE IF NOT EXISTS misiones_documentos (
-  id_documento UUID PRIMARY KEY,
-  id_actividad INT NOT NULL REFERENCES clubes(id_club) ON DELETE RESTRICT,
-  id_edicion INT REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
-  id_registro INT REFERENCES actividades_registros(id_registro) ON DELETE RESTRICT,
-  tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('plantilla','firmado')),
-  public_id TEXT NOT NULL UNIQUE,
-  nombre VARCHAR(200) NOT NULL,
-  bytes INT NOT NULL CHECK (bytes>0 AND bytes<=10485760),
-  sha256 VARCHAR(64) NOT NULL,
-  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK ((tipo='plantilla' AND id_registro IS NULL) OR (tipo='firmado' AND id_edicion IS NOT NULL AND id_registro IS NOT NULL))
-);
-ALTER TABLE actividades_registros DROP CONSTRAINT IF EXISTS fk_misiones_codigo_firmado;
-ALTER TABLE actividades_registros ADD CONSTRAINT fk_misiones_codigo_firmado FOREIGN KEY(codigo_firmado_id) REFERENCES misiones_documentos(id_documento) ON DELETE RESTRICT;
-
-CREATE OR REPLACE FUNCTION fn_misiones_version_edicion() RETURNS trigger AS $$
-BEGIN
-  IF TG_OP='UPDATE' AND (
-    (OLD.configuracion_misiones IS NULL) IS DISTINCT FROM (NEW.configuracion_misiones IS NULL)
-    OR (OLD.configuracion_misiones->>'formato') IS DISTINCT FROM (NEW.configuracion_misiones->>'formato')
-  ) THEN
-    IF NOT (OLD.estado='borrador' AND NEW.estado='borrador'
-      AND (NEW.configuracion_misiones->>'formato'='megamisiones-2026') IS TRUE
-      AND NOT EXISTS (SELECT 1 FROM actividades_registros WHERE id_edicion=OLD.id_edicion)) THEN
-      RAISE EXCEPTION 'El formato solo cambia a MEGAMISIONES en borradores sin registros' USING ERRCODE='23514';
-    END IF;
-  END IF;
-  IF NEW.configuracion_misiones IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM clubes WHERE id_club=NEW.id_actividad AND tipo='actividad' AND plantilla='misiones'
-  ) THEN RAISE EXCEPTION 'El formulario corresponde únicamente a Misiones' USING ERRCODE='23514'; END IF;
-  RETURN NEW;
-END $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS trg_misiones_version_edicion ON actividades_ediciones;
-CREATE TRIGGER trg_misiones_version_edicion BEFORE INSERT OR UPDATE OF configuracion_misiones,id_actividad ON actividades_ediciones FOR EACH ROW EXECUTE FUNCTION fn_misiones_version_edicion();
-
-CREATE OR REPLACE FUNCTION fn_registro_invitado_misiones() RETURNS trigger AS $$
-BEGIN
-  IF NEW.tipo_participante='invitado' AND NOT EXISTS (
-    SELECT 1 FROM actividades_ediciones e JOIN clubes c ON c.id_club=e.id_actividad
-    WHERE e.id_edicion=NEW.id_edicion AND c.tipo='actividad' AND c.plantilla='misiones'
-      AND e.configuracion_misiones @> '{"version":2}'::jsonb
-  ) THEN RAISE EXCEPTION 'Los invitados solo se inscriben a nuevas ediciones de Misiones' USING ERRCODE='23514'; END IF;
-  RETURN NEW;
-END $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS trg_registro_invitado_misiones ON actividades_registros;
-CREATE TRIGGER trg_registro_invitado_misiones BEFORE INSERT OR UPDATE ON actividades_registros FOR EACH ROW EXECUTE FUNCTION fn_registro_invitado_misiones();
-
--- TRINEO: cartas y reservas exclusivas por edición
-ALTER TABLE actividades_ediciones ADD COLUMN IF NOT EXISTS cartas_habilitadas BOOLEAN NOT NULL DEFAULT FALSE;
-
-CREATE TABLE IF NOT EXISTS actividades_cartas (
-  id_carta SERIAL PRIMARY KEY,
-  id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
-  nombre VARCHAR(150) NOT NULL CHECK (length(trim(nombre))>0),
-  edad INT NOT NULL CHECK (edad BETWEEN 1 AND 18),
-  deseo TEXT NOT NULL CHECK (length(trim(deseo)) BETWEEN 1 AND 2000),
-  activa BOOLEAN NOT NULL DEFAULT TRUE,
-  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_cartas_edicion ON actividades_cartas(id_edicion);
-
-CREATE TABLE IF NOT EXISTS actividades_cartas_reservas (
-  id_reserva SERIAL PRIMARY KEY,
-  id_carta INT NOT NULL REFERENCES actividades_cartas(id_carta) ON DELETE RESTRICT,
-  id_registro INT NOT NULL REFERENCES actividades_registros(id_registro) ON DELETE RESTRICT,
-  id_aportacion INT REFERENCES actividades_aportaciones(id_aportacion) ON DELETE RESTRICT,
-  recibida BOOLEAN NOT NULL DEFAULT FALSE,
-  recibida_en TIMESTAMPTZ,
-  recibida_por INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
-  carta_snapshot JSONB NOT NULL CHECK (jsonb_typeof(carta_snapshot)='object'),
-  reservada_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  cancelada_en TIMESTAMPTZ
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_carta_reserva_activa ON actividades_cartas_reservas(id_carta) WHERE cancelada_en IS NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS uq_registro_carta_activa ON actividades_cartas_reservas(id_registro) WHERE cancelada_en IS NULL;
-CREATE INDEX IF NOT EXISTS idx_cartas_reservas_registro ON actividades_cartas_reservas(id_registro);
-
-ALTER TABLE actividades_cartas_reservas ALTER COLUMN id_aportacion DROP NOT NULL;
-ALTER TABLE actividades_cartas_reservas ADD COLUMN IF NOT EXISTS recibida BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE actividades_cartas_reservas ADD COLUMN IF NOT EXISTS recibida_en TIMESTAMPTZ;
-ALTER TABLE actividades_cartas_reservas ADD COLUMN IF NOT EXISTS recibida_por INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
-
--- Solo la reserva vigente hereda la entrega: un aporte antiguo puede tener varias reservas históricas.
-UPDATE actividades_cartas_reservas SET recibida=TRUE WHERE recibida_en IS NOT NULL AND NOT recibida;
-UPDATE actividades_cartas_reservas v SET recibida=TRUE,recibida_en=a.recibida_en,recibida_por=a.recibida_por
-FROM actividades_aportaciones a WHERE v.id_aportacion=a.id_aportacion
-  AND v.cancelada_en IS NULL AND NOT v.recibida AND a.estado='recibida';
-
-ALTER TABLE actividades_cartas_reservas DROP CONSTRAINT IF EXISTS chk_carta_entrega_vigente;
-ALTER TABLE actividades_cartas_reservas ADD CONSTRAINT chk_carta_entrega_vigente CHECK (cancelada_en IS NULL OR NOT recibida);
-
-CREATE OR REPLACE FUNCTION fn_trineo_carta() RETURNS trigger AS $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM actividades_ediciones e JOIN clubes c ON c.id_club=e.id_actividad
-    WHERE e.id_edicion=NEW.id_edicion AND c.tipo='actividad' AND c.plantilla='trineo') THEN
-    RAISE EXCEPTION 'Las cartas corresponden a una edición del Trineo' USING ERRCODE='23514';
-  END IF;
-  RETURN NEW;
-END $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS trg_trineo_carta ON actividades_cartas;
-CREATE TRIGGER trg_trineo_carta BEFORE INSERT OR UPDATE ON actividades_cartas FOR EACH ROW EXECUTE FUNCTION fn_trineo_carta();
-
-CREATE OR REPLACE FUNCTION fn_trineo_reserva() RETURNS trigger AS $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM actividades_cartas c
-    JOIN actividades_registros r ON r.id_edicion=c.id_edicion
-    WHERE c.id_carta=NEW.id_carta AND r.id_registro=NEW.id_registro AND r.id_usuario IS NOT NULL) THEN
-    RAISE EXCEPTION 'La carta y el alumno deben pertenecer a la misma edición del Trineo' USING ERRCODE='23514';
-  END IF;
-  IF NEW.id_aportacion IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM actividades_aportaciones a
-    JOIN actividades_aportes_catalogo o USING(id_opcion)
-    JOIN actividades_cartas c ON c.id_edicion=o.id_edicion
-    WHERE a.id_aportacion=NEW.id_aportacion AND a.id_registro=NEW.id_registro AND c.id_carta=NEW.id_carta
-  ) THEN RAISE EXCEPTION 'La referencia histórica del regalo corresponde a otra inscripción' USING ERRCODE='23514'; END IF;
-  IF NEW.cancelada_en IS NOT NULL AND NEW.recibida THEN
-    RAISE EXCEPTION 'Una carta con regalo recibido conserva su reserva' USING ERRCODE='23514';
-  END IF;
-  IF TG_OP='UPDATE' AND OLD.recibida AND
-    (NEW.id_carta,NEW.id_registro,NEW.id_aportacion,NEW.carta_snapshot,NEW.cancelada_en,NEW.recibida,NEW.recibida_en)
-    IS DISTINCT FROM
-    (OLD.id_carta,OLD.id_registro,OLD.id_aportacion,OLD.carta_snapshot,OLD.cancelada_en,OLD.recibida,OLD.recibida_en) THEN
-    RAISE EXCEPTION 'El regalo recibido conserva sus datos y fecha de entrega' USING ERRCODE='23514';
-  END IF;
-  RETURN NEW;
-END $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS trg_trineo_reserva ON actividades_cartas_reservas;
-CREATE TRIGGER trg_trineo_reserva BEFORE INSERT OR UPDATE ON actividades_cartas_reservas FOR EACH ROW EXECUTE FUNCTION fn_trineo_reserva();
-
 COMMIT;
-

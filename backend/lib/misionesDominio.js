@@ -108,7 +108,8 @@ export function validarCamposMisiones(campos, configuracion = null) {
   const mega = esFormatoMegamisiones(configuracion);
   for (const base of camposMisiones(configuracion)) {
     const campo = campos.find((item) => item.clave === base.clave);
-    if (!campo || campo.tipo !== base.tipo) throw fallo('Conserva las preguntas base de Misiones');
+    if (!campo) continue;
+    if (campo.tipo !== base.tipo) throw fallo('Conserva el tipo de respuesta de ' + base.etiqueta.toLowerCase());
     if (base.clave === 'talla' && !campo.obligatorio) throw fallo('La talla de camisa es obligatoria');
     if (mega && base.obligatorio && !campo.obligatorio) throw fallo('Conserva las preguntas obligatorias de MEGAMISIONES');
     for (const clave of ['ayuda', 'no_futura', 'validacion']) {
@@ -116,6 +117,7 @@ export function validarCamposMisiones(campos, configuracion = null) {
     }
     // Las condiciones son parte de la plantilla; el cliente no puede alterarlas.
     if (base.visible_si) {
+      if (!campos.some((item) => item.clave === base.visible_si.campo)) throw fallo('Quita también las preguntas que dependen de ' + base.visible_si.campo);
       campo.visible_si = { ...base.visible_si };
       campo.obligatorio = true;
     } else delete campo.visible_si;
