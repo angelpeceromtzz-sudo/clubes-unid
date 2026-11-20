@@ -265,6 +265,35 @@ describe('Misiones v2: invitados, PDF, pedidos y QR con PostgreSQL', { skip: !co
     assert.deepEqual((await db.query('SELECT formulario_snapshot,misiones_snapshot FROM actividades_registros WHERE id_registro=$1', [creada.registro.id_registro])).rows[0], antes);
   });
 
+  test('Misiones guarda y publica formularios reducidos sin cambiar respuestas ni preguntas de inscritos anteriores', async () => {
+    const configuracion = configuracionMisionesInicial();
+    const campos = camposMisiones(configuracion).filter((campo) => ['sexo', 'fecha_nacimiento'].includes(campo.clave));
+    const creada = await enviar(2, 'POST', '/gestion/actividades/' + misiones + '/ediciones', {
+      ...datosMega(), configuracion_misiones: configuracion, campos_registro: campos,
+    }, 201);
+    const id = creada.id_edicion;
+    assert.deepEqual(creada.campos_registro.map((campo) => campo.clave).sort(), ['fecha_nacimiento', 'sexo']);
+    await enviar(2, 'POST', '/gestion/ediciones/' + id + '/revision', {});
+    await enviar(4, 'POST', '/gestion/ediciones/' + id + '/decision', { aprobar: true });
+    const contacto = { nombre_completo: 'Invitada formulario reducido', correo: 'reducido@example.test', telefono: '9811234567', pedido: [] };
+    const anterior = await enviar(null, 'POST', '/ediciones/' + id + '/invitados', {
+      ...contacto, respuestas: { fecha_nacimiento: '2004-02-29', sexo: 'Mujer', religion: 'Otra', talla: 'No solicitada' },
+    }, 201);
+    assert.deepEqual(anterior.registro.respuestas, { fecha_nacimiento: '2004-02-29', sexo: 'Mujer' });
+    const antes = (await db.query('SELECT respuestas,formulario_snapshot,misiones_snapshot FROM actividades_registros WHERE id_registro=$1', [anterior.registro.id_registro])).rows[0];
+    await enviar(2, 'PUT', '/gestion/ediciones/' + id, { campos_registro: [] });
+    assert.equal((await enviar(null, 'GET', '/detalle/misiones')).ediciones.find((edicion) => edicion.id_edicion === id).campos_registro.length, 2, 'la reducción espera aprobación');
+    await enviar(2, 'POST', '/gestion/ediciones/' + id + '/revision', {});
+    await enviar(4, 'POST', '/gestion/ediciones/' + id + '/decision', { aprobar: true });
+    const nueva = await enviar(null, 'POST', '/ediciones/' + id + '/invitados', {
+      ...contacto, correo: 'solo-contacto@example.test', respuestas: {},
+    }, 201);
+    assert.deepEqual(nueva.registro.formulario_snapshot, []);
+    assert.deepEqual(nueva.registro.respuestas, {});
+    assert.deepEqual((await db.query('SELECT respuestas,formulario_snapshot,misiones_snapshot FROM actividades_registros WHERE id_registro=$1', [anterior.registro.id_registro])).rows[0], antes);
+    await enviar(null, 'PUT', '/invitados/' + anterior.registro.folio, { ...contacto, respuestas: {} }, 400, anterior.token);
+  });
+
   test('la adopción explícita funciona desde borradores clásicos y v2, conservando documentos y catálogo', async () => {
     const borradorV2 = await enviar(2, 'POST', '/gestion/actividades/' + misiones + '/ediciones', { ...datosMega(), configuracion_misiones: configuracion, campos_registro: camposMisiones().map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['M', 'G'] } : campo) }, 201);
     const borradorClasico = (await db.query("INSERT INTO actividades_ediciones(id_actividad,nombre,estado) VALUES($1,'Borrador clásico QA','borrador') RETURNING id_edicion", [misiones])).rows[0];

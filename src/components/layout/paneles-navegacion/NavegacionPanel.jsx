@@ -170,7 +170,6 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
                      {renderElemento(item, false)}
                    </div>
                  ))}
-               <div className="h-px mx-3 my-1 border-t border-amber-400/40" />
             </nav>
           )}
         </div>

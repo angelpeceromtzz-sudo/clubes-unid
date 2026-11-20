@@ -5,6 +5,7 @@ import { normalizarActividad, normalizarRecursoCatalogo, normalizarEdicionActivi
 import { disponibilidadAsistenciaActividad, normalizarCodigoAsistencia } from '../shared/actividades.js';
 import { hoyEnCampus } from '../backend/lib/fechasEvento.js';
 import { rutaRegresoActividades } from '../src/utils/rutaRegresoActividades.js';
+import { filtrarCatalogoGestion, seleccionarEdicionGestion } from '../src/utils/catalogoGestion.js';
 
 const campos = camposPlantillaActividad('trineo').map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['CH', 'M', 'G'] } : campo);
 const edicion = { nombre: 'Edición de prueba', descripcion: '', lugar: 'Campus', fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', requiere_registro: true, campos_registro: campos, inscripcion_desde: '2026-11-01', inscripcion_hasta: '2026-12-04', destacable: true, destacada_desde: '2026-11-20', destacada_hasta: '2026-12-06', estado: 'publicada', inscripciones_habilitadas: true };
@@ -45,6 +46,42 @@ test('Gestión de Clubs y su acceso al catálogo solo aparecen para Admin, Coord
     if (gestion) assert.ok(gestion.children.some((item) => item.key === 'clubes'));
     else assert.ok(menu.every((item) => item.key !== 'clubes' && !item.children?.some((hijo) => hijo.key === 'clubes')));
   }
+  const rectoria = ELEMENTOS_NAV_RECTORIA.find((item) => item.key === 'gestion-clubes');
+  assert.ok(rectoria.children.some((item) => item.key === 'revision-actividades'));
+});
+
+test('revisión incluye actividades publicadas con una edición o propuesta de edición pendiente', () => {
+  const actividades = [
+    { id_actividad: 1, tipo: 'club', estado: 'publicada' },
+    { id_actividad: 2, tipo: 'actividad', estado: 'publicada' },
+    { id_actividad: 3, tipo: 'actividad', estado: 'publicada' },
+    { id_actividad: 4, tipo: 'actividad', estado: 'pendiente' },
+    { id_actividad: 5, tipo: 'actividad', estado: 'publicada' },
+  ];
+  const ediciones = [
+    { id_edicion: 20, id_actividad: 2, estado: 'borrador' },
+    { id_edicion: 19, id_actividad: 2, estado: 'pendiente' },
+    { id_edicion: 30, id_actividad: 3, estado: 'publicada', estado_propuesta: 'pendiente' },
+    { id_edicion: 50, id_actividad: 5, estado: 'publicada' },
+  ];
+  assert.deepEqual(filtrarCatalogoGestion(actividades, ediciones, 'actividad', 'pendiente').map((item) => item.id_actividad), [2, 3, 4]);
+  assert.deepEqual(filtrarCatalogoGestion(actividades, ediciones, 'club', 'pendiente'), []);
+  assert.deepEqual(filtrarCatalogoGestion(actividades, ediciones, 'actividad', 'todos').map((item) => item.id_actividad), [2, 3, 4, 5]);
+  const aprobadas = ediciones.map((item) => ({ ...item, estado: 'publicada', estado_propuesta: null }));
+  assert.deepEqual(filtrarCatalogoGestion(actividades, aprobadas, 'actividad', 'pendiente').map((item) => item.id_actividad), [4]);
+});
+
+test('la revisión abre la edición pendiente aunque exista un borrador más reciente y permite cambiarla', () => {
+  const ediciones = [
+    { id_edicion: 3, estado: 'borrador' },
+    { id_edicion: 2, estado: 'publicada', estado_propuesta: 'pendiente' },
+    { id_edicion: 1, estado: 'publicada' },
+  ];
+  assert.equal(seleccionarEdicionGestion(ediciones, null, true).id_edicion, 2);
+  assert.equal(seleccionarEdicionGestion(ediciones, 1, true).id_edicion, 1);
+  assert.equal(seleccionarEdicionGestion(ediciones, null, false).id_edicion, 3);
+  assert.equal(seleccionarEdicionGestion([ediciones[0]], null, true).id_edicion, 3);
+  assert.equal(seleccionarEdicionGestion([], null, true), undefined);
 });
 
 test('las actividades generales no heredan requisitos específicos de Trineo', () => {
@@ -64,7 +101,8 @@ test('Trineo y Misiones exigen edad y talla y permiten configurar las aportacion
     assert.equal(datos.requiere_registro, true);
     assert.equal(datos.requiere_aportacion, false);
     assert.equal(normalizarEdicionActividad({ ...edicion, requiere_aportacion: true }, plantilla).requiere_aportacion, true);
-    assert.throws(() => normalizarEdicionActividad({ ...edicion, campos_registro: campos.filter((campo) => campo.clave !== 'talla') }, plantilla), /edad y talla/);
+    if (plantilla === 'trineo') assert.throws(() => normalizarEdicionActividad({ ...edicion, campos_registro: campos.filter((campo) => campo.clave !== 'talla') }, plantilla), /edad y talla/);
+    else assert.ok(!normalizarEdicionActividad({ ...edicion, campos_registro: campos.filter((campo) => campo.clave !== 'talla') }, plantilla).campos_registro.some((campo) => campo.clave === 'talla'));
     assert.throws(() => normalizarEdicionActividad({ ...edicion, campos_registro: campos.map((campo) => campo.clave === 'edad' ? { ...campo, obligatorio: false } : campo) }, plantilla));
   }
 });

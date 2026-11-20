@@ -108,7 +108,8 @@ export function validarCamposMisiones(campos, configuracion = null) {
   const mega = esFormatoMegamisiones(configuracion);
   for (const base of camposMisiones(configuracion)) {
     const campo = campos.find((item) => item.clave === base.clave);
-    if (!campo || campo.tipo !== base.tipo) throw fallo('Conserva las preguntas base de Misiones');
+    if (!campo) continue;
+    if (campo.tipo !== base.tipo) throw fallo('Conserva el tipo de respuesta de ' + base.etiqueta.toLowerCase());
     if (base.clave === 'talla' && !campo.obligatorio) throw fallo('La talla de camisa es obligatoria');
     if (mega && base.obligatorio && !campo.obligatorio) throw fallo('Conserva las preguntas obligatorias de MEGAMISIONES');
     for (const clave of ['ayuda', 'no_futura', 'validacion']) {
@@ -116,6 +117,7 @@ export function validarCamposMisiones(campos, configuracion = null) {
     }
     // Las condiciones son parte de la plantilla; el cliente no puede alterarlas.
     if (base.visible_si) {
+      if (!campos.some((item) => item.clave === base.visible_si.campo)) throw fallo('Quita también las preguntas que dependen de ' + base.visible_si.campo);
       campo.visible_si = { ...base.visible_si };
       campo.obligatorio = true;
     } else delete campo.visible_si;
@@ -157,7 +159,12 @@ export function validarContactoInvitado(datos) {
   const nombre_completo = texto(datos.nombre_completo, 150, 'tu nombre completo', true);
   const correo = texto(datos.correo, 254, 'tu correo', true).toLowerCase();
   const telefono = texto(datos.telefono, 40, 'tu teléfono', true);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) throw fallo('Escribe un correo válido');
+  // Buscar los separadores evita el retroceso entre grupos de una expresión regular.
+  const arroba = correo.indexOf('@');
+  const dominio = correo.slice(arroba + 1);
+  const punto = dominio.indexOf('.', 1);
+  if (arroba < 1 || correo.indexOf('@', arroba + 1) !== -1 || /\s/.test(correo)
+    || punto < 1 || punto >= dominio.length - 1) throw fallo('Escribe un correo válido');
   if (!/^[+\d\s().-]{7,40}$/.test(telefono) || telefono.replace(/\D/g, '').length < 7) throw fallo('Escribe un teléfono válido');
   return { nombre_completo, correo, telefono };
 }

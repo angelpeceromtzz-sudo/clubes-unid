@@ -2,7 +2,7 @@
 
 El cambio principal es un catálogo compartido: `clubes` guarda tanto clubes como actividades. Cada registro tiene un `tipo`, mientras que sus procesos se guardan en tablas específicas. Así, una actividad puede tener ediciones e inscripciones sin convertirse en una membresía de club.
 
-Esta guía explica la unificación introducida en `6c6aef9` respecto a `8f08b82`, su compactación posterior de once a ocho tablas nuevas y la incorporación de dos tablas para el pase de lista. El módulo actual añade diez tablas físicas. La estructura final está en [schema.sql](../backend/schema.sql), desde el comentario `CATALOGO UNIFICADO`. Los ejemplos con IDs y participantes son ficticios.
+Esta guía explica la unificación introducida en `6c6aef9` respecto a `8f08b82`, su compactación posterior de once a ocho tablas nuevas y las ampliaciones de asistencia, Misiones y Trineo. El módulo actual añade trece tablas físicas. La estructura final está en [schema.sql](../backend/schema.sql), desde el comentario `CATALOGO UNIFICADO` hasta antes de onboarding. Los ejemplos con IDs y participantes son ficticios.
 
 Para estudiar por partes, empieza por el catálogo y el diagrama, continúa con los registros y la publicación, y termina con las [consultas de práctica](sql/estudiar-catalogo.sql) y las preguntas de repaso.
 
@@ -20,14 +20,14 @@ Para estudiar por partes, empieza por el catálogo y el diagrama, continúa con 
 
 Durante el desarrollo también existió una versión con una tabla física `actividades` separada. La migración reconoce ese caso. En el modelo final, `actividades` es una **vista** y los datos principales se guardan en `clubes`.
 
-## Control de tablas: diez tablas actuales
+## Control de tablas: trece tablas actuales
 
-El conteo corresponde a las tablas que añade este módulo, no al total de tablas del proyecto. La versión compacta con pase de lista crea estas **diez tablas físicas**:
+El conteo corresponde a las tablas que añade este módulo, no al total de tablas del proyecto. La versión actual crea estas **trece tablas físicas**:
 
 | Tabla nueva | Qué almacena |
 | --- | --- |
 | `actividades_ediciones` | Cada realización de una actividad, con sus fechas y formulario. |
-| `actividades_registros` | La inscripción del alumno a una edición. |
+| `actividades_registros` | La inscripción del participante UNID o invitado de Misiones a una edición. |
 | `actividades_aportes_catalogo` | Opciones de aportación disponibles. |
 | `actividades_aportaciones` | Compromisos elegidos y su recepción. |
 | `publicaciones_oferta` | Descripción y destino de una publicación. |
@@ -36,6 +36,9 @@ El conteo corresponde a las tablas que añade este módulo, no al total de tabla
 | `migraciones_catalogo` | Correspondencias de IDs y traslados desde clubes anteriores. |
 | `actividades_asistencia_accesos` | Código privado de acceso al pase de lista de cada edición. |
 | `actividades_asistencias` | Una marca de asistencia por inscripción, su origen y última corrección. |
+| `misiones_documentos` | Plantillas y documentos firmados privados de Misiones. |
+| `actividades_cartas` | Niños y deseos disponibles en cada edición del Trineo. |
+| `actividades_cartas_reservas` | Reserva de una carta y recepción del regalo, separada de otras aportaciones. |
 
 Se modifican dos tablas existentes: `clubes`, para el catálogo compartido, y `actividad_clubes`, para la bitácora compartida. Las tablas operativas de clubes conservan sus funciones y reciben las restricciones de tipo correspondientes.
 
@@ -348,7 +351,7 @@ Esta consulta recupera el nombre general desde el catálogo y el nombre particul
 10. ¿Un registro `confirmado` demuestra que la persona asistió al evento?
 11. ¿Por qué una instalación nueva puede no tener `actividades_catalogo_anterior`?
 12. ¿Qué revisa el servidor que JSONB por sí solo no comprueba?
-13. ¿Cómo quedan diez tablas nuevas aunque todavía veas cinco nombres anteriores?
+13. ¿Cómo quedan trece tablas nuevas aunque todavía veas cinco nombres anteriores?
 14. ¿Cómo se distingue una reacción de club de una reacción de edición?
 15. ¿Qué ocurre si falla la escritura de la bitácora durante una inscripción?
 
@@ -366,7 +369,7 @@ Esta consulta recupera el nombre general desde el catálogo y el nombre particul
 10. Confirma la inscripción. La asistencia se registra por separado en `actividades_asistencias`.
 11. Esa tabla aparece al convertir un catálogo separado que ya existía.
 12. Requisitos de la plantilla, opciones permitidas, tipos de respuesta y reglas de aportaciones, entre otros.
-13. Esos cinco nombres son vistas sobre las estructuras compartidas. La compactación dejó ocho tablas al fusionar reacciones y correspondencias y reutilizar una bitácora; el pase de lista añade dos tablas específicas.
+13. Esos cinco nombres son vistas sobre las estructuras compartidas. La compactación dejó ocho tablas al fusionar reacciones y correspondencias y reutilizar una bitácora; el pase de lista añade dos, Misiones una y Trineo dos.
 14. Ambas están en `reacciones_catalogo`: la de club tiene edición vacía; la de actividad apunta a su edición.
 15. La transacción se revierte y la inscripción no queda confirmada sin su entrada de historial.
 
