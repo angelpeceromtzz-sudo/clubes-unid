@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from './Icono';
 
-export function CampoTexto({ label, name, placeholder, value, onChange, onBlur, type = 'text', disabled, readOnly, error, required, maxLength, min, max, inputRef, autoComplete, inputMode, autoFocus, pattern }) {
+export function CampoTexto({ label, name, placeholder, value, onChange, onBlur, type = 'text', disabled, readOnly, error, required, maxLength, min, max, inputRef, autoComplete, inputMode, autoFocus, pattern, inputProps }) {
   const { inputCls, labelCls, modoOscuro } = useTheme();
   const textareaRef = useRef(null);
 
@@ -49,6 +49,7 @@ export function CampoTexto({ label, name, placeholder, value, onChange, onBlur, 
         inputMode={inputMode}
         autoFocus={autoFocus}
         pattern={pattern}
+        {...inputProps}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={error ? `${name}-error` : undefined}
         rows={type === 'textarea' ? 3 : undefined}
