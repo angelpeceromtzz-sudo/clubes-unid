@@ -8,6 +8,7 @@ import { BotonMicrosoft } from '../ui/BotonMicrosoft';
 import { BotonCerrar } from '../ui/BotonCerrar';
 import { Icono } from '../ui/Icono';
 import { CampoTexto } from '../ui/CampoTexto';
+import { EntradaCodigoOtp } from '../ui/EntradaCodigoOtp';
 import { ModalBase } from '../ui/ModalBase';
 import {
   LARGO_CODIGO_OTP,
@@ -285,8 +286,8 @@ export function ModalInicioSesion({ onClose }) {
     setMensaje('');
   }
 
-  function manejarCambioCodigo(e) {
-    setCodigo(normalizarCodigoOtp(e.target.value));
+  function manejarCambioCodigo(valor) {
+    setCodigo(normalizarCodigoOtp(valor));
     setError('');
     setErrorCodigo('');
   }
@@ -636,17 +637,13 @@ export function ModalInicioSesion({ onClose }) {
             </div>
           )}
 
-          <CampoTexto
+          <EntradaCodigoOtp
             label="Código de verificación"
             name="otp-codigo"
-            type="text"
             value={codigo}
             onChange={manejarCambioCodigo}
-            placeholder="000000"
-            maxLength={LARGO_CODIGO_OTP}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="one-time-code"
+            length={LARGO_CODIGO_OTP}
+            disabled={cargandoOtp}
             autoFocus
             error={errorCodigo}
           />
