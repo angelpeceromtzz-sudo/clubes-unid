@@ -1684,6 +1684,7 @@ CREATE TABLE IF NOT EXISTS actividades_ediciones (
   campos_registro JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(campos_registro) = 'array'),
   configuracion_misiones JSONB,
   cartas_habilitadas BOOLEAN NOT NULL DEFAULT FALSE,
+  carta_obligatoria BOOLEAN NOT NULL DEFAULT TRUE,
   requiere_aportacion BOOLEAN NOT NULL DEFAULT FALSE,
   inscripcion_desde DATE,
   inscripcion_hasta DATE,
@@ -1730,6 +1731,7 @@ END $$;
 ALTER TABLE actividades_ediciones DROP CONSTRAINT IF EXISTS fk_edicion_catalogo;
 ALTER TABLE actividades_ediciones ADD CONSTRAINT fk_edicion_catalogo FOREIGN KEY (id_actividad) REFERENCES clubes(id_club) ON DELETE RESTRICT;
 ALTER TABLE actividades_ediciones ADD COLUMN IF NOT EXISTS ubicacion_maps VARCHAR(2048) NOT NULL DEFAULT '';
+ALTER TABLE actividades_ediciones ADD COLUMN IF NOT EXISTS carta_obligatoria BOOLEAN NOT NULL DEFAULT TRUE;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_edicion_propietario ON actividades_ediciones(id_edicion,id_actividad);
 ALTER TABLE migraciones_catalogo DROP CONSTRAINT IF EXISTS fk_migracion_edicion;
 ALTER TABLE migraciones_catalogo ADD CONSTRAINT fk_migracion_edicion FOREIGN KEY(id_edicion_destino,id_club_destino) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT;
@@ -1834,8 +1836,32 @@ CREATE TABLE IF NOT EXISTS publicaciones_oferta (
  id_edicion INT,
  contenido VARCHAR(300) NOT NULL DEFAULT '',
  id_autor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+ estado VARCHAR(20) NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('borrador','pendiente','publicada','rechazada','retirada')),
+ estado_propuesta VARCHAR(20) CHECK (estado_propuesta IN ('borrador','pendiente','rechazada')),
+ contenido_pendiente VARCHAR(300),
+ motivo_rechazo TEXT,
  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  FOREIGN KEY (id_edicion,id_club) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT
+);
+-- Compatibilidad con datos existentes: agrega columnas nuevas y conserva publicaciones previas.
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS estado VARCHAR(20) NOT NULL DEFAULT 'publicada';
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS estado_propuesta VARCHAR(20);
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS contenido_pendiente VARCHAR(300);
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS motivo_rechazo TEXT;
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW();
+UPDATE publicaciones_oferta SET estado='publicada' WHERE estado IS NULL;
+ALTER TABLE publicaciones_oferta DROP CONSTRAINT IF EXISTS chk_publicacion_estado;
+ALTER TABLE publicaciones_oferta ADD CONSTRAINT chk_publicacion_estado CHECK (estado IN ('borrador','pendiente','publicada','rechazada','retirada'));
+ALTER TABLE publicaciones_oferta DROP CONSTRAINT IF EXISTS chk_publicacion_estado_propuesta;
+ALTER TABLE publicaciones_oferta ADD CONSTRAINT chk_publicacion_estado_propuesta CHECK (estado_propuesta IS NULL OR estado_propuesta IN ('borrador','pendiente','rechazada'));
+CREATE TABLE IF NOT EXISTS reacciones_publicacion (
+ id_reaccion BIGSERIAL PRIMARY KEY,
+ id_publicacion INT NOT NULL REFERENCES publicaciones_oferta(id_publicacion) ON DELETE CASCADE,
+ id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+ reaccion VARCHAR(10) NOT NULL CHECK (reaccion IN ('like','love','clap')),
+ creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ UNIQUE (id_publicacion, id_usuario)
 );
 DO $$
 DECLARE foto RECORD; publicacion INT;
@@ -1846,8 +1872,8 @@ BEGIN
    ALTER TABLE publicaciones_imagenes ADD COLUMN orden INT NOT NULL DEFAULT 0;
    ALTER TABLE publicaciones_imagenes ADD COLUMN public_id TEXT;
    FOR foto IN SELECT f.*,e.id_actividad AS id_propietario FROM publicaciones_imagenes f JOIN actividades_ediciones e ON e.id_edicion=f.id_edicion LOOP
-     INSERT INTO publicaciones_oferta(id_club,id_edicion,contenido,id_autor,creado_en)
-     VALUES(foto.id_propietario,foto.id_edicion,foto.pie,foto.id_autor,foto.creado_en) RETURNING id_publicacion INTO publicacion;
+      INSERT INTO publicaciones_oferta(id_club,id_edicion,contenido,id_autor,estado,creado_en)
+      VALUES(foto.id_propietario,foto.id_edicion,foto.pie,foto.id_autor,'publicada',foto.creado_en) RETURNING id_publicacion INTO publicacion;
      UPDATE publicaciones_imagenes SET id_publicacion=publicacion WHERE id_foto=foto.id_foto;
    END LOOP;
    ALTER TABLE publicaciones_imagenes ALTER COLUMN id_publicacion SET NOT NULL;
@@ -2197,12 +2223,39 @@ CREATE TABLE IF NOT EXISTS actividades_cartas (
   id_carta SERIAL PRIMARY KEY,
   id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
   nombre VARCHAR(150) NOT NULL CHECK (length(trim(nombre))>0),
-  edad INT NOT NULL CHECK (edad BETWEEN 1 AND 18),
+  edad INT NOT NULL CHECK (edad BETWEEN 0 AND 100),
   deseo TEXT NOT NULL CHECK (length(trim(deseo)) BETWEEN 1 AND 2000),
   activa BOOLEAN NOT NULL DEFAULT TRUE,
   creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+ );
+ALTER TABLE actividades_cartas ADD COLUMN IF NOT EXISTS edad INT;
+DO $$
+DECLARE tipo_edad TEXT;
+BEGIN
+  SELECT data_type INTO tipo_edad
+  FROM information_schema.columns
+  WHERE table_schema=current_schema() AND table_name='actividades_cartas' AND column_name='edad';
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='actividades_cartas' AND column_name='edad_meses')
+    OR (tipo_edad IS NOT NULL AND NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('actividades_cartas') AND conname='chk_carta_edad')) THEN
+    ALTER TABLE actividades_cartas ADD COLUMN IF NOT EXISTS edad_nueva INT;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='actividades_cartas' AND column_name='edad_meses') THEN
+      UPDATE actividades_cartas SET edad_nueva=LEAST(100,FLOOR(edad_meses / 12.0)::int) WHERE edad_nueva IS NULL;
+    END IF;
+    IF tipo_edad IS NOT NULL THEN
+      UPDATE actividades_cartas SET edad_nueva=LEAST(100,FLOOR(edad::numeric)::int) WHERE edad_nueva IS NULL;
+    END IF;
+    ALTER TABLE actividades_cartas DROP CONSTRAINT IF EXISTS actividades_cartas_edad_check;
+    ALTER TABLE actividades_cartas DROP CONSTRAINT IF EXISTS actividades_cartas_edad_meses_check;
+    ALTER TABLE actividades_cartas DROP CONSTRAINT IF EXISTS chk_carta_edad;
+    ALTER TABLE actividades_cartas DROP CONSTRAINT IF EXISTS chk_carta_edad_meses;
+    ALTER TABLE actividades_cartas DROP COLUMN IF EXISTS edad;
+    ALTER TABLE actividades_cartas DROP COLUMN IF EXISTS edad_meses;
+    ALTER TABLE actividades_cartas RENAME COLUMN edad_nueva TO edad;
+    ALTER TABLE actividades_cartas ALTER COLUMN edad SET NOT NULL;
+    ALTER TABLE actividades_cartas ADD CONSTRAINT chk_carta_edad CHECK (edad BETWEEN 0 AND 100);
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_cartas_edicion ON actividades_cartas(id_edicion);
 
 CREATE TABLE IF NOT EXISTS actividades_cartas_reservas (

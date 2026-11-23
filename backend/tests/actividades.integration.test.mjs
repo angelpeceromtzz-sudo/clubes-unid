@@ -82,7 +82,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     await enviar(1, 'POST', '/gestion/actividades', { nombre: 'Sin permiso' }, 403);
   });
 
-  test('solo Administración, Coordinación y Rectoría crean actividades y reciben ese permiso en el panel', async () => {
+  test('solo Coordinación y Rectoría crean actividades y reciben ese permiso en el panel', async () => {
     const datos = { nombre: 'Actividad de permisos QA', descripcion: 'Actividad para comprobar autorización', categoria: 'Servicio' };
     const contar = async () => (await db.query('SELECT (SELECT COUNT(*)::int FROM clubes) AS recursos,(SELECT COUNT(*)::int FROM actividad_clubes) AS eventos')).rows[0];
     const antes = await contar();
@@ -122,10 +122,10 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     for (const rol of [1, 2, 3, 4, 5, 6, 7]) {
       const gestion = await enviar(rol, 'GET', '/gestion');
       assert.equal(gestion.puede_aprobar, rol === 4);
-      assert.equal(gestion.puede_aprobar_ediciones, [4, 7].includes(rol));
+      assert.equal(gestion.puede_aprobar_ediciones, [3, 4, 7].includes(rol));
     }
     await enviar(7, 'POST', ruta + '/revision', {});
-    for (const rol of [null, 1, 2, 3, 5, 6]) await enviar(rol, 'POST', ruta + '/decision', { aprobar: true }, rol ? 403 : 401);
+    for (const rol of [null, 1, 2, 5, 6]) await enviar(rol, 'POST', ruta + '/decision', { aprobar: true }, rol ? 403 : 401);
     await enviar(7, 'POST', ruta + '/decision', { aprobar: true }, 400);
     await publicar(7, 'actividades', actividad.id_actividad);
     assert.equal((await enviar(7, 'POST', ruta + '/decision', { aprobar: true })).estado, 'publicada');
@@ -145,7 +145,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     assert.deepEqual(eventos, [{ tipo_evento: 'edicion_publicada', id_actor: 7 }, { tipo_evento: 'edicion_rechazada', id_actor: 7 }, { tipo_evento: 'edicion_publicada', id_actor: 7 }]);
 
     for (const archivar of [true, false]) await enviar(7, 'POST', ruta + '/archivo', { archivar }, 403);
-    await enviar(7, 'POST', ruta + '/catalogo', { nombre: 'Aporte QA', unidad: 'piezas', cantidad_minima: 1 }, 403);
+    await enviar(7, 'POST', ruta + '/catalogo', { nombre: 'Aporte QA', unidad: 'piezas', cantidad_minima: 1 }, 201);
     const foto = await enviar(7, 'POST', ruta + '/fotos', { pie: 'Revisión por Rectoría' }, 201);
     assert.equal(foto.estado, 'pendiente');
     await enviar(7, 'PUT', '/gestion/fotos/' + foto.id_foto, { estado: 'publicada' }, 403);
@@ -153,10 +153,41 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     const concurrente = await enviar(7, 'POST', '/gestion/actividades/' + actividad.id_actividad + '/ediciones', { ...datos, nombre: 'Decisión concurrente QA' }, 201);
     const decidir = '/gestion/ediciones/' + concurrente.id_edicion;
     await enviar(7, 'POST', decidir + '/revision', {});
-    const respuestas = await Promise.all([4, 7].map((rol) => fetch(base + decidir + '/decision', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-usuario-qa': String(rol) }, body: JSON.stringify({ aprobar: true }) })));
-    assert.deepEqual(respuestas.map((respuesta) => respuesta.status).sort(), [200, 409]);
+    const respuestas = await Promise.all([3, 4, 7].map((rol) => fetch(base + decidir + '/decision', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-usuario-qa': String(rol) }, body: JSON.stringify({ aprobar: true }) })));
+    assert.deepEqual(respuestas.map((respuesta) => respuesta.status).sort(), [200, 409, 409]);
     await Promise.all(respuestas.map((respuesta) => respuesta.text()));
     assert.equal((await db.query("SELECT COUNT(*)::int AS total FROM actividad_clubes WHERE id_edicion=$1 AND tipo_evento='edicion_publicada'", [concurrente.id_edicion])).rows[0].total, 1);
+  });
+
+  test('la publicación directa conserva la versión pública y registra una sola publicación concurrente', async () => {
+    for (const rol of [3, 4, 7]) {
+      const actividad = await enviar(rol, 'POST', '/gestion/actividades', { nombre: 'Publicación directa QA ' + rol, descripcion: 'Descripción original', categoria: 'Servicio' }, 201);
+      const rutaActividad = '/gestion/actividades/' + actividad.id_actividad;
+      await enviar(rol, 'POST', rutaActividad + '/revision', {});
+      await enviar(rol, 'PUT', rutaActividad, { descripcion: 'Descripción corregida' });
+      await enviar(rol, 'POST', rutaActividad + '/imagen', {});
+      await enviar(rol, 'POST', rutaActividad + '/publicar', {});
+      const edicion = await enviar(rol, 'POST', rutaActividad + '/ediciones', { nombre: 'Edición directa QA', lugar: 'Campus QA', fecha_inicio: '2026-12-05' }, 201);
+      const rutaEdicion = '/gestion/ediciones/' + edicion.id_edicion;
+      await enviar(2, 'POST', rutaEdicion + '/publicar', {}, 403);
+      await enviar(rol, 'POST', rutaEdicion + '/publicar', {});
+      await enviar(rol, 'PUT', rutaActividad, { descripcion: 'Cambios reservados' });
+      await enviar(rol, 'PUT', rutaEdicion, { lugar: 'Nuevo punto de encuentro' });
+      const antes = await enviar(null, 'GET', '/detalle/' + actividad.slug);
+      assert.equal(antes.actividad.descripcion, 'Descripción corregida');
+      assert.equal(antes.ediciones.find((item) => item.id_edicion === edicion.id_edicion).lugar, 'Campus QA');
+      for (const [ruta, campo, id, accion] of [[rutaActividad, 'id_club', actividad.id_actividad, 'actividad_publicada'], [rutaEdicion, 'id_edicion', edicion.id_edicion, 'edicion_publicada']]) {
+        const respuestas = await Promise.all([3, 4, 7].map((actor) => enviar(actor, 'POST', ruta + '/publicar', {})));
+        assert.ok(respuestas.every((respuesta) => respuesta.estado === 'publicada' && respuesta.propuesta === null));
+        assert.equal((await db.query('SELECT COUNT(*)::int AS total FROM actividad_clubes WHERE ' + campo + '=$1 AND tipo_evento=$2', [id, accion])).rows[0].total, 2);
+      }
+      const despues = await enviar(null, 'GET', '/detalle/' + actividad.slug);
+      assert.equal(despues.actividad.descripcion, 'Cambios reservados');
+      assert.equal(despues.ediciones.find((item) => item.id_edicion === edicion.id_edicion).lugar, 'Nuevo punto de encuentro');
+      const catalogo = await enviar(rol, 'POST', rutaEdicion + '/catalogo', { nombre: 'Aporte directo QA', unidad: 'piezas', cantidad_minima: 1 }, 201);
+      await enviar(rol, 'PUT', '/gestion/catalogo/' + catalogo.id_opcion, { cantidad_minima: 2 });
+    }
+    for (const rol of [3, 4, 7]) await enviar(rol, 'POST', '/gestion/actividades/101/publicar', {}, 403);
   });
 
   test('guarda una edición con sus aportaciones desde el asistente y rechaza lotes incompletos',async()=>{

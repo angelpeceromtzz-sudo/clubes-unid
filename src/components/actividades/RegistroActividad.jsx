@@ -32,8 +32,12 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
   const abierta = edicion.estado_registro === 'abierta';
   const usaCartas = edicion.plantilla === 'trineo';
   const regaloRecibido = registro?.carta?.estado === 'entregada';
-  const requiereCarta = usaCartas && (!confirmado || Boolean(carta));
-  const campos = confirmado ? registro.formulario_snapshot : edicion.campos_registro;
+   const cartaObligatoria = edicion.carta_obligatoria !== false;
+   const requiereCarta = usaCartas && cartaObligatoria && (!confirmado || Boolean(carta));
+   const campos = confirmado ? registro.formulario_snapshot.map((campo) => {
+     const actual = edicion.campos_registro.find((item) => item.clave === campo.clave);
+     return actual ? { ...campo, imagen_url: actual.imagen_url, imagen_public_id: actual.imagen_public_id } : campo;
+   }) : edicion.campos_registro;
   const opcionesRegalosAnteriores = new Set((registro?.aportaciones || []).filter((aporte) => aporte.es_regalo_carta).map((aporte) => aporte.id_opcion));
   const catalogo = edicion.catalogo.filter((opcion) => !opcionesRegalosAnteriores.has(opcion.id_opcion));
   for (const previo of aportacionesAnteriores) {
@@ -68,7 +72,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
     <EstadoActividad estado="confirmado" /><p>{registro.nombre_completo} · Matrícula {registro.matricula}</p>
     <ResumenCartaTrineo carta={registro.carta} />
     {usaCartas && !registro.carta && <p className="text-sm text-amber-700 dark:text-amber-300">Este registro anterior no tiene carta vinculada.{!regaloRecibido && abierta ? ' Edita tu registro para elegir al niño de tu carta.' : ' Consulta al encargado para revisar tu aportación.'}</p>}
-    <dl className="grid gap-3 sm:grid-cols-2">{campos.map((campo) => <div key={campo.clave}><dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt><dd className="font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : registro.respuestas[campo.clave] || 'Sin especificar'}</dd></div>)}</dl>
+     <dl className="grid gap-3 sm:grid-cols-2">{campos.map((campo) => <div key={campo.clave}>{campo.imagen_url && <img src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-28 w-full rounded-lg object-cover" />}<dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt><dd className="font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : registro.respuestas[campo.clave] || 'Sin especificar'}</dd></div>)}</dl>
     {aportacionesAnteriores.filter((aporte) => aporte.estado !== 'cancelada').map((aporte) => <p key={aporte.id_aportacion}>Aportación para la actividad · {aporte.nombre}: {Number(aporte.cantidad)} {aporte.unidad} · {aporte.estado}</p>)}
     {abierta && <div className="flex flex-wrap gap-3"><BotonAccion onClick={() => setEditando(true)}>Editar mi registro</BotonAccion><BotonAccion variant="outline" onClick={() => setCancelando(true)}>Cancelar inscripción</BotonAccion></div>}
     {cancelando && <div className="space-y-3" role="alert"><p>¿Confirmas la cancelación de tu inscripción?{registro.carta?.estado === 'reservada' ? ' La carta quedará disponible para otro alumno.' : ''} Las aportaciones recibidas y cualquier asistencia registrada conservarán su historial.</p><div className="flex flex-wrap gap-3"><BotonAccion variant="danger" disabled={pendiente} onClick={cancelar}>Confirmar cancelación</BotonAccion><BotonAccion variant="outline" disabled={pendiente} onClick={() => setCancelando(false)}>Conservar mi inscripción</BotonAccion></div></div>}
@@ -81,12 +85,12 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
     <fieldset disabled={pendiente} className="min-w-0 space-y-5">
     {registro?.estado && <EstadoActividad estado={registro.estado} />}
     {registro?.historial_cartas?.length > 0 && !registro.carta && <p className="text-sm">Tu reserva anterior fue liberada al cancelar la inscripción. Elige una carta disponible para registrarte de nuevo.</p>}
-    {usaCartas && (!regaloRecibido || registro?.carta) && <SelectorCartaTrineo idEdicion={edicion.id_edicion} actual={registro?.carta} seleccionada={carta} onSeleccionar={setCarta} bloqueada={Boolean(regaloRecibido)} version={versionCartas} />}
+     {usaCartas && (!regaloRecibido || registro?.carta) && <SelectorCartaTrineo idEdicion={edicion.id_edicion} actual={registro?.carta} seleccionada={carta} onSeleccionar={setCarta} bloqueada={Boolean(regaloRecibido)} obligatoria={cartaObligatoria} version={versionCartas} />}
     {usaCartas && confirmado && !carta && <p className="text-sm text-amber-700 dark:text-amber-300">Tu inscripción anterior puede conservarse sin carta. Puedes elegir una para registrar el compromiso de regalo, aparte de las aportaciones para la actividad.</p>}
     <div className="grid gap-4 sm:grid-cols-2">
       <label className={labelCls}>Nombre completo<input className={inputCls} value={usuario.nombre_completo || ''} readOnly /></label>
       <label className={labelCls}>Matrícula *<input className={inputCls} value={matricula} onChange={(evento) => setMatricula(evento.target.value)} readOnly={Boolean(usuario.institutional_id)} inputMode="numeric" pattern="[0-9]+" maxLength={30} required /></label>
-      {campos.map((campo) => <label className={labelCls} key={campo.clave}>{campo.etiqueta}{campo.obligatorio ? ' *' : ' (opcional)'}
+       {campos.map((campo) => <label className={labelCls} key={campo.clave}>{campo.imagen_url && <img src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-36 w-full rounded-lg object-cover" />}{campo.etiqueta}{campo.obligatorio ? ' *' : ' (opcional)'}
         {campo.tipo === 'seleccion' || campo.tipo === 'licenciatura' ? <select aria-label={campo.etiqueta + (campo.obligatorio ? ' *' : ' (opcional)')} className={inputCls} value={respuestas[campo.clave] ?? ''} required={campo.obligatorio} disabled={campo.tipo === 'licenciatura' && loading} onChange={(evento) => responder(campo.clave, evento.target.value)}>
           <option value="">Selecciona una opción</option>
           {(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ valor: item.id_licenciatura, nombre: item.nombre })) : campo.opciones.map((opcion) => ({ valor: opcion, nombre: opcion }))).map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.nombre}</option>)}

@@ -2,9 +2,11 @@ import { camposMisiones, campoActividadVisible, normalizarConfiguracionMisiones,
 import { normalizarEnlaceMapa } from './ubicacionMaps.js';
 export * from './misionesDominio.js';
 // Contrato compartido entre la API, los formularios y las pruebas del módulo.
+// Los identificadores históricos admin (3) y coordinacion (7) representan Coordinación.
 export const ROLES_CREAN_ACTIVIDADES = [3, 4, 7];
 export const ROLES_SUPERVISAN_ACTIVIDADES = [3, 4, 7];
-export const ROLES_APRUEBAN_EDICIONES = [4, 7];
+export const ROLES_APRUEBAN_EDICIONES = [3, 4, 7];
+export const ROLES_PUBLICAN_ACTIVIDADES = [3, 4, 7];
 export const REACCIONES_ACTIVIDAD = ['like', 'love', 'clap'];
 export const ESTADOS_ACTIVIDAD = ['borrador', 'pendiente', 'publicada', 'rechazada', 'archivada'];
 
@@ -18,8 +20,8 @@ export const ETIQUETAS_ACTIVIDAD_CATALOGO = {
   edicion_enviada_revision: 'Edición enviada a revisión',
   actividad_retirada_revision: 'Información general retirada de revisión',
   edicion_retirada_revision: 'Edición retirada de revisión',
-  actividad_publicada: 'Información general aprobada y publicada',
-  edicion_publicada: 'Edición aprobada y publicada',
+  actividad_publicada: 'Información general publicada',
+  edicion_publicada: 'Edición publicada',
   actividad_rechazada: 'Cambios solicitados en la información general',
   edicion_rechazada: 'Cambios solicitados en la edición',
   actividad_archivada: 'Publicación archivada',
@@ -149,6 +151,14 @@ export function normalizarCamposActividad(valor, plantilla = 'general', configur
       tipo: campo.tipo, obligatorio: campo.obligatorio === true,
       opciones: [...new Set(opciones.map((opcion) => textoActividad(opcion, 120, 'Opción', true)))],
     };
+    if (campo.imagen_url != null) {
+      const imagen = textoActividad(campo.imagen_url, 1000, 'Imagen del campo');
+      if (!/^(https?:\/\/|\/)[^\s<>"']+$/i.test(imagen)) throw errorActividad('La imagen del campo no es válida');
+      resultado.imagen_url = imagen;
+    }
+    if (campo.imagen_public_id != null) {
+      resultado.imagen_public_id = textoActividad(campo.imagen_public_id, 255, 'Identificador de imagen');
+    }
     if (campo.tipo === 'numero') {
       resultado.minimo = campo.minimo === '' || campo.minimo == null ? 0 : Number(campo.minimo);
       resultado.maximo = campo.maximo === '' || campo.maximo == null ? 1000000 : Number(campo.maximo);
@@ -171,6 +181,7 @@ export function normalizarCamposActividad(valor, plantilla = 'general', configur
 
 export function normalizarEdicionActividad(datos, plantilla = 'general') {
   if (!datos || typeof datos !== 'object' || Array.isArray(datos)) throw errorActividad('Revisa los datos de la edición');
+  if (plantilla === 'trineo' && datos.carta_obligatoria !== undefined && typeof datos.carta_obligatoria !== 'boolean') throw errorActividad('Indica si la carta del Trineo es obligatoria');
   const configuracion = plantilla === 'misiones' && datos.configuracion_misiones != null ? normalizarConfiguracionMisiones(datos.configuracion_misiones) : null;
   const resultado = {
     nombre: textoActividad(datos.nombre, 160, 'Nombre de la edición', true),
@@ -180,6 +191,7 @@ export function normalizarEdicionActividad(datos, plantilla = 'general') {
     hora_inicio: textoActividad(datos.hora_inicio, 5, 'Hora'),
     requiere_registro: datos.requiere_registro === true,
     requiere_aportacion: datos.requiere_aportacion === true,
+    carta_obligatoria: plantilla === 'trineo' ? datos.carta_obligatoria !== false : false,
     destacable: datos.destacable === true,
     campos_registro: normalizarCamposActividad(datos.campos_registro || camposPlantillaActividad(plantilla, configuracion), plantilla, configuracion),
   };
@@ -198,7 +210,7 @@ export function normalizarEdicionActividad(datos, plantilla = 'general') {
 }
 
 export function validarPublicacionEdicion(edicion, catalogo = []) {
-  if (!edicion.fecha_inicio || !edicion.lugar) throw errorActividad('Completa la fecha y el lugar antes de enviar a revisión');
+  if (!edicion.fecha_inicio || !edicion.lugar) throw errorActividad('Completa la fecha y el lugar antes de publicar');
   if (edicion.requiere_registro) {
     if (!edicion.inscripcion_desde || !edicion.inscripcion_hasta) throw errorActividad('Configura el periodo de inscripción');
     if (edicion.campos_registro.some((campo) => campo.tipo === 'seleccion' && campo.obligatorio && !campo.opciones.length)) throw errorActividad('Completa las opciones de los campos obligatorios, incluyendo las tallas');

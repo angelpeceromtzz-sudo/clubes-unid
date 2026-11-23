@@ -6,7 +6,7 @@ import { montarAsistenciaActividades, consultarAsistencia, asistenciaPropia } fr
 import { montarMisiones, registroMisionesSeguro, validarDocumentoConfiguracion } from './misionesRouter.js';
 import { montarCartasTrineo, completarCartasRegistros, prepararReservaCarta, guardarReservaCarta, liberarCartaPendiente, recibirRegaloCarta } from './trineoCartas.js';
 import {
-  ROLES_CREAN_ACTIVIDADES, ROLES_SUPERVISAN_ACTIVIDADES, ROLES_APRUEBAN_EDICIONES, REACCIONES_ACTIVIDAD,
+  ROLES_CREAN_ACTIVIDADES, ROLES_SUPERVISAN_ACTIVIDADES, ROLES_APRUEBAN_EDICIONES, ROLES_PUBLICAN_ACTIVIDADES, REACCIONES_ACTIVIDAD,
   errorActividad, textoActividad, normalizarRecursoCatalogo, normalizarEdicionActividad,
   validarPublicacionEdicion, esDestacadaActividad, estadoRegistroActividad,
   validarRespuestasActividad, validarAportacionesActividad,
@@ -22,6 +22,9 @@ const TABLAS = { actividad: ['catalogo_recursos', 'id_actividad'], edicion: ['ac
 const supervisa = (usuario) => ROLES_SUPERVISAN_ACTIVIDADES.includes(usuario.id_rol);
 const aprueba = (usuario) => usuario.id_rol === 4;
 const apruebaEdicion = (usuario) => ROLES_APRUEBAN_EDICIONES.includes(usuario.id_rol);
+const publica = (usuario) => ROLES_PUBLICAN_ACTIVIDADES.includes(usuario.id_rol);
+const puedePublicar = (usuario, entidad) => publica(usuario) && (entidad.tipo === 'actividad' || Boolean(entidad.id_edicion));
+const permisosPublicacion = (usuario) => ({ puede_publicar_actividades: publica(usuario), puede_publicar_ediciones: publica(usuario) });
 const puedeGestionar = (usuario, actividad) => supervisa(usuario) || actividad.id_responsable === usuario.id || (!actividad.id_responsable && actividad.id_autor === usuario.id);
 
 function comprobarGestion(usuario, actividad) {
@@ -82,7 +85,7 @@ async function auditar(db, usuario, accion, detalle) {
 export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secretoAdmin, limpiarImagenes = async () => {}, limitarEscritura = (_req, _res, next) => next(), limitarSubida = (_req, _res, next) => next(), limitarRegistro = limitarEscritura, limitarReenvio = limitarEscritura, almacenPdf, correoMisiones }) {
   const router = Router();
   router.use((_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
-  for (const parametro of ['idActividad', 'idEdicion', 'idFoto', 'idAporte', 'idOpcion', 'idClub', 'idRegistro', 'idCarta', 'idReserva']) {
+  for (const parametro of ['idActividad', 'idEdicion', 'idFoto', 'idAporte', 'idOpcion', 'idClub', 'idRegistro', 'idCarta', 'idReserva', 'idPublicacion']) {
     router.param(parametro, (_req, _res, next, valor) => {
       if (!/^[1-9]\d*$/.test(valor) || !Number.isSafeInteger(Number(valor))) return next(errorActividad('Identificador no válido'));
       next();
@@ -124,6 +127,13 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       resultado.push({ ...edicionPublica(edicion, hoy()), catalogo: catalogo.filter((opcion) => opcion.activa), fotos, reacciones });
     }
     const fotos = rows[0].tipo === 'club' ? (await db.query("SELECT id_foto,url_imagen,pie,creado_en FROM actividades_fotos WHERE id_club=$1 AND id_edicion IS NULL AND estado='publicada' ORDER BY creado_en DESC,id_foto DESC", [rows[0].id_club])).rows : [];
+    for (const edicion of resultado) {
+      edicion.publicaciones = (await db.query("SELECT * FROM publicaciones_oferta WHERE id_edicion=$1 AND estado='publicada' ORDER BY creado_en DESC", [edicion.id_edicion])).rows;
+      for (const p of edicion.publicaciones) {
+        p.imagenes = (await db.query("SELECT * FROM publicaciones_imagenes WHERE id_publicacion=$1 AND estado='publicada' ORDER BY orden", [p.id_publicacion])).rows;
+        p.reacciones = (await db.query('SELECT reaccion, COUNT(*)::int AS total FROM reacciones_publicacion WHERE id_publicacion=$1 GROUP BY reaccion', [p.id_publicacion])).rows;
+      }
+    }
     res.json({ actividad: rows[0], ediciones: resultado, fotos, hoy: hoy() });
   });
 
@@ -178,7 +188,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const actividad = await actividadAsignada(req);
     actividad.responsable_nombre = (await db.query('SELECT nombre_completo FROM usuarios WHERE id_usuario=$1', [req.user.id])).rows[0]?.nombre_completo || null;
     const ediciones = (await db.query('SELECT ' + SELECT_EDICION + DESDE_EDICION + 'WHERE e.id_actividad=$1 ORDER BY e.id_edicion DESC', [actividad.id_actividad])).rows;
-    res.json({ actividad, ediciones, puede_aprobar: aprueba(req.user), puede_aprobar_ediciones: apruebaEdicion(req.user) });
+    res.json({ actividad, ediciones, puede_aprobar: aprueba(req.user), puede_aprobar_ediciones: apruebaEdicion(req.user), ...permisosPublicacion(req.user) });
   });
 
   router.get('/gestion/asignadas/:idActividad/historial', async (req, res) => {
@@ -199,11 +209,11 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     for (const actividad of actividades) actividad.niveles = (await db.query('SELECT id_nivel FROM clubes_niveles WHERE id_club=$1 ORDER BY id_nivel', [actividad.id_actividad])).rows.map((fila) => fila.id_nivel);
     const ids = actividades.map((item) => item.id_actividad);
     const ediciones = ids.length ? (await db.query('SELECT ' + SELECT_EDICION + DESDE_EDICION + 'WHERE e.id_actividad = ANY($1::int[]) ORDER BY e.id_edicion DESC', [ids])).rows : [];
-    res.json({ actividades, ediciones, puede_crear: ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol), puede_crear_club: [3,7].includes(req.user.id_rol), puede_asignar: supervisa(req.user), puede_aprobar: aprueba(req.user), puede_aprobar_ediciones: apruebaEdicion(req.user) });
+    res.json({ actividades, ediciones, puede_crear: ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol), puede_crear_club: [3,7].includes(req.user.id_rol), puede_asignar: supervisa(req.user), puede_aprobar: aprueba(req.user), puede_aprobar_ediciones: apruebaEdicion(req.user), ...permisosPublicacion(req.user) });
   });
 
   router.get('/gestion/encargados', async (req, res) => {
-    if (!supervisa(req.user)) throw errorActividad('Solo Coordinación, Administración y Rectoría asignan encargados', 403);
+    if (!supervisa(req.user)) throw errorActividad('Solo Coordinación y Rectoría asignan encargados', 403);
     const buscar = textoActividad(req.query.buscar, 100, 'Nombre');
     res.json((await db.query("SELECT id_usuario, nombre_completo FROM usuarios WHERE deleted_at IS NULL AND nombre_completo ILIKE $1 AND ($2::boolean=FALSE OR id_rol IN (1,2)) ORDER BY nombre_completo LIMIT 50", ['%' + buscar + '%',req.query.tipo==='club'])).rows);
   });
@@ -229,7 +239,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   });
 
   router.post('/gestion/actividades', async (req, res) => {
-    if (!ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol)) throw errorActividad('Solo Administración, Coordinación y Rectoría pueden crear actividades', 403);
+    if (!ROLES_CREAN_ACTIVIDADES.includes(req.user.id_rol)) throw errorActividad('Solo Coordinación y Rectoría pueden crear actividades', 403);
     const datos = normalizarRecursoCatalogo(req.body);
     if (datos.tipo === 'club' && (![3,7].includes(req.user.id_rol) || !secretoAdmin || req.body.password !== secretoAdmin)) throw errorActividad('La creación de clubes requiere Coordinación y su contraseña de administración', 403);
     const resultado = await transaccion(async (cliente) => {
@@ -248,7 +258,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     if (!Number.isSafeInteger(id) || id < 1) throw errorActividad('Selecciona un encargado');
     res.json(await transaccion(async (cliente) => {
       const recurso=await obtenerActividad(cliente, req.params.idActividad, true);
-      if(recurso.tipo==='club' && ![3,7].includes(req.user.id_rol)) throw errorActividad('Coordinación y Administración asignan responsables de clubes',403);
+      if(recurso.tipo==='club' && ![3,7].includes(req.user.id_rol)) throw errorActividad('Coordinación asigna responsables de clubes',403);
       const usuario = await cliente.query('SELECT id_usuario,id_rol FROM usuarios WHERE id_usuario = $1 AND deleted_at IS NULL FOR UPDATE', [id]);
       if (!usuario.rows.length) throw errorActividad('Encargado no disponible');
       if(recurso.tipo==='club') {
@@ -312,7 +322,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
         comprobarGestion(req.user, entidad);
         if (tipo === 'actividad' && req.body.tipo && req.body.tipo !== entidad.tipo) throw errorActividad('El tipo se elige al crear. Para registros existentes utiliza el traslado revisado', 409);
         if (entidad.estado === 'archivada') throw errorActividad('Esta actividad está archivada', 409);
-        if (entidad.estado === 'pendiente' || entidad.estado_propuesta === 'pendiente') throw errorActividad('Retira la propuesta de revisión antes de editarla', 409);
+        if ((entidad.estado === 'pendiente' || entidad.estado_propuesta === 'pendiente') && !puedePublicar(req.user, entidad)) throw errorActividad('Retira la propuesta de revisión antes de editarla', 409);
         const entrada = { ...entidad, ...entidad.propuesta, ...req.body };
         const adoptando = tipo === 'edicion' && !esFormatoMegamisiones(entidad.configuracion_misiones) && esFormatoMegamisiones(entrada.configuracion_misiones);
         if (adoptando) {
@@ -327,6 +337,26 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
           resultado = (await cliente.query('UPDATE ' + tabla + " SET propuesta = $1, estado_propuesta = 'borrador', motivo_rechazo = NULL, actualizado_en = NOW() WHERE " + campoId + ' = $2 RETURNING *', [JSON.stringify(datos), entidad[campoId]])).rows[0];
         } else resultado = await guardarColumnas(cliente, tabla, campoId, entidad[campoId], { ...datos, estado: 'borrador', motivo_rechazo: null });
         await auditar(cliente, req.user, tipo + '_editada', { [campoId]: entidad[campoId] });
+        return resultado;
+      }));
+    });
+
+    router.post(ruta + '/publicar', async (req, res) => {
+      if (!publica(req.user)) throw errorActividad('No tienes permiso para publicar actividades', 403);
+      res.json(await transaccion(async (cliente) => {
+        const entidad = await obtener(cliente, req.params[parametro], true);
+        comprobarGestion(req.user, entidad);
+        if (!puedePublicar(req.user, entidad)) throw errorActividad('Los clubes conservan su proceso de revisión', 403);
+        if (entidad.estado === 'archivada') throw errorActividad('Esta publicación está archivada', 409);
+        if (entidad.estado === 'publicada' && !entidad.propuesta) return entidad;
+        const datos = normalizar({ ...entidad, ...entidad.propuesta }, entidad);
+        if (tipo === 'edicion') {
+          if (entidad.estado_actividad !== 'publicada') throw errorActividad('Publica primero la información general de la actividad');
+          validarPublicacionEdicion(datos, await catalogoEdicion(cliente, entidad.id_edicion));
+          await validarDocumentoConfiguracion(cliente, datos, entidad.id_actividad);
+        }
+        const resultado = await guardarColumnas(cliente, tabla, campoId, entidad[campoId], { ...datos, estado: 'publicada', propuesta: null, estado_propuesta: null, motivo_rechazo: null });
+        await auditar(cliente, req.user, tipo + '_publicada', { [campoId]: entidad[campoId] });
         return resultado;
       }));
     });
@@ -397,7 +427,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     const aportes = (await db.query(`SELECT p.*,EXISTS(SELECT 1 FROM actividades_cartas_reservas v WHERE v.id_aportacion=p.id_aportacion) AS es_regalo_carta
       FROM actividades_aportaciones p JOIN actividades_registros r ON r.id_registro=p.id_registro WHERE r.id_edicion=$1 ORDER BY p.id_aportacion`, [edicion.id_edicion])).rows;
     const fotos = (await db.query("SELECT * FROM actividades_fotos WHERE id_edicion = $1 AND estado <> 'eliminada' ORDER BY id_foto DESC", [edicion.id_edicion])).rows;
-    res.json({ edicion, puede_adoptar_formato: edicion.plantilla === 'misiones' && edicion.estado === 'borrador' && !edicion.propuesta && !registros.length && !esFormatoMegamisiones(edicion.configuracion_misiones), catalogo: await catalogoEdicion(db, edicion.id_edicion), registros: registros.map((registro) => ({ ...registroMisionesSeguro(registro), aportaciones: aportes.filter((aporte) => aporte.id_registro === registro.id_registro) })), fotos });
+    res.json({ edicion, ...permisosPublicacion(req.user), puede_adoptar_formato: edicion.plantilla === 'misiones' && edicion.estado === 'borrador' && !edicion.propuesta && !registros.length && !esFormatoMegamisiones(edicion.configuracion_misiones), catalogo: await catalogoEdicion(db, edicion.id_edicion), registros: registros.map((registro) => ({ ...registroMisionesSeguro(registro), aportaciones: aportes.filter((aporte) => aporte.id_registro === registro.id_registro) })), fotos });
   });
 
   router.put('/gestion/ediciones/:idEdicion/inscripciones', async (req, res) => {
@@ -415,8 +445,9 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     res.status(201).json(await transaccion(async (cliente) => {
       const edicion = await obtenerEdicion(cliente, req.params.idEdicion, true);
       comprobarGestion(req.user, edicion);
-      if (edicion.estado === 'publicada' && !aprueba(req.user)) throw errorActividad('Rectoría debe actualizar el catálogo publicado', 403);
-      if (edicion.estado === 'pendiente' || edicion.estado_propuesta === 'pendiente') throw errorActividad('Retira la edición de revisión antes de cambiar su catálogo', 409);
+      if (edicion.estado === 'archivada') throw errorActividad('Esta edición está archivada', 409);
+      if (edicion.estado === 'publicada' && !puedePublicar(req.user, edicion)) throw errorActividad('No tienes permiso para actualizar el catálogo publicado', 403);
+      if ((edicion.estado === 'pendiente' || edicion.estado_propuesta === 'pendiente') && !puedePublicar(req.user, edicion)) throw errorActividad('Retira la edición de revisión antes de cambiar su catálogo', 409);
       const {nombre,unidad,descripcion,cantidad_minima:minimo}=normalizarOpcionAportacion(req.body);
       const { rows } = await cliente.query('INSERT INTO actividades_aportes_catalogo (id_edicion,nombre,descripcion,unidad,cantidad_minima) VALUES ($1,$2,$3,$4,$5) RETURNING *', [edicion.id_edicion, nombre, descripcion, unidad, minimo]);
       await auditar(cliente, req.user, 'opcion_aportacion_creada', { id_opcion: rows[0].id_opcion });
@@ -430,8 +461,9 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       if (!opcion) throw errorActividad('Aportación no encontrada', 404);
       const edicion = await obtenerEdicion(cliente, opcion.id_edicion, true);
       comprobarGestion(req.user, edicion);
-      if (edicion.estado === 'publicada' && !aprueba(req.user)) throw errorActividad('Rectoría debe actualizar el catálogo publicado', 403);
-      if (edicion.estado === 'pendiente' || edicion.estado_propuesta === 'pendiente') throw errorActividad('Retira la edición de revisión antes de cambiar su catálogo', 409);
+      if (edicion.estado === 'archivada') throw errorActividad('Esta edición está archivada', 409);
+      if (edicion.estado === 'publicada' && !puedePublicar(req.user, edicion)) throw errorActividad('No tienes permiso para actualizar el catálogo publicado', 403);
+      if ((edicion.estado === 'pendiente' || edicion.estado_propuesta === 'pendiente') && !puedePublicar(req.user, edicion)) throw errorActividad('Retira la edición de revisión antes de cambiar su catálogo', 409);
       const datos = { ...opcion, ...req.body };
       if (typeof datos.activa !== 'boolean') throw errorActividad('Indica la disponibilidad de la aportación');
       const nombre = textoActividad(datos.nombre, 160, 'Nombre de la aportación', true);
@@ -474,7 +506,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
         const actividad = await obtenerActividad(db, req.params.idActividad);
         comprobarGestion(req.user, actividad);
         if(actividad.estado==='archivada') throw errorActividad('Esta publicación está archivada',409);
-        if (actividad.estado === 'pendiente' || actividad.estado_propuesta === 'pendiente') throw errorActividad('Retira la propuesta de revisión antes de cambiar la imagen', 409);
+        if ((actividad.estado === 'pendiente' || actividad.estado_propuesta === 'pendiente') && !puedePublicar(req.user, actividad)) throw errorActividad('Retira la propuesta de revisión antes de cambiar la imagen', 409);
         req.fotosActividadEnProceso=true;
         next();
       } catch (error) { next(error); }
@@ -485,7 +517,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
         const actividad = await obtenerActividad(cliente, req.params.idActividad, true);
         comprobarGestion(req.user, actividad);
         if(actividad.estado==='archivada') throw errorActividad('Esta publicación está archivada',409);
-        if (actividad.estado === 'pendiente' || actividad.estado_propuesta === 'pendiente') throw errorActividad('La propuesta está en revisión', 409);
+        if ((actividad.estado === 'pendiente' || actividad.estado_propuesta === 'pendiente') && !puedePublicar(req.user, actividad)) throw errorActividad('La propuesta está en revisión', 409);
         let resultado;
         if (actividad.estado === 'publicada') {
           const propuesta = normalizarRecursoCatalogo({ ...actividad, ...actividad.propuesta, url_imagen: req.file.path });
@@ -497,6 +529,86 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       req.fotosActividadGuardadas=true;
       res.json(resultado);
     });
+
+    const autorizarImagenCampo = async (req, _res, next) => {
+      try {
+        const edicion = await obtenerEdicion(db, req.params.idEdicion);
+        comprobarGestion(req.user, edicion);
+        if (edicion.estado === 'archivada') throw errorActividad('Esta edición está archivada', 409);
+        if ((edicion.estado === 'pendiente' || edicion.estado_propuesta === 'pendiente') && !puedePublicar(req.user, edicion)) {
+          throw errorActividad('Retira la edición de revisión antes de cambiar sus preguntas', 409);
+        }
+        req.fotosActividadEnProceso = true;
+        next();
+      } catch (error) { next(error); }
+    };
+
+    async function actualizarImagenCampo(req, res) {
+      if (!req.file) throw errorActividad('Selecciona una imagen JPG, PNG, GIF o WebP de hasta 5 MB');
+      const clave = textoActividad(req.params.clave, 50, 'Clave del campo', true);
+      let imagenAnterior = null;
+      let eraPublicada = false;
+      const resultado = await transaccion(async (cliente) => {
+        const edicion = await obtenerEdicion(cliente, req.params.idEdicion, true);
+        comprobarGestion(req.user, edicion);
+        eraPublicada = edicion.estado === 'publicada';
+        const base = { ...edicion, ...edicion.propuesta };
+        const campos = Array.isArray(base.campos_registro) ? base.campos_registro.map((campo) => ({ ...campo })) : [];
+        const indice = campos.findIndex((campo) => campo.clave === clave);
+        if (indice < 0) throw errorActividad('El campo no existe en esta edición', 404);
+        imagenAnterior = campos[indice].imagen_public_id || null;
+        campos[indice] = { ...campos[indice], imagen_url: req.file.path, imagen_public_id: req.file.filename || null };
+        let actualizado;
+        if (edicion.estado === 'publicada') {
+          const propuesta = { ...base, campos_registro: campos };
+          actualizado = (await cliente.query("UPDATE actividades_ediciones SET propuesta=$1,estado_propuesta='borrador',motivo_rechazo=NULL,actualizado_en=NOW() WHERE id_edicion=$2 RETURNING *", [JSON.stringify(propuesta), edicion.id_edicion])).rows[0];
+        } else {
+          actualizado = (await cliente.query('UPDATE actividades_ediciones SET campos_registro=$1,actualizado_en=NOW() WHERE id_edicion=$2 RETURNING *', [JSON.stringify(campos), edicion.id_edicion])).rows[0];
+        }
+        await auditar(cliente, req.user, 'imagen_campo_actualizada', { id_edicion: edicion.id_edicion, clave });
+        return actualizado;
+      });
+      req.fotosActividadGuardadas = true;
+      if (!eraPublicada && imagenAnterior && imagenAnterior !== req.file.filename) {
+        try { await limpiarImagenes([{ filename: imagenAnterior }]); }
+        catch { console.error('[actividades] No se pudo limpiar la imagen anterior del campo'); }
+      }
+      res.json(resultado);
+    }
+
+    router.post('/gestion/ediciones/:idEdicion/campos/:clave/imagen', autorizarImagenCampo, limitarSubida, subirImagen.single('imagen'), actualizarImagenCampo);
+    router.delete('/gestion/ediciones/:idEdicion/campos/:clave/imagen', async (req, res) => {
+      res.json(await transaccion(async (cliente) => {
+        const edicion = await obtenerEdicion(cliente, req.params.idEdicion, true);
+        comprobarGestion(req.user, edicion);
+        if (edicion.estado === 'archivada') throw errorActividad('Esta edición está archivada', 409);
+        if ((edicion.estado === 'pendiente' || edicion.estado_propuesta === 'pendiente') && !puedePublicar(req.user, edicion)) {
+          throw errorActividad('Retira la edición de revisión antes de cambiar sus preguntas', 409);
+        }
+        const clave = textoActividad(req.params.clave, 50, 'Clave del campo', true);
+        const base = { ...edicion, ...edicion.propuesta };
+        const eraPublicada = edicion.estado === 'publicada';
+        const campos = Array.isArray(base.campos_registro) ? base.campos_registro.map((campo) => ({ ...campo })) : [];
+        const indice = campos.findIndex((campo) => campo.clave === clave);
+        if (indice < 0) throw errorActividad('El campo no existe en esta edición', 404);
+        const anterior = campos[indice].imagen_public_id || null;
+        delete campos[indice].imagen_url;
+        delete campos[indice].imagen_public_id;
+        let actualizado;
+        if (edicion.estado === 'publicada') {
+          actualizado = (await cliente.query("UPDATE actividades_ediciones SET propuesta=$1,estado_propuesta='borrador',motivo_rechazo=NULL,actualizado_en=NOW() WHERE id_edicion=$2 RETURNING *", [JSON.stringify({ ...base, campos_registro: campos }), edicion.id_edicion])).rows[0];
+        } else {
+          actualizado = (await cliente.query('UPDATE actividades_ediciones SET campos_registro=$1,actualizado_en=NOW() WHERE id_edicion=$2 RETURNING *', [JSON.stringify(campos), edicion.id_edicion])).rows[0];
+        }
+        await auditar(cliente, req.user, 'imagen_campo_eliminada', { id_edicion: edicion.id_edicion, clave });
+        if (!eraPublicada && anterior) {
+          try { await limpiarImagenes([{ filename: anterior }]); }
+          catch { console.error('[actividades] No se pudo limpiar la imagen del campo'); }
+        }
+        return actualizado;
+      }));
+    });
+
     const contextoFotos = async (cliente,req,bloquear=false) => {
       const recurso=req.params.idEdicion ? await obtenerEdicion(cliente,req.params.idEdicion,bloquear) : await obtenerActividad(cliente,req.params.idActividad,bloquear);
       comprobarGestion(req.user,recurso);
@@ -576,6 +688,191 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     res.json({ registro, reaccion, asistencia: await consultarAsistencia(db, registro?.id_registro),
       disponibilidad_asistencia: disponibilidadAsistenciaActividad(edicion, hoy()) });
   });
+
+  const esModerador = (usuario) => [3, 4, 7].includes(usuario.id_rol);
+  const esAlumno = (usuario) => usuario.id_rol === 1;
+
+  // Borrado definitivo de ediciones.
+  router.delete('/gestion/ediciones/:idEdicion', async (req, res) => {
+    if (!esModerador(req.user)) throw errorActividad('Solo Coordinación o Rectoría pueden borrar ediciones', 403);
+    if (req.body?.confirmar !== true && req.query?.confirmar !== 'true') throw errorActividad('Confirma el borrado definitivo');
+    res.json(await transaccion(async (cliente) => {
+      const edicion = await obtenerEdicion(cliente, req.params.idEdicion, true);
+      comprobarGestion(req.user, edicion);
+      await auditar(cliente, req.user, 'edicion_borrada', { id_edicion: edicion.id_edicion, id_actividad: edicion.id_actividad });
+      // limpiar datos operativos
+      const registros = (await cliente.query('SELECT id_registro FROM actividades_registros WHERE id_edicion=$1', [edicion.id_edicion])).rows.map(r => r.id_registro);
+      if (registros.length) {
+        await cliente.query('DELETE FROM actividades_asistencias WHERE id_registro = ANY($1::int[])', [registros]);
+        await cliente.query('DELETE FROM actividades_aportaciones WHERE id_registro = ANY($1::int[])', [registros]);
+        await cliente.query('DELETE FROM actividades_registros WHERE id_edicion=$1', [edicion.id_edicion]);
+      }
+      await cliente.query('DELETE FROM actividades_aportes_catalogo WHERE id_edicion=$1', [edicion.id_edicion]);
+      await cliente.query('DELETE FROM reacciones_catalogo WHERE id_edicion=$1', [edicion.id_edicion]);
+      await cliente.query('DELETE FROM reacciones_publicacion WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_edicion=$1)', [edicion.id_edicion]);
+      await cliente.query('DELETE FROM publicaciones_imagenes WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_edicion=$1)', [edicion.id_edicion]);
+      await cliente.query('DELETE FROM publicaciones_oferta WHERE id_edicion=$1', [edicion.id_edicion]);
+      await cliente.query('DELETE FROM actividades_ediciones WHERE id_edicion=$1', [edicion.id_edicion]);
+      return { borrado: true, id_edicion: edicion.id_edicion };
+    }));
+  });
+
+  // Borrado definitivo de actividades (no clubes).
+  router.delete('/gestion/actividades/:idActividad', async (req, res) => {
+    if (!esModerador(req.user)) throw errorActividad('Solo Coordinación o Rectoría pueden borrar actividades', 403);
+    if (req.body?.confirmar !== true && req.query?.confirmar !== 'true') throw errorActividad('Confirma el borrado definitivo');
+    res.json(await transaccion(async (cliente) => {
+      const actividad = await obtenerActividad(cliente, req.params.idActividad, true);
+      comprobarGestion(req.user, actividad);
+      if (actividad.tipo === 'club') throw errorActividad('Los clubes no se pueden borrar desde aquí', 403);
+      await auditar(cliente, req.user, 'actividad_borrada', { id_actividad: actividad.id_actividad });
+      const ediciones = (await cliente.query('SELECT id_edicion FROM actividades_ediciones WHERE id_actividad=$1', [actividad.id_actividad])).rows.map(r => r.id_edicion);
+      for (const idEdicion of ediciones) {
+        const registros = (await cliente.query('SELECT id_registro FROM actividades_registros WHERE id_edicion=$1', [idEdicion])).rows.map(r => r.id_registro);
+        if (registros.length) {
+          await cliente.query('DELETE FROM actividades_asistencias WHERE id_registro = ANY($1::int[])', [registros]);
+          await cliente.query('DELETE FROM actividades_aportaciones WHERE id_registro = ANY($1::int[])', [registros]);
+          await cliente.query('DELETE FROM actividades_registros WHERE id_edicion=$1', [idEdicion]);
+        }
+        await cliente.query('DELETE FROM actividades_aportes_catalogo WHERE id_edicion=$1', [idEdicion]);
+        await cliente.query('DELETE FROM reacciones_catalogo WHERE id_edicion=$1', [idEdicion]);
+      }
+      await cliente.query('DELETE FROM reacciones_catalogo WHERE id_club=$1', [actividad.id_actividad]);
+      await cliente.query('DELETE FROM reacciones_publicacion WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_club=$1)', [actividad.id_actividad]);
+      await cliente.query('DELETE FROM publicaciones_imagenes WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_club=$1)', [actividad.id_actividad]);
+      await cliente.query('DELETE FROM publicaciones_oferta WHERE id_club=$1', [actividad.id_actividad]);
+      await cliente.query('DELETE FROM actividades_ediciones WHERE id_actividad=$1', [actividad.id_actividad]);
+      await cliente.query('DELETE FROM clubes_niveles WHERE id_club=$1', [actividad.id_actividad]);
+      await cliente.query('DELETE FROM catalogo_recursos WHERE id_actividad=$1', [actividad.id_actividad]);
+      return { borrado: true, id_actividad: actividad.id_actividad };
+    }));
+  });
+
+  // Publicaciones de alumnos.
+  router.post('/ediciones/:idEdicion/publicaciones', autenticar, async (req, res) => {
+    if (!esAlumno(req.user)) throw errorActividad('Solo los alumnos pueden publicar', 403);
+    const edicion = await obtenerEdicion(db, req.params.idEdicion);
+    comprobarPublica(edicion);
+    const contenido = String(req.body?.contenido || '').trim().slice(0, 300);
+    if (!contenido) throw errorActividad('Escribe el contenido de la publicación');
+    const imagenes = Array.isArray(req.body?.imagenes) ? req.body.imagenes.slice(0, 10) : [];
+    res.status(201).json(await transaccion(async (cliente) => {
+      const { rows } = await cliente.query('INSERT INTO publicaciones_oferta(id_club,id_edicion,contenido,id_autor,estado) VALUES($1,$2,$3,$4,$5) RETURNING *', [edicion.id_actividad, edicion.id_edicion, contenido, req.user.id, 'pendiente']);
+      const pub = rows[0];
+      for (let i = 0; i < imagenes.length; i++) {
+        await cliente.query('INSERT INTO publicaciones_imagenes(id_publicacion,url_imagen,estado,orden) VALUES($1,$2,$3,$4)', [pub.id_publicacion, imagenes[i], 'pendiente', i]);
+      }
+      await auditar(cliente, req.user, 'publicacion_alumno_creada', { id_publicacion: pub.id_publicacion, id_edicion: edicion.id_edicion });
+      return pub;
+    }));
+  });
+
+  router.get('/ediciones/:idEdicion/publicaciones', async (req, res) => {
+    const edicion = await obtenerEdicion(db, req.params.idEdicion);
+    comprobarPublica(edicion);
+    const pubs = (await db.query("SELECT * FROM publicaciones_oferta WHERE id_edicion=$1 AND estado='publicada' ORDER BY creado_en DESC", [edicion.id_edicion])).rows;
+    for (const p of pubs) {
+      p.imagenes = (await db.query("SELECT * FROM publicaciones_imagenes WHERE id_publicacion=$1 AND estado='publicada' ORDER BY orden", [p.id_publicacion])).rows;
+      p.reacciones = (await db.query('SELECT reaccion, COUNT(*)::int AS total FROM reacciones_publicacion WHERE id_publicacion=$1 GROUP BY reaccion', [p.id_publicacion])).rows;
+    }
+    res.json(pubs);
+  });
+
+  router.get('/mis-publicaciones', autenticar, async (req, res) => {
+    const pubs = (await db.query('SELECT * FROM publicaciones_oferta WHERE id_autor=$1 ORDER BY creado_en DESC', [req.user.id])).rows;
+    for (const p of pubs) {
+      p.imagenes = (await db.query('SELECT * FROM publicaciones_imagenes WHERE id_publicacion=$1 ORDER BY orden', [p.id_publicacion])).rows;
+    }
+    res.json(pubs);
+  });
+
+  router.get('/gestion/publicaciones', autenticar, async (req, res) => {
+    if (!esModerador(req.user)) throw errorActividad('Solo Coordinación o Rectoría revisan publicaciones', 403);
+    const estado = req.query.estado || 'pendiente';
+    const pubs = (await db.query('SELECT p.*,u.nombre_completo AS autor_nombre FROM publicaciones_oferta p LEFT JOIN usuarios u ON u.id_usuario=p.id_autor WHERE p.estado=$1 OR p.estado_propuesta=$1 ORDER BY p.creado_en DESC', [estado])).rows;
+    for (const p of pubs) {
+      p.imagenes = (await db.query('SELECT * FROM publicaciones_imagenes WHERE id_publicacion=$1 ORDER BY orden', [p.id_publicacion])).rows;
+    }
+    res.json(pubs);
+  });
+
+  router.post('/gestion/publicaciones/:idPublicacion/decision', autenticar, async (req, res) => {
+    if (!esModerador(req.user)) throw errorActividad('Solo Coordinación o Rectoría aprueban publicaciones', 403);
+    if (typeof req.body.aprobar !== 'boolean') throw errorActividad('Indica la decisión');
+    res.json(await transaccion(async (cliente) => {
+      const { rows } = await cliente.query('SELECT * FROM publicaciones_oferta WHERE id_publicacion=$1 FOR UPDATE', [req.params.idPublicacion]);
+      const pub = rows[0];
+      if (!pub) throw errorActividad('Publicación no encontrada', 404);
+      if (req.body.aprobar) {
+        if (pub.estado_propuesta === 'pendiente' && pub.contenido_pendiente) {
+          await cliente.query("UPDATE publicaciones_oferta SET contenido=contenido_pendiente, contenido_pendiente=NULL, estado_propuesta=NULL, estado='publicada', motivo_rechazo=NULL, actualizado_en=NOW() WHERE id_publicacion=$1", [pub.id_publicacion]);
+          await cliente.query("UPDATE publicaciones_imagenes SET estado='publicada' WHERE id_publicacion=$1 AND estado='pendiente'", [pub.id_publicacion]);
+        } else {
+          await cliente.query("UPDATE publicaciones_oferta SET estado='publicada', motivo_rechazo=NULL, actualizado_en=NOW() WHERE id_publicacion=$1", [pub.id_publicacion]);
+          await cliente.query("UPDATE publicaciones_imagenes SET estado='publicada' WHERE id_publicacion=$1", [pub.id_publicacion]);
+        }
+      } else {
+        if (pub.estado_propuesta === 'pendiente') {
+          await cliente.query("UPDATE publicaciones_oferta SET estado_propuesta='rechazada', contenido_pendiente=NULL, motivo_rechazo=$1, actualizado_en=NOW() WHERE id_publicacion=$2", [req.body.motivo || '', pub.id_publicacion]);
+        } else {
+          await cliente.query("UPDATE publicaciones_oferta SET estado='rechazada', motivo_rechazo=$1, actualizado_en=NOW() WHERE id_publicacion=$2", [req.body.motivo || '', pub.id_publicacion]);
+        }
+      }
+      await auditar(cliente, req.user, 'publicacion_alumno_' + (req.body.aprobar ? 'aprobada' : 'rechazada'), { id_publicacion: pub.id_publicacion });
+      const updated = (await cliente.query('SELECT * FROM publicaciones_oferta WHERE id_publicacion=$1', [pub.id_publicacion])).rows[0];
+      return updated;
+    }));
+  });
+
+  // Editar publicación propia (si aprobada, envía cambios a revisión).
+  router.put('/publicaciones/:idPublicacion', autenticar, async (req, res) => {
+    const { rows } = await db.query('SELECT * FROM publicaciones_oferta WHERE id_publicacion=$1', [req.params.idPublicacion]);
+    const pub = rows[0];
+    if (!pub) throw errorActividad('Publicación no encontrada', 404);
+    if (pub.id_autor !== req.user.id) throw errorActividad('No puedes editar esta publicación', 403);
+    const contenido = String(req.body?.contenido || pub.contenido).trim().slice(0, 300);
+    res.json(await transaccion(async (cliente) => {
+      if (pub.estado === 'publicada') {
+        await cliente.query("UPDATE publicaciones_oferta SET contenido_pendiente=$1, estado_propuesta='pendiente', actualizado_en=NOW() WHERE id_publicacion=$2", [contenido, pub.id_publicacion]);
+      } else {
+        await cliente.query('UPDATE publicaciones_oferta SET contenido=$1, actualizado_en=NOW() WHERE id_publicacion=$2', [contenido, pub.id_publicacion]);
+      }
+      await auditar(cliente, req.user, 'publicacion_alumno_editada', { id_publicacion: pub.id_publicacion });
+      return (await cliente.query('SELECT * FROM publicaciones_oferta WHERE id_publicacion=$1', [pub.id_publicacion])).rows[0];
+    }));
+  });
+
+  // Retirar publicación propia.
+  router.post('/publicaciones/:idPublicacion/retirar', autenticar, async (req, res) => {
+    const { rows } = await db.query('SELECT * FROM publicaciones_oferta WHERE id_publicacion=$1', [req.params.idPublicacion]);
+    const pub = rows[0];
+    if (!pub) throw errorActividad('Publicación no encontrada', 404);
+    if (pub.id_autor !== req.user.id && !esModerador(req.user)) throw errorActividad('No puedes retirar esta publicación', 403);
+    res.json(await transaccion(async (cliente) => {
+      await cliente.query("UPDATE publicaciones_oferta SET estado='retirada', actualizado_en=NOW() WHERE id_publicacion=$1", [pub.id_publicacion]);
+      await auditar(cliente, req.user, 'publicacion_alumno_retirada', { id_publicacion: pub.id_publicacion });
+      return (await cliente.query('SELECT * FROM publicaciones_oferta WHERE id_publicacion=$1', [pub.id_publicacion])).rows[0];
+    }));
+  });
+
+  // Reacción por publicación.
+  router.put('/publicaciones/:idPublicacion/reaccion', autenticar, async (req, res) => {
+    if (req.body.reaccion != null && !['like','love','clap'].includes(req.body.reaccion)) throw errorActividad('Reacción no válida');
+    res.json(await transaccion(async (cliente) => {
+      const { rows } = await cliente.query('SELECT * FROM publicaciones_oferta WHERE id_publicacion=$1', [req.params.idPublicacion]);
+      const pub = rows[0];
+      if (!pub || pub.estado !== 'publicada') throw errorActividad('Publicación no disponible', 404);
+      if (req.body.reaccion) {
+        await cliente.query('INSERT INTO reacciones_publicacion(id_publicacion,id_usuario,reaccion) VALUES($1,$2,$3) ON CONFLICT(id_publicacion,id_usuario) DO UPDATE SET reaccion=EXCLUDED.reaccion', [pub.id_publicacion, req.user.id, req.body.reaccion]);
+      } else {
+        await cliente.query('DELETE FROM reacciones_publicacion WHERE id_publicacion=$1 AND id_usuario=$2', [pub.id_publicacion, req.user.id]);
+      }
+      const totales = (await cliente.query('SELECT reaccion, COUNT(*)::int AS total FROM reacciones_publicacion WHERE id_publicacion=$1 GROUP BY reaccion', [pub.id_publicacion])).rows;
+      return { reaccion: req.body.reaccion || null, totales };
+    }));
+  });
+
+  // Incluir publicaciones aprobadas en detalle público.
 
   montarMisiones(router, {
     db, autenticar, hoy, obtenerActividad, obtenerEdicion, comprobarGestion, comprobarPublica, edicionPublica,
