@@ -40,7 +40,7 @@ import { abrirPanelResponsable } from './services/panelResponsable';
 import PaginaPerfilPreferencias from './pages/PaginaPerfilPreferencias';
 import { FlujoOnboarding } from './components/onboarding/FlujoOnboarding';
 import { ModalConsentimientoLegal } from './components/legal/ModalConsentimientoLegal';
-import { api } from './services/api';
+import { api, request } from './services/api';
 
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
@@ -330,7 +330,7 @@ return (
             </div>
           </div>
         ) : (
-          <ModalConsentimientoLegal onAceptar={async () => { await api.post('/legal/aceptar', { terminos: true, privacidad: true }); setConsentimientoPendiente(false); }} />
+          <ModalConsentimientoLegal onAceptar={async () => { await request('/legal/aceptar', { method: 'POST', body: JSON.stringify({ terminos: true, privacidad: true }) }); setConsentimientoPendiente(false); }} />
         )
       )}
       <SplashScreen authReady={authReady} clubesLoading={clubesLoading} onFinish={() => setSplashDone(true)} />
