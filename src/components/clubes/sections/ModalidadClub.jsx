@@ -24,9 +24,7 @@ export function ModalidadClub({ club, modoOscuro }) {
       <div className={`rounded-xl border border-dashed p-3 md:p-4 space-y-2.5 ${modoOscuro ? 'border-slate-700 bg-slate-800/30' : 'border-slate-300 bg-slate-50'}`}>
         <div className="flex items-center gap-3">
           <span className={`w-14 shrink-0 text-[10px] uppercase tracking-widest font-bold ${c.text}`}>Género</span>
-          <span className={`text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-full border ${c.badge}`}>
-            {etiquetaParticipacion(club?.participacion)}
-          </span>
+          <p className={`text-sm font-semibold ${c.title}`}>{etiquetaParticipacion(club?.participacion)}</p>
         </div>
         <div className="flex items-start gap-3">
           <span className={`w-14 shrink-0 text-[10px] uppercase tracking-widest font-bold ${c.text}`}>Nivel</span>

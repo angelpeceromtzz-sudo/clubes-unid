@@ -2,12 +2,12 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { ROL_ADMIN, ROL_COORDINACION } from '../constants/roles.js';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { esIdEntero } from '../lib/validarId.js';
 
 const router = Router();
 
-router.get('/panel-data', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
+router.get('/panel-data', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     const { id_club, id_periodo, carrera, estado } = req.query;
 

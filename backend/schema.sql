@@ -90,30 +90,35 @@ ON CONFLICT (id_nivel) DO UPDATE SET nombre_nivel = EXCLUDED.nombre_nivel;
 CREATE TABLE IF NOT EXISTS cat_licenciaturas (
     id_licenciatura SERIAL PRIMARY KEY,
     nombre         VARCHAR(120) NOT NULL UNIQUE,
-    orden          INT NOT NULL DEFAULT 0
+    orden          INT NOT NULL DEFAULT 0,
+    modalidad      VARCHAR(20) NOT NULL DEFAULT 'escolarizada'
+                   CONSTRAINT chk_licenciatura_modalidad CHECK (modalidad IN ('escolarizada', 'ejecutiva', 'dual', 'maestria'))
 );
 
-INSERT INTO cat_licenciaturas (nombre, orden) VALUES
-    ('Licenciatura en Administración Empresarial', 1),
-    ('Licenciatura en Administración de Empresas Turísticas', 2),
-    ('Licenciatura en Arquitectura', 3),
-    ('Licenciatura en Ciencias y Técnicas de la Comunicación', 4),
-    ('Licenciatura en Contabilidad y Finanzas', 5),
-    ('Licenciatura en Derecho y Ciencias Jurídicas', 6),
-    ('Licenciatura en Diseño Gráfico Digital', 7),
-    ('Licenciatura en Educación Física, Recreación y Deporte', 8),
-    ('Licenciatura en Ingeniería de Software y Sistemas Computacionales', 9),
-    ('Licenciatura en Mercadotecnia Estratégica', 10),
+INSERT INTO cat_licenciaturas (nombre, orden, modalidad) VALUES
+    ('Licenciatura en Administración Empresarial', 1, 'escolarizada'),
+    ('Licenciatura en Administración de Empresas Turísticas', 2, 'escolarizada'),
+    ('Licenciatura en Arquitectura', 3, 'escolarizada'),
+    ('Licenciatura en Ciencias y Técnicas de la Comunicación', 4, 'escolarizada'),
+    ('Licenciatura en Contabilidad y Finanzas', 5, 'escolarizada'),
+    ('Licenciatura en Derecho y Ciencias Jurídicas', 6, 'escolarizada'),
+    ('Licenciatura en Diseño Gráfico Digital', 7, 'escolarizada'),
+    ('Licenciatura en Educación Física, Recreación y Deporte', 8, 'escolarizada'),
+    ('Licenciatura en Ingeniería de Software y Sistemas Computacionales', 9, 'escolarizada'),
+    ('Licenciatura en Mercadotecnia Estratégica', 10, 'escolarizada'),
     -- Licenciaturas Ejecutivas: son programas distintos de los regulares, no
     -- nombres alternativos (cada uno tiene su propio RVOE: Contabilidad
     -- Financiera 20221767 vs. Contabilidad y Finanzas 20193846; Derecho
     -- 20193847 vs. Derecho y Ciencias Jurídicas 20193848). Se listan sin
     -- distinguir modalidad porque el catálogo no tiene ese campo.
-    ('Licenciatura en Administración de Empresas', 11),
-    ('Licenciatura en Contabilidad Financiera', 12),
-    ('Licenciatura en Derecho', 13),
-    ('Licenciatura en Educación y Tecnologías para el Aprendizaje', 14)
-ON CONFLICT (nombre) DO UPDATE SET orden = EXCLUDED.orden;
+    ('Licenciatura en Administración de Empresas', 11, 'ejecutiva'),
+    ('Licenciatura en Contabilidad Financiera', 12, 'ejecutiva'),
+    ('Licenciatura en Derecho', 13, 'ejecutiva'),
+    ('Licenciatura en Educación y Tecnologías para el Aprendizaje', 14, 'ejecutiva'),
+    ('Licenciatura Modelo Dual', 15, 'dual'),
+    ('Licenciatura en Administración y Dirección Empresarial Modelo Dual', 16, 'dual'),
+    ('Maestría en Derecho Constitucional y Amparo', 17, 'maestria')
+ON CONFLICT (nombre) DO UPDATE SET orden = EXCLUDED.orden, modalidad = EXCLUDED.modalidad;
 
 -- ============================================================
 -- TABLAS PRINCIPALES
@@ -130,6 +135,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
     institutional_id VARCHAR(50) UNIQUE,
     deleted_at TIMESTAMPTZ,
     last_login TIMESTAMPTZ,
+    id_licenciatura INT REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE SET NULL,
+    fecha_nacimiento DATE,
     CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES cat_roles(id_rol) ON DELETE RESTRICT
 );
 
@@ -224,6 +231,7 @@ CREATE TABLE IF NOT EXISTS formularios (
     telefono_contacto VARCHAR(20) NOT NULL,
     motivo_ingreso TEXT NOT NULL,
     experiencia_previa TEXT DEFAULT '',
+    respuestas_extra JSONB NOT NULL DEFAULT '{}'::jsonb,
     status VARCHAR(20) NOT NULL DEFAULT 'En revisión',
     fecha_oferta TIMESTAMPTZ,
     fecha_expiracion TIMESTAMPTZ,
@@ -239,6 +247,21 @@ CREATE TABLE IF NOT EXISTS formularios (
         'Oferta enviada', 'Miembro oficial', 'Rechazado'
     ))
 );
+
+CREATE TABLE IF NOT EXISTS club_formulario_preguntas (
+    id_pregunta SERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    etiqueta VARCHAR(200) NOT NULL,
+    tipo VARCHAR(30) NOT NULL DEFAULT 'texto',
+    configuracion JSONB NOT NULL DEFAULT '{}'::jsonb,
+    obligatorio BOOLEAN NOT NULL DEFAULT FALSE,
+    orden INT NOT NULL DEFAULT 0,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_club_formulario_preguntas_club
+  ON club_formulario_preguntas(id_club, orden);
 
 -- Migración de 'carrera VARCHAR(100)' a 'id_licenciatura INT REFERENCES'.
 --
@@ -2420,12 +2443,15 @@ CREATE TABLE IF NOT EXISTS preferencias_usuario (
     correo_eventos              BOOLEAN NOT NULL DEFAULT FALSE,
     correo_noticias             BOOLEAN NOT NULL DEFAULT FALSE,
     correo_recordatorios        BOOLEAN NOT NULL DEFAULT FALSE,
+    telefono_contacto          VARCHAR(20),
+    disposicion_responsable    VARCHAR(20),
     onboarding_completado_en    TIMESTAMPTZ,
     onboarding_omitido_en       TIMESTAMPTZ,
     actualizado_en              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_pref_estado CHECK (estado_onboarding IN ('pendiente', 'completado', 'omitido')),
     CONSTRAINT chk_pref_genero CHECK (genero IS NULL OR genero IN ('mujer', 'hombre', 'otra_identidad', 'prefiero_no_responder')),
-    CONSTRAINT chk_pref_frecuencia CHECK (correo_frecuencia IN ('inmediata', 'diaria', 'semanal'))
+    CONSTRAINT chk_pref_frecuencia CHECK (correo_frecuencia IN ('inmediata', 'diaria', 'semanal')),
+    CONSTRAINT chk_pref_disposicion CHECK (disposicion_responsable IS NULL OR disposicion_responsable IN ('responsable', 'miembro', 'indeciso'))
 );
 
 -- ------------------------------------------------------------

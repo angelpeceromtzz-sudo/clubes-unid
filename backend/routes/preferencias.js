@@ -3,7 +3,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { ROL_ALUMNO } from '../constants/roles.js';
+import { ROL_ALUMNO, ROL_ADMIN, ROL_RECTORIA } from '../constants/roles.js';
 import { limitadorPreferencias } from '../lib/rateLimits.js';
 import { CORREOS_NO_CONFIGURABLES, VERSION_AVISO_PUBLICADA } from '../lib/preferenciasCorreo.js';
 import {
@@ -109,6 +109,8 @@ async function guardarPreferencias(client, idUsuario, datos) {
   await client.query(
     `UPDATE preferencias_usuario SET
        genero = $2,
+       disposicion_responsable = $10,
+       telefono_contacto = $11,
        estado_onboarding = 'completado',
        onboarding_completado_en = COALESCE(onboarding_completado_en, CURRENT_TIMESTAMP),
        correo_activo = $3,
@@ -124,6 +126,8 @@ async function guardarPreferencias(client, idUsuario, datos) {
       idUsuario, datos.genero, correo.activo, correo.frecuencia,
       correo.tipos.clubes_convocatorias, correo.tipos.mis_clubes, correo.tipos.eventos,
       correo.tipos.noticias, correo.tipos.recordatorios,
+      datos.disposicion_responsable,
+      datos.telefono_contacto,
     ],
   );
 
@@ -211,6 +215,92 @@ router.get('/preferencias/historial-correo', authenticate, requireRole(ROL_ALUMN
   } catch (err) {
     console.error('Error al leer historial de consentimiento:', { codigo: err.code, mensaje: err.message });
     res.status(500).json({ error: 'No se pudo cargar el historial' });
+  }
+});
+
+// Resumen agregado de preferencias de onboarding (solo admin/rectoría).
+router.get('/resumen', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA), async (req, res) => {
+  try {
+    const total = (await pool.query(
+      `SELECT COUNT(*)::int AS n FROM preferencias_usuario WHERE estado_onboarding = 'completado'`,
+    )).rows[0].n;
+
+    const porCategoria = (await pool.query(
+      `SELECT ci.nombre AS categoria, COUNT(*)::int AS total
+       FROM usuario_categorias_interes uci
+       JOIN cat_categorias_interes ci ON ci.id_categoria_interes = uci.id_categoria_interes
+       GROUP BY ci.nombre ORDER BY total DESC`,
+    )).rows;
+
+    const porActividad = (await pool.query(
+      `SELECT cai.nombre AS actividad, ci.nombre AS categoria, COUNT(*)::int AS total
+       FROM usuario_actividades_interes uai
+       JOIN cat_actividades_interes cai ON cai.id_actividad = uai.id_actividad
+       JOIN cat_categorias_interes ci ON ci.id_categoria_interes = cai.id_categoria_interes
+       GROUP BY cai.nombre, ci.nombre ORDER BY total DESC`,
+    )).rows;
+
+    const porMotivacion = (await pool.query(
+      `SELECT cm.nombre AS motivacion, COUNT(*)::int AS total
+       FROM usuario_motivaciones um
+       JOIN cat_motivaciones cm ON cm.id_motivacion = um.id_motivacion
+       GROUP BY cm.nombre ORDER BY total DESC`,
+    )).rows;
+
+    const porDisposicion = (await pool.query(
+      `SELECT COALESCE(disposicion_responsable, 'sin_respuesta') AS disposicion, COUNT(*)::int AS total
+       FROM preferencias_usuario WHERE estado_onboarding = 'completado'
+       GROUP BY disposicion_responsable ORDER BY total DESC`,
+    )).rows;
+
+    res.json({
+      total_con_onboarding: total,
+      por_categoria: porCategoria,
+      por_actividad: porActividad,
+      por_motivacion: porMotivacion,
+      por_disposicion: porDisposicion,
+    });
+  } catch (err) {
+    console.error('Error al obtener resumen de preferencias:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// Lista de alumnos interesados en ser responsables de club (admin/rectoría).
+router.get('/responsables', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional, u.id_licenciatura,
+              (SELECT l.nombre FROM cat_licenciaturas l WHERE l.id_licenciatura = u.id_licenciatura) AS licenciatura,
+              f.cuatrimestre, pu.telefono_contacto,
+              (SELECT string_agg(ci.nombre, ', ' ORDER BY ci.nombre)
+               FROM usuario_categorias_interes uci
+               JOIN cat_categorias_interes ci ON ci.id_categoria_interes = uci.id_categoria_interes
+               WHERE uci.id_usuario = u.id_usuario) AS categorias,
+              (SELECT string_agg(cai.nombre, ', ' ORDER BY cai.nombre)
+               FROM usuario_actividades_interes uai
+               JOIN cat_actividades_interes cai ON cai.id_actividad = uai.id_actividad
+               WHERE uai.id_usuario = u.id_usuario) AS actividades,
+              (SELECT string_agg(cm.nombre, ', ' ORDER BY cm.nombre)
+               FROM usuario_motivaciones um
+               JOIN cat_motivaciones cm ON cm.id_motivacion = um.id_motivacion
+               WHERE um.id_usuario = u.id_usuario) AS motivaciones
+       FROM preferencias_usuario pu
+       JOIN usuarios u ON u.id_usuario = pu.id_usuario
+       LEFT JOIN LATERAL (
+         SELECT f.cuatrimestre
+         FROM formularios f
+         WHERE f.id_alumno = u.id_usuario
+         ORDER BY f.fecha_envio DESC
+         LIMIT 1
+       ) f ON TRUE
+       WHERE pu.disposicion_responsable = 'responsable'
+       ORDER BY u.nombre_completo`,
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener responsables interesados:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 

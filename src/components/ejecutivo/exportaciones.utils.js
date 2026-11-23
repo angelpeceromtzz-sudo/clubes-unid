@@ -4,6 +4,7 @@ export const TITULOS_REPORTE = {
   asistencia: 'Asistencia',
   encuestas: 'Encuestas',
   postulaciones: 'Postulaciones',
+  preferencias: 'Preferencias de alumnos',
 };
 
 const numero = (valor) => Number(valor) || 0;

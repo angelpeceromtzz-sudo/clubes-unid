@@ -29,7 +29,7 @@ router.get('/licenciaturas', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT id_licenciatura, nombre
+      `SELECT id_licenciatura, nombre, modalidad
        FROM cat_licenciaturas
        ORDER BY orden ASC, nombre ASC`
     );

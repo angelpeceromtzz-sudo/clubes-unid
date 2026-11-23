@@ -131,6 +131,7 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       telefono_contacto,
       motivo_ingreso,
       experiencia_previa,
+      respuestas_extra,
     } = req.body;
 
     // No confío en la matrícula que viene del frontend. Si el usuario
@@ -263,8 +264,8 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       const result = await client.query(
         `INSERT INTO formularios (id_alumno, id_club, id_convocatoria_inscripcion, bloque_asignado,
           nombre_completo, matricula, id_licenciatura, cuatrimestre,
-          telefono_contacto, motivo_ingreso, experiencia_previa)
-         VALUES ($1, $2, $3, DEFAULT, $4, $5, $6, $7, $8, $9, $10)
+          telefono_contacto, motivo_ingreso, experiencia_previa, respuestas_extra)
+         VALUES ($1, $2, $3, DEFAULT, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING *`,
         [
           req.user.id,
@@ -277,6 +278,7 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
           telefono_contacto,
           motivo_ingreso,
           experiencia_previa || '',
+          JSON.stringify(respuestas_extra || {}),
         ],
       );
 
@@ -320,7 +322,7 @@ router.get('/pendientes/:id_club', authenticate, requireClubLeader, async (req, 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
 f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
-               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
+               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.respuestas_extra, f.status,
                f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
                (SELECT json_agg(json_build_object(
                  'status_anterior', hp.status_anterior,
@@ -362,7 +364,7 @@ router.get('/todos/:id_club', authenticate, requireClubLeader, async (req, res) 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
                f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
-               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.status,
+               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.respuestas_extra, f.status,
                f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
                (SELECT json_agg(json_build_object(
                  'status_anterior', hp.status_anterior,

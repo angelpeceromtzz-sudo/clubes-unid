@@ -12,6 +12,7 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
 
   const tieneAdmin = elementosNav.some((i) => i.key === 'usuarios');
   const itemUsuarios = elementosNav.find((i) => i.key === 'usuarios');
+  const itemExpediente = elementosNav.find((i) => i.key === 'expediente');
   const itemGestionClubes = elementosNav.find((i) => i.key === 'gestion-clubes');
   const itemResumen = elementosNav.find((i) => i.key === 'resumen');
   const itemActividades = elementosNav.find((i) => i.key === 'mis-actividades');
@@ -155,11 +156,12 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
                      <span>Mi Panel</span>
                    </button>
                    {itemUsuarios && renderBoton(itemUsuarios, false)}
+                   {itemExpediente && renderBoton(itemExpediente, false)}
                    {itemGestionClubes && renderGrupo(itemGestionClubes, false)}
                  </>
                )}
                {elementosNav
-                 .filter((i) => !tieneAdmin || !['resumen', 'usuarios', 'gestion-clubes'].includes(i.key))
+                 .filter((i) => !tieneAdmin || !['resumen', 'usuarios', 'expediente', 'gestion-clubes'].includes(i.key))
                  .map((item) => (
                    <div key={item.key}>
                      {item.key === 'calendario' && (
@@ -168,7 +170,6 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
                      {renderElemento(item, false)}
                    </div>
                  ))}
-               <div className="h-px mx-3 my-1 border-t border-amber-400/40" />
             </nav>
           )}
         </div>
