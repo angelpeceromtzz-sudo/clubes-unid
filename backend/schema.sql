@@ -2200,12 +2200,16 @@ CREATE TABLE IF NOT EXISTS actividades_cartas (
   id_carta SERIAL PRIMARY KEY,
   id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
   nombre VARCHAR(150) NOT NULL CHECK (length(trim(nombre))>0),
-  edad INT NOT NULL CHECK (edad BETWEEN 1 AND 18),
+  edad NUMERIC(5,1) NOT NULL CHECK (edad BETWEEN 0.1 AND 100),
   deseo TEXT NOT NULL CHECK (length(trim(deseo)) BETWEEN 1 AND 2000),
   activa BOOLEAN NOT NULL DEFAULT TRUE,
   creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+ );
+ALTER TABLE actividades_cartas DROP CONSTRAINT IF EXISTS actividades_cartas_edad_check;
+ALTER TABLE actividades_cartas DROP CONSTRAINT IF EXISTS chk_carta_edad;
+ALTER TABLE actividades_cartas ALTER COLUMN edad TYPE NUMERIC(5,1) USING edad::numeric;
+ALTER TABLE actividades_cartas ADD CONSTRAINT chk_carta_edad CHECK (edad BETWEEN 0.1 AND 100);
 CREATE INDEX IF NOT EXISTS idx_cartas_edicion ON actividades_cartas(id_edicion);
 
 CREATE TABLE IF NOT EXISTS actividades_cartas_reservas (

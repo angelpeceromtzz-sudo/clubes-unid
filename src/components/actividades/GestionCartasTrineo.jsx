@@ -4,6 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useActividadRecurso } from '../../hooks/useActividadRecurso';
 import { actividadService } from '../../services/actividad.service';
 import { BotonAccion } from '../ui/BotonAccion';
+import { formatearEdadCarta } from '../../utils/edadCarta';
 
 const VACIA = { nombre: '', edad: '', deseo: '' };
 const ETIQUETAS = { disponible: 'Disponible', reservada: 'Reservada', entregada: 'Regalo recibido', retirada: 'Retirada' };
@@ -64,7 +65,7 @@ export function GestionCartasTrineo({ idEdicion, onActualizar }) {
         <h4 className="font-bold">{editada ? 'Editar carta #' + editada.id_carta : 'Agregar carta'}</h4>
       {!cartas.length && <p className="text-sm">Captura cartas para que los alumnos puedan elegirlas. La carta de regalo es {datos?.carta_obligatoria === false ? 'opcional' : 'obligatoria'} en esta edición; las aportaciones para la actividad se configuran aparte.</p>}
         <fieldset disabled={pendiente} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-[1fr_8rem]"><label className={labelCls}>Nombre del niño *<input className={inputCls} required maxLength={150} value={formulario.nombre} onChange={(evento) => cambiar('nombre', evento.target.value)} /></label><label className={labelCls}>Edad *<input className={inputCls} type="number" min={1} max={18} step={1} required value={formulario.edad} onChange={(evento) => cambiar('edad', evento.target.value)} /></label></div>
+           <div className="grid gap-4 sm:grid-cols-[1fr_8rem]"><label className={labelCls}>Nombre del niño *<input className={inputCls} required maxLength={150} value={formulario.nombre} onChange={(evento) => cambiar('nombre', evento.target.value)} /></label><label className={labelCls}>Edad *<input className={inputCls} type="number" min={0.1} max={100} step={0.1} required value={formulario.edad} onChange={(evento) => cambiar('edad', evento.target.value)} /><span className={'text-xs font-normal ' + tema.subtitle}>Usa años con un decimal: 0.1 = 1 mes, 1.5 = 1 año y 6 meses.</span></label></div>
           <label className={labelCls}>Deseo *<textarea className={inputCls} rows={3} required maxLength={2000} value={formulario.deseo} onChange={(evento) => cambiar('deseo', evento.target.value)} /></label>
           <div className="flex flex-wrap gap-3"><BotonAccion type="submit">{pendiente ? 'Guardando…' : editada ? 'Guardar carta' : 'Agregar carta'}</BotonAccion>{editada && <BotonAccion variant="outline" onClick={limpiar}>Cancelar edición</BotonAccion>}</div>
         </fieldset>
@@ -74,7 +75,7 @@ export function GestionCartasTrineo({ idEdicion, onActualizar }) {
       {!visibles.length && <p className={tema.subtitle}>{cartas.length ? 'No hay cartas que coincidan con la búsqueda.' : 'Todavía no hay cartas capturadas.'}</p>}
       <div className="grid gap-4 sm:grid-cols-2">{visibles.map((carta) => <article key={carta.id_carta} className="min-w-0 space-y-3 rounded-xl border border-slate-400/25 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-bold">Carta #{carta.id_carta}</span><span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold">{ETIQUETAS[carta.estado]}</span></div>
-        <h4 className="font-bold">{carta.nombre} · {carta.edad} años</h4><p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
+         <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad)}</h4><p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
         {carta.alumno_nombre && <div className="space-y-1 border-t border-slate-400/25 pt-3 text-sm"><p>Alumno: {carta.alumno_nombre} · {carta.matricula}</p><p>Compromiso: regalo de esta carta.</p></div>}
         {datos.editable && carta.estado === 'reservada' && carta.estado_registro === 'confirmado' && <BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => recibir(carta)}>Confirmar recepción del regalo</BotonAccion>}
         {carta.recibida_en && <p className={'text-xs ' + tema.subtitle}>Recibido el {new Date(carta.recibida_en).toLocaleString('es-MX', { timeZone: 'America/Merida' })}{carta.recibida_por_nombre ? ' por ' + carta.recibida_por_nombre : ''}.</p>}

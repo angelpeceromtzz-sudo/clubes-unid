@@ -5,7 +5,7 @@ export function normalizarCartaTrineo(datos = {}) {
   const nombre = textoActividad(datos.nombre, 150, 'Nombre del niño', true);
   const deseo = textoActividad(datos.deseo, 2000, 'Deseo', true);
   const edad = typeof datos.edad === 'number' || typeof datos.edad === 'string' && datos.edad.trim() !== '' ? Number(datos.edad) : NaN;
-  if (!Number.isInteger(edad) || edad < 1 || edad > 18) throw errorActividad('Indica una edad entre 1 y 18 años');
+  if (!Number.isFinite(edad) || edad < 0.1 || edad > 100 || Math.abs(edad * 10 - Math.round(edad * 10)) > 0.000001) throw errorActividad('Indica una edad entre 1 mes y 100 años usando hasta un decimal');
   if (datos.activa !== undefined && typeof datos.activa !== 'boolean') throw errorActividad('Indica si la carta está disponible');
   return { nombre, edad, deseo, activa: datos.activa ?? true };
 }

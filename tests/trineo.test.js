@@ -5,10 +5,11 @@ import { normalizarCartaTrineo, validarSeleccionCartaTrineo } from '../backend/l
 const carta = { nombre: '  Niño QA  ', edad: '7', deseo: '  Un trompo  ' };
 const seleccion = { plantilla: 'trineo', idCarta: 3, actual: null, anteriorConfirmado: false };
 
-test('cartas: limpia textos y exige datos completos, edades enteras y disponibilidad explícita', () => {
+test('cartas: limpia textos y exige datos completos, edades válidas y disponibilidad explícita', () => {
   assert.deepEqual(normalizarCartaTrineo(carta), { nombre: 'Niño QA', edad: 7, deseo: 'Un trompo', activa: true });
   for (const datos of [undefined, null, [], false, 'carta']) assert.throws(() => normalizarCartaTrineo(datos), { status: 400 });
-  for (const edad of ['', ' ', true, null, [], 0, -1, 19, 1.5, 'no', Infinity]) assert.throws(() => normalizarCartaTrineo({ ...carta, edad }), { status: 400 });
+  for (const edad of ['', ' ', true, null, [], 0, -1, 100.1, 1.25, 'no', Infinity]) assert.throws(() => normalizarCartaTrineo({ ...carta, edad }), { status: 400 });
+  for (const edad of [0.1, 1.5, 100]) assert.equal(normalizarCartaTrineo({ ...carta, edad }).edad, edad);
   for (const datos of [{ nombre: '' }, { deseo: ' ' }, { nombre: 'a'.repeat(151) }, { deseo: 'a'.repeat(2001) }, { activa: 'false' }]) assert.throws(() => normalizarCartaTrineo({ ...carta, ...datos }), { status: 400 });
 });
 
