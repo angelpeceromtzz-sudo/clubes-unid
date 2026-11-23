@@ -8,6 +8,7 @@ const CARACTERES_PROPUESTA = /^[\p{L}\p{N} .,'&()/-]+$/u;
 
 export const TIPOS_CORREO = Object.freeze([
   'clubes_convocatorias',
+  'mis_clubes',
   'eventos',
   'noticias',
   'recordatorios',
