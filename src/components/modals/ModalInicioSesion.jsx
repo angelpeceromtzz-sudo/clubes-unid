@@ -360,8 +360,8 @@ export function ModalInicioSesion({ onClose, onAceptarLegal }) {
     setMensaje('');
   }
 
-  function manejarCambioCodigo(e) {
-    setCodigo(normalizarCodigoOtp(e.target.value));
+  function manejarCambioCodigo(valor) {
+    setCodigo(normalizarCodigoOtp(valor));
     setError('');
     setErrorCodigo('');
   }
