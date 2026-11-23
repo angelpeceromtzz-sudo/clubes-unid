@@ -12,13 +12,17 @@ import { gruposPreguntasMisiones } from '../../constants/preguntasMisiones';
 
 const dinero = (centavos) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(centavos / 100);
 
-export function ResumenRegistroMisiones({ registro, acceso, licenciaturas = [], mostrarAportaciones = true }) {
+export function ResumenRegistroMisiones({ registro, edicion, acceso, licenciaturas = [], mostrarAportaciones = true }) {
   const { tema } = useTheme();
+  const campos = registro.formulario_snapshot.map((campo) => {
+    const actual = edicion?.campos_registro?.find((item) => item.clave === campo.clave);
+    return actual ? { ...campo, imagen_url: actual.imagen_url, imagen_public_id: actual.imagen_public_id } : campo;
+  });
   return <div className="space-y-4">
     <EstadoActividad estado={registro.estado} />
     <p className="font-bold">{registro.nombre_completo} · {registro.tipo_participante === 'invitado' ? 'Invitado' : 'Matrícula ' + registro.matricula}</p>
     {registro.correo && <p className="break-words text-sm">{registro.correo}{registro.telefono ? ' · ' + registro.telefono : ''}</p>}
-    <dl className="grid gap-3 sm:grid-cols-2">{registro.formulario_snapshot.filter((campo) => campoActividadVisible(campo, registro.respuestas)).map((campo) => <div key={campo.clave}>
+    <dl className="grid gap-3 sm:grid-cols-2">{campos.filter((campo) => campoActividadVisible(campo, registro.respuestas)).map((campo) => <div key={campo.clave}>{campo.imagen_url && <img src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-28 w-full rounded-lg object-cover" />}
       <dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt>
       <dd className="whitespace-pre-wrap break-words font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : campo.tipo === 'fecha' && registro.respuestas[campo.clave] ? registro.respuestas[campo.clave].split('-').reverse().join('/') : registro.respuestas[campo.clave] ?? 'Sin especificar'}</dd>
     </div>)}</dl>
@@ -46,7 +50,11 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   const mega = esFormatoMegamisiones(config);
   const etiquetaCampo = mega ? 'block space-y-2 text-sm font-semibold ' + tema.title : labelCls;
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-  const campos = (registro?.estado === 'confirmado' ? registro.formulario_snapshot : edicion.campos_registro).filter((campo) => !invitado || campo.tipo !== 'licenciatura');
+  const camposBase = registro?.estado === 'confirmado' ? registro.formulario_snapshot.map((campo) => {
+    const actual = edicion.campos_registro.find((item) => item.clave === campo.clave);
+    return actual ? { ...campo, imagen_url: actual.imagen_url, imagen_public_id: actual.imagen_public_id } : campo;
+  }) : edicion.campos_registro;
+  const campos = camposBase.filter((campo) => !invitado || campo.tipo !== 'licenciatura');
   const secciones = gruposPreguntasMisiones(config, campos);
   const abierta = edicion.estado_registro === 'abierta';
   const responder = (clave, valor) => setRespuestas((actual) => ({ ...actual, [clave]: valor }));
@@ -111,7 +119,7 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   function dibujarCampo(campo) {
     if (!campoActividadVisible(campo, respuestas)) return null;
     const comunes = { id: 'mision-' + campo.clave, 'aria-label': campo.etiqueta + (campo.obligatorio ? ' *' : ' (opcional)'), className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
-    return <label className={etiquetaCampo + (campo.tipo === 'texto_largo' ? ' sm:col-span-2' : '')} key={campo.clave}>{campo.etiqueta}{campo.obligatorio ? ' *' : ' (opcional)'}
+     return <label className={etiquetaCampo + (campo.tipo === 'texto_largo' ? ' sm:col-span-2' : '')} key={campo.clave}>{campo.imagen_url && <img src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-36 w-full rounded-lg object-cover" />}{campo.etiqueta}{campo.obligatorio ? ' *' : ' (opcional)'}
       {['seleccion', 'licenciatura'].includes(campo.tipo) ? <select {...comunes} disabled={campo.tipo === 'licenciatura' && loading}>
         <option value="">Selecciona una opción</option>
         {(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ valor: item.id_licenciatura, texto: item.nombre })) : campo.opciones.map((opcion) => ({ valor: opcion, texto: opcion }))).map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.texto}</option>)}
@@ -121,7 +129,7 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   }
 
   if (registro && !editando) return <section aria-label="Tu inscripción a Misiones" className="space-y-4">
-    <ResumenRegistroMisiones registro={registro} acceso={acceso} licenciaturas={licenciaturas} />
+    <ResumenRegistroMisiones registro={registro} edicion={edicion} acceso={acceso} licenciaturas={licenciaturas} />
     {abierta && registro.estado !== 'cancelado' && <div className="flex flex-wrap gap-3"><BotonAccion onClick={() => setEditando(true)}>Editar mi registro</BotonAccion>{!invitado && <BotonAccion variant="outline" onClick={() => setCancelando(true)}>Cancelar inscripción</BotonAccion>}</div>}
     {cancelando && <div role="alert" className="space-y-3"><p>¿Confirmas la cancelación? Tus aportaciones recibidas y asistencias conservarán su historial.</p><BotonAccion variant="danger" disabled={pendiente} onClick={cancelar}>Confirmar cancelación</BotonAccion> <BotonAccion variant="outline" onClick={() => setCancelando(false)}>Conservar mi inscripción</BotonAccion></div>}
     {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
