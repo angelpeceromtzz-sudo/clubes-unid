@@ -53,8 +53,10 @@ export function VistaEjecutiva({ d }) {
 
   const subtextoCls = modoOscuro ? 'text-slate-400' : 'text-slate-500';
   const botonBase = 'group flex min-h-16 min-w-0 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-wait disabled:opacity-50 motion-reduce:transition-none';
-  const botonExportarCls = `${botonBase} focus-visible:ring-emerald-500 ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400/50 focus-visible:ring-offset-[#0e162c]' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-400 focus-visible:ring-offset-white'}`;
-  const iconoExportarCls = `flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${modoOscuro ? 'bg-emerald-500/15' : 'bg-white'}`;
+  const botonExcelCls = `${botonBase} focus-visible:ring-emerald-500 ${modoOscuro ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400/50 focus-visible:ring-offset-[#0e162c]' : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-400 focus-visible:ring-offset-white'}`;
+  const botonPdfCls = `${botonBase} focus-visible:ring-red-500 ${modoOscuro ? 'bg-red-500/10 border-red-500/25 text-red-300 hover:bg-red-500/20 hover:border-red-400/50 focus-visible:ring-offset-[#0e162c]' : 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100 hover:border-red-400 focus-visible:ring-offset-white'}`;
+  const iconoExcelCls = `flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${modoOscuro ? 'bg-emerald-500/15' : 'bg-white'}`;
+  const iconoPdfCls = `flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${modoOscuro ? 'bg-red-500/15' : 'bg-white'}`;
   const pdfPendiente = d.cargandoResultados;
   const IconoAviso = aviso?.tipo === 'error' ? AlertCircle : CheckCircle2;
 
@@ -72,8 +74,8 @@ export function VistaEjecutiva({ d }) {
           <div role="group" aria-label="Exportar estadísticas" className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3 xl:min-w-[440px]">
             <button type="button" onClick={() => exportar('excel')} disabled={Boolean(exportando)} aria-busy={exportando === 'excel'}
               aria-label={exportando === 'excel' ? 'Preparando Excel' : 'Exportar Excel: todas las secciones'}
-              className={botonExportarCls}>
-              <span className={iconoExportarCls}>
+              className={botonExcelCls}>
+              <span className={iconoExcelCls}>
                 {exportando === 'excel' ? <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none" /> : <FileSpreadsheet aria-hidden="true" className="h-5 w-5" />}
               </span>
               <span className="min-w-0 flex-1">
@@ -85,8 +87,8 @@ export function VistaEjecutiva({ d }) {
             <button type="button" onClick={() => exportar('pdf')} disabled={Boolean(exportando) || pdfPendiente} aria-busy={exportando === 'pdf'}
               aria-label={exportando === 'pdf' ? 'Preparando PDF completo' : 'Exportar PDF: todos los bloques'}
               title={pdfPendiente ? 'Espera a que terminen de cargar los resultados de la encuesta.' : 'Descargar todos los bloques del panel con los filtros aplicados'}
-              className={botonExportarCls}>
-              <span className={iconoExportarCls}>
+              className={botonPdfCls}>
+              <span className={iconoPdfCls}>
                 {exportando === 'pdf' ? <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none" /> : <FileText aria-hidden="true" className="h-5 w-5" />}
               </span>
               <span className="min-w-0 flex-1">

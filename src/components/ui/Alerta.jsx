@@ -29,11 +29,23 @@ const CONFIG = {
   },
 };
 
-export function Alerta({ tipo = 'error', mensaje, children, className = '' }) {
+export function Alerta({ tipo = 'error', mensaje, children, className = '', onClick }) {
   if (!mensaje && !children) return null;
   const c = CONFIG[tipo] || CONFIG.error;
+  const interactiva = typeof onClick === 'function';
   return (
-    <div className={`rounded-xl p-4 border ${c.bg} ${className}`}>
+    <div
+      className={`rounded-xl p-4 border ${c.bg} ${interactiva ? 'cursor-pointer transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400' : ''} ${className}`}
+      onClick={onClick}
+      onKeyDown={interactiva ? (evento) => {
+        if (evento.key === 'Enter' || evento.key === ' ') {
+          evento.preventDefault();
+          onClick(evento);
+        }
+      } : undefined}
+      role={interactiva ? 'button' : undefined}
+      tabIndex={interactiva ? 0 : undefined}
+    >
       <div className="flex items-start gap-2">
         <Icono nombre={c.icono} strokeWidth={2} className={`h-4 w-4 mt-0.5 shrink-0 ${c.iconColor}`} />
         <div>

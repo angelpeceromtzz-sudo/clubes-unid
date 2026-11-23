@@ -8,7 +8,6 @@ const CARACTERES_PROPUESTA = /^[\p{L}\p{N} .,'&()/-]+$/u;
 
 export const TIPOS_CORREO = Object.freeze([
   'clubes_convocatorias',
-  'mis_clubes',
   'eventos',
   'noticias',
   'recordatorios',
@@ -37,6 +36,7 @@ export function respuestasIniciales() {
     fechaNacimiento: null,
     disposicion: null,
     telefono: null,
+    actividadesResponsable: [],
   };
 }
 
@@ -80,6 +80,10 @@ export function pasoEsValido(paso, respuestas) {
   if (paso === 7) return true; // teléfono opcional
   if (paso === 8) return respuestas.disposicion !== null && respuestas.disposicion !== undefined;
   if (paso === 9) {
+    if (respuestas.disposicion !== 'responsable') return true;
+    return Array.isArray(respuestas.actividadesResponsable) && respuestas.actividadesResponsable.length > 0;
+  }
+  if (paso === 10) {
     const decision = respuestas.correo?.decision;
     if (decision !== 'aceptar' && decision !== 'rechazar') return false;
     if (decision === 'aceptar') {
@@ -129,6 +133,7 @@ export function construirPayload(respuestas, origen) {
     genero: respuestas.genero ?? null,
     disposicion_responsable: respuestas.disposicion ?? null,
     telefono_contacto: respuestas.telefono ?? null,
+    actividades_responsable: respuestas.disposicion === 'responsable' ? [...respuestas.actividadesResponsable] : [],
     correo: {
       activo: respuestas.correo.decision === 'aceptar',
       frecuencia: respuestas.correo.frecuencia,

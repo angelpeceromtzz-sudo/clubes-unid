@@ -1,14 +1,17 @@
 import { useTheme } from '../contexts/ThemeContext';
+import { useLocation } from 'react-router-dom';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
 import { PiePagina } from '../components/layout/PiePagina';
 
 export default function PaginaAvisoPrivacidad() {
+  const location = useLocation();
   const { modoOscuro } = useTheme();
+  const logoTo = location.state?.rutaOrigen || '/';
   const oscuro = modoOscuro;
 
   return (
     <main className={oscuro ? 'bg-[#0b111e] text-white' : 'bg-slate-50 text-slate-900'}>
-      <BarraGeneral />
+      <BarraGeneral logoTo={logoTo} />
       <section className="max-w-4xl mx-auto px-6 sm:px-8 py-12 sm:py-16 space-y-8">
         <div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Aviso de Privacidad de Clubs UNID</h1>

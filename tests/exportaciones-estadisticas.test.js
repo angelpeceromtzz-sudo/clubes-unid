@@ -106,7 +106,7 @@ test('el reporte completo incluye todas las preguntas cargadas aunque solo una e
 
 test('el PDF completo conserva todos los bloques cuando no hay datos', () => {
   const reporte = crearReporteCompletoPDF({ filtros: {} });
-  assert.equal(reporte.secciones.length, 5);
+  assert.equal(reporte.secciones.length, 6);
   assert.ok(reporte.secciones.every((seccion) => seccion.tablas.length > 0));
-  assert.equal(generarPDF(reporte).getNumberOfPages(), 5);
+  assert.equal(generarPDF(reporte).getNumberOfPages(), 6);
 });

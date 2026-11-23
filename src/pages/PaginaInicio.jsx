@@ -16,7 +16,7 @@ import { CatalogoActividades } from '../components/actividades/ActividadUI';
 const ORDEN_ESTADO = ['abierto', 'proximo', 'lleno', 'cerrado'];
 const ORDEN_CATEGORIA = ['Deportes', 'Cultura', 'Tecnologia'];
 
-export function PaginaInicio() {
+export function PaginaInicio({ onLoginClick }) {
   const navigate = useNavigate();
   const { estaAutenticado } = useAutenticacion();
   const { tema, modoOscuro } = useTheme();
@@ -99,7 +99,7 @@ export function PaginaInicio() {
         </div>
 
         {!estaAutenticado && !verActividades && (
-          <Alerta tipo="warning" mensaje="Inicia sesión para inscribirte en un club." className="mb-4 lg:mb-8" />
+          <Alerta tipo="warning" mensaje="Inicia sesión para inscribirte en un club." onClick={onLoginClick} className="mb-4 lg:mb-8" />
         )}
 
         {verActividades ? <CatalogoActividades /> : clubesLoading ? (
