@@ -398,7 +398,7 @@ return (
         <Route path="/actividades/misiones/registro/:folio" element={<PaginaRegistroInvitadoMisiones key={location.pathname} />} />
         <Route path="/actividades/:slug" element={<DetalleActividad onLoginClick={() => setShowLogin(true)} />} />
         <Route path="/campus/campeche/portal" element={
-          <PaginaInicio key={catalogoKey} />
+          <PaginaInicio key={catalogoKey} onLoginClick={() => setShowLogin(true)} />
         } />
         <Route path="/noticias" element={<RedireccionNoticias />} />
         <Route path="/eventos" element={<RedireccionNoticias />} />
