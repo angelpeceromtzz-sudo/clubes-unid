@@ -20,7 +20,7 @@ export function ResumenCartaTrineo({ carta, onRecibir }) {
   </section>;
 }
 
-export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSeleccionar, bloqueada, version = 0 }) {
+export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSeleccionar, bloqueada, obligatoria = true, version = 0 }) {
   const { usuario } = useAutenticacion();
   const { tema, labelCls, inputCls } = useTheme();
   const { datos, cargando, error, recargar } = useActividadRecurso('/ediciones/' + idEdicion + '/cartas', (usuario.id_usuario || usuario.id) + ':' + version, 30000);
@@ -28,8 +28,8 @@ export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSelecci
   const consulta = normalizar(busqueda);
   const cartas = (datos?.cartas || []).filter((carta) => carta.id_carta !== actual?.id_carta && normalizar(carta.nombre + ' ' + carta.id_carta).includes(consulta));
   return <fieldset className="space-y-4" disabled={bloqueada}>
-    <legend className={'mb-2 text-lg font-bold ' + tema.title}>Carta de regalo (obligatoria)</legend>
-    <p className={'text-sm ' + tema.subtitle}>{bloqueada ? 'El regalo de esta carta ya fue recibido. Sus datos se conservarán en tu registro.' : 'Busca al niño de la carta que recibiste en el salón. Se reservará exclusivamente para ti al confirmar tu inscripción. El regalo es independiente de las aportaciones para la actividad.'}</p>
+     <legend className={'mb-2 text-lg font-bold ' + tema.title}>Carta de regalo ({obligatoria ? 'obligatoria' : 'opcional'})</legend>
+     <p className={'text-sm ' + tema.subtitle}>{bloqueada ? 'El regalo de esta carta ya fue recibido. Sus datos se conservarán en tu registro.' : 'Busca al niño de la carta que recibiste en el salón. Se reservará exclusivamente para ti al confirmar tu inscripción. El regalo es independiente de las aportaciones para la actividad.' + (!obligatoria ? ' Puedes continuar sin seleccionar una carta.' : '')}</p>
     {seleccionada && <><ResumenCartaTrineo carta={seleccionada} />{seleccionada.estado !== 'entregada' && <p className="text-sm">Puedes elegir otra carta antes de guardar los cambios.</p>}</>}
     {!bloqueada && <>
       <label className={labelCls}>Buscar niño por nombre o número de carta<input className={inputCls} type="search" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} placeholder="Nombre del niño" /></label>

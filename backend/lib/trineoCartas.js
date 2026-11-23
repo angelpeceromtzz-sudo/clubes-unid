@@ -29,6 +29,7 @@ export async function prepararReservaCarta(db, { edicion, anterior, idCarta }) {
   const actual = anterior ? (await db.query(SELECT_RESERVA + ' WHERE v.id_registro=$1 AND v.cancelada_en IS NULL FOR UPDATE OF v', [anterior.id_registro])).rows[0] : null;
   const seleccion = validarSeleccionCartaTrineo({
     plantilla: edicion.plantilla, idCarta, actual, anteriorConfirmado: anterior?.estado === 'confirmado',
+    cartaObligatoria: edicion.carta_obligatoria !== false,
   });
   if (!seleccion) return { actual, carta: null };
   const carta = (await db.query('SELECT * FROM actividades_cartas WHERE id_carta=$1 AND id_edicion=$2 FOR UPDATE', [seleccion, edicion.id_edicion])).rows[0];
@@ -117,7 +118,7 @@ export function montarCartasTrineo(router, { db, autenticar, obtenerEdicion, com
       LEFT JOIN actividades_registros r ON r.id_registro=v.id_registro
       LEFT JOIN usuarios u ON u.id_usuario=v.recibida_por
       WHERE c.id_edicion=$1 ORDER BY c.nombre,c.id_carta`, [edicion.id_edicion]);
-    res.json({ cartas: rows, habilitadas: true, editable: edicion.estado !== 'archivada' && edicion.estado_actividad !== 'archivada' });
+    res.json({ cartas: rows, habilitadas: true, carta_obligatoria: edicion.carta_obligatoria !== false, editable: edicion.estado !== 'archivada' && edicion.estado_actividad !== 'archivada' });
   });
 
   router.post('/gestion/ediciones/:idEdicion/cartas', async (req, res) => {

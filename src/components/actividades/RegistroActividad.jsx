@@ -32,7 +32,8 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
   const abierta = edicion.estado_registro === 'abierta';
   const usaCartas = edicion.plantilla === 'trineo';
   const regaloRecibido = registro?.carta?.estado === 'entregada';
-  const requiereCarta = usaCartas && (!confirmado || Boolean(carta));
+   const cartaObligatoria = edicion.carta_obligatoria !== false;
+   const requiereCarta = usaCartas && cartaObligatoria && (!confirmado || Boolean(carta));
    const campos = confirmado ? registro.formulario_snapshot.map((campo) => {
      const actual = edicion.campos_registro.find((item) => item.clave === campo.clave);
      return actual ? { ...campo, imagen_url: actual.imagen_url, imagen_public_id: actual.imagen_public_id } : campo;
@@ -84,7 +85,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
     <fieldset disabled={pendiente} className="min-w-0 space-y-5">
     {registro?.estado && <EstadoActividad estado={registro.estado} />}
     {registro?.historial_cartas?.length > 0 && !registro.carta && <p className="text-sm">Tu reserva anterior fue liberada al cancelar la inscripción. Elige una carta disponible para registrarte de nuevo.</p>}
-    {usaCartas && (!regaloRecibido || registro?.carta) && <SelectorCartaTrineo idEdicion={edicion.id_edicion} actual={registro?.carta} seleccionada={carta} onSeleccionar={setCarta} bloqueada={Boolean(regaloRecibido)} version={versionCartas} />}
+     {usaCartas && (!regaloRecibido || registro?.carta) && <SelectorCartaTrineo idEdicion={edicion.id_edicion} actual={registro?.carta} seleccionada={carta} onSeleccionar={setCarta} bloqueada={Boolean(regaloRecibido)} obligatoria={cartaObligatoria} version={versionCartas} />}
     {usaCartas && confirmado && !carta && <p className="text-sm text-amber-700 dark:text-amber-300">Tu inscripción anterior puede conservarse sin carta. Puedes elegir una para registrar el compromiso de regalo, aparte de las aportaciones para la actividad.</p>}
     <div className="grid gap-4 sm:grid-cols-2">
       <label className={labelCls}>Nombre completo<input className={inputCls} value={usuario.nombre_completo || ''} readOnly /></label>

@@ -181,6 +181,7 @@ export function normalizarCamposActividad(valor, plantilla = 'general', configur
 
 export function normalizarEdicionActividad(datos, plantilla = 'general') {
   if (!datos || typeof datos !== 'object' || Array.isArray(datos)) throw errorActividad('Revisa los datos de la edición');
+  if (plantilla === 'trineo' && datos.carta_obligatoria !== undefined && typeof datos.carta_obligatoria !== 'boolean') throw errorActividad('Indica si la carta del Trineo es obligatoria');
   const configuracion = plantilla === 'misiones' && datos.configuracion_misiones != null ? normalizarConfiguracionMisiones(datos.configuracion_misiones) : null;
   const resultado = {
     nombre: textoActividad(datos.nombre, 160, 'Nombre de la edición', true),
@@ -190,6 +191,7 @@ export function normalizarEdicionActividad(datos, plantilla = 'general') {
     hora_inicio: textoActividad(datos.hora_inicio, 5, 'Hora'),
     requiere_registro: datos.requiere_registro === true,
     requiere_aportacion: datos.requiere_aportacion === true,
+    carta_obligatoria: plantilla === 'trineo' ? datos.carta_obligatoria !== false : false,
     destacable: datos.destacable === true,
     campos_registro: normalizarCamposActividad(datos.campos_registro || camposPlantillaActividad(plantilla, configuracion), plantilla, configuracion),
   };

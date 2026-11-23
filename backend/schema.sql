@@ -1661,6 +1661,7 @@ CREATE TABLE IF NOT EXISTS actividades_ediciones (
   campos_registro JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(campos_registro) = 'array'),
   configuracion_misiones JSONB,
   cartas_habilitadas BOOLEAN NOT NULL DEFAULT FALSE,
+  carta_obligatoria BOOLEAN NOT NULL DEFAULT TRUE,
   requiere_aportacion BOOLEAN NOT NULL DEFAULT FALSE,
   inscripcion_desde DATE,
   inscripcion_hasta DATE,
@@ -1707,6 +1708,7 @@ END $$;
 ALTER TABLE actividades_ediciones DROP CONSTRAINT IF EXISTS fk_edicion_catalogo;
 ALTER TABLE actividades_ediciones ADD CONSTRAINT fk_edicion_catalogo FOREIGN KEY (id_actividad) REFERENCES clubes(id_club) ON DELETE RESTRICT;
 ALTER TABLE actividades_ediciones ADD COLUMN IF NOT EXISTS ubicacion_maps VARCHAR(2048) NOT NULL DEFAULT '';
+ALTER TABLE actividades_ediciones ADD COLUMN IF NOT EXISTS carta_obligatoria BOOLEAN NOT NULL DEFAULT TRUE;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_edicion_propietario ON actividades_ediciones(id_edicion,id_actividad);
 ALTER TABLE migraciones_catalogo DROP CONSTRAINT IF EXISTS fk_migracion_edicion;
 ALTER TABLE migraciones_catalogo ADD CONSTRAINT fk_migracion_edicion FOREIGN KEY(id_edicion_destino,id_club_destino) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT;
