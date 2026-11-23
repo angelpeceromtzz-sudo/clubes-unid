@@ -39,6 +39,8 @@ import { RutaClubActividad } from './components/actividades/RutaClubActividad';
 import { abrirPanelResponsable } from './services/panelResponsable';
 import PaginaPerfilPreferencias from './pages/PaginaPerfilPreferencias';
 import { FlujoOnboarding } from './components/onboarding/FlujoOnboarding';
+import { ModalConsentimientoLegal } from './components/legal/ModalConsentimientoLegal';
+import { api } from './services/api';
 
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
@@ -129,9 +131,30 @@ function App() {
   const [heroVisible, setHeroVisible] = useState(true);
   const [splashDone, setSplashDone] = useState(false);
   const [onboardingAbierto, setOnboardingAbierto] = useState(false);
+  const [consentimientoPendiente, setConsentimientoPendiente] = useState(false);
+  const [consentimientoError, setConsentimientoError] = useState(false);
+
+  useEffect(() => {
+    if (!authReady || !estaAutenticado) {
+      setConsentimientoPendiente(false);
+      return undefined;
+    }
+    let vigente = true;
+    api.get('/legal/estado').then((data) => {
+      if (!vigente) return;
+      setConsentimientoError(false);
+      setConsentimientoPendiente(!data?.completo);
+    }).catch(() => {
+      if (vigente) {
+        setConsentimientoError(true);
+        setConsentimientoPendiente(true);
+      }
+    });
+    return () => { vigente = false; };
+  }, [authReady, estaAutenticado, usuario?.id_usuario]);
 
   const debeAbrirOnboarding =
-    authReady && estaAutenticado && esAlumnoOnboarding && estadoOnboarding === 'pendiente' && !onboardingAbierto;
+    authReady && estaAutenticado && esAlumnoOnboarding && estadoOnboarding === 'pendiente' && !onboardingAbierto && !consentimientoPendiente;
 
   const onboardingAbiertoEfectivo =
     onboardingAbierto || debeAbrirOnboarding;
@@ -298,6 +321,18 @@ return (
         className={`min-h-dvh font-sans transition-colors duration-300 overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0 ${esLandingGeneral ? '' : 'lg:pt-[var(--navbar-height)]'} ${tema.bg} ${tema.text}`}
       style={{ '--navbar-height': modoOscuro && !esLandingGeneral && !esOferta && location.pathname !== '/campus/campeche/portal' ? `${alturaNavbar}px` : '0px' }}
     >
+      {consentimientoPendiente && estaAutenticado && !['/terminos', '/privacidad'].includes(location.pathname) && (
+        consentimientoError ? (
+          <div className="fixed inset-0 z-[1000] bg-slate-50 dark:bg-[#0b111e] flex items-center justify-center px-4">
+            <div className="w-full max-w-md rounded-2xl p-8 border bg-white dark:bg-[#0e162c] border-slate-200 dark:border-slate-700/50">
+              <p className="text-sm text-red-500">No se pudo verificar la aceptación de los documentos legales.</p>
+              <button type="button" onClick={() => window.location.reload()} className="mt-4 bg-amber-400 text-[#0e162c] font-black text-xs uppercase tracking-wider rounded-xl px-4 py-3 cursor-pointer">Reintentar</button>
+            </div>
+          </div>
+        ) : (
+          <ModalConsentimientoLegal onAceptar={async () => { await api.post('/legal/aceptar', { terminos: true, privacidad: true }); setConsentimientoPendiente(false); }} />
+        )
+      )}
       <SplashScreen authReady={authReady} clubesLoading={clubesLoading} onFinish={() => setSplashDone(true)} />
 
       {!esLandingGeneral && !esOferta && (
@@ -347,6 +382,7 @@ return (
             <FlujoOnboarding
               onCompletar={() => {
                 marcarCompletadoOnboarding();
+                try { localStorage.setItem('tutorial_alumno_pending', 'true'); } catch { /* La guía es opcional. */ }
                 setOnboardingAbierto(false);
               }}
             />

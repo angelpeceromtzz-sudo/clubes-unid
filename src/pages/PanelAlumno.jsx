@@ -17,6 +17,8 @@ import { SeccionPostulaciones } from '../components/responsable/secciones/Seccio
 import { MisActividadesPanel } from '../components/actividades/MisActividadesPanel';
 import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
 import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
+import { useTutorial } from '../hooks/useTutorial';
+import { TutorialOverlay } from '../components/tutorial/TutorialOverlay';
 import { Icono } from '../components/ui/Icono';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -36,6 +38,13 @@ export function PanelAlumno() {
   const {setPanelNav}=usePanelNav();
   const d=usePanelAlumno();
   const asignacion=useActividadesAsignadas();
+  const tutorial = useTutorial('alumno');
+  const pasosTutorial = [
+    { titulo: 'Bienvenido a tu panel', texto: 'Aquí puedes consultar tu club, postulaciones y actividades.' },
+    { titulo: 'Noticias y avisos', texto: 'Revisa aquí las novedades publicadas por tu club.' },
+    { titulo: 'Horarios y actividades', texto: 'Consulta tus horarios y las actividades que tienes asignadas.' },
+    { titulo: 'Postulaciones', texto: 'Da seguimiento a los estados de tus convocatorias.' },
+  ];
   const elementosNav=useMemo(()=>{
     const opciones=d.club ? ELEMENTOS_NAV_ALUMNO : NAV_SIN_CLUB;
     return usuario?.id_rol===1 ? opciones : opciones.filter((item)=>item.key!=='mis-actividades');
@@ -55,6 +64,14 @@ export function PanelAlumno() {
     setPanelNav({itemsNav:elementosNav,onNavChange:setVistaAlumno});
     return ()=>setPanelNav({itemsNav:[],onNavChange:null});
   },[setPanelNav,elementosNav,setVistaAlumno,esResponsableClub,esAdmin,esRectoria,esResponsableMural]);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('tutorial_alumno_pending') === 'true') {
+        localStorage.removeItem('tutorial_alumno_pending');
+        if (localStorage.getItem('tutorial_alumno_done') !== 'true') tutorial.iniciar();
+      }
+    } catch { /* La guía es opcional. */ }
+  }, [tutorial.iniciar]);
   function descartarBanner(){
     setDismissMiembroBanner(true);
     try{localStorage.setItem('dismiss_miembro_banner','true');}catch{ /* Preferencia opcional. */ }
@@ -73,5 +90,6 @@ export function PanelAlumno() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-2 space-y-8"><InformacionClub club={d.club}/><SeccionAvisos club={d.club} esResponsableClub={false}/></div><div className="space-y-8"><SeccionMiembros miembros={d.miembros} club={d.club}/></div></div>
     </>}
     {vistaAlumno==='horarios' && d.club && <HorariosClub club={d.club} modoOscuro={modoOscuro} esMiembro expandirHorarios/>}
+    {tutorial.activo && <TutorialOverlay pasos={pasosTutorial} paso={tutorial.paso} onSiguiente={() => tutorial.siguiente(pasosTutorial.length)} onSaltar={tutorial.saltar} />}
   </NavegacionPanel></RutaProtegida></ErrorBoundary>;
 }

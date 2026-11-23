@@ -2,7 +2,7 @@
 // actividades y motivaciones) llegan del backend; aquí solo viven iconos y
 // textos asociados por nombre o código.
 
-export const TOTAL_PASOS_ONBOARDING = 9;
+export const TOTAL_PASOS_ONBOARDING = 10;
 
 export const ICONO_CATEGORIA = Object.freeze({
   Deportivos: 'trophy',
@@ -45,18 +45,17 @@ export const DECISIONES_CORREO_ONBOARDING = Object.freeze([
   { valor: 'rechazar', etiqueta: 'No, no quiero recibir correos opcionales' },
 ]);
 
+// Opcionales visibles: convocatorias, eventos, noticias, recordatorios.
+// 'mis_clubes' es legacy (no se muestra): si el alumno es miembro, las
+// comunicaciones de su club llegan por el canal operativo; si no es miembro,
+// no recibe notificaciones de clubes. Las convocatorias solo se envían si el
+// alumno NO pertenece a ningún club.
 export const TIPOS_CORREO_ONBOARDING = Object.freeze([
   {
     id: 'clubes_convocatorias',
     titulo: 'Clubes y convocatorias',
-    descripcion: 'Nuevos clubes y convocatorias que coincidan con tus intereses.',
+    descripcion: 'Nuevos clubes y convocatorias que coincidan con tus intereses (solo si no perteneces a un club).',
     icono: 'trophy',
-  },
-  {
-    id: 'mis_clubes',
-    titulo: 'Notificaciones de mis clubes',
-    descripcion: 'Avisos, novedades y mensajes de los clubes en los que participas.',
-    icono: 'bell',
   },
   {
     id: 'eventos',

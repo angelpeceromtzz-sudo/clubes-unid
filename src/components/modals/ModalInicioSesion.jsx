@@ -3,10 +3,13 @@ import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { api } from '../../services/api';
 import { Alerta } from '../ui/Alerta';
-import { BotonMicrosoft } from '../ui/BotonMicrosoft';
+import { AutocompletadoCorreo } from '../ui/AutocompletadoCorreo';
+// Azure/Microsoft login deshabilitado temporalmente en frontend.
+// import { BotonMicrosoft } from '../ui/BotonMicrosoft';
 import { BotonCerrar } from '../ui/BotonCerrar';
 import { Icono } from '../ui/Icono';
 import { CampoTexto } from '../ui/CampoTexto';
+import { EntradaCodigoOtp } from '../ui/EntradaCodigoOtp';
 import { ModalBase } from '../ui/ModalBase';
 import {
   LARGO_CODIGO_OTP,
@@ -277,6 +280,13 @@ export function ModalInicioSesion({ onClose }) {
     setErrorCorreo(validarCorreoOtp(correo));
   }
 
+  function manejarSeleccionCorreo(valor) {
+    setCorreo(valor);
+    setError('');
+    setErrorCorreo('');
+    setMensaje('');
+  }
+
   function manejarCambioCodigo(e) {
     setCodigo(normalizarCodigoOtp(e.target.value));
     setError('');
@@ -429,8 +439,6 @@ export function ModalInicioSesion({ onClose }) {
       {vista === VISTA.OPCIONES && (
         <div className="space-y-4">
           <div className="space-y-3">
-            <BotonMicrosoft />
-
             {OTP_HABILITADO && (
               <button
                 type="button"
@@ -516,12 +524,13 @@ export function ModalInicioSesion({ onClose }) {
 
       {vista === VISTA.LOCAL && (
         <form onSubmit={manejarEnvio} className="space-y-5">
-          <CampoTexto
+          <AutocompletadoCorreo
             label="Correo"
             name="correo"
             type="email"
             value={correo}
             onChange={(e) => setCorreo(e.target.value)}
+            onSeleccionar={manejarSeleccionCorreo}
             placeholder="correo@ejemplo.com"
             autoComplete="email"
           />
@@ -567,13 +576,14 @@ export function ModalInicioSesion({ onClose }) {
             Te enviaremos un código de 6 dígitos a tu correo institucional.
           </p>
 
-          <CampoTexto
+          <AutocompletadoCorreo
             label="Correo institucional"
             name="otp-correo"
             type="email"
             value={correo}
             onChange={manejarCambioCorreo}
             onBlur={manejarBlurCorreo}
+            onSeleccionar={manejarSeleccionCorreo}
             placeholder="usuario@red.unid.mx"
             autoComplete="email"
             autoFocus
@@ -626,17 +636,13 @@ export function ModalInicioSesion({ onClose }) {
             </div>
           )}
 
-          <CampoTexto
+          <EntradaCodigoOtp
             label="Código de verificación"
             name="otp-codigo"
-            type="text"
             value={codigo}
             onChange={manejarCambioCodigo}
-            placeholder="000000"
-            maxLength={LARGO_CODIGO_OTP}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="one-time-code"
+            length={LARGO_CODIGO_OTP}
+            disabled={cargandoOtp}
             autoFocus
             error={errorCodigo}
           />
