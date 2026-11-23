@@ -5,6 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { api } from '../../services/api';
 import { Alerta } from '../ui/Alerta';
 import { AutocompletadoCorreo } from '../ui/AutocompletadoCorreo';
+import { BotonMicrosoft } from '../ui/BotonMicrosoft';
 // Azure/Microsoft login deshabilitado temporalmente en frontend.
 // import { BotonMicrosoft } from '../ui/BotonMicrosoft';
 import { BotonCerrar } from '../ui/BotonCerrar';
