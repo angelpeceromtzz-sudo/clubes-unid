@@ -1811,8 +1811,32 @@ CREATE TABLE IF NOT EXISTS publicaciones_oferta (
  id_edicion INT,
  contenido VARCHAR(300) NOT NULL DEFAULT '',
  id_autor INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+ estado VARCHAR(20) NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('borrador','pendiente','publicada','rechazada','retirada')),
+ estado_propuesta VARCHAR(20) CHECK (estado_propuesta IN ('borrador','pendiente','rechazada')),
+ contenido_pendiente VARCHAR(300),
+ motivo_rechazo TEXT,
  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  FOREIGN KEY (id_edicion,id_club) REFERENCES actividades_ediciones(id_edicion,id_actividad) ON DELETE RESTRICT
+);
+-- Compatibilidad con datos existentes: agrega columnas nuevas y conserva publicaciones previas.
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS estado VARCHAR(20) NOT NULL DEFAULT 'publicada';
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS estado_propuesta VARCHAR(20);
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS contenido_pendiente VARCHAR(300);
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS motivo_rechazo TEXT;
+ALTER TABLE publicaciones_oferta ADD COLUMN IF NOT EXISTS actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW();
+UPDATE publicaciones_oferta SET estado='publicada' WHERE estado IS NULL;
+ALTER TABLE publicaciones_oferta DROP CONSTRAINT IF EXISTS chk_publicacion_estado;
+ALTER TABLE publicaciones_oferta ADD CONSTRAINT chk_publicacion_estado CHECK (estado IN ('borrador','pendiente','publicada','rechazada','retirada'));
+ALTER TABLE publicaciones_oferta DROP CONSTRAINT IF EXISTS chk_publicacion_estado_propuesta;
+ALTER TABLE publicaciones_oferta ADD CONSTRAINT chk_publicacion_estado_propuesta CHECK (estado_propuesta IS NULL OR estado_propuesta IN ('borrador','pendiente','rechazada'));
+CREATE TABLE IF NOT EXISTS reacciones_publicacion (
+ id_reaccion BIGSERIAL PRIMARY KEY,
+ id_publicacion INT NOT NULL REFERENCES publicaciones_oferta(id_publicacion) ON DELETE CASCADE,
+ id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+ reaccion VARCHAR(10) NOT NULL CHECK (reaccion IN ('like','love','clap')),
+ creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ UNIQUE (id_publicacion, id_usuario)
 );
 DO $$
 DECLARE foto RECORD; publicacion INT;
@@ -1823,8 +1847,8 @@ BEGIN
    ALTER TABLE publicaciones_imagenes ADD COLUMN orden INT NOT NULL DEFAULT 0;
    ALTER TABLE publicaciones_imagenes ADD COLUMN public_id TEXT;
    FOR foto IN SELECT f.*,e.id_actividad AS id_propietario FROM publicaciones_imagenes f JOIN actividades_ediciones e ON e.id_edicion=f.id_edicion LOOP
-     INSERT INTO publicaciones_oferta(id_club,id_edicion,contenido,id_autor,creado_en)
-     VALUES(foto.id_propietario,foto.id_edicion,foto.pie,foto.id_autor,foto.creado_en) RETURNING id_publicacion INTO publicacion;
+      INSERT INTO publicaciones_oferta(id_club,id_edicion,contenido,id_autor,estado,creado_en)
+      VALUES(foto.id_propietario,foto.id_edicion,foto.pie,foto.id_autor,'publicada',foto.creado_en) RETURNING id_publicacion INTO publicacion;
      UPDATE publicaciones_imagenes SET id_publicacion=publicacion WHERE id_foto=foto.id_foto;
    END LOOP;
    ALTER TABLE publicaciones_imagenes ALTER COLUMN id_publicacion SET NOT NULL;

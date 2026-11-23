@@ -15,9 +15,14 @@ async function subirArchivos(ruta, campo, archivos, datos = {}) {
   return cuerpo;
 }
 
+async function subirImagenCampo(idEdicion, clave, archivo) {
+  return subirArchivos('/gestion/ediciones/' + idEdicion + '/campos/' + encodeURIComponent(clave) + '/imagen', 'imagen', [archivo]);
+}
+
 export const actividadService = {
   guardarActividad: (id, datos) => enviar('/gestion/actividades' + (id ? '/' + id : ''), id ? 'PUT' : 'POST', datos),
   guardarEdicion: (idActividad, idEdicion, datos) => enviar(idEdicion ? '/gestion/ediciones/' + idEdicion : '/gestion/actividades/' + idActividad + '/ediciones', idEdicion ? 'PUT' : 'POST', datos),
+  publicar: (tipo, id) => enviar('/gestion/' + tipo + '/' + id + '/publicar', 'POST', {}),
   revision: (tipo, id, retirar = false) => enviar('/gestion/' + tipo + '/' + id + '/revision', 'POST', { retirar }),
   decidir: (tipo, id, aprobar, motivo = '') => enviar('/gestion/' + tipo + '/' + id + '/decision', 'POST', { aprobar, motivo }),
   archivar: (tipo, id, archivar) => enviar('/gestion/' + tipo + '/' + id + '/archivo', 'POST', { archivar }),
@@ -42,4 +47,6 @@ export const actividadService = {
   subirImagen: (ruta, archivo, datos = {}) => subirArchivos(ruta, 'imagen', [archivo], datos),
   subirFotos: (idEdicion, archivos, pie) => subirArchivos('/gestion/ediciones/' + idEdicion + '/fotos/lote', 'imagenes', archivos, { pie }),
   subirFotosClub: (idClub, archivos, pie) => subirArchivos('/gestion/actividades/' + idClub + '/fotos/lote', 'imagenes', archivos, { pie }),
+  subirImagenCampo,
+  eliminarImagenCampo: (idEdicion, clave) => enviar('/gestion/ediciones/' + idEdicion + '/campos/' + encodeURIComponent(clave) + '/imagen', 'DELETE'),
 };

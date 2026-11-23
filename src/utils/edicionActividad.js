@@ -5,10 +5,10 @@ import {
 import { normalizarEnlaceMapa } from '../../shared/ubicacionMaps.js';
 
 export const PASOS_EDICION = [
-  { titulo: 'Información de la edición', descripcion: 'Define el nombre, el lugar y la información de esta edición.' },
-  { titulo: 'Fechas y destacado', descripcion: 'Indica cuándo se realizará y cuándo aparecerá como destacada en el sitio.' },
-  { titulo: 'Inscripción y requisitos', descripcion: 'Configura el registro, las preguntas y los requisitos de participación.' },
-  { titulo: 'Revisión final', descripcion: 'Revisa cómo se verá la edición y completa los pendientes antes de guardar.' },
+  { titulo: 'Información' },
+  { titulo: 'Fechas' },
+  { titulo: 'Inscripciones' },
+  { titulo: 'Vista previa' },
 ];
 
 export function prepararDatosEdicion(datos, plantilla) {
