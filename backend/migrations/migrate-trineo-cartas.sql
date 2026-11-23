@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS actividades_cartas (
   id_carta SERIAL PRIMARY KEY,
   id_edicion INT NOT NULL REFERENCES actividades_ediciones(id_edicion) ON DELETE RESTRICT,
   nombre VARCHAR(150) NOT NULL CHECK (length(trim(nombre))>0),
-  edad NUMERIC(5,1) NOT NULL CHECK (edad BETWEEN 0.1 AND 100),
+  edad INT NOT NULL CHECK (edad BETWEEN 0 AND 100),
   deseo TEXT NOT NULL CHECK (length(trim(deseo)) BETWEEN 1 AND 2000),
   activa BOOLEAN NOT NULL DEFAULT TRUE,
   creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),

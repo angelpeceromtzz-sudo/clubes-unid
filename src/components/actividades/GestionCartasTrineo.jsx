@@ -31,7 +31,7 @@ export function GestionCartasTrineo({ idEdicion, onActualizar }) {
     if (pendiente) return;
     setPendiente(true); setErrorOperacion(''); setMensaje('');
     try {
-      await actividadService.guardarCarta(idEdicion, editada?.id_carta, { ...formulario, edad: Number(formulario.edad) });
+      await actividadService.guardarCarta(idEdicion, editada?.id_carta, { nombre: formulario.nombre, deseo: formulario.deseo, edad: Number(formulario.edad) });
       limpiar(); recargar(); setMensaje('Carta guardada.');
     } catch (fallo) { setErrorOperacion(fallo.mensajeServidor || fallo.message); }
     finally { setPendiente(false); }
@@ -65,7 +65,7 @@ export function GestionCartasTrineo({ idEdicion, onActualizar }) {
         <h4 className="font-bold">{editada ? 'Editar carta #' + editada.id_carta : 'Agregar carta'}</h4>
       {!cartas.length && <p className="text-sm">Captura cartas para que los alumnos puedan elegirlas. La carta de regalo es {datos?.carta_obligatoria === false ? 'opcional' : 'obligatoria'} en esta edición; las aportaciones para la actividad se configuran aparte.</p>}
         <fieldset disabled={pendiente} className="space-y-4">
-           <div className="grid gap-4 sm:grid-cols-[1fr_8rem]"><label className={labelCls}>Nombre del niño *<input className={inputCls} required maxLength={150} value={formulario.nombre} onChange={(evento) => cambiar('nombre', evento.target.value)} /></label><label className={labelCls}>Edad *<input className={inputCls} type="number" min={0.1} max={100} step={0.1} required value={formulario.edad} onChange={(evento) => cambiar('edad', evento.target.value)} /><span className={'text-xs font-normal ' + tema.subtitle}>Usa años con un decimal: 0.1 = 1 mes, 1.5 = 1 año y 6 meses.</span></label></div>
+           <div className="grid gap-4 sm:grid-cols-[1fr_8rem]"><label className={labelCls}>Nombre del niño *<input className={inputCls} required maxLength={150} value={formulario.nombre} onChange={(evento) => cambiar('nombre', evento.target.value)} /></label><label className={labelCls}>Edad *<input className={inputCls} type="number" min={0} max={100} step={1} required value={formulario.edad} onChange={(evento) => cambiar('edad', evento.target.value)} /><span className={'text-xs font-normal ' + tema.subtitle}>Usa 0 para “Menos de 1 año”.</span></label></div>
           <label className={labelCls}>Deseo *<textarea className={inputCls} rows={3} required maxLength={2000} value={formulario.deseo} onChange={(evento) => cambiar('deseo', evento.target.value)} /></label>
           <div className="flex flex-wrap gap-3"><BotonAccion type="submit">{pendiente ? 'Guardando…' : editada ? 'Guardar carta' : 'Agregar carta'}</BotonAccion>{editada && <BotonAccion variant="outline" onClick={limpiar}>Cancelar edición</BotonAccion>}</div>
         </fieldset>
@@ -75,11 +75,11 @@ export function GestionCartasTrineo({ idEdicion, onActualizar }) {
       {!visibles.length && <p className={tema.subtitle}>{cartas.length ? 'No hay cartas que coincidan con la búsqueda.' : 'Todavía no hay cartas capturadas.'}</p>}
       <div className="grid gap-4 sm:grid-cols-2">{visibles.map((carta) => <article key={carta.id_carta} className="min-w-0 space-y-3 rounded-xl border border-slate-400/25 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-bold">Carta #{carta.id_carta}</span><span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold">{ETIQUETAS[carta.estado]}</span></div>
-         <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad)}</h4><p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
+          <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12))}</h4><p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
         {carta.alumno_nombre && <div className="space-y-1 border-t border-slate-400/25 pt-3 text-sm"><p>Alumno: {carta.alumno_nombre} · {carta.matricula}</p><p>Compromiso: regalo de esta carta.</p></div>}
         {datos.editable && carta.estado === 'reservada' && carta.estado_registro === 'confirmado' && <BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => recibir(carta)}>Confirmar recepción del regalo</BotonAccion>}
         {carta.recibida_en && <p className={'text-xs ' + tema.subtitle}>Recibido el {new Date(carta.recibida_en).toLocaleString('es-MX', { timeZone: 'America/Merida' })}{carta.recibida_por_nombre ? ' por ' + carta.recibida_por_nombre : ''}.</p>}
-        {datos.editable && ['disponible', 'retirada'].includes(carta.estado) && <div className="flex flex-wrap gap-2"><BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => { setEditada(carta); setFormulario({ nombre: carta.nombre, edad: carta.edad, deseo: carta.deseo }); setErrorOperacion(''); }}>Editar carta</BotonAccion><BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => alternar(carta)}>{carta.activa ? 'Retirar carta' : 'Volver a ofrecer'}</BotonAccion></div>}
+         {datos.editable && ['disponible', 'retirada'].includes(carta.estado) && <div className="flex flex-wrap gap-2"><BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => { setEditada(carta); setFormulario({ nombre: carta.nombre, edad: carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12), deseo: carta.deseo }); setErrorOperacion(''); }}>Editar carta</BotonAccion><BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => alternar(carta)}>{carta.activa ? 'Retirar carta' : 'Volver a ofrecer'}</BotonAccion></div>}
       </article>)}</div>
     </>}
     {mensaje && <p role="status" className="text-emerald-700 dark:text-emerald-300">{mensaje}</p>}

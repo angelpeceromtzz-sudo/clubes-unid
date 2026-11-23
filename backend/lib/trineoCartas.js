@@ -5,9 +5,10 @@ const SELECT_RESERVA = `SELECT v.*, u.nombre_completo AS recibida_por_nombre
   FROM actividades_cartas_reservas v LEFT JOIN usuarios u ON u.id_usuario=v.recibida_por`;
 
 function reservaPublica(fila) {
+  const edad = fila.carta_snapshot.edad ?? (fila.carta_snapshot.edad_meses == null ? null : Math.floor(Number(fila.carta_snapshot.edad_meses) / 12));
   return {
     id_reserva: fila.id_reserva, id_carta: fila.id_carta, id_aportacion: fila.id_aportacion,
-    ...fila.carta_snapshot, estado: fila.cancelada_en ? 'cancelada' : fila.recibida ? 'entregada' : 'reservada',
+    ...fila.carta_snapshot, edad, estado: fila.cancelada_en ? 'cancelada' : fila.recibida ? 'entregada' : 'reservada',
     reservada_en: fila.reservada_en, cancelada_en: fila.cancelada_en,
     recibida_en: fila.cancelada_en ? null : fila.recibida_en,
     recibida_por_nombre: fila.cancelada_en ? null : fila.recibida_por_nombre,

@@ -12,7 +12,7 @@ export function ResumenCartaTrineo({ carta, onRecibir }) {
   if (!carta) return null;
   return <section aria-label="Carta del Trineo" className="space-y-2 rounded-xl border border-amber-400/40 bg-amber-400/5 p-4">
     <p className="text-xs font-bold uppercase tracking-widest text-amber-700 dark:text-amber-300">Carta #{carta.id_carta}</p>
-     <h4 className={'font-bold ' + tema.title}>{carta.nombre} · {formatearEdadCarta(carta.edad)}</h4>
+     <h4 className={'font-bold ' + tema.title}>{carta.nombre} · {formatearEdadCarta(carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12))}</h4>
     <p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
     {carta.estado && <p className="text-sm font-semibold">{carta.estado === 'entregada' ? 'Regalo recibido' : carta.estado === 'cancelada' ? 'Reserva liberada' : 'Carta reservada'}</p>}
     {carta.cancelada_en && <p className={'text-xs ' + tema.subtitle}>Liberada el {new Date(carta.cancelada_en).toLocaleString('es-MX', { timeZone: 'America/Merida' })}.</p>}
@@ -40,7 +40,7 @@ export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSelecci
         <p role="status" className={'text-sm ' + tema.subtitle}>{cartas.length ? cartas.length + (cartas.length === 1 ? ' carta disponible' : ' cartas disponibles') : consulta ? 'No hay cartas disponibles con ese nombre. Verifica los datos con el encargado.' : 'No hay cartas disponibles en este momento. Consulta al encargado.'}</p>
         <div className="grid max-h-[32rem] gap-3 overflow-y-auto sm:grid-cols-2">{cartas.map((carta) => <article key={carta.id_carta} className={'min-w-0 space-y-3 rounded-xl border p-4 ' + (seleccionada?.id_carta === carta.id_carta ? 'border-amber-400 bg-amber-400/10' : 'border-slate-400/25')}>
           <p className={'text-xs ' + tema.subtitle}>Carta #{carta.id_carta}</p>
-           <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad)}</h4>
+           <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12))}</h4>
           <p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
           <BotonAccion size="sm" variant={seleccionada?.id_carta === carta.id_carta ? 'primary' : 'outline'} aria-pressed={seleccionada?.id_carta === carta.id_carta} onClick={() => onSeleccionar(carta)}>{seleccionada?.id_carta === carta.id_carta ? 'Carta seleccionada' : 'Elegir este niño'}</BotonAccion>
         </article>)}</div>
