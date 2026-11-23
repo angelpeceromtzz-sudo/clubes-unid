@@ -3,7 +3,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { ROL_ALUMNO, ROL_ADMIN, ROL_RECTORIA } from '../constants/roles.js';
+import { ROL_ALUMNO, ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { limitadorPreferencias } from '../lib/rateLimits.js';
 import { CORREOS_NO_CONFIGURABLES, VERSION_AVISO_PUBLICADA } from '../lib/preferenciasCorreo.js';
 import {
@@ -218,8 +218,9 @@ router.get('/preferencias/historial-correo', authenticate, requireRole(ROL_ALUMN
   }
 });
 
-// Resumen agregado de preferencias de onboarding (solo admin/rectoría).
-router.get('/resumen', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA), async (req, res) => {
+// Resumen agregado de preferencias de onboarding (admin, rectoría y coordinación).
+// Coordinación lo consulta desde la vista ejecutiva en modo lectura.
+router.get('/resumen', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     const total = (await pool.query(
       `SELECT COUNT(*)::int AS n FROM preferencias_usuario WHERE estado_onboarding = 'completado'`,

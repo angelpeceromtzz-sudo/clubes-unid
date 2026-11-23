@@ -35,6 +35,7 @@ import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActivid
 
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
+  const esCoordinacion = usuario?.id_rol === 7;
   const asignacion=useActividadesAsignadas();
   const d = usePanelAdmin(usuario);
   const ejecutivo = useVistaEjecutiva();
@@ -60,7 +61,10 @@ export function PanelAdmin() {
         onVistaChange={d.setVistaActiva}
       >
         <div className="mb-6 md:mb-8">
-            <EncabezadoPagina titulo="Panel de Administración" subtitulo={`Bienvenido, ${formatearNombre(d.user.nombre_completo)}`} />
+            <EncabezadoPagina
+              titulo={esCoordinacion ? 'Panel de Coordinación' : 'Panel de Administración'}
+              subtitulo={`Bienvenido, ${formatearNombre(d.user.nombre_completo)}`}
+            />
           </div>
 
           <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
