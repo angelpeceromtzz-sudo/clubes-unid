@@ -45,7 +45,13 @@ export function DetalleClub({ onLoginClick }) {
   function formatearFecha(fechaIso) {
     if (!fechaIso) return '';
     const fecha = new Date(fechaIso);
-    return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+    return fecha.toLocaleString('es-MX', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   }
 
   function obtenerTextoBoton() {

@@ -3,8 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
 import { usePanelNav } from '../contexts/PanelNavContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
-import { InformacionClub } from '../components/clubes/InformacionClub';
-import { SeccionAvisos } from '../components/responsable/secciones/SeccionAvisos';
+import { SeccionFeedClub } from '../components/responsable/secciones/SeccionFeedClub';
 import { SeccionMiembros } from '../components/responsable/secciones/SeccionMiembros';
 import { usePanelResponsableClub } from '../hooks/usePanelResponsableClub';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
@@ -19,11 +18,20 @@ import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
 import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
 import { useVistaPanel } from '../hooks/useVistaPanel';
+import { useTutorial } from '../hooks/useTutorial';
+import { TutorialOverlay } from '../components/tutorial/TutorialOverlay';
 
 export function PanelResponsableClub() {
   const { usuario } = useAutenticacion();
   const d = usePanelResponsableClub(usuario);
   const asignacion = useActividadesAsignadas();
+  const tutorial = useTutorial(`responsable_${usuario?.id_usuario}`);
+  const pasosTutorial = [
+    { titulo: 'Mi panel', texto: 'Aquí gestionas la información y los avisos de tu club.' },
+    { titulo: 'Miembros', texto: 'Consulta y administra a los integrantes del club.' },
+    { titulo: 'Horario y asistencia', texto: 'Revisa horarios y registra la asistencia.' },
+    { titulo: 'Convocatorias', texto: 'Gestiona convocatorias, bloques y postulaciones.' },
+  ];
   const elementosNav = useMemo(()=>{
     return !d.club ? ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item)=>item.key==='principal') : d.esResponsableClub ? ELEMENTOS_NAV_RESPONSABLE_CLUB : ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item)=>item.key!=='asistencia');
   },[d.club,d.esResponsableClub]);
@@ -33,6 +41,12 @@ export function PanelResponsableClub() {
     setPanelNav({ itemsNav:elementosNav, onNavChange:setVistaActiva });
     return () => setPanelNav({ itemsNav: [], onNavChange: null });
   }, [setPanelNav,elementosNav,setVistaActiva]);
+  useEffect(() => {
+    if (!usuario?.id_usuario) return;
+    try {
+      if (localStorage.getItem(`tutorial_responsable_${usuario.id_usuario}_done`) !== 'true') tutorial.iniciar();
+    } catch { /* La guía es opcional. */ }
+  }, [usuario?.id_usuario, tutorial.iniciar]);
 
   if (d.loading) {
     return (
@@ -71,8 +85,7 @@ export function PanelResponsableClub() {
             <TarjetasMiActividad asignacion={asignacion}/>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
-                <InformacionClub club={d.club} />
-                <SeccionAvisos club={d.club} esResponsableClub={true} />
+                <SeccionFeedClub club={d.club} miembros={d.miembros} esResponsableClub={true} />
               </div>
               <div className="space-y-8">
                 <SeccionMiembros miembros={d.miembros} club={d.club} />
@@ -105,6 +118,7 @@ export function PanelResponsableClub() {
             />
           )}
 
+        {tutorial.activo && <TutorialOverlay pasos={pasosTutorial} paso={tutorial.paso} onSiguiente={() => tutorial.siguiente(pasosTutorial.length)} onSaltar={tutorial.saltar} />}
       </NavegacionPanel>
     </RutaProtegida>
   );

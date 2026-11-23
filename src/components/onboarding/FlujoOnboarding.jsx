@@ -18,6 +18,7 @@ import { PasoLicenciatura } from './PasoLicenciatura';
 import { PasoFechaNacimiento } from './PasoFechaNacimiento';
 import { PasoTelefono } from './PasoTelefono';
 import { PasoDisposicion } from './PasoDisposicion';
+import { PasoActividadResponsable } from './PasoActividadResponsable';
 import { PasoCorreo } from './PasoCorreo';
 import { PasoConfirmacion } from './PasoConfirmacion';
 import { TOTAL_PASOS_ONBOARDING } from '../../constants/onboarding';
@@ -136,7 +137,16 @@ export function FlujoOnboarding({ onCompletar }) {
       else if (paso === 6) setAviso('Indica tu fecha de nacimiento para continuar.');
       else if (paso === 7) setAviso(''); // teléfono opcional, no bloquea
       else if (paso === 8) setAviso('Indica tu disposición para continuar.');
-      else if (paso === 9) setAviso('Indica si quieres recibir correos opcionales.');
+      else if (paso === 9) setAviso('Selecciona al menos una actividad que te gustaría coordinar.');
+      else if (paso === 10) setAviso('Indica si quieres recibir correos opcionales.');
+      return;
+    }
+    if (paso === 8) {
+      irA(respuestas.disposicion === 'responsable' ? 9 : 10);
+      return;
+    }
+    if (paso === 9) {
+      irA(10);
       return;
     }
     if (paso === TOTAL_PASOS_ONBOARDING) {
@@ -148,6 +158,14 @@ export function FlujoOnboarding({ onCompletar }) {
 
   function atras() {
     if (paso === 1 && haComenzado) return;
+    if (paso === 10) {
+      irA(respuestas.disposicion === 'responsable' ? 9 : 8);
+      return;
+    }
+    if (paso === 9) {
+      irA(8);
+      return;
+    }
     irA(paso === 1 ? 'bienvenida' : paso - 1);
   }
 
@@ -252,10 +270,19 @@ export function FlujoOnboarding({ onCompletar }) {
     contenido = (
       <PasoDisposicion
         valor={respuestas.disposicion}
-        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, disposicion: valor }))}
+        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, disposicion: valor, actividadesResponsable: valor === 'responsable' ? actual.actividadesResponsable : [] }))}
       />
     );
   } else if (paso === 9) {
+    const actividadesSeleccionadas = actividades.filter((a) => respuestas.actividades.includes(a.id));
+    contenido = (
+      <PasoActividadResponsable
+        actividades={actividadesSeleccionadas}
+        seleccion={respuestas.actividadesResponsable}
+        onAlternar={(id) => setRespuestas((actual) => ({ ...actual, actividadesResponsable: alternarElemento(actual.actividadesResponsable, id) }))}
+      />
+    );
+  } else if (paso === 10) {
     contenido = (
       <PasoCorreo
         correo={respuestas.correo}
