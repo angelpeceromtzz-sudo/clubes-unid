@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { api } from '../../services/api';
@@ -90,7 +91,67 @@ function IndicadorEspera({ segundos, prefijo = 'Podrás solicitar otro código e
   );
 }
 
-export function ModalInicioSesion({ onClose }) {
+function ModalLegalOtp({ esOscuro, onAceptar, onCerrar }) {
+  return (
+    <ModalBase
+      show={true}
+      onClose={onCerrar}
+      maxWidth="max-w-lg"
+      panelClassName={`relative ${esOscuro ? 'bg-[#0e162c] border border-slate-700/30' : 'bg-white border border-slate-200/70 shadow-sm'}`}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h3 className={`text-xl font-black ${esOscuro ? 'text-white' : 'text-slate-900'}`}>Antes de continuar</h3>
+          <p className={`mt-1.5 text-sm ${esOscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+            Revisa los documentos legales antes de iniciar sesión con código.
+          </p>
+        </div>
+        <BotonCerrar onClick={onCerrar} />
+      </div>
+
+      <div className="mt-6 space-y-3">
+        <div className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${esOscuro ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50'}`}>
+          <span className={`text-sm font-semibold ${esOscuro ? 'text-white' : 'text-slate-900'}`}>Términos y condiciones</span>
+          <Link to="/terminos" target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-lg border border-amber-400/50 px-3 py-2 text-xs font-black uppercase tracking-wider text-amber-500 hover:bg-amber-400/10">
+            Ver
+          </Link>
+        </div>
+        <div className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${esOscuro ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50'}`}>
+          <span className={`text-sm font-semibold ${esOscuro ? 'text-white' : 'text-slate-900'}`}>Política de privacidad</span>
+          <Link to="/privacidad" target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-lg border border-amber-400/50 px-3 py-2 text-xs font-black uppercase tracking-wider text-amber-500 hover:bg-amber-400/10">
+            Ver
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button type="button" onClick={onCerrar} className={`rounded-xl border px-4 py-3 text-xs font-black uppercase tracking-wider cursor-pointer ${esOscuro ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+          Volver
+        </button>
+        <button type="button" onClick={onAceptar} className="rounded-xl bg-amber-400 px-4 py-3 text-xs font-black uppercase tracking-wider text-[#0e162c] hover:bg-amber-300 cursor-pointer">
+          Aceptar
+        </button>
+      </div>
+    </ModalBase>
+  );
+}
+
+function CheckboxesLegalesOtp({ esOscuro, terminos, privacidad, onTerminos, onPrivacidad }) {
+  return (
+    <div className={`space-y-2 rounded-xl border p-3 ${esOscuro ? 'border-slate-700/70 bg-slate-800/30' : 'border-slate-200 bg-slate-50'}`}>
+      <label className={`flex items-start gap-2 text-xs leading-relaxed ${esOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+        <input type="checkbox" checked={terminos} onChange={(evento) => onTerminos(evento.target.checked)} className="mt-0.5 accent-amber-400" />
+        <span>Acepto los <Link to="/terminos" target="_blank" rel="noopener noreferrer" className="font-bold text-amber-500 underline">Términos y condiciones</Link>.</span>
+      </label>
+      <label className={`flex items-start gap-2 text-xs leading-relaxed ${esOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+        <input type="checkbox" checked={privacidad} onChange={(evento) => onPrivacidad(evento.target.checked)} className="mt-0.5 accent-amber-400" />
+        <span>He leído y acepto la <Link to="/privacidad" target="_blank" rel="noopener noreferrer" className="font-bold text-amber-500 underline">Política de privacidad</Link>.</span>
+      </label>
+    </div>
+  );
+}
+
+export function ModalInicioSesion({ onClose, onAceptarLegal }) {
   const { modoOscuro } = useTheme();
   const { iniciarSesion, iniciarSesionOtp } = useAutenticacion();
   const [vista, setVista] = useState(VISTA.OPCIONES);
@@ -109,6 +170,9 @@ export function ModalInicioSesion({ onClose }) {
   const [cargandoOtp, setCargandoOtp] = useState(false);
   const [cooldownReenvio, setCooldownReenvio] = useState(0);
   const [cooldownVerificacion, setCooldownVerificacion] = useState(0);
+  const [terminosOtp, setTerminosOtp] = useState(false);
+  const [privacidadOtp, setPrivacidadOtp] = useState(false);
+  const [mostrarLegalOtp, setMostrarLegalOtp] = useState(false);
   const peticionOtpRef = useRef(false);
   const esOscuro = modoOscuro;
   const hayCuentaAtras = cooldownReenvio > 0 || cooldownVerificacion > 0;
@@ -143,6 +207,9 @@ export function ModalInicioSesion({ onClose }) {
     setCargandoOtp(false);
     setCooldownReenvio(0);
     setCooldownVerificacion(0);
+    setTerminosOtp(false);
+    setPrivacidadOtp(false);
+    setMostrarLegalOtp(false);
     onClose();
   }
 
@@ -215,6 +282,11 @@ export function ModalInicioSesion({ onClose }) {
 
   async function solicitarCodigo({ reenvio = false } = {}) {
     if (peticionOtpRef.current || cargandoOtp || cooldownReenvio > 0) {
+      return;
+    }
+
+    if (!terminosOtp || !privacidadOtp) {
+      setMostrarLegalOtp(true);
       return;
     }
 
@@ -309,6 +381,18 @@ export function ModalInicioSesion({ onClose }) {
     setErrorNombre(validarNombreOtp(nombre, correo));
   }
 
+  async function completarInicioSesion() {
+    if (onAceptarLegal && terminosOtp && privacidadOtp) {
+      try {
+        await onAceptarLegal();
+      } catch {
+        // El inicio de sesión ya fue válido; el consentimiento global volverá
+        // a solicitarse si el registro en el backend no pudo completarse.
+      }
+    }
+    cerrarModal();
+  }
+
   async function manejarVerificar(e) {
     e.preventDefault();
 
@@ -333,7 +417,7 @@ export function ModalInicioSesion({ onClose }) {
 
     if (result.ok) {
       setCodigo('');
-      cerrarModal();
+      await completarInicioSesion();
       return;
     }
 
@@ -385,7 +469,7 @@ export function ModalInicioSesion({ onClose }) {
     if (result.ok) {
       setNombre('');
       setCodigo('');
-      cerrarModal();
+      await completarInicioSesion();
       return;
     }
 
@@ -621,6 +705,14 @@ export function ModalInicioSesion({ onClose }) {
             )}
             {cargandoOtp ? 'Enviando...' : 'Enviar código'}
           </button>
+
+          <CheckboxesLegalesOtp
+            esOscuro={esOscuro}
+            terminos={terminosOtp}
+            privacidad={privacidadOtp}
+            onTerminos={setTerminosOtp}
+            onPrivacidad={setPrivacidadOtp}
+          />
         </form>
       )}
 
@@ -787,6 +879,18 @@ export function ModalInicioSesion({ onClose }) {
 
           <IndicadorEspera segundos={cooldownReenvio} />
         </form>
+      )}
+
+      {mostrarLegalOtp && (
+        <ModalLegalOtp
+          esOscuro={esOscuro}
+          onCerrar={() => setMostrarLegalOtp(false)}
+          onAceptar={() => {
+            setTerminosOtp(true);
+            setPrivacidadOtp(true);
+            setMostrarLegalOtp(false);
+          }}
+        />
       )}
     </ModalBase>
   );

@@ -186,6 +186,11 @@ function App() {
     if (!actualizacionesAbiertas && location.pathname !== '/noticias' && location.pathname !== '/calendario' && !location.pathname.startsWith('/actividades')) redirigirPostLogin();
   }, [redirigirPostLogin, location.pathname, actualizacionesAbiertas]);
 
+  const aceptarLegalDesdeLogin = useCallback(async () => {
+    await request('/legal/aceptar', { method: 'POST', body: JSON.stringify({ terminos: true, privacidad: true }) });
+    setConsentimientoPendiente(false);
+  }, []);
+
    function handleLogout() {
     cerrarSesion();
     navigate('/campus/campeche/portal');
@@ -289,7 +294,7 @@ function App() {
           {esPreguntasFrecuentes && <Route path="/preguntas-frecuentes" element={<PaginaPreguntasFrecuentes />} />}
           {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs />} />}
         </Routes>
-        {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} />}
+        {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} onAceptarLegal={aceptarLegalDesdeLogin} />}
       </>
     );
   }
@@ -373,7 +378,7 @@ return (
       />
 
       {showLogin && (
-        <ModalInicioSesion onClose={handleLoginSuccess} />
+        <ModalInicioSesion onClose={handleLoginSuccess} onAceptarLegal={aceptarLegalDesdeLogin} />
       )}
 
       {onboardingAbiertoEfectivo && (
