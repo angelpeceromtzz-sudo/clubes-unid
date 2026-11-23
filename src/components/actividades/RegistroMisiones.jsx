@@ -22,7 +22,7 @@ export function ResumenRegistroMisiones({ registro, edicion, acceso, licenciatur
     <EstadoActividad estado={registro.estado} />
     <p className="font-bold">{registro.nombre_completo} · {registro.tipo_participante === 'invitado' ? 'Invitado' : 'Matrícula ' + registro.matricula}</p>
     {registro.correo && <p className="break-words text-sm">{registro.correo}{registro.telefono ? ' · ' + registro.telefono : ''}</p>}
-    <dl className="grid gap-3 sm:grid-cols-2">{campos.filter((campo) => campoActividadVisible(campo, registro.respuestas)).map((campo) => <div key={campo.clave}>{campo.imagen_url && <img src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-28 w-full rounded-lg object-cover" />}
+    <dl className="grid gap-3 sm:grid-cols-2">{campos.filter((campo) => campoActividadVisible(campo, registro.respuestas)).map((campo) => <div key={campo.clave}>{campo.imagen_url && <a href={campo.imagen_url} target="_blank" rel="noreferrer" aria-label="Abrir imagen completa"><img src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-28 w-full rounded-lg bg-slate-100 object-contain dark:bg-slate-800" /></a>}
       <dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt>
       <dd className="whitespace-pre-wrap break-words font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : campo.tipo === 'fecha' && registro.respuestas[campo.clave] ? registro.respuestas[campo.clave].split('-').reverse().join('/') : registro.respuestas[campo.clave] ?? 'Sin especificar'}</dd>
     </div>)}</dl>
@@ -119,7 +119,7 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   function dibujarCampo(campo) {
     if (!campoActividadVisible(campo, respuestas)) return null;
     const comunes = { id: 'mision-' + campo.clave, 'aria-label': campo.etiqueta + (campo.obligatorio ? ' *' : ' (opcional)'), className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
-     return <label className={etiquetaCampo + (campo.tipo === 'texto_largo' ? ' sm:col-span-2' : '')} key={campo.clave}>{campo.imagen_url && <img src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-36 w-full rounded-lg object-cover" />}{campo.etiqueta}{campo.obligatorio ? ' *' : ' (opcional)'}
+     return <label className={etiquetaCampo + (campo.tipo === 'texto_largo' ? ' sm:col-span-2' : '')} key={campo.clave}>{campo.imagen_url && <a href={campo.imagen_url} target="_blank" rel="noreferrer" aria-label="Abrir imagen completa"><img src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-36 w-full rounded-lg bg-slate-100 object-contain dark:bg-slate-800" /></a>}{campo.etiqueta}{campo.obligatorio ? ' *' : ' (opcional)'}
       {['seleccion', 'licenciatura'].includes(campo.tipo) ? <select {...comunes} disabled={campo.tipo === 'licenciatura' && loading}>
         <option value="">Selecciona una opción</option>
         {(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ valor: item.id_licenciatura, texto: item.nombre })) : campo.opciones.map((opcion) => ({ valor: opcion, texto: opcion }))).map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.texto}</option>)}

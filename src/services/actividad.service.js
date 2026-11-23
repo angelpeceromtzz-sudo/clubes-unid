@@ -26,6 +26,8 @@ export const actividadService = {
   revision: (tipo, id, retirar = false) => enviar('/gestion/' + tipo + '/' + id + '/revision', 'POST', { retirar }),
   decidir: (tipo, id, aprobar, motivo = '') => enviar('/gestion/' + tipo + '/' + id + '/decision', 'POST', { aprobar, motivo }),
   archivar: (tipo, id, archivar) => enviar('/gestion/' + tipo + '/' + id + '/archivo', 'POST', { archivar }),
+  borrarActividad: (id) => enviar('/gestion/actividades/' + id, 'DELETE', { confirmar: true }),
+  borrarEdicion: (id) => enviar('/gestion/ediciones/' + id, 'DELETE', { confirmar: true }),
   asignarEncargado: (id, idResponsable) => enviar('/gestion/actividades/' + id + '/responsable', 'PUT', { id_responsable: idResponsable }),
   buscarEncargados: (buscar,tipo='actividad') => request(raiz + '/gestion/encargados?buscar=' + encodeURIComponent(buscar)+'&tipo='+tipo),
   abrirInscripciones: (id, abiertas) => enviar('/gestion/ediciones/' + id + '/inscripciones', 'PUT', { abiertas }),
