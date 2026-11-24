@@ -4,7 +4,11 @@ import { ImagenPregunta } from './ImagenPregunta';
 
 export function ImagenesCuestionarioActividad({ campos, respuestas, excluirClaves = [] }) {
   const { tema } = useTheme();
-  const imagenes = campos.filter((campo) => campo.imagen_url && !excluirClaves.includes(campo.clave) && campoActividadVisible(campo, respuestas));
+  const imagenes = campos.filter((campo) => {
+    const valor = respuestas?.[campo.clave];
+    const respondida = valor !== undefined && valor !== null && String(valor).trim() !== '';
+    return campo.imagen_url && !excluirClaves.includes(campo.clave) && !respondida && campoActividadVisible(campo, respuestas);
+  });
   if (!imagenes.length) return null;
 
   return <section aria-label="Imágenes de referencia del cuestionario" className="border-t border-slate-400/25 pt-5">
