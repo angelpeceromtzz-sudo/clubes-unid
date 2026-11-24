@@ -25,6 +25,7 @@ import { ModalPasswordAdmin } from '../components/admin/modales/ModalPasswordAdm
 import { SeccionDiapositivas } from '../components/admin/seccion-diapositivas/SeccionDiapositivas';
 import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
 import { SeccionNoticias } from '../components/admin/seccion-noticias/SeccionNoticias';
+import { SeccionReportesAdmin } from '../components/admin/secciones/SeccionReportesAdmin';
 import { Spinner } from '../components/ui/Spinner';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -97,6 +98,8 @@ export function PanelAdmin() {
           {d.vistaActiva === 'noticias' && (
             <SeccionNoticias gestion={d.noticias} />
           )}
+
+          {d.vistaActiva === 'reportes' && <SeccionReportesAdmin />}
 
           {d.vistaActiva === 'expediente' && <SeccionExpediente />}
           {d.vistaActiva === 'historial' && (

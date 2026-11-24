@@ -16,4 +16,20 @@ export const uploadService = {
     }
     return res.json();
   },
+  uploadImagenReporte: async (file) => {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('imagen', file);
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch(`${API_BASE}/upload/reporte-imagen`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Error al subir imagen' }));
+      throw new Error(err.error || `Error ${res.status}`);
+    }
+    return res.json();
+  },
 };
