@@ -138,7 +138,11 @@ export function camposPlantillaActividad(plantilla = 'general', configuracion = 
 }
 
 export function camposRegistroTrineo(campos) {
-  return campos.map((campo) => campo.clave === 'talla' ? { ...campo, obligatorio: false } : campo);
+  const resultado = campos.map((campo) => campo.clave === 'talla' ? { ...campo, obligatorio: false } : campo);
+  if (!resultado.some((campo) => campo.clave === 'telefono')) {
+    resultado.push({ clave: 'telefono', etiqueta: 'Teléfono', tipo: 'texto', obligatorio: true, opciones: [], validacion: 'telefono' });
+  }
+  return resultado;
 }
 
 export function cotizarCamisaTrineo({ campo, solicita, talla, anterior = null }) {
