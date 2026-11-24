@@ -96,7 +96,7 @@ export default function PaginaSelectorCampus() {
               Conoce nuestra red de campus
             </h2>
             <p className={`mt-4 text-sm sm:text-base ${oscuro ? 'text-slate-400' : 'text-slate-600'}`}>
-              Campus Campeche es el único disponible por ahora. El resto se irán activando próximamente.
+              Campus Campeche es el único disponible por ahora.
             </p>
           </div>
 

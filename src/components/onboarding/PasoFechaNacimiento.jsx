@@ -22,7 +22,7 @@ export function PasoFechaNacimiento({ valor, onCambiar }) {
           value={valor ?? ''}
           onChange={(e) => onCambiar(e.target.value || null)}
           max={new Date().toISOString().slice(0, 10)}
-          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 ${
+          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
             modoOscuro ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
           }`}
         />

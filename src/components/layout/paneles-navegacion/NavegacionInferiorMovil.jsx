@@ -28,14 +28,15 @@ export function NavegacionInferiorMovil({ estaAutenticado, tieneInscripcionActiv
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const enPanel = location.pathname !== '/campus/campeche/portal';
+  const esDetalleClubPortal = location.pathname.startsWith('/campus/campeche/portal/club/');
+  const enPanel = location.pathname !== '/campus/campeche/portal' && !esDetalleClubPortal;
 
   function irPanel() {
     if (esAdmin) navigate('/admin/panel');
     else if (esRectoria) navigate('/rectoria/panel');
     else if (esResponsableClub) navigate('/campus/campeche/portal/responsable-de-club/panel');
     else if (esResponsableMural) navigate('/mural/panel');
-    else navigate('/panel');
+    else navigate('/campus/campeche/alumno/panel');
   }
 
   return (

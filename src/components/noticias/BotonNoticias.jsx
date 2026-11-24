@@ -10,6 +10,7 @@ export function BotonNoticias({ className = '', colorClase = null }) {
 
   return (
     <button
+      data-tutorial="noticias-eventos"
       onClick={abrirActualizaciones}
       aria-label={`Noticias y eventos${hayNuevas ? `, ${noLeidas} sin leer` : ''}`}
       className={`inline-flex items-center gap-1.5 font-semibold text-xs lg:text-sm tracking-wide px-3 py-2 rounded-full transition-all duration-200 cursor-pointer active:scale-95 ${

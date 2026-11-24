@@ -4,7 +4,7 @@ import { useAutenticacion } from '../contexts/AuthContext';
 import { usePanelNav } from '../contexts/PanelNavContext';
 import { RutaProtegida } from '../components/layout/RutaProtegida';
 import { SeccionFeedClub } from '../components/responsable/secciones/SeccionFeedClub';
-import { SeccionMiembros } from '../components/responsable/secciones/SeccionMiembros';
+import { ChatClub } from '../components/clubes/ChatClub';
 import { usePanelResponsableClub } from '../hooks/usePanelResponsableClub';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
 import { ELEMENTOS_NAV_RESPONSABLE_CLUB } from '../constants/navegacion';
@@ -12,6 +12,7 @@ import { VistaConvocatorias } from '../components/responsable/vistas/VistaConvoc
 import { VistaMiembros } from '../components/responsable/vistas/VistaMiembros';
 import { VistaHistorial } from '../components/responsable/vistas/VistaHistorial';
 import { VistaAsistencia } from '../components/asistencia/VistaAsistencia';
+import { EventosResponsableClub } from '../components/responsable/vistas/EventosResponsableClub';
 import { HorariosClub } from '../components/clubes/sections/HorariosClub';
 import { Spinner } from '../components/ui/Spinner';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -26,27 +27,79 @@ export function PanelResponsableClub() {
   const d = usePanelResponsableClub(usuario);
   const asignacion = useActividadesAsignadas();
   const tutorial = useTutorial(`responsable_${usuario?.id_usuario}`);
-  const pasosTutorial = [
-    { titulo: 'Mi panel', texto: 'Aquí gestionas la información y los avisos de tu club.' },
-    { titulo: 'Miembros', texto: 'Consulta y administra a los integrantes del club.' },
-    { titulo: 'Horario y asistencia', texto: 'Revisa horarios y registra la asistencia.' },
-    { titulo: 'Convocatorias', texto: 'Gestiona convocatorias, bloques y postulaciones.' },
-  ];
   const elementosNav = useMemo(()=>{
     return !d.club ? ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item)=>item.key==='principal') : d.esResponsableClub ? ELEMENTOS_NAV_RESPONSABLE_CLUB : ELEMENTOS_NAV_RESPONSABLE_CLUB.filter((item)=>item.key!=='asistencia');
   },[d.club,d.esResponsableClub]);
   const [vistaVisible,setVistaActiva]=useVistaPanel(elementosNav,'principal');
+  const pasosTutorial = useMemo(() => {
+    const pasos = [
+      { seccion: 'principal', titulo: 'Mi panel', texto: 'Aquí ves la actividad reciente y los avisos publicados en tu club.', target: '[data-tutorial="responsable-panel"]' },
+      { seccion: 'asistencia', titulo: 'Asistencia', texto: 'Desde aquí revisas las sesiones y registras quién asistió.', target: 'button[data-tutorial="responsable-asistencia"]' },
+      { seccion: 'chat-club', titulo: 'Chat del club', texto: 'Aquí puedes conversar con las personas que forman parte de tu club.', target: 'button[data-tutorial="responsable-chat-club"]' },
+      { seccion: 'eventos', titulo: 'Eventos', texto: 'En este módulo publicas y administras los eventos de tu club.', target: 'button[data-tutorial="responsable-eventos"]' },
+      { seccion: 'miembros', titulo: 'Miembros del club', texto: 'Consulta quiénes forman parte de tu club y administra a sus integrantes.', target: 'button[data-tutorial="responsable-miembros"]' },
+      { seccion: 'horarios', titulo: 'Horario', texto: 'Consulta y administra el horario de tu club.', target: 'button[data-tutorial="responsable-horarios"]' },
+      { seccion: 'convocatorias', titulo: 'Convocatorias', texto: 'Gestiona las convocatorias, sus bloques y las postulaciones.', target: 'button[data-tutorial="responsable-convocatorias"]' },
+      { seccion: 'historial', titulo: 'Historial', texto: 'Revisa los cambios y movimientos anteriores de tu club.', target: 'button[data-tutorial="responsable-historial"]' },
+    ];
+    return pasos.filter((paso) => elementosNav.some((item) => item.key === paso.seccion));
+  }, [elementosNav]);
+  const targetTutorialActual = pasosTutorial[tutorial.paso]?.target;
   const { setPanelNav } = usePanelNav();
   useEffect(() => {
     setPanelNav({ itemsNav:elementosNav, onNavChange:setVistaActiva });
     return () => setPanelNav({ itemsNav: [], onNavChange: null });
   }, [setPanelNav,elementosNav,setVistaActiva]);
   useEffect(() => {
-    if (!usuario?.id_usuario) return;
+    if (!usuario?.id_usuario || d.loading || !d.club?.id_club) return;
     try {
-      if (localStorage.getItem(`tutorial_responsable_${usuario.id_usuario}_done`) !== 'true') tutorial.iniciar();
+      const solicitud = localStorage.getItem(`tutorial_responsable_${usuario.id_usuario}_pending`);
+      if (solicitud) {
+        localStorage.removeItem(`tutorial_responsable_${usuario.id_usuario}_pending`);
+        setVistaActiva('principal');
+        if (solicitud === 'repetir') tutorial.reintentar();
+        else if (localStorage.getItem(`tutorial_responsable_${usuario.id_usuario}_done`) !== 'true') tutorial.iniciar();
+      } else if (localStorage.getItem(`tutorial_responsable_${usuario.id_usuario}_done`) !== 'true') {
+        setVistaActiva('principal');
+        tutorial.iniciar();
+      }
     } catch { /* La guía es opcional. */ }
-  }, [usuario?.id_usuario, tutorial.iniciar]);
+  }, [usuario?.id_usuario, d.loading, d.club?.id_club, tutorial.iniciar, tutorial.reintentar, setVistaActiva]);
+  useEffect(() => {
+    const iniciarTutorial = (evento) => {
+      setVistaActiva('principal');
+      if (evento.detail?.repetir) tutorial.reintentar();
+      else tutorial.iniciar();
+    };
+    window.addEventListener('clubsunid:iniciar-tutorial-responsable', iniciarTutorial);
+    return () => window.removeEventListener('clubsunid:iniciar-tutorial-responsable', iniciarTutorial);
+  }, [setVistaActiva, tutorial.iniciar, tutorial.reintentar]);
+  useEffect(() => {
+    const targetsQueAbrenMenu = ['responsable-asistencia', 'responsable-chat-club', 'responsable-eventos', 'responsable-miembros', 'responsable-horarios', 'responsable-convocatorias', 'responsable-historial'];
+    const nombreTarget = targetTutorialActual?.match(/data-tutorial="([^"]+)"/)?.[1];
+    const vistaMovil = window.matchMedia('(max-width: 767px)');
+    let frameReintento = 0;
+    let tiempoReintento = 0;
+    const sincronizarMenu = () => {
+      const abierto = tutorial.activo && vistaMovil.matches && targetsQueAbrenMenu.includes(nombreTarget);
+      window.dispatchEvent(new CustomEvent('clubsunid:menu-tutorial', { detail: { abierto } }));
+    };
+    const sincronizarTrasRender = () => {
+      sincronizarMenu();
+      cancelAnimationFrame(frameReintento);
+      frameReintento = requestAnimationFrame(sincronizarMenu);
+      window.clearTimeout(tiempoReintento);
+      tiempoReintento = window.setTimeout(sincronizarMenu, 80);
+    };
+    sincronizarTrasRender();
+    vistaMovil.addEventListener('change', sincronizarTrasRender);
+    return () => {
+      cancelAnimationFrame(frameReintento);
+      window.clearTimeout(tiempoReintento);
+      vistaMovil.removeEventListener('change', sincronizarTrasRender);
+      window.dispatchEvent(new CustomEvent('clubsunid:menu-tutorial', { detail: { abierto: false } }));
+    };
+  }, [tutorial.activo, targetTutorialActual]);
 
   if (d.loading) {
     return (
@@ -71,27 +124,25 @@ export function PanelResponsableClub() {
         elementosNav={elementosNav}
         vistaActiva={vistaVisible}
         onVistaChange={setVistaActiva}
+        fullHeight={vistaVisible === 'chat-club'}
       >
-        <div className="mb-6 md:mb-8">
+          {vistaVisible !== 'chat-club' && <div data-tutorial="responsable-panel" className="mb-6 md:mb-8">
             <EncabezadoPagina
               titulo={d.esResponsableClub ? 'Panel de Presidente' : 'Panel de Lider de Club'}
               subtitulo={`Bienvenido, ${d.user.nombre_completo} · ${d.esResponsableClub ? 'Presidente' : 'Lider de Club'} de ${d.club.nombre_club}`}
             />
-          </div>
+          </div>}
 
 
 
           {vistaVisible === 'principal' && <>
             <TarjetasMiActividad asignacion={asignacion}/>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-8">
-                <SeccionFeedClub club={d.club} miembros={d.miembros} esResponsableClub={true} />
-              </div>
-              <div className="space-y-8">
-                <SeccionMiembros miembros={d.miembros} club={d.club} />
-              </div>
-            </div>
+            <SeccionFeedClub club={d.club} esResponsableClub={true} />
           </>}
+
+          {vistaVisible === 'chat-club' && <ChatClub club={d.club} ocuparPantalla />}
+
+          {vistaVisible === 'eventos' && <EventosResponsableClub club={d.club} />}
 
           {vistaVisible === 'convocatorias' && (
             <VistaConvocatorias club={d.club} />

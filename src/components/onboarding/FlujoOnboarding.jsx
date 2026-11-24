@@ -1,9 +1,8 @@
-/* Flujo completo del onboarding de preferencias: bienvenida, cinco pasos y
-   confirmación. Las respuestas viven solo en memoria mientras el componente
-   está montado (no se guardan en el navegador) y se envían con un único PUT
-   al terminar el paso 5. Lo montará la fase D tras el inicio de sesión. */
+/* Flujo completo del onboarding: conserva un borrador local por usuario para
+   recuperar respuestas y paso si se cierra la página o se pierde internet. */
 import { useEffect, useRef, useState } from 'react';
 import { api, request } from '../../services/api';
+import { useAutenticacion } from '../../contexts/AuthContext';
 import { useCatalogoIntereses } from '../../hooks/useCatalogoIntereses';
 import { Alerta } from '../ui/Alerta';
 import { BotonAccion } from '../ui/BotonAccion';
@@ -33,16 +32,45 @@ import {
 
 const MENSAJE_GUARDADO = 'No se pudieron guardar tus preferencias. Tus respuestas se conservan; puedes intentarlo de nuevo.';
 const MENSAJE_CATALOGO = 'No pudimos cargar las opciones del onboarding.';
+const VERSION_BORRADOR_ONBOARDING = 1;
+
+function leerBorrador(clave) {
+  if (!clave) return null;
+  try {
+    const guardado = JSON.parse(window.localStorage.getItem(clave) || 'null');
+    if (guardado?.version !== VERSION_BORRADOR_ONBOARDING || !Number.isInteger(guardado.paso) || guardado.paso < 1 || guardado.paso > TOTAL_PASOS_ONBOARDING || !guardado.respuestas) return null;
+
+    const iniciales = respuestasIniciales();
+    return {
+      paso: guardado.paso,
+      respuestas: {
+        ...iniciales,
+        ...guardado.respuestas,
+        correo: {
+          ...iniciales.correo,
+          ...guardado.respuestas.correo,
+          tipos: { ...iniciales.correo.tipos, ...guardado.respuestas.correo?.tipos },
+        },
+      },
+    };
+  } catch {
+    return null;
+  }
+}
 
 export function FlujoOnboarding({ onCompletar }) {
   const { estado, catalogo, reintentar } = useCatalogoIntereses();
-  const [paso, setPaso] = useState('bienvenida');
-  const [respuestas, setRespuestas] = useState(respuestasIniciales);
+  const { usuario } = useAutenticacion();
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  const claveBorrador = idUsuario ? `clubs-unid:onboarding:borrador:${idUsuario}` : null;
+  const [borradorInicial] = useState(() => leerBorrador(claveBorrador));
+  const [paso, setPaso] = useState(() => borradorInicial?.paso ?? 'bienvenida');
+  const [respuestas, setRespuestas] = useState(() => borradorInicial?.respuestas ?? respuestasIniciales());
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [errorPropuestaTexto, setErrorPropuestaTexto] = useState('');
-  const [haComenzado, setHaComenzado] = useState(false);
+  const [haComenzado, setHaComenzado] = useState(() => Boolean(borradorInicial));
   const [resumen, setResumen] = useState(null);
   const enCurso = useRef(false);
 
@@ -55,6 +83,30 @@ export function FlujoOnboarding({ onCompletar }) {
     if (paso === 'bienvenida') return;
     document.getElementById('titulo-paso')?.focus();
   }, [paso, estado]);
+
+  useEffect(() => {
+    if (!claveBorrador) return;
+    if (paso === 'confirmacion') {
+      try {
+        window.localStorage.removeItem(claveBorrador);
+      } catch {
+        // No interrumpe la confirmación si el navegador bloquea el almacenamiento local.
+      }
+      return;
+    }
+    if (!haComenzado || typeof paso !== 'number') return;
+
+    try {
+      window.localStorage.setItem(claveBorrador, JSON.stringify({
+        version: VERSION_BORRADOR_ONBOARDING,
+        paso,
+        respuestas,
+        actualizadoEn: new Date().toISOString(),
+      }));
+    } catch {
+      // El formulario sigue funcionando aunque el navegador no permita guardar localmente.
+    }
+  }, [claveBorrador, haComenzado, paso, respuestas]);
 
   function irA(siguiente) {
     if (siguiente === 'bienvenida' && haComenzado) return;
@@ -135,10 +187,14 @@ export function FlujoOnboarding({ onCompletar }) {
       else if (paso === 4) setAviso('Selecciona una opción para continuar.');
       else if (paso === 5) setAviso('Selecciona tu licenciatura para continuar.');
       else if (paso === 6) setAviso('Indica tu fecha de nacimiento para continuar.');
-      else if (paso === 7) setAviso(''); // teléfono opcional, no bloquea
-      else if (paso === 8) setAviso('Indica tu disposición para continuar.');
+      else if (paso === 7) setAviso('Indica tu disposición para continuar.');
+      else if (paso === 8) setAviso('Escribe un número de teléfono de 10 dígitos.');
       else if (paso === 9) setAviso('Selecciona al menos una actividad que te gustaría coordinar.');
       else if (paso === 10) setAviso('Indica si quieres recibir correos opcionales.');
+      return;
+    }
+    if (paso === 7) {
+      irA(8);
       return;
     }
     if (paso === 8) {
@@ -261,16 +317,16 @@ export function FlujoOnboarding({ onCompletar }) {
     );
   } else if (paso === 7) {
     contenido = (
-      <PasoTelefono
-        valor={respuestas.telefono}
-        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, telefono: valor }))}
+      <PasoDisposicion
+        valor={respuestas.disposicion}
+        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, disposicion: valor, actividadesResponsable: valor === 'responsable' ? actual.actividadesResponsable : [] }))}
       />
     );
   } else if (paso === 8) {
     contenido = (
-      <PasoDisposicion
-        valor={respuestas.disposicion}
-        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, disposicion: valor, actividadesResponsable: valor === 'responsable' ? actual.actividadesResponsable : [] }))}
+      <PasoTelefono
+        valor={respuestas.telefono}
+        onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, telefono: valor }))}
       />
     );
   } else if (paso === 9) {
@@ -305,19 +361,24 @@ export function FlujoOnboarding({ onCompletar }) {
 
   const pie = (
     <div>
+      {haComenzado && paso !== 'confirmacion' && (
+        <p className="mb-3 text-center text-[11px] text-slate-500">
+          Tus respuestas se guardan automáticamente en este dispositivo.
+        </p>
+      )}
       {error && (
         <div role="alert" className="mb-4">
           <Alerta tipo="error" mensaje={error} />
         </div>
       )}
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className={`flex flex-col-reverse gap-3 sm:flex-row sm:items-center ${paso === 1 ? 'items-end sm:justify-end' : 'sm:justify-between'}`}>
         {paso !== 1 && (
           <BotonAccion variant="outline" onClick={atras} disabled={ocupado} className="w-full sm:w-auto">
             <Icono nombre="arrow-left" className="h-4 w-4" />
             Atrás
           </BotonAccion>
         )}
-        <BotonAccion onClick={continuar} disabled={ocupado || !pasoEsValido(paso, respuestas) || (paso === 2 && Boolean(errorPropuesta(respuestas.propuesta)))} aria-busy={ocupado} className="w-full sm:w-auto">
+        <BotonAccion onClick={continuar} disabled={ocupado || !pasoEsValido(paso, respuestas) || (paso === 2 && Boolean(errorPropuesta(respuestas.propuesta)))} aria-busy={ocupado} className={paso === 1 ? 'w-auto min-w-[9rem]' : 'w-full sm:w-auto'}>
           {paso === TOTAL_PASOS_ONBOARDING ? (
             ocupado ? (
               <>

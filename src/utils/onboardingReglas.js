@@ -8,6 +8,8 @@ const CARACTERES_PROPUESTA = /^[\p{L}\p{N} .,'&()/-]+$/u;
 
 export const TIPOS_CORREO = Object.freeze([
   'clubes_convocatorias',
+  // El backend mantiene esta clave histórica, aunque ya no se ofrece como
+  // preferencia visible. Los avisos del club usan sus notificaciones internas.
   'mis_clubes',
   'eventos',
   'noticias',
@@ -78,8 +80,8 @@ export function pasoEsValido(paso, respuestas) {
   if (paso === 4) return respuestas.genero !== null && respuestas.genero !== undefined;
   if (paso === 5) return respuestas.licenciatura !== null && respuestas.licenciatura !== undefined;
   if (paso === 6) return !!respuestas.fechaNacimiento;
-  if (paso === 7) return true; // teléfono opcional
-  if (paso === 8) return respuestas.disposicion !== null && respuestas.disposicion !== undefined;
+  if (paso === 7) return respuestas.disposicion !== null && respuestas.disposicion !== undefined;
+  if (paso === 8) return /^\d{10}$/.test(respuestas.telefono || '');
   if (paso === 9) {
     if (respuestas.disposicion !== 'responsable') return true;
     return Array.isArray(respuestas.actividadesResponsable) && respuestas.actividadesResponsable.length > 0;

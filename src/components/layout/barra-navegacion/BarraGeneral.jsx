@@ -26,7 +26,16 @@ export function BarraGeneral({ onLoginClick, ctaPortal = null, ocultarMenuMovil 
           : (oscuro ? 'backdrop-blur-md border-b bg-[#0b111e]/85 border-slate-800' : 'backdrop-blur-md border-b bg-white/85 border-slate-200')
       }`}>
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:max-w-none lg:mx-0 lg:px-12 xl:px-16 h-16 flex items-center justify-between gap-4">
-        <Link to={logoTo} className="flex items-center shrink-0" aria-label="Clubs UNID">
+        <Link
+          to={logoTo}
+          onClick={() => {
+            if (window.location.pathname === '/' && logoTo === '/') {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          className="flex items-center shrink-0"
+          aria-label="Clubs UNID"
+        >
           <img draggable={false} src="/branding/lobounid.png" alt="Lobo UNID" id="navbar-logo" className={`h-8 sm:h-10 w-auto object-contain self-center transition-opacity duration-200 ${splashActivo ? 'opacity-0' : 'opacity-100'}`} />
           <img draggable={false} src={oscuro ? '/branding/clubs-unid.png' : '/branding/clubs-unid-modoclaro.png'} alt="Clubs UNID" className="h-9 sm:h-12 w-auto object-contain self-center -ml-1 sm:ml-0" />
         </Link>
