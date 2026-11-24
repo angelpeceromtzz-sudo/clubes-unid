@@ -42,7 +42,7 @@ export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSelecci
         {consulta ? (
           <>
             <p role="status" className={'text-sm ' + tema.subtitle}>{cartas.length ? cartas.length + (cartas.length === 1 ? ' carta disponible' : ' cartas disponibles') : 'No hay cartas disponibles con ese nombre. Verifica los datos con el encargado.'}</p>
-            {cartas.length > 0 && <div className="max-h-[16rem] overflow-y-auto sm:max-h-[32rem]"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{cartas.map((carta) => <article key={carta.id_carta} className={'min-w-0 space-y-3 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ' + (seleccionada?.id_carta === carta.id_carta ? 'border-amber-400 bg-amber-400/10 shadow-sm' : 'border-slate-400/25')}>
+            {cartas.length > 0 && <div className="overflow-x-auto sm:max-h-[32rem] sm:overflow-y-auto sm:overflow-x-hidden"><div className="flex snap-x snap-mandatory gap-3 sm:grid sm:grid-cols-2">{cartas.map((carta) => <article key={carta.id_carta} className={'min-w-[85vw] snap-start space-y-3 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:min-w-0 ' + (seleccionada?.id_carta === carta.id_carta ? 'border-amber-400 bg-amber-400/10 shadow-sm' : 'border-slate-400/25')}>
                <p className={'text-xs ' + tema.subtitle}>Carta #{carta.id_carta}</p>
                 <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12))}</h4>
                <p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
