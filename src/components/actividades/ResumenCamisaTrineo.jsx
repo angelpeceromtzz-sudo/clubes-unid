@@ -20,7 +20,7 @@ export function ResumenCamisaTrineo({ pedido, campo, valor, onChange }) {
   if (pedido?.tipo !== 'camisa_trineo' && !campo) return null;
   const camisa = pedido?.lineas?.[0];
 
-  return <section aria-label="Pedido de camisa del Trineo" className="space-y-2 rounded-xl border border-slate-400/25 p-4">
+  return <section aria-label="Pedido de camisa del Trineo" className="w-full space-y-2 rounded-xl border border-slate-400/25 p-4 sm:ml-auto sm:max-w-md">
     <h4 className="font-bold">Camisa del Trineo</h4>
     {campo && <><p className="text-xs">Selecciona la talla que necesitas.</p><SelectorCompraCamisa campo={campo} valor={valor} onChange={onChange} /></>}
     {camisa && <><p className="text-sm">1 camisa · Talla {camisa.talla}</p><p className="text-lg font-bold" aria-live="polite">Total: {dinero(pedido.total_centavos)} MXN</p><p className="text-sm">El pago se acuerda con el encargado.</p></>}
