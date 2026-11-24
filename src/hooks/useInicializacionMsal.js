@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { api, getSession, setSession, clearSession } from '../services/api';
+import { limpiarCuentaConfiable, obtenerCuentaConfiable, renovarSesionConfiable } from '../services/api-core';
 import { msalInstance, loginRequest } from '../services/authConfig';
 import { jwtExpirado } from '../utils/jwt';
 import { rutaRegresoActividades } from '../utils/rutaRegresoActividades';
@@ -33,6 +34,25 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
         const cuentas = msalInstance.getAllAccounts();
         const sesion = getSession();
         const tokenExpirado = sesion?.token ? jwtExpirado(sesion.token) : true;
+
+        const cuentaConfiable = obtenerCuentaConfiable();
+        const idSesion = sesion?.user?.id_usuario ?? sesion?.user?.id;
+        const coincideCuentaConfiable = cuentaConfiable
+          && (!idSesion || Number(cuentaConfiable.id_usuario) === Number(idSesion));
+
+        if ((!sesion || tokenExpirado) && coincideCuentaConfiable) {
+          try {
+            const data = await renovarSesionConfiable();
+            if (cancelado.current) return;
+            window.history.replaceState({}, document.title, rutaDeRegreso());
+            onLoggedIn?.(data);
+            return;
+          } catch (err) {
+            if (Number(err?.status) === 401 || Number(err?.status) === 403) limpiarCuentaConfiable();
+          }
+        } else if (cuentaConfiable && idSesion && !coincideCuentaConfiable) {
+          limpiarCuentaConfiable();
+        }
 
         if (cuentas.length > 0 && tokenExpirado) {
           try {

@@ -17,16 +17,19 @@ if (JWT_SECRET.length < 32) {
 // Mantiene exactamente el contrato que ya consumía el frontend:
 // id (id_usuario), nombre_completo, correo_institucional, institutional_id,
 // id_rol y rol. No se agregan claims que cambien el comportamiento actual.
-export function generarToken(user) {
+export function generarToken(user, { idDispositivoConfiable } = {}) {
+  const payload = {
+    id: user.id_usuario,
+    nombre_completo: user.nombre_completo,
+    correo_institucional: user.correo_institucional,
+    institutional_id: user.institutional_id,
+    id_rol: user.id_rol,
+    rol: user.rol,
+  };
+  if (idDispositivoConfiable) payload.id_dispositivo_confiable = idDispositivoConfiable;
+
   return jwt.sign(
-    {
-      id: user.id_usuario,
-      nombre_completo: user.nombre_completo,
-      correo_institucional: user.correo_institucional,
-      institutional_id: user.institutional_id,
-      id_rol: user.id_rol,
-      rol: user.rol,
-    },
+    payload,
     JWT_SECRET,
     { expiresIn: '24h' },
   );

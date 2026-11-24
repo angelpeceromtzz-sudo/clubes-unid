@@ -39,12 +39,26 @@ export async function authenticate(req, res, next) {
   //      deleted_at IS NULL filtra cuentas desactivadas en la propia consulta.
   let resultado;
   try {
-    resultado = await pool.query(
-      `SELECT u.id_usuario, u.nombre_completo, u.id_rol
-       FROM usuarios u
-       WHERE u.id_usuario = $1 AND u.deleted_at IS NULL`,
-      [decoded.id]
-    );
+    if (decoded.id_dispositivo_confiable) {
+      resultado = await pool.query(
+        `SELECT u.id_usuario, u.nombre_completo, u.id_rol
+           FROM usuarios u
+           JOIN dispositivos_confiables d
+             ON d.id_dispositivo = $2
+            AND d.id_usuario = u.id_usuario
+            AND d.revocado_en IS NULL
+            AND d.expira_en > CURRENT_TIMESTAMP
+          WHERE u.id_usuario = $1 AND u.deleted_at IS NULL`,
+        [decoded.id, decoded.id_dispositivo_confiable],
+      );
+    } else {
+      resultado = await pool.query(
+        `SELECT u.id_usuario, u.nombre_completo, u.id_rol
+         FROM usuarios u
+         WHERE u.id_usuario = $1 AND u.deleted_at IS NULL`,
+        [decoded.id],
+      );
+    }
   } catch (err) {
     // Fail closed: ante un fallo de la BD no se aceptan los claims del token
     // como respaldo ni se exponen detalles del error.

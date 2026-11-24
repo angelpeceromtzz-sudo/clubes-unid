@@ -5,6 +5,7 @@ import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { ROL_ALUMNO, ROL_ADMIN, ROL_COORDINACION, ROL_RESPONSABLE_CLUB, ROL_RECTORIA, ROL_RESPONSABLE_MURAL } from '../constants/roles.js';
 import { generarToken } from '../lib/jwt.js';
+import { idDispositivoDesdeReq, revocarConfianzaDeDispositivo } from '../lib/dispositivosConfiables.js';
 import {
   limitadorLoginLocalIp,
   limitadorLoginLocalCuenta,
@@ -69,6 +70,7 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
+    const dispositivoConfiableRevocado = await revocarConfianzaDeDispositivo(idDispositivoDesdeReq(req));
     const token = generarToken(user);
 
     res.json({
@@ -82,6 +84,7 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
         id_licenciatura: user.id_licenciatura ?? null,
         rol: user.rol,
       },
+      dispositivo_confiable_revocado: dispositivoConfiableRevocado,
     });
   } catch (err) {
     console.error('Error en login-local:', err);
@@ -239,6 +242,7 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
       };
     }
 
+    const dispositivoConfiableRevocado = await revocarConfianzaDeDispositivo(idDispositivoDesdeReq(req));
     const token = generarToken(user);
 
     res.json({
@@ -252,6 +256,7 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
         id_licenciatura: user.id_licenciatura ?? null,
         rol: user.rol,
       },
+      dispositivo_confiable_revocado: dispositivoConfiableRevocado,
     });
   } catch (err) {
     console.error('Error en login-microsoft:', err);

@@ -5,6 +5,13 @@ import { mailer } from '../lib/mailer.js';
 import { diagnosticarSolicitudOtp } from '../lib/otpDiagnostico.js';
 import { generarToken } from '../lib/jwt.js';
 import {
+  idDispositivoDesdeReq,
+  recordarCuentaEnDispositivo,
+  renovarCuentaEnDispositivo,
+  revocarConfianzaDeDispositivo,
+  revocarCuentaEnDispositivo,
+} from '../lib/dispositivosConfiables.js';
+import {
   normalizarCorreoInstitucional,
   esCorreoInstitucionalValido,
 } from '../lib/institutionalEmail.js';
@@ -104,6 +111,51 @@ function respuestaUsuario(usuario) {
     rol: rolDesdeFila(usuario),
   };
 }
+
+// Renueva una sesión OTP desde el secreto rotatorio de este navegador.
+// El identificador solo localiza el dispositivo; el token secreto demuestra confianza.
+router.post('/dispositivo/renovar', async (req, res) => {
+  try {
+    const idDispositivo = idDispositivoDesdeReq(req);
+    const token = req.get('x-trusted-device') || '';
+    if (!idDispositivo || !token) return res.status(401).json({ error: 'Este navegador necesita un nuevo código de acceso.' });
+
+    const dispositivo = await renovarCuentaEnDispositivo({ idDispositivo, token });
+    if (!dispositivo) return res.status(401).json({ error: 'Este navegador necesita un nuevo código de acceso.' });
+
+    const usuario = {
+      id_usuario: dispositivo.id_usuario,
+      nombre_completo: dispositivo.nombre_completo,
+      correo_institucional: dispositivo.correo_institucional,
+      institutional_id: dispositivo.institutional_id,
+      id_rol: dispositivo.id_rol,
+      id_licenciatura: dispositivo.id_licenciatura ?? null,
+      rol: dispositivo.rol,
+    };
+    const jwt = generarToken(usuario, { idDispositivoConfiable: dispositivo.id_dispositivo });
+    return res.json({
+      token: jwt,
+      user: respuestaUsuario(usuario),
+      dispositivo_confiable: { token: dispositivo.token, expira_en: dispositivo.expira_en },
+    });
+  } catch (err) {
+    console.error('Error al renovar sesión de dispositivo confiable:', nombreError(err), codigoError(err));
+    return res.status(500).json({ error: MENSAJE_ERROR_INTERNO });
+  }
+});
+
+router.post('/dispositivo/revocar', async (req, res) => {
+  try {
+    await revocarCuentaEnDispositivo({
+      idDispositivo: idDispositivoDesdeReq(req),
+      token: req.get('x-trusted-device') || '',
+    });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Error al revocar dispositivo confiable:', nombreError(err), codigoError(err));
+    return res.status(500).json({ error: MENSAJE_ERROR_INTERNO });
+  }
+});
 
 // POST /api/auth/otp/solicitar
 //
@@ -214,6 +266,11 @@ router.post(
       return res.status(400).json({ error: MENSAJE_VERIFICACION_GENERICO });
     }
 
+    const idDispositivoSolicitado = idDispositivoDesdeReq(req);
+    if (req.body?.recordar_cuenta === true && !idDispositivoSolicitado) {
+      return res.status(400).json({ error: 'No pudimos recordar esta cuenta en este navegador. Desactiva la opción e intenta de nuevo.' });
+    }
+
     if (!pepperConfigurado()) {
       console.error('OTP no disponible: OTP_PEPPER no está configurado.');
       return res.status(503).json({ error: MENSAJE_NO_DISPONIBLE });
@@ -303,11 +360,30 @@ router.post(
         await otpStore.actualizarLastLogin({ idUsuario: usuario.id_usuario });
       }
 
-      const token = generarToken(usuario);
+      const idDispositivo = idDispositivoSolicitado;
+      const recordarCuenta = req.body?.recordar_cuenta === true;
+      let dispositivoConfiable = null;
+      if (idDispositivo) {
+        if (recordarCuenta) {
+          dispositivoConfiable = await recordarCuentaEnDispositivo({
+            idUsuario: usuario.id_usuario,
+            idDispositivo,
+          });
+        } else {
+          await revocarConfianzaDeDispositivo(idDispositivo);
+        }
+      }
+
+      const token = generarToken(usuario, dispositivoConfiable
+        ? { idDispositivoConfiable: dispositivoConfiable.id_dispositivo }
+        : undefined);
 
       return res.json({
         token,
         user: respuestaUsuario(usuario),
+        ...(dispositivoConfiable
+          ? { dispositivo_confiable: { token: dispositivoConfiable.token, expira_en: dispositivoConfiable.expira_en } }
+          : { dispositivo_confiable_revocado: Boolean(idDispositivo) }),
       });
     } catch (err) {
       console.error('Error en la verificación de OTP:', nombreError(err), codigoError(err));

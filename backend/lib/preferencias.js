@@ -120,16 +120,22 @@ function validarCorreo(correo) {
   }
   const claves = Object.keys(tipos);
   const esperadas = [...TIPOS_CORREO_OPCIONAL].sort();
-  if (claves.length !== esperadas.length || claves.slice().sort().some((clave, i) => clave !== esperadas[i])) {
+  // mis_clubes dejó de ser una preferencia visible: las novedades del club
+  // llegan dentro de la plataforma. Se acepta si un cliente anterior la envía,
+  // pero no se exige para no rechazar el formulario actualizado.
+  const requeridas = esperadas.filter((tipo) => tipo !== 'mis_clubes');
+  const clavesInvalidas = claves.some((clave) => !esperadas.includes(clave));
+  const faltanRequeridas = requeridas.some((tipo) => !Object.hasOwn(tipos, tipo));
+  if (clavesInvalidas || faltanRequeridas) {
     throw new ErrorValidacion('correo.tipos debe incluir exactamente los tipos de novedades disponibles');
   }
-  if (!TIPOS_CORREO_OPCIONAL.every((tipo) => typeof tipos[tipo] === 'boolean')) {
+  if (claves.some((tipo) => typeof tipos[tipo] !== 'boolean')) {
     throw new ErrorValidacion('Cada tipo de novedades debe ser verdadero o falso');
   }
   return {
     activo: correo.activo,
     frecuencia: correo.frecuencia,
-    tipos: Object.fromEntries(TIPOS_CORREO_OPCIONAL.map((tipo) => [tipo, tipos[tipo]])),
+    tipos: Object.fromEntries(TIPOS_CORREO_OPCIONAL.map((tipo) => [tipo, tipo === 'mis_clubes' ? tipos[tipo] === true : tipos[tipo]])),
   };
 }
 

@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { api, getSession, setSession, clearSession } from '../services/api';
+import { guardarCuentaConfiable, limpiarCuentaConfiable, revocarCuentaConfiableEnServidor } from '../services/api-core';
 import { useInicializacionMsal } from '../hooks/useInicializacionMsal';
 import { errorRequiereNombreOtp } from '../utils/nombreOtp';
 
@@ -15,6 +16,14 @@ export function ProveedorAutenticacion({ children: hijos }) {
   const [authReady, setAuthReady] = useState(false);
   const [clubesPostulados, setClubesPostulados] = useState([]);
 
+  useEffect(() => {
+    const alRenovarSesion = (evento) => {
+      if (evento.detail) setUsuario(evento.detail);
+    };
+    window.addEventListener('clubsunid:session-refreshed', alRenovarSesion);
+    return () => window.removeEventListener('clubsunid:session-refreshed', alRenovarSesion);
+  }, []);
+
   const obtenerMisFormularios = useCallback(async () => {
     try {
       const clubs = await api.getMisFormularios();
@@ -26,6 +35,11 @@ export function ProveedorAutenticacion({ children: hijos }) {
 
   const despuesDeLogin = useCallback(async (data) => {
     setSession({ token: data.token, user: data.user });
+    if (data.dispositivo_confiable?.token) {
+      guardarCuentaConfiable(data.dispositivo_confiable, data.user);
+    } else if (data.dispositivo_confiable_revocado) {
+      limpiarCuentaConfiable();
+    }
     setUsuario(data.user);
     try {
       const insc = await api.getInscripcionActiva();
@@ -82,9 +96,9 @@ export function ProveedorAutenticacion({ children: hijos }) {
     }
   }, [despuesDeLogin]);
 
-  const iniciarSesionOtp = useCallback(async (correo, codigo, nombre) => {
+  const iniciarSesionOtp = useCallback(async (correo, codigo, nombre, recordarCuenta = false) => {
     try {
-      const data = await api.verificarOtp(correo, codigo, nombre);
+      const data = await api.verificarOtp(correo, codigo, nombre, recordarCuenta);
       await despuesDeLogin(data);
       return { ok: true, user: data.user };
     } catch (err) {
@@ -107,6 +121,8 @@ export function ProveedorAutenticacion({ children: hijos }) {
   }, [despuesDeLogin]);
 
   const cerrarSesion = useCallback(() => {
+    revocarCuentaConfiableEnServidor().catch(() => {});
+    limpiarCuentaConfiable();
     setUsuario(null);
     setTieneInscripcionActiva(false);
     setClubesPostulados([]);
