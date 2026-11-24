@@ -126,17 +126,17 @@ export function SelectorOpciones({ id, valor, alCambiar, opciones, etiqueta, mos
           abrir();
         }
       }}
-      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300/25 disabled:cursor-not-allowed disabled:opacity-50 ${
+       className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 disabled:cursor-not-allowed disabled:opacity-50 ${
         modoOscuro ? 'bg-[#172238] text-white' : 'bg-white text-slate-900'
       } ${
         mostrarError ? 'border-red-400' : abierto
-          ? modoOscuro ? 'border-amber-300' : 'border-amber-500'
-          : modoOscuro ? 'border-slate-600 hover:border-amber-300/70' : 'border-slate-300 hover:border-amber-500'
+           ? modoOscuro ? 'border-sky-300' : 'border-sky-500'
+           : modoOscuro ? 'border-slate-600 hover:border-sky-300/70' : 'border-slate-300 hover:border-sky-500'
       } ${botonClassName}`}
     >
-      {icono && <Icono nombre={icono} className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-amber-300' : 'text-amber-600'}`} strokeWidth={2} />}
+       {icono && <Icono nombre={icono} className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-sky-300' : 'text-sky-600'}`} strokeWidth={2} />}
       <span className="min-w-0 flex-1 truncate">{seleccionada?.label || 'Selecciona una opción'}</span>
-      <Icono nombre="chevron-down" className={`h-4 w-4 shrink-0 transition-transform ${modoOscuro ? 'text-amber-300' : 'text-amber-600'} ${abierto ? 'rotate-180' : ''}`} strokeWidth={2.5} />
+       <Icono nombre="chevron-down" className={`h-4 w-4 shrink-0 transition-transform ${modoOscuro ? 'text-sky-300' : 'text-sky-600'} ${abierto ? 'rotate-180' : ''}`} strokeWidth={2.5} />
     </button>
     {abierto && !disabled && <div
       id={id + '-opciones'}
@@ -161,14 +161,14 @@ export function SelectorOpciones({ id, valor, alCambiar, opciones, etiqueta, mos
           disabled={opcion.disabled}
           onFocus={() => setActivo(indice)}
           onClick={() => elegir(opcion)}
-          className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-300/50 disabled:cursor-not-allowed disabled:opacity-40 ${
+           className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/70 disabled:cursor-not-allowed disabled:opacity-40 ${
             elegida
-              ? modoOscuro ? 'bg-amber-300/15 font-semibold text-amber-200' : 'bg-amber-50 font-semibold text-amber-800'
+               ? modoOscuro ? 'bg-sky-300/15 font-semibold text-sky-200' : 'bg-sky-50 font-semibold text-sky-800'
               : modoOscuro ? 'text-slate-200 hover:bg-slate-700/70' : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
           <span className="min-w-0 flex-1 break-words">{opcion.label}</span>
-          {elegida && <Icono nombre="check" className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-amber-300' : 'text-amber-600'}`} strokeWidth={2.5} />}
+           {elegida && <Icono nombre="check" className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-sky-300' : 'text-sky-600'}`} strokeWidth={2.5} />}
         </button>;
       })}
     </div>}

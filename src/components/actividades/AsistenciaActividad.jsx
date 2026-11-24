@@ -17,7 +17,7 @@ export function ResumenAsistenciaActividad({ asistencia }) {
 }
 
 export function FormularioAsistenciaActividad({
-  idEdicion, estadoInscripcion, asistencia, disponibilidad, codigoInicial = '', origenInicial = 'codigo', accesoInvitado,
+  idEdicion, estadoInscripcion, asistencia, disponibilidad, codigoInicial = '', origenInicial = 'codigo', accesoInvitado, servicioInvitado = misionesService,
 }) {
   const { tema, inputCls, labelCls } = useTheme();
   const [codigo, setCodigo] = useState(codigoInicial);
@@ -34,7 +34,7 @@ export function FormularioAsistenciaActividad({
       const normalizado = normalizarCodigoAsistencia(codigo);
       setPendiente(true);
       const origen = codigo === codigoInicial ? origenInicial : 'codigo';
-      const respuesta = accesoInvitado ? await misionesService.asistencia(accesoInvitado, normalizado, origen) : await actividadService.registrarAsistencia(idEdicion, normalizado, origen);
+      const respuesta = accesoInvitado ? await servicioInvitado.asistencia(accesoInvitado, normalizado, origen) : await actividadService.registrarAsistencia(idEdicion, normalizado, origen);
       setResultado(respuesta.asistencia);
     } catch (fallo) {
       setError(fallo.message);

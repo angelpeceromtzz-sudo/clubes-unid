@@ -3,7 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useLicenciaturas } from '../../hooks/useLicenciaturas';
 import { actividadService } from '../../services/actividad.service';
-import { validarRespuestasActividad, validarAportacionesActividad, camposRegistroTrineo, cotizarCamisaTrineo } from '../../../shared/actividades';
+import { validarRespuestasActividad, validarAportacionesActividad, camposRegistroTrineo, cotizarCamisaTrineo, validarContactoInvitado } from '../../../shared/actividades';
 import { BotonAccion } from '../ui/BotonAccion';
 import { EstadoActividad } from './ActividadUI';
 import { RegistroMisiones } from './RegistroMisiones';
@@ -12,20 +12,22 @@ import { CampoRegistroActividad } from './CampoRegistroActividad';
 import { ImagenesCuestionarioActividad } from './ImagenesCuestionarioActividad';
 import { SelectorOpciones } from '../ui/SelectorOpciones';
 import { ResumenCamisaTrineo } from './ResumenCamisaTrineo';
+import { trineoService } from '../../services/trineo.service';
 
-export function RegistroActividad({ edicion, registro, onGuardado }) {
+export function RegistroActividad({ edicion, registro, onGuardado, invitado = false, acceso }) {
   if (edicion.configuracion_misiones?.version === 2) return <RegistroMisiones edicion={edicion} registro={registro} onGuardado={(resultado) => onGuardado(resultado.cancelado ? 'Tu inscripción fue cancelada.' : 'Tu inscripción está guardada.')} />;
-  return <RegistroActividadAnterior edicion={edicion} registro={registro} onGuardado={onGuardado} />;
+  return <RegistroActividadAnterior edicion={edicion} registro={registro} onGuardado={onGuardado} invitado={invitado} acceso={acceso} />;
 }
 
-function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
+function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = false, acceso }) {
   const { usuario } = useAutenticacion();
   const { tema, inputCls, labelCls } = useTheme();
   const idFormulario = useId();
   const { licenciaturas, loading, error: errorLicenciaturas, recargar } = useLicenciaturas();
   const confirmado = registro?.estado === 'confirmado';
   const [editando, setEditando] = useState(!confirmado);
-  const [matricula, setMatricula] = useState(usuario.institutional_id || registro?.matricula || '');
+  const [matricula, setMatricula] = useState(usuario?.institutional_id || registro?.matricula || '');
+  const [contacto, setContacto] = useState({ nombre_completo: registro?.nombre_completo || '', correo: registro?.correo || '', telefono: registro?.telefono || '' });
   const [respuestas, setRespuestas] = useState(registro?.respuestas || {});
   const [solicitaCamisa, setSolicitaCamisa] = useState(registro?.pedido ? registro.pedido.lineas.length > 0 : null);
   const aportacionesAnteriores = (registro?.aportaciones || []).filter((aporte) => !aporte.es_regalo_carta);
@@ -71,9 +73,11 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
       validarRespuestasActividad(campos, respuestas);
       validarAportacionesActividad(aportaciones, catalogo, edicion.requiere_aportacion, aportacionesAnteriores);
       if (requiereCarta && !carta) throw new Error('Elige al niño de tu carta antes de confirmar tu inscripción');
+      if (invitado) validarContactoInvitado(contacto);
       setPendiente(true);
-      await actividadService.guardarRegistro(edicion.id_edicion, { matricula, respuestas, aportaciones, ...(usaCartas ? { id_carta: carta?.id_carta ?? null, solicita_camisa: solicitaCamisa, total_centavos: pedidoCamisa.total_centavos } : {}) });
-      onGuardado('Tu inscripción está confirmada.');
+      const datos = { ...(invitado ? contacto : { matricula }), respuestas, aportaciones, ...(usaCartas ? { id_carta: carta?.id_carta ?? null, solicita_camisa: solicitaCamisa, total_centavos: pedidoCamisa.total_centavos } : {}) };
+      const resultado = invitado ? acceso ? await trineoService.editarInvitado(acceso, datos) : await trineoService.crearInvitado(edicion.id_edicion, datos) : await actividadService.guardarRegistro(edicion.id_edicion, datos);
+      onGuardado(invitado ? resultado : 'Tu inscripción está confirmada.');
     } catch (fallo) { setError(fallo.mensajeServidor || fallo.message); if (fallo.status === 409) setVersionCartas((actual) => actual + 1); } finally { setPendiente(false); }
   }
 
@@ -86,28 +90,28 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
   }
 
   if (!editando && confirmado) return <section className="space-y-4" aria-label="Tu inscripción">
-    <EstadoActividad estado="confirmado" /><p>{registro.nombre_completo} · Matrícula {registro.matricula}</p>
+     <EstadoActividad estado="confirmado" /><p>{registro.nombre_completo} · {invitado ? 'Invitado' : 'Matrícula ' + registro.matricula}</p>
+     {invitado && registro.correo && <p className="text-sm">{registro.correo}{registro.telefono ? ' · ' + registro.telefono : ''}</p>}
     <ResumenCartaTrineo carta={registro.carta} />
     {usaCartas && !registro.carta && <p className="text-sm text-amber-700 dark:text-amber-300">Este registro anterior no tiene carta vinculada.{!regaloRecibido && abierta ? ' Edita tu registro para elegir al niño de tu carta.' : ' Consulta al encargado para revisar tu aportación.'}</p>}
      <dl className="grid gap-3 sm:grid-cols-2">{campos.map((campo) => <div key={campo.clave}><dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt><dd className="font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : registro.respuestas[campo.clave] || 'Sin especificar'}</dd></div>)}</dl>
     <ResumenCamisaTrineo pedido={registro.pedido} />
     {aportacionesAnteriores.filter((aporte) => aporte.estado !== 'cancelada').map((aporte) => <p key={aporte.id_aportacion}>Aportación para la actividad · {aporte.nombre}: {Number(aporte.cantidad)} {aporte.unidad} · {aporte.estado}</p>)}
-    {abierta && <div className="flex flex-wrap gap-3"><BotonAccion onClick={() => setEditando(true)}>Editar mi registro</BotonAccion><BotonAccion variant="outline" onClick={() => setCancelando(true)}>Cancelar inscripción</BotonAccion></div>}
+     {abierta && <div className="flex flex-wrap gap-3"><BotonAccion onClick={() => setEditando(true)}>Editar mi registro</BotonAccion>{!invitado && <BotonAccion variant="outline" onClick={() => setCancelando(true)}>Cancelar inscripción</BotonAccion>}</div>}
     {cancelando && <div className="space-y-3" role="alert"><p>¿Confirmas la cancelación de tu inscripción?{registro.carta?.estado === 'reservada' ? ' La carta quedará disponible para otro alumno.' : ''} Las aportaciones recibidas y cualquier asistencia registrada conservarán su historial.</p><div className="flex flex-wrap gap-3"><BotonAccion variant="danger" disabled={pendiente} onClick={cancelar}>Confirmar cancelación</BotonAccion><BotonAccion variant="outline" disabled={pendiente} onClick={() => setCancelando(false)}>Conservar mi inscripción</BotonAccion></div></div>}
     {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
   </section>;
 
   if (!abierta) return <p className={tema.subtitle}>{edicion.estado_registro === 'proxima' ? 'El registro estará disponible durante el periodo de inscripción.' : 'Las inscripciones de esta edición están cerradas.'}</p>;
 
-  return <form onSubmit={guardar} className="registro-actividad space-y-6 rounded-2xl border border-slate-400/15 bg-white/95 p-6 shadow-[-4px_-4px_12px_rgba(0,0,0,0.08),4px_4px_12px_rgba(0,0,0,0.12)] dark:bg-slate-900" aria-label="Registro a la actividad">
+  return <form onSubmit={guardar} className="registro-actividad space-y-6 rounded-2xl border border-slate-400/15 bg-white/95 p-6 shadow-[-4px_-4px_12px_rgba(0,0,0,0.08),4px_4px_12px_rgba(0,0,0,0.12)] dark:bg-[#12203f]" aria-label="Registro a la actividad">
     <fieldset disabled={pendiente} className="min-w-0 space-y-5">
     {registro?.estado && <EstadoActividad estado={registro.estado} />}
     {registro?.historial_cartas?.length > 0 && !registro.carta && <p className="text-sm">Tu reserva anterior fue liberada al cancelar la inscripción. Elige una carta disponible para registrarte de nuevo.</p>}
      {usaCartas && (!regaloRecibido || registro?.carta) && <SelectorCartaTrineo idEdicion={edicion.id_edicion} actual={registro?.carta} seleccionada={carta} onSeleccionar={setCarta} bloqueada={Boolean(regaloRecibido)} obligatoria={cartaObligatoria} version={versionCartas} />}
     {usaCartas && confirmado && !carta && <p className="text-sm text-amber-700 dark:text-amber-300">Tu inscripción anterior puede conservarse sin carta. Puedes elegir una para registrar el compromiso de regalo, aparte de las aportaciones para la actividad.</p>}
     <div className="grid items-start gap-4 sm:grid-cols-2">
-      <CampoRegistroActividad id={idFormulario + '-nombre'} etiqueta="Nombre completo"><input id={idFormulario + '-nombre'} className={inputCls} value={usuario.nombre_completo || ''} readOnly /></CampoRegistroActividad>
-      <CampoRegistroActividad id={idFormulario + '-matricula'} etiqueta="Matrícula *"><input id={idFormulario + '-matricula'} className={inputCls} value={matricula} onChange={(evento) => setMatricula(evento.target.value)} readOnly={Boolean(usuario.institutional_id)} inputMode="numeric" pattern="[0-9]+" maxLength={30} required /></CampoRegistroActividad>
+       {invitado ? <><CampoRegistroActividad id={idFormulario + '-nombre'} etiqueta="Nombre completo *"><input id={idFormulario + '-nombre'} className={inputCls} value={contacto.nombre_completo} onChange={(evento) => setContacto((actual) => ({ ...actual, nombre_completo: evento.target.value }))} maxLength={150} required /></CampoRegistroActividad><CampoRegistroActividad id={idFormulario + '-correo'} etiqueta="Correo electrónico *"><input id={idFormulario + '-correo'} className={inputCls} type="email" value={contacto.correo} onChange={(evento) => setContacto((actual) => ({ ...actual, correo: evento.target.value }))} maxLength={254} required /></CampoRegistroActividad><CampoRegistroActividad id={idFormulario + '-telefono'} etiqueta="Teléfono *"><input id={idFormulario + '-telefono'} className={inputCls} type="tel" value={contacto.telefono} onChange={(evento) => setContacto((actual) => ({ ...actual, telefono: evento.target.value }))} maxLength={40} required /></CampoRegistroActividad></> : <><CampoRegistroActividad id={idFormulario + '-nombre'} etiqueta="Nombre completo"><input id={idFormulario + '-nombre'} className={inputCls} value={usuario.nombre_completo || ''} readOnly /></CampoRegistroActividad><CampoRegistroActividad id={idFormulario + '-matricula'} etiqueta="Matrícula *"><input id={idFormulario + '-matricula'} className={inputCls} value={matricula} onChange={(evento) => setMatricula(evento.target.value)} readOnly={Boolean(usuario.institutional_id)} inputMode="numeric" pattern="[0-9]+" maxLength={30} required /></CampoRegistroActividad></>}
       {campos.map((campo) => {
         const id = idFormulario + '-' + campo.clave;
         const esCamisa = usaCartas && campo.clave === 'talla';

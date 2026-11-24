@@ -2,9 +2,9 @@
 
 ## Actualización del 23 de noviembre de 2026
 
-Para una base que ya tiene el catálogo unificado y las versiones anteriores de Misiones y Trineo, aplicar con respaldo previo `backend/migrations/migrate-actividades-20261123.sql`. Reúne la revisión de publicaciones y sus reacciones, la opción de carta obligatoria por edición y la conversión de edades del Trineo a años enteros. Se puede pegar el archivo completo en el editor SQL de Supabase; no requiere ejecutar `schema.sql` ni `seed.sql`. Conserva las publicaciones anteriores, inscripciones, reservas y entregas. Las edades decimales se convierten a años cumplidos y las menores de un año a `0`, igual que en la migración individual de edad.
+Para una base que ya tiene el catálogo unificado y las versiones anteriores de Misiones y Trineo, aplicar con respaldo previo `backend/migrations/migrate-actividades-20261123.sql` y después `backend/migrations/migrate-actividades-responsables-cartas-20261123.sql`. La segunda migración habilita responsables adicionales, invitados de Trineo y la asignación o liberación de cartas por inscripción. La primera reúne la revisión de publicaciones y sus reacciones, la opción de carta obligatoria por edición y la conversión de edades del Trineo a años enteros. Se puede pegar cada archivo completo en el editor SQL de Supabase; no requiere ejecutar `schema.sql` ni `seed.sql`. Conserva las publicaciones anteriores, inscripciones, reservas y entregas. Las edades decimales se convierten a años cumplidos y las menores de un año a `0`, igual que en la migración individual de edad.
 
-La actualización se ejecuta en una sola transacción, comprueba las consultas que usan la estructura nueva y admite una segunda ejecución sin reiniciar los datos. Si faltan las tablas anteriores del módulo, se detiene con un mensaje antes de realizar cambios. La aplicación de este archivo a una base compartida es manual; guardarlo en el repositorio no actualiza Supabase.
+Cada migración se ejecuta en una sola transacción, comprueba las consultas que usan la estructura nueva y admite una segunda ejecución sin reiniciar los datos. Si faltan las tablas anteriores del módulo, se detiene con un mensaje antes de realizar cambios. La aplicación de estos archivos a una base compartida es manual; guardarlos en el repositorio no actualiza Supabase.
 
 ## Trineo: cartas y regalos
 
@@ -32,11 +32,15 @@ Antes de desplegar sobre una base que ya tiene cartas, aplicar manualmente `back
 
 | Interfaz de cartas | Acceso |
 | --- | --- |
-| `GET /api/actividades/ediciones/:idEdicion/cartas` | Cuenta institucional; cartas disponibles de Trineo publicado |
+| `GET /api/actividades/ediciones/:idEdicion/cartas` | Trineo publicado; cartas disponibles para seleccionar durante el registro |
 | `GET /api/actividades/gestion/ediciones/:idEdicion/cartas` | Encargado asignado o supervisor; cartas, estado y alumno responsable |
 | `POST /api/actividades/gestion/ediciones/:idEdicion/cartas` | Gestión autorizada; captura de cartas |
 | `PUT /api/actividades/gestion/ediciones/:idEdicion/cartas/:idCarta` | Gestión autorizada; corrige o retira cartas sin reserva vigente |
+| `PUT /api/actividades/gestion/ediciones/:idEdicion/registros/:idRegistro/carta` | Supervisor o responsable de la actividad; asigna una carta o usa `id_carta: null` para liberar una reserva pendiente |
 | `POST /api/actividades/gestion/cartas-reservas/:idReserva/recibir` | Gestión autorizada; confirma el regalo de esa reserva, sin recibir otra si la carta fue reasignada |
+| `GET /api/actividades/gestion/actividades/:idActividad/responsables` | Gestor de la actividad; lista el responsable principal y los adicionales |
+| `POST /api/actividades/gestion/actividades/:idActividad/responsables` | Coordinación o Rectoría; agrega un responsable adicional |
+| `DELETE /api/actividades/gestion/actividades/:idActividad/responsables/:idUsuario` | Coordinación o Rectoría; retira un responsable adicional |
 | `PUT /api/actividades/ediciones/:idEdicion/registro` | Carta obligatoria en nuevas inscripciones de Trineo; aportaciones según la configuración |
 
 `npm run test:trineo` cubre reservas simultáneas, aportaciones independientes, permisos, cancelaciones, recepciones, reversión ante fallos y actualización de datos anteriores. La integración requiere `ACTIVIDADES_TEST_DATABASE_URL`, usa esquemas temporales y no lee `.env`. También forma parte de `npm run test:actividades`.
@@ -51,7 +55,7 @@ Los artículos se configuran por edición con precio en centavos de MXN, disponi
 
 El encargado puede cargar el PDF original desde el asistente, incluso antes de guardar la nueva edición, y decidir si exige adjuntarlo firmado. El participante lo firma electrónicamente por fuera y sube un PDF de hasta 10 MB. Se comprueban tipo, cabecera y cierre; no se certifica su firma electrónica. Se guarda la configuración original respondida y cada PDF firmado queda asociado al participante. Los recursos se almacenan en Cloudinary como `raw/authenticated` y se descargan a través de la API después de comprobar acceso. Las firmas no tienen URL pública. Una operación fallida revierte sus datos y limpia las cargas incompletas.
 
-El participante UNID usa su cuenta y matrícula. **Soy invitado** abre el formulario sin cuenta, con nombre, correo y teléfono obligatorios; no pide matrícula ni licenciatura. El enlace privado se muestra al confirmar y se envía por correo. Solo su poseedor puede consultar/editar ese registro o registrar su asistencia, además de los gestores autorizados. La edición se permite durante el mismo periodo aprobado de inscripción. Los duplicados por edición/correo no sobrescriben la inscripción ni devuelven su acceso. Si falla el correo, el registro se conserva y se ofrece reenviarlo desde el enlace privado.
+El participante UNID usa su cuenta y matrícula. **Soy invitado** abre el formulario sin cuenta, con nombre, correo y teléfono obligatorios; no pide matrícula y la licenciatura permanece opcional. En Trineo también puede elegir carta, camisa y aportaciones. El enlace privado se muestra al confirmar y se envía por correo. Solo su poseedor puede consultar/editar ese registro o registrar su asistencia, además de los gestores autorizados. La edición se permite durante el mismo periodo aprobado de inscripción. Los duplicados por edición/correo no sobrescriben la inscripción ni devuelven su acceso. Si falla el correo, el registro se conserva y se ofrece reenviarlo desde el enlace privado.
 
 El enlace usa `/actividades/misiones/registro/:folio#acceso=SECRETO`; el secreto no se envía en la dirección de la petición, se elimina del fragmento tras comprobarlo y solo se almacena su hash en la base. El navegador conserva la credencial por folio y edición, sin respuestas personales. Las peticiones privadas usan `Authorization: Registro SECRETO`; esta credencial no es una sesión institucional ni da acceso a otros módulos. Al escanear el QR habitual se recupera la credencial de esa edición; en otro navegador se pega el enlace recibido conservando el código del QR. Se exige inscripción confirmada, publicación, código y fechas; los reintentos conservan una sola marca y el encargado puede corregirla con motivo.
 
@@ -69,6 +73,10 @@ Configurar `MISIONES_PUBLIC_URL` con el origen HTTPS del frontend y `MISIONES_MA
 | `GET/PUT /api/actividades/invitados/:folio` | Credencial privada del mismo registro; PUT admite el mismo multipart |
 | `POST /api/actividades/invitados/:folio/reenviar-enlace` | Credencial privada, con límite de reenvíos |
 | `POST /api/actividades/invitados/:folio/asistencia` | Credencial privada, con código y origen QR/código |
+| `POST /api/actividades/trineo/ediciones/:idEdicion/invitados` | Registro público de invitados de Trineo, con contacto, carta, camisa y aportaciones |
+| `GET/PUT /api/actividades/trineo/invitados/:folio` | Credencial privada para consultar o editar el registro de Trineo |
+| `POST /api/actividades/trineo/invitados/:folio/reenviar-enlace` | Credencial privada, con límite de reenvíos |
+| `POST /api/actividades/trineo/invitados/:folio/asistencia` | Credencial privada, con código y origen QR/código |
 | `PUT /api/actividades/ediciones/:idEdicion/registro` | Cuenta UNID; conserva JSON para formularios anteriores y admite multipart en Misiones v2 |
 | `POST /api/actividades/gestion/actividades/:idActividad/codigo-conducta` | Gestor autorizado; multipart `pdf` |
 | `GET /api/actividades/documentos-misiones/:idDocumento` | Plantilla vigente publicada, participante propietario o gestor autorizado según corresponda |
@@ -88,7 +96,7 @@ La ubicación usa `actividades_ediciones.ubicacion_maps`, con máximo de 2048 ca
 
 Las rutas públicas no entregan participantes, encargados, respuestas personales, propuestas ni fotografías sin aprobar. Las respuestas del módulo llevan `Cache-Control: private, no-store`. El acceso privado revalida la sesión y los permisos en el servidor.
 
-Solo Coordinación y Rectoría pueden crear actividades. El acceso **Gestión de Clubs → Clubs y actividades** se muestra únicamente a estos perfiles, tanto en escritorio como en el menú del celular. Periódico Mural, responsables, vicepresidencia y alumnos no muestran ese acceso, incluso si tienen una actividad asignada. Coordinación también puede crear clubes, con la contraseña administrativa existente. Coordinación y Rectoría supervisan actividades y asignan encargados. Cualquier cuenta activa asignada conserva permisos sobre su actividad sin necesitar un club o un cambio de rol global. La reasignación retira el permiso al encargado anterior. El permiso de creación se verifica en el servidor y controla tanto el botón como la apertura del formulario mediante un enlace directo.
+Solo Coordinación y Rectoría pueden crear actividades. El acceso **Gestión de Clubs → Clubs y actividades** se muestra únicamente a estos perfiles, tanto en escritorio como en el menú del celular. Periódico Mural, responsables, vicepresidencia y alumnos no muestran ese acceso, incluso si tienen una actividad asignada. Coordinación también puede crear clubes, con la contraseña administrativa existente. Coordinación y Rectoría supervisan actividades y asignan responsables principales o adicionales. Cualquier cuenta activa asignada conserva permisos sobre su actividad sin necesitar un club o un cambio de rol global. La reasignación del principal y el retiro de responsables adicionales actualizan el acceso en el servidor. El permiso de creación se verifica en el servidor y controla tanto el botón como la apertura del formulario mediante un enlace directo.
 
 ### Guardado y publicación de actividades
 
@@ -109,7 +117,7 @@ Ambas rutas verifican rol, acceso y estado en el servidor, aplican la propuesta 
 
 Los clubes conservan la aprobación de su información general por Rectoría. El archivo, la restauración y la moderación de fotografías mantienen sus permisos de Rectoría. La publicación directa no cambia la estructura de la base de datos.
 
-Los clubes conservan su límite de un responsable por club y un club por responsable. Solo Coordinación asigna esta responsabilidad a alumnos o responsables; se conserva el cambio de rol necesario para operar el club. Las reasignaciones de un club ocupado y el retiro de responsabilidades se realizan desde Usuarios. Un responsable puede organizar varias actividades además de su club.
+Los clubes conservan su límite de un responsable por club y un club por responsable. Solo Coordinación asigna esta responsabilidad a alumnos o responsables; se conserva el cambio de rol necesario para operar el club. Las reasignaciones de un club ocupado y el retiro de responsabilidades se realizan desde Usuarios. Una actividad puede tener un responsable principal y varios responsables adicionales, mientras que una misma persona puede organizar varias actividades además de su club.
 
 Al asignar una actividad, el encargado encuentra **Actividades a mi cargo** directamente en la pantalla principal de su panel. Cada tarjeta muestra nombre, descripción, estado y el botón **Administrar actividad**, que abre la gestión completa con el registro seleccionado. El panel de presidente las presenta en Principal, junto a la información del club. También aparecen para encargados sin club y en la vista principal de los otros paneles.
 
@@ -117,7 +125,7 @@ La barra conserva las opciones originales de cada rol, sin grupos separados de c
 
 Desde las tarjetas se accede a la presentación de Oferta, su revisión, el asistente de ediciones y los controles de inscripción, participantes, aportaciones y fotografías. Estas funciones permanecen en el detalle de administración, con sus permisos existentes.
 
-La lista privada se obtiene mediante `/api/actividades/gestion/asignadas` y solo incluye actividades asignadas al usuario de la sesión. Se conservan los accesos privados de detalle e historial en `/api/actividades/gestion/asignadas/:idActividad` y `/historial`, comprobando al encargado actual en cada consulta. El listado de tarjetas se actualiza al volver a la pestaña o ventana y cada minuto, y ofrece Actualizar. Una reasignación retira la tarjeta del encargado anterior y revoca su acceso privado. La asignación conserva el rol y las membresías existentes. El menú general de gestión y la creación siguen reservados a Coordinación y Rectoría.
+La lista privada se obtiene mediante `/api/actividades/gestion/asignadas` y solo incluye actividades asignadas al usuario de la sesión, ya sea como responsable principal o adicional. Se conservan los accesos privados de detalle e historial en `/api/actividades/gestion/asignadas/:idActividad` y `/historial`, comprobando la asignación vigente en cada consulta. El listado de tarjetas se actualiza al volver a la pestaña o ventana y cada minuto, y ofrece Actualizar. Una reasignación retira la tarjeta del responsable anterior cuando deja de estar asignado y revoca su acceso privado. La asignación conserva el rol y las membresías existentes. El menú general de gestión y la creación siguen reservados a Coordinación y Rectoría.
 
 ## Estructura de datos
 
@@ -223,7 +231,7 @@ Cada edición con inscripciones tiene el apartado **Pase de lista**, dentro de s
 
 El participante UNID escanea el QR, inicia sesión y pulsa **Registrar mi asistencia**. También puede escribir el código desde **Mis actividades** o desde el detalle de su inscripción. El inicio de sesión conserva la edición y el código del enlace. Se requiere cuenta activa, inscripción confirmada, actividad y edición publicadas, código correcto y fecha del campus dentro del inicio y fin del evento, ambos incluidos. Sin fecha final, solo se admite el día inicial. Se usa la zona de fechas de actividades existente, `America/Mexico_City`; la hora de inicio y las fechas o pausas de inscripción no limitan el pase de lista.
 
-En las ediciones de Misiones que admiten invitados, la página del QR muestra primero **Me inscribí con UNID** y **Me inscribí como invitado**, sin exigir sesión al invitado. Si ese navegador conserva el enlace privado de la inscripción y no hay una cuenta UNID abierta, recupera directamente el registro de invitado; en otro navegador se pega el enlace recibido por correo. Se comprueba que el enlace pertenezca a la edición del QR antes de guardar el acceso. El código escaneado se conserva al elegir la opción o recuperar el registro y la llegada se confirma con **Registrar mi asistencia**. Los fallos al consultar las opciones o recuperar la inscripción se muestran con una acción para reintentar.
+En las ediciones de Misiones y Trineo que admiten invitados, la página del QR muestra primero **Me inscribí con UNID** y **Me inscribí como invitado**, sin exigir sesión al invitado. Si ese navegador conserva el enlace privado de la inscripción y no hay una cuenta UNID abierta, recupera directamente el registro de invitado; en otro navegador se pega el enlace recibido por correo. Se comprueba que el enlace pertenezca a la edición del QR antes de guardar el acceso. El código escaneado se conserva al elegir la opción o recuperar el registro y la llegada se confirma con **Registrar mi asistencia**. Los fallos al consultar las opciones o recuperar la inscripción se muestran con una acción para reintentar.
 
 Hay una asistencia por inscripción/edición, con fecha del servidor, origen (QR, código o manual) y autor. Los reintentos y los envíos simultáneos devuelven la misma marca y no repiten el evento de bitácora. La confirmación se muestra únicamente después de guardar en el servidor; no hay almacenamiento de asistencias sin conexión. El código se valida con el limitador de escrituras por cuenta existente. El acceso no aparece en las consultas públicas ni en la bitácora. Como el QR y el código pueden compartirse, la verificación física queda a cargo del encargado.
 

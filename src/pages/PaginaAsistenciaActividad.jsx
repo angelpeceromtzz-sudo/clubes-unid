@@ -8,7 +8,9 @@ import { NavegacionActividades, FechaActividad } from '../components/actividades
 import { BotonAccion } from '../components/ui/BotonAccion';
 import { Spinner } from '../components/ui/Spinner';
 import { AsistenciaInvitadoMisiones } from '../components/actividades/AsistenciaInvitadoMisiones';
+import { AsistenciaInvitadoTrineo } from '../components/actividades/AsistenciaInvitadoTrineo';
 import { leerAccesoMisiones } from '../utils/accesoMisiones';
+import { leerAccesoTrineo } from '../utils/accesoTrineo';
 
 function AsistenciaCuentaUnid({ idEdicion, codigo, onLoginClick }) {
   const { usuario, authReady } = useAutenticacion();
@@ -34,10 +36,12 @@ export function PaginaAsistenciaActividad({ onLoginClick }) {
   const { usuario, authReady } = useAutenticacion();
   const { tema, cardCls } = useTheme();
   const [seleccion, setSeleccion] = useState(null);
-  const [accesoGuardado] = useState(() => leerAccesoMisiones('edicion_' + idEdicion));
+  const [accesoMisiones] = useState(() => leerAccesoMisiones('edicion_' + idEdicion));
+  const [accesoTrineo] = useState(() => leerAccesoTrineo('edicion_' + idEdicion));
   const valido = /^[1-9]\d*$/.test(idEdicion) && Number.isSafeInteger(Number(idEdicion));
   const { datos, cargando, error, recargar } = useActividadRecurso(valido ? '/ediciones/' + idEdicion + '/acceso-invitados' : null);
   const invitados = datos?.habilitado === true;
+  const accesoGuardado = datos?.tipo === 'trineo' ? accesoTrineo : accesoMisiones;
   const modo = invitados ? seleccion || (usuario ? 'unid' : accesoGuardado ? 'invitado' : null) : 'unid';
   const codigo = parametros.get('codigo') || '';
 
@@ -56,7 +60,7 @@ export function PaginaAsistenciaActividad({ onLoginClick }) {
           </button>)}
         </div>
       </section>}
-      {modo === 'invitado' ? <AsistenciaInvitadoMisiones key={idEdicion} idEdicion={idEdicion} codigo={codigo} /> : modo === 'unid' ? <AsistenciaCuentaUnid key={idEdicion} idEdicion={idEdicion} codigo={codigo} onLoginClick={onLoginClick} /> : null}
+      {modo === 'invitado' ? datos.tipo === 'trineo' ? <AsistenciaInvitadoTrineo key={idEdicion} idEdicion={idEdicion} codigo={codigo} /> : <AsistenciaInvitadoMisiones key={idEdicion} idEdicion={idEdicion} codigo={codigo} /> : modo === 'unid' ? <AsistenciaCuentaUnid key={idEdicion} idEdicion={idEdicion} codigo={codigo} onLoginClick={onLoginClick} /> : null}
     </>}
   </main>;
 }

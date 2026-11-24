@@ -53,6 +53,12 @@
   overflow: hidden;
 }
 
+/* El recorte solo hace falta durante el cierre; al estar abierto no debe
+   cortar el focus ring ámbar de los campos del acordeón. */
+.registro-actividad details[open] .accordion-content > * {
+  overflow: visible;
+}
+
 .registro-actividad :focus-visible {
   outline: 2px solid #f59e0b;
   outline-offset: 2px;
