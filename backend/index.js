@@ -48,6 +48,7 @@ import expedienteRoutes from './routes/expediente.js';
 import clubFormularioRoutes from './routes/clubFormulario.js';
 import consentimientoLegalRoutes from './routes/consentimientoLegal.js';
 import reportesRoutes from './routes/reportes.js';
+import { noCacheExpediente } from './lib/cacheExpediente.js';
 const app = express();
 // Render termina TLS y reenvía con X-Forwarded-For (un solo proxy).
 // Pendiente de verificar en Render: si algún día hay un proxy adicional
@@ -82,6 +83,10 @@ app.use(cors({
   // el cooldown real que impone express-rate-limit en un 429.
   exposedHeaders: ['Retry-After', 'RateLimit', 'RateLimit-Reset', 'X-RateLimit-Reset'],
 }));
+
+// La política del expediente debe preceder al límite global: un 429 se emite
+// antes de entrar al router y también debe ser privado y no cacheable.
+app.use(noCacheExpediente);
 
 // Cobertura general de API por IP (H5a): red de seguridad única para todas
 // las rutas /api. Va después de CORS (los OPTIONS de preflight los responde

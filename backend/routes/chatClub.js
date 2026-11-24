@@ -117,7 +117,7 @@ async function registrarMenciones(db, idMensaje, ids) {
   }
 }
 
-router.get('/clubes/:idClub/chat', async (req, res) => {
+router.get('/clubes/:idClub/chat', limitadorChatLectura, async (req, res) => {
   try {
     const antes = req.query.antes == null ? null : Number(req.query.antes);
     if (antes !== null && (!Number.isSafeInteger(antes) || antes < 1)) return res.status(400).json({ error: 'Referencia de historial no válida' });
@@ -137,11 +137,20 @@ router.put('/clubes/:idClub/presencia', limitadorChatPresencia, async (req, res)
       await pool.query('DELETE FROM club_chat_presencia WHERE id_club=$1 AND id_usuario=$2', [req.params.idClub, req.user.id]);
       return res.json({ ok: true, conectado: false });
     }
-    const escribiendo = req.body?.escribiendo === true;
+    const estadoEscribiendo = req.body?.escribiendo;
+    if (estadoEscribiendo !== undefined && typeof estadoEscribiendo !== 'boolean') {
+      return res.status(400).json({ error: 'Estado de escritura inválido' });
+    }
+    // null = heartbeat: actualiza actividad sin borrar el typing de otra pestaña.
+    const escribiendo = estadoEscribiendo === undefined ? null : estadoEscribiendo;
     await pool.query(`INSERT INTO club_chat_presencia (id_club,id_usuario,ultima_actividad,escribiendo_hasta)
-      VALUES ($1,$2,NOW(),CASE WHEN $3 THEN NOW()+INTERVAL '6 seconds' ELSE NULL END)
+      VALUES ($1,$2,NOW(),CASE WHEN $3::boolean THEN NOW()+INTERVAL '6 seconds' ELSE NULL END)
       ON CONFLICT (id_club,id_usuario) DO UPDATE SET ultima_actividad=NOW(),
-      escribiendo_hasta=CASE WHEN $3 THEN NOW()+INTERVAL '6 seconds' ELSE NULL END`, [req.params.idClub, req.user.id, escribiendo]);
+      escribiendo_hasta=CASE
+        WHEN $3::boolean IS NULL THEN club_chat_presencia.escribiendo_hasta
+        WHEN $3::boolean THEN NOW()+INTERVAL '6 seconds'
+        ELSE NULL
+      END`, [req.params.idClub, req.user.id, escribiendo]);
     res.json({ ok: true });
   } catch (error) { res.status(500).json({ error: 'No se pudo actualizar la presencia' }); }
 });

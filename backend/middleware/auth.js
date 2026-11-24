@@ -39,6 +39,17 @@ export async function authenticate(req, res, next) {
 
   const idDispositivoConfiable = decoded.id_dispositivo_confiable;
   const esSesionConfiable = idDispositivoConfiable != null;
+  const claimOtpPresente = Object.prototype.hasOwnProperty.call(decoded, 'auth_otp');
+
+  // El claim es nuevo: su ausencia sigue siendo compatible con roles permitidos,
+  // pero una cuenta restringida con token legado deberá iniciar sesión una vez.
+  // Si está presente, debe ser booleano; cualquier otro tipo falla cerrado antes
+  // de consultar la base. Un dispositivo confiable solo puede proceder de OTP,
+  // incluso si un token antiguo no trae el claim.
+  if (claimOtpPresente && typeof decoded.auth_otp !== 'boolean') {
+    return res.status(401).json({ error: 'Token inválido o expirado' });
+  }
+  const esSesionOtp = decoded.auth_otp === true || esSesionConfiable;
 
   // Una sesión confiable exige el vínculo completo con la fila del dispositivo.
   // Los JWT anteriores no tienen generación: se rechazan aunque su firma y exp
@@ -97,6 +108,15 @@ export async function authenticate(req, res, next) {
   }
 
   const fila = resultado.rows[0];
+
+  // Una sesión OTP no puede heredar privilegios de un rol que tiene prohibido
+  // este método. Los tokens legacy sin claim tampoco pueden autorizar roles
+  // restringidos: sin claim no se puede distinguir OTP de local/Microsoft, así
+  // que se exige una reautenticación única. Los tokens nuevos auth_otp=false de
+  // local/Microsoft y los legacy en roles permitidos conservan su flujo normal.
+  if (ROLES_SIN_OTP.has(Number(fila.id_rol)) && (esSesionOtp || !claimOtpPresente)) {
+    return res.status(401).json({ error: 'Sesión no válida. Inicia sesión nuevamente.' });
+  }
 
   // 5) req.user se construye SOLO con datos actuales de la BD. Los claims del
   //    token no se mezclan (ni siquiera en último lugar), para que un rol

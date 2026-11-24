@@ -100,7 +100,7 @@ after(() => {
 });
 
 const tokenAdmin = jwt.sign(
-  { id: 10, nombre_completo: 'Admin Ficticio', id_rol: 3, rol: 'admin' },
+  { id: 10, nombre_completo: 'Admin Ficticio', id_rol: 3, rol: 'admin', auth_otp: false },
   process.env.JWT_SECRET,
   { expiresIn: '5m' },
 );

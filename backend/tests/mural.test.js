@@ -57,7 +57,7 @@ async function enviar(metodo, datos, rol = 3, ruta = '', usuario = 7) {
   consultas = [];
   rolActual = rol ?? 3;
   const headers = { 'Content-Type': 'application/json' };
-  if (rol) headers.Authorization = `Bearer ${jwt.sign({ id: usuario, id_rol: rol, nombre_completo: 'Editor de prueba' }, process.env.JWT_SECRET)}`;
+  if (rol) headers.Authorization = `Bearer ${jwt.sign({ id: usuario, id_rol: rol, nombre_completo: 'Editor de prueba', auth_otp: false }, process.env.JWT_SECRET)}`;
   const res = await fetch(`${base}${ruta}`, { method: metodo, headers, body: datos ? JSON.stringify(datos) : undefined });
   return { status: res.status, datos: await res.json() };
 }

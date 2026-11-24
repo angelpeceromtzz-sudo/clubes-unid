@@ -1,10 +1,10 @@
-import { useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 import { api, getSession, clearSession } from '../services/api';
 import {
   capturarEpocaSesion,
   conservaEpocaSesion,
   iniciarSesionAlmacenada,
-  limpiarCuentaConfiable,
+  limpiarCuentaConfianzaSiCoincide,
   obtenerCuentaConfiable,
   renovarSesionConfiable,
 } from '../services/api-core';
@@ -24,48 +24,57 @@ function sesionActualVigente() {
 }
 
 export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
-  const cancelado = useRef(false);
-
   useEffect(() => {
-    cancelado.current = false;
+    // Bandera local por ejecución: evita que StrictMode reactive la primera
+    // inicialización después de su cleanup.
+    let cancelado = false;
 
     async function inicializar() {
       const epocaInicial = capturarEpocaSesion();
+      const registrarRegreso = () => window.history.replaceState({}, document.title, rutaDeRegreso());
+
+      async function adoptarGanadoraOSalir() {
+        const ganadora = sesionActualVigente();
+        registrarRegreso();
+        if (cancelado) return;
+        if (ganadora) await onLoggedIn?.({ user: ganadora.user });
+        else onLoggedOut?.();
+      }
+
+      async function persistirLogin(data) {
+        const persistida = await iniciarSesionAlmacenada({ token: data.token, user: data.user }, {
+          epocaEsperada: epocaInicial,
+          dispositivoConfiable: data.dispositivo_confiable,
+          revocarDispositivo: data.dispositivo_confiable_revocado === true,
+        });
+        if (cancelado) return;
+        if (!persistida) {
+          // Otro login/logout ganó mientras esta operación esperaba el lock.
+          await adoptarGanadoraOSalir();
+          return;
+        }
+        registrarRegreso();
+        await onLoggedIn?.({ ...data, sesionPersistida: true });
+      }
+
       try {
         await msalInstance.initialize();
-
         const respuesta = await msalInstance.handleRedirectPromise();
-        if (cancelado.current) return;
+        if (cancelado) return;
 
         if (respuesta?.accessToken) {
           const data = await api.loginMicrosoft(respuesta.accessToken);
-          if (cancelado.current) return;
-          // Una sesión previa con la misma época no sustituye este login recién
-          // completado. Sólo una pestaña que cambió la época durante la espera
-          // puede haber dejado una sesión concurrente más reciente.
+          if (cancelado) return;
           if (!conservaEpocaSesion(epocaInicial)) {
-            const sesionGanadora = sesionActualVigente();
-            if (sesionGanadora) {
-              window.history.replaceState({}, document.title, rutaDeRegreso());
-              onLoggedIn?.({ user: sesionGanadora.user });
-              return;
-            }
+            await adoptarGanadoraOSalir();
+            return;
           }
-          iniciarSesionAlmacenada({ token: data.token, user: data.user });
-          window.history.replaceState({}, document.title, rutaDeRegreso());
-          onLoggedIn?.({ ...data, sesionPersistida: true });
+          await persistirLogin(data);
           return;
         }
 
         if (!conservaEpocaSesion(epocaInicial)) {
-          const sesionGanadora = sesionActualVigente();
-          if (sesionGanadora) {
-            window.history.replaceState({}, document.title, rutaDeRegreso());
-            onLoggedIn?.({ user: sesionGanadora.user });
-          } else {
-            onLoggedOut?.();
-            window.history.replaceState({}, document.title, rutaDeRegreso());
-          }
+          await adoptarGanadoraOSalir();
           return;
         }
 
@@ -83,36 +92,37 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
         if (necesitaNuevaSesion && coincideCuentaConfiable) {
           try {
             const data = await renovarSesionConfiable();
-            if (cancelado.current) return;
-            window.history.replaceState({}, document.title, rutaDeRegreso());
-            onLoggedIn?.(data);
+            if (cancelado) return;
+            registrarRegreso();
+            await onLoggedIn?.(data);
             return;
           } catch (err) {
-            if (Number(err?.status) === 409 && !cancelado.current) {
+            if (cancelado) return;
+            if (Number(err?.status) === 409) {
               const sesionActual = sesionActualVigente();
               if (sesionActual) {
                 // Otra pestaña hizo login mientras esperábamos la renovación.
-                // Usamos su sesión vigente y no limpiamos/reemplazamos la nueva.
-                window.history.replaceState({}, document.title, rutaDeRegreso());
-                onLoggedIn?.({ user: sesionActual.user });
+                registrarRegreso();
+                await onLoggedIn?.({ user: sesionActual.user });
                 return;
               }
             }
-            if (Number(err?.status) === 401 || Number(err?.status) === 403) limpiarCuentaConfiable();
+            // api-core ya limpia de forma condicional un 401/403. No repetir
+            // aquí esa limpieza: podría borrar el token nuevo de otra pestaña.
           }
         } else if (cuentaConfiable && idSesion && !coincideCuentaConfiable) {
-          limpiarCuentaConfiable();
+          await limpiarCuentaConfianzaSiCoincide(cuentaConfiable, epocaInicial);
+          if (cancelado) return;
         }
 
         const sesionGanadora = sesionActualVigente();
         if (sesionGanadora) {
-          window.history.replaceState({}, document.title, rutaDeRegreso());
-          onLoggedIn?.({ user: sesionGanadora.user });
+          registrarRegreso();
+          await onLoggedIn?.({ user: sesionGanadora.user });
           return;
         }
         if (!conservaEpocaSesion(epocaInicial)) {
-          onLoggedOut?.();
-          window.history.replaceState({}, document.title, rutaDeRegreso());
+          await adoptarGanadoraOSalir();
           return;
         }
 
@@ -122,25 +132,12 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
               ...loginRequest,
               account: cuentas[0],
             });
-            if (!cancelado.current && silencioso?.accessToken) {
+            if (cancelado) return;
+            if (silencioso?.accessToken) {
               const data = await api.loginMicrosoft(silencioso.accessToken);
-              if (!cancelado.current) {
-                if (!conservaEpocaSesion(epocaInicial)) {
-                  const sesionGanadora = sesionActualVigente();
-                  if (sesionGanadora) {
-                    window.history.replaceState({}, document.title, rutaDeRegreso());
-                    onLoggedIn?.({ user: sesionGanadora.user });
-                    return;
-                  }
-                  onLoggedOut?.();
-                  window.history.replaceState({}, document.title, rutaDeRegreso());
-                  return;
-                }
-                iniciarSesionAlmacenada({ token: data.token, user: data.user });
-                window.history.replaceState({}, document.title, rutaDeRegreso());
-                onLoggedIn?.({ ...data, sesionPersistida: true });
-                return;
-              }
+              if (cancelado) return;
+              await persistirLogin(data);
+              return;
             }
           } catch (err) {
             console.error('[MSAL] No se pudo renovar el token:', err);
@@ -149,32 +146,33 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
 
         if (necesitaNuevaSesion) {
           if (!conservaEpocaSesion(epocaInicial)) {
-            const sesionGanadora = sesionActualVigente();
-            if (sesionGanadora) {
-              window.history.replaceState({}, document.title, rutaDeRegreso());
-              onLoggedIn?.({ user: sesionGanadora.user });
-              return;
-            }
-            onLoggedOut?.();
-            window.history.replaceState({}, document.title, rutaDeRegreso());
+            await adoptarGanadoraOSalir();
             return;
           }
-          if (tokenExpirado || requiereRenovacion) clearSession();
+          if (tokenExpirado || requiereRenovacion) {
+            const limpio = await clearSession({ epocaEsperada: epocaInicial });
+            if (cancelado) return;
+            if (!limpio) {
+              await adoptarGanadoraOSalir();
+              return;
+            }
+          }
           onLoggedOut?.();
-          window.history.replaceState({}, document.title, rutaDeRegreso());
+          registrarRegreso();
         } else {
-          onLoggedIn?.({ user: sesion.user });
+          registrarRegreso();
+          await onLoggedIn?.({ user: sesion.user });
         }
       } catch (err) {
         console.error('[MSAL] Error en handleRedirectPromise:', err);
-        window.history.replaceState({}, document.title, rutaDeRegreso());
+        registrarRegreso();
       } finally {
-        if (!cancelado.current) onReady?.();
+        if (!cancelado) onReady?.();
       }
     }
 
-    inicializar();
-    return () => { cancelado.current = true; };
+    void inicializar();
+    return () => { cancelado = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

@@ -2,7 +2,7 @@ import { request } from './api-core';
 
 export const chatClubService = {
   obtenerChatClub: (idClub, antes = null) => request(`/chat-clubes/clubes/${idClub}/chat${antes ? `?antes=${encodeURIComponent(antes)}` : ''}`),
-  actualizarPresenciaChat: (idClub, escribiendo = false, activo = true) => request(`/chat-clubes/clubes/${idClub}/presencia`, {
+  actualizarPresenciaChat: (idClub, escribiendo, activo = true) => request(`/chat-clubes/clubes/${idClub}/presencia`, {
     method: 'PUT', body: JSON.stringify({ escribiendo, activo }),
   }),
   marcarChatClubLeido: (idClub) => request(`/chat-clubes/clubes/${idClub}/leer`, { method: 'POST' }),

@@ -106,7 +106,9 @@ test('flujo completo: alumno con token de admin pierde el acceso a ruta de rol 3
 });
 
 test('flujo completo: admin activo conserva el acceso a ruta de rol 3', async () => {
-  const { req } = await ejecutarAuthenticate(tokenDe({ id: 10, id_rol: 1 }));
+  // Fixture de una sesión local/Microsoft NUEVA. Los tokens legacy sin claim en
+  // roles restringidos ahora exigen reautenticar y se cubren en otpJwtRol.
+  const { req } = await ejecutarAuthenticate(tokenDe({ id: 10, id_rol: 1, auth_otp: false }));
   const res2 = mockRes();
   let pasoRole = false;
   requireRole(3)(req, res2, () => { pasoRole = true; });

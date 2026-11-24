@@ -69,7 +69,7 @@ export function PanelAlumno() {
     const opciones=d.club ? ELEMENTOS_NAV_ALUMNO : NAV_SIN_CLUB;
     return usuario?.id_rol===1 ? opciones : opciones.filter((item)=>item.key!=='mis-actividades');
   },[d.club,usuario?.id_rol]);
-  const [vistaAlumno,setVistaAlumno]=useVistaPanel(elementosNav,d.club ? 'mi-club' : 'postulaciones');
+  const [vistaAlumno,setVistaAlumno]=useVistaPanel(elementosNav,d.club ? 'mi-club' : 'mi-panel');
   const [dismissMiembroBanner,setDismissMiembroBanner]=useState(()=>{
     try{return localStorage.getItem('dismiss_miembro_banner')==='true';}catch{return false;}
   });
@@ -140,6 +140,29 @@ export function PanelAlumno() {
   return <ErrorBoundary><RutaProtegida><NavegacionPanel elementosNav={elementosNav} vistaActiva={vistaAlumno} onVistaChange={setVistaAlumno} fullHeight={vistaAlumno === 'chat-club'}>
     {vistaAlumno !== 'chat-club' && <div data-tutorial="panel-alumno" className="mb-6 md:mb-8"><EncabezadoPagina titulo="Mi panel" subtitulo={'Bienvenido, '+(usuario?.nombre_completo || '')}/></div>}
 
+    {vistaAlumno==='mi-panel' && <section className="mb-6 space-y-4" data-tutorial="resumen-alumno">
+      <div>
+        <h2 className={'text-xl font-black '+tema.title}>Tu resumen</h2>
+        <p className={'mt-1 text-sm '+tema.subtitle}>Desde aquí puedes continuar con tus solicitudes o explorar los clubes.</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <article className="rounded-2xl border border-slate-400/25 p-5">
+          <p className={'text-sm '+tema.subtitle}>Mis postulaciones</p>
+          <p className={'mt-1 text-2xl font-black '+tema.title}>{d.postulaciones.length}</p>
+          <button type="button" onClick={()=>setVistaAlumno('postulaciones')} className="mt-4 cursor-pointer font-bold text-amber-600 underline dark:text-amber-400">Ver mis postulaciones</button>
+        </article>
+        <article className="rounded-2xl border border-slate-400/25 p-5">
+          <p className={'text-sm '+tema.subtitle}>Clubes</p>
+          <p className={'mt-1 text-sm font-semibold '+tema.title}>Encuentra una actividad para ti</p>
+          <Link to="/campus/campeche/portal" className="mt-4 inline-block font-bold text-amber-600 underline dark:text-amber-400">Explorar clubes</Link>
+        </article>
+        <article className="rounded-2xl border border-slate-400/25 p-5 sm:col-span-2">
+          <p className={'text-sm '+tema.subtitle}>Tu perfil</p>
+          <p className={'mt-1 text-sm font-semibold '+tema.title}>Revisa tus datos y reconocimientos.</p>
+          <button type="button" onClick={()=>navigate('/perfil')} className="mt-4 cursor-pointer font-bold text-amber-600 underline dark:text-amber-400">Ver mi perfil</button>
+        </article>
+      </div>
+    </section>}
     {['mi-club','postulaciones'].includes(vistaAlumno) && <TarjetasMiActividad asignacion={asignacion}/>}
     {vistaAlumno==='mis-actividades' && <MisActividadesPanel/>}
     {vistaAlumno==='chat-club' && d.club && <ChatClub club={d.club} ocuparPantalla/>}

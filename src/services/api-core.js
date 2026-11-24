@@ -8,9 +8,12 @@ export const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:4000/
 const ID_DISPOSITIVO_KEY = 'unid_device_id';
 const DISPOSITIVO_CONFIABLE_KEY = 'unid_trusted_account';
 const EPOCA_SESION_KEY = 'unid_session_epoch';
+const BLOQUEO_SESION = 'unid:session';
 const PREFIJO_BLOQUEO_RENOVACION = 'unid:trusted-account:renovar:';
 const FORMATO_TOKEN_DISPOSITIVO = /^[a-f0-9]{64}$/i;
-let renovacionPendiente = null;
+// Cada cuenta y época tiene su propia promesa. Una petición de B nunca se une a
+// la renovación de A, ni un login nuevo comparte la promesa de la época anterior.
+const renovacionesPendientes = new Map();
 let contadorEpoca = 0;
 
 export function obtenerIdDispositivo() {
@@ -37,23 +40,22 @@ export function obtenerCuentaConfiable() {
       || !FORMATO_TOKEN_DISPOSITIVO.test(guardada.dispositivo_id || '')
     ) return null;
 
-    return { ...guardada, token: guardada.token.toLowerCase() };
+    return { ...guardada, token: guardada.token.toLowerCase(), dispositivo_id: guardada.dispositivo_id.toLowerCase() };
   } catch {
     return null;
   }
 }
 
-export function guardarCuentaConfiable(datos, usuario) {
-  const dispositivoId = obtenerIdDispositivo();
+export function guardarCuentaConfiable(datos, usuario, dispositivoId = obtenerIdDispositivo()) {
   if (
-    !dispositivoId
+    !FORMATO_TOKEN_DISPOSITIVO.test(dispositivoId || '')
     || !FORMATO_TOKEN_DISPOSITIVO.test(datos?.token || '')
     || !usuario?.id_usuario
   ) return false;
 
   try {
     localStorage.setItem(DISPOSITIVO_CONFIABLE_KEY, JSON.stringify({
-      dispositivo_id: dispositivoId,
+      dispositivo_id: dispositivoId.toLowerCase(),
       id_usuario: usuario.id_usuario,
       token: datos.token.toLowerCase(),
       expira_en: datos.expira_en,
@@ -102,12 +104,9 @@ function generarEpocaSesion() {
 
 function invalidarEpocaSesion() {
   const epoca = generarEpocaSesion();
-  try {
-    localStorage.setItem(EPOCA_SESION_KEY, epoca);
-  } catch {
-    // Si el almacenamiento no está disponible, tampoco se puede persistir una
-    // sesión confiable; las rutas de login normal seguirán su propio manejo.
-  }
+  // No silenciar este fallo: una época no persistida invalidaría la garantía
+  // cross-tab y podría dejar una renovación antigua como vigente.
+  localStorage.setItem(EPOCA_SESION_KEY, epoca);
   return epoca;
 }
 
@@ -142,6 +141,30 @@ function mismaCuentaConfiable(actual, esperada) {
     && actual.dispositivo_id === esperada.dispositivo_id
     && Number(actual.id_usuario) === Number(esperada.id_usuario),
   );
+}
+
+function idUsuarioDeSesion(sesion) {
+  return sesion?.user?.id_usuario ?? sesion?.user?.id ?? null;
+}
+
+function mismaCuentaDeSesion(actual, esperada) {
+  const idActual = idUsuarioDeSesion(actual);
+  const idEsperado = idUsuarioDeSesion(esperada);
+  return idActual != null && idEsperado != null && String(idActual) === String(idEsperado);
+}
+
+// Una petición pertenece a la cuenta y época capturadas al iniciarse. Se permite
+// que otra pestaña renueve el token de ESA misma cuenta, pero no que un login o
+// logout intermedio cambie las credenciales que va a usar la petición.
+function exigirMismaCuentaDeSolicitud(epoca, sesionInicial) {
+  const sesionActual = getSession();
+  const conservaCuenta = sesionInicial?.token
+    ? mismaCuentaDeSesion(sesionActual, sesionInicial)
+    : !sesionActual?.token;
+
+  if (!conservaEpocaSesion(epoca) || !conservaCuenta) {
+    throw errorRenovacion('La sesión cambió antes de enviar la solicitud.', 409);
+  }
 }
 
 function errorRenovacion(mensaje, status) {
@@ -217,86 +240,108 @@ async function renovarDentroDeBloque(epoca, cuentaInicial) {
         continue;
       }
 
-      if (cuentaActual.token === tokenUtilizado) limpiarCuentaConfiable();
+      if (cuentaActual.token === tokenUtilizado) {
+        await ejecutarConBloqueSesion(() => {
+          exigirMismaEpoca(epoca);
+          const cuentaEnBloque = obtenerCuentaConfiable();
+          if (!mismaCuentaConfiable(cuentaEnBloque, cuentaInicial) || cuentaEnBloque.token !== tokenUtilizado) {
+            throw err;
+          }
+          limpiarCuentaConfiable();
+        });
+      }
       throw err;
     }
 
-    exigirMismaEpoca(epoca);
-
-    // Verificación inmediatamente anterior a escribir. Si una tercera pestaña
-    // ya dejó un token distinto del utilizado y del recibido, su renovación es
-    // más reciente: no sobrescribimos ni token confiable ni sesión.
-    const cuentaActual = obtenerCuentaConfiable();
-    if (!mismaCuentaConfiable(cuentaActual, cuentaInicial)) {
-      throw errorRenovacion('La cuenta recordada cambió durante la renovación.', 409);
-    }
-
-    const tokenRecibido = datos.dispositivo_confiable.token;
-    if (cuentaActual.token !== tokenUtilizado && cuentaActual.token !== tokenRecibido) {
-      const sesionActual = getSession();
+    // La validación y la escritura comparten EL MISMO lock que login/logout.
+    // Otra pestaña puede cambiar la sesión durante el fetch, pero no puede
+    // colarse entre esta comprobación y persistirSesion().
+    return ejecutarConBloqueSesion(() => {
       exigirMismaEpoca(epoca);
-      const idSesionActual = sesionActual?.user?.id_usuario ?? sesionActual?.user?.id;
-      if (
-        !sesionActual?.token
-        || !sesionActual?.user
-        || Number(idSesionActual) !== Number(cuentaInicial.id_usuario)
-      ) {
-        throw errorRenovacion('No hay una sesión vigente de la cuenta renovada.', 409);
+      const cuentaActual = obtenerCuentaConfiable();
+      if (!mismaCuentaConfiable(cuentaActual, cuentaInicial)) {
+        throw errorRenovacion('La cuenta recordada cambió durante la renovación.', 409);
       }
 
-      // Otra pestaña completó una renovación más reciente. Devolvemos su estado
-      // actual, nunca el token/usuario recibido por esta respuesta más antigua.
-      return {
-        token: sesionActual.token,
-        user: sesionActual.user,
-        dispositivo_confiable: {
-          token: cuentaActual.token,
-          expira_en: cuentaActual.expira_en,
-        },
-        sesionRenovada: true,
-        sesionNoPersistida: true,
-      };
-    }
+      const tokenRecibido = datos.dispositivo_confiable.token;
+      if (cuentaActual.token !== tokenUtilizado && cuentaActual.token !== tokenRecibido) {
+        const sesionActual = getSession();
+        if (
+          !sesionActual?.token
+          || !sesionActual?.user
+          || !mismaCuentaDeSesion(sesionActual, { user: { id_usuario: cuentaInicial.id_usuario } })
+        ) {
+          throw errorRenovacion('No hay una sesión vigente de la cuenta renovada.', 409);
+        }
 
-    exigirMismaEpoca(epoca);
-    persistirSesion({ token: datos.token, user: datos.user });
-    guardarCuentaConfiable(datos.dispositivo_confiable, datos.user);
-    window.dispatchEvent(new CustomEvent('clubsunid:session-refreshed', { detail: datos.user }));
-    return { ...datos, sesionRenovada: true };
+        // Otra pestaña completó una renovación más reciente. Devolvemos su estado
+        // actual, nunca el token/usuario recibido por esta respuesta más antigua.
+        return {
+          token: sesionActual.token,
+          user: sesionActual.user,
+          dispositivo_confiable: {
+            token: cuentaActual.token,
+            expira_en: cuentaActual.expira_en,
+          },
+          sesionRenovada: true,
+          sesionNoPersistida: true,
+        };
+      }
+
+      persistirSesion({ token: datos.token, user: datos.user });
+      guardarCuentaConfiable(datos.dispositivo_confiable, datos.user, cuentaActual.dispositivo_id);
+      window.dispatchEvent(new CustomEvent('clubsunid:session-refreshed', { detail: datos.user }));
+      return { ...datos, sesionRenovada: true };
+    });
   }
 
   throw errorRenovacion('No se pudo completar la renovación de la sesión.', 409);
 }
 
-function ejecutarConBloqueRenovacion(dispositivoId, callback) {
+function ejecutarConBloqueRenovacion(clave, callback) {
   const locks = globalThis.navigator?.locks;
   if (typeof locks?.request === 'function') {
-    return locks.request(`${PREFIJO_BLOQUEO_RENOVACION}${dispositivoId}`, { mode: 'exclusive' }, callback);
+    return locks.request(`${PREFIJO_BLOQUEO_RENOVACION}${clave}`, { mode: 'exclusive' }, callback);
   }
   return callback();
 }
 
-export function renovarSesionConfiable() {
-  if (renovacionPendiente) return renovacionPendiente;
+// Login/logout y la escritura final de una renovación usan el mismo lock. El
+// fetch de renovación se hace fuera para no bloquear un cambio de sesión.
+function ejecutarConBloqueSesion(callback) {
+  const locks = globalThis.navigator?.locks;
+  if (typeof locks?.request === 'function') {
+    return locks.request(BLOQUEO_SESION, { mode: 'exclusive' }, callback);
+  }
+  return callback();
+}
 
+function claveRenovacion(cuenta, epoca) {
+  return JSON.stringify([cuenta.dispositivo_id, String(cuenta.id_usuario), epoca]);
+}
+
+export function renovarSesionConfiable() {
   const cuentaInicial = obtenerCuentaConfiable();
   if (!cuentaInicial) {
     return Promise.reject(new Error('No hay una cuenta recordada en este navegador.'));
   }
 
   const epoca = leerEpocaSesion();
-  renovacionPendiente = ejecutarConBloqueRenovacion(
-    cuentaInicial.dispositivo_id,
+  const clave = claveRenovacion(cuentaInicial, epoca);
+  const pendiente = renovacionesPendientes.get(clave);
+  if (pendiente) return pendiente;
+
+  const renovacion = ejecutarConBloqueRenovacion(
+    clave,
     () => renovarDentroDeBloque(epoca, cuentaInicial),
   ).finally(() => {
-    renovacionPendiente = null;
+    if (renovacionesPendientes.get(clave) === renovacion) renovacionesPendientes.delete(clave);
   });
-
-  return renovacionPendiente;
+  renovacionesPendientes.set(clave, renovacion);
+  return renovacion;
 }
 
-async function tokenParaSolicitud() {
-  const sesion = getSession();
+async function tokenParaSolicitud(sesion, epoca) {
   if (!sesion?.token) return null;
 
   // Un JWT confiable antiguo puede seguir vigente, pero el servidor ya lo
@@ -304,16 +349,21 @@ async function tokenParaSolicitud() {
   if (!jwtRequiereRenovacion(sesion.token) && !jwtVencePronto(sesion.token)) return sesion.token;
 
   const cuenta = obtenerCuentaConfiable();
-  const idUsuario = sesion.user?.id_usuario ?? sesion.user?.id;
+  const idUsuario = idUsuarioDeSesion(sesion);
   if (!cuenta || Number(cuenta.id_usuario) !== Number(idUsuario)) return sesion.token;
 
   try {
     await renovarSesionConfiable();
-    // Si otra pestaña ganó la carrera, usamos su sesión vigente. Si hubo logout
-    // o login nuevo, getSession refleja ese estado en vez del token capturado.
+    exigirMismaCuentaDeSolicitud(epoca, sesion);
+    // Otra pestaña puede haber renovado esta misma cuenta y época; nunca se
+    // adopta la sesión de una cuenta o época distinta.
     return getSession()?.token || null;
-  } catch {
-    return getSession()?.token || null;
+  } catch (err) {
+    // El fallo de renovación no rompe el flujo normal de la cuenta capturada,
+    // pero un cambio de sesión falla cerrado: no se envía la petición con B.
+    exigirMismaCuentaDeSolicitud(epoca, sesion);
+    if (err?.status === 409) throw err;
+    return getSession()?.token || sesion.token;
   }
 }
 
@@ -335,19 +385,51 @@ function persistirSesion(data) {
 }
 
 // Un login crea una época nueva. Toda renovación que capturó la anterior queda
-// invalidada, incluso si su respuesta llega después desde otra pestaña.
-export function setSession(data) {
-  invalidarEpocaSesion();
-  persistirSesion(data);
+// invalidada, incluso si su respuesta llega después desde otra pestaña. Estos
+// métodos son async porque serializan la escritura con el lock cross-tab.
+export async function setSession(data) {
+  await ejecutarConBloqueSesion(() => {
+    invalidarEpocaSesion();
+    persistirSesion(data);
+  });
 }
 
-export function iniciarSesionAlmacenada(data) {
-  setSession(data);
+export async function iniciarSesionAlmacenada(data, {
+  epocaEsperada,
+  dispositivoConfiable,
+  revocarDispositivo = false,
+} = {}) {
+  return ejecutarConBloqueSesion(() => {
+    if (epocaEsperada !== undefined && !conservaEpocaSesion(epocaEsperada)) return null;
+
+    invalidarEpocaSesion();
+    persistirSesion(data);
+    // La sesión y su cuenta confiable se escriben en la misma sección crítica.
+    if (dispositivoConfiable) guardarCuentaConfiable(dispositivoConfiable, data.user);
+    else if (revocarDispositivo) limpiarCuentaConfiable();
+    return data;
+  });
 }
 
-export function clearSession() {
-  invalidarEpocaSesion();
-  localStorage.removeItem('unid_session');
+export async function clearSession({ epocaEsperada, limpiarCuenta = false } = {}) {
+  return ejecutarConBloqueSesion(() => {
+    if (epocaEsperada !== undefined && !conservaEpocaSesion(epocaEsperada)) return false;
+
+    invalidarEpocaSesion();
+    localStorage.removeItem('unid_session');
+    if (limpiarCuenta) limpiarCuentaConfiable();
+    return true;
+  });
+}
+
+export async function limpiarCuentaConfianzaSiCoincide(cuentaEsperada, epocaEsperada) {
+  return ejecutarConBloqueSesion(() => {
+    if (epocaEsperada !== undefined && !conservaEpocaSesion(epocaEsperada)) return false;
+    const actual = obtenerCuentaConfiable();
+    if (!mismaCuentaConfiable(actual, cuentaEsperada) || actual.token !== cuentaEsperada?.token) return false;
+    limpiarCuentaConfiable();
+    return true;
+  });
 }
 
 export function getSession() {
@@ -378,7 +460,12 @@ function cuerpoErrorControlado(data) {
 }
 
 export async function request(endpoint, options = {}) {
-  const token = await tokenParaSolicitud();
+  const sesionInicial = getSession();
+  const epoca = capturarEpocaSesion();
+  const token = await tokenParaSolicitud(sesionInicial, epoca);
+  // La comprobación va inmediatamente antes de construir/enviar la petición.
+  // Incluye el camino sin renovación, donde await también cede el control.
+  exigirMismaCuentaDeSolicitud(epoca, sesionInicial);
   const headers = { 'Content-Type': 'application/json', ...options.headers };
 
   if (token) {

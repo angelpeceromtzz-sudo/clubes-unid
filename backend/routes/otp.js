@@ -131,6 +131,7 @@ router.post('/dispositivo/renovar', exigirOtpHabilitado, async (req, res) => {
     const jwt = generarToken(usuario, {
       idDispositivoConfiable: dispositivo.id_dispositivo,
       generacion: dispositivo.generacion,
+      origenOtp: true,
     });
     return res.json({
       token: jwt,
@@ -389,8 +390,9 @@ router.post(
         ? {
             idDispositivoConfiable: dispositivoConfiable.id_dispositivo,
             generacion: dispositivoConfiable.generacion,
+            origenOtp: true,
           }
-        : undefined);
+        : { origenOtp: true });
 
       return res.json({
         token,

@@ -227,8 +227,10 @@ describe('espejo schema.sql ↔ migración', () => {
     const schema = readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
     const migracion = readFileSync(new URL('../migrations/migrate-onboarding-preferencias.sql', import.meta.url), 'utf8');
     const marcador = 'CREATE TABLE IF NOT EXISTS cat_categorias_interes';
+    const finSeccion = 'CREATE TABLE IF NOT EXISTS reportes (';
     const sqlEjecutable = (texto) => texto
       .slice(texto.indexOf(marcador))
+      .split(finSeccion)[0]
       .split(/\r?\n/)
       .filter((linea) => linea.trim() !== '' && !linea.trim().startsWith('--') && !['BEGIN;', 'COMMIT;'].includes(linea.trim()))
       .join('\n');

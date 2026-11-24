@@ -1,9 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { api, getSession, clearSession } from '../services/api';
 import {
-  guardarCuentaConfiable,
   iniciarSesionAlmacenada,
-  limpiarCuentaConfiable,
   revocarCuentaConfiableEnServidor,
 } from '../services/api-core';
 import { useInicializacionMsal } from '../hooks/useInicializacionMsal';
@@ -109,19 +107,18 @@ export function ProveedorAutenticacion({ children: hijos }) {
   }, [actualizarUsuario, cargarDatosPosteriores, limpiarEstadoSesion]);
 
   const aplicarDatosLogin = useCallback(async (data) => {
-    if (data.dispositivo_confiable?.token) {
-      guardarCuentaConfiable(data.dispositivo_confiable, data.user);
-    } else if (data.dispositivo_confiable_revocado) {
-      limpiarCuentaConfiable();
-    }
     setUsuario(data.user);
     await cargarDatosPosteriores(data.user);
   }, [cargarDatosPosteriores]);
 
   const despuesDeLogin = useCallback(async (data) => {
     // La época nueva invalida cualquier renovación capturada por otra pestaña
-    // antes de este login, aunque su respuesta llegue después.
-    iniciarSesionAlmacenada({ token: data.token, user: data.user });
+    // antes de este login, aunque su respuesta llegue después. Sesión y cuenta
+    // confiable se persisten juntas bajo el lock cross-tab.
+    await iniciarSesionAlmacenada({ token: data.token, user: data.user }, {
+      dispositivoConfiable: data.dispositivo_confiable,
+      revocarDispositivo: data.dispositivo_confiable_revocado === true,
+    });
     await aplicarDatosLogin(data);
   }, [aplicarDatosLogin]);
 
@@ -129,14 +126,14 @@ export function ProveedorAutenticacion({ children: hijos }) {
     onLoggedIn: (data) => {
       if (data?.token && !data.sesionRenovada) {
         // El hook de MSAL ya creó la sesión y marcó el dato para no invalidar
-        // la época una segunda vez. Los logins directos sí pasan por aquí.
-        if (data.sesionPersistida) aplicarDatosLogin(data);
-        else despuesDeLogin(data);
+        // la época una segunda vez. La carga posterior no bloquea authReady.
+        const carga = data.sesionPersistida ? aplicarDatosLogin(data) : despuesDeLogin(data);
+        void carga.catch((err) => console.error('[Auth] No se pudieron cargar los datos posteriores:', err));
       } else if (data?.user) {
         // renovarSesionConfiable ya persistió la sesión y marcó el resultado.
         // Aquí sólo actualizamos usuario/datos, sin crear otra época de login.
         actualizarUsuario(data.user);
-        cargarDatosPosteriores(data.user);
+        void cargarDatosPosteriores(data.user).catch((err) => console.error('[Auth] No se pudieron cargar los datos posteriores:', err));
       }
     },
     onLoggedOut: () => {
@@ -200,17 +197,19 @@ export function ProveedorAutenticacion({ children: hijos }) {
     }
   }, [despuesDeLogin]);
 
-  const cerrarSesion = useCallback(() => {
+  const cerrarSesion = useCallback(async () => {
+    // La revocación captura la cuenta antes de borrarla; el fetch no se espera
+    // dentro del lock. Sesión y confianza se eliminan juntas.
     revocarCuentaConfiableEnServidor().catch(() => {});
-    limpiarCuentaConfiable();
-    limpiarEstadoSesion();
-    clearSession();
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('msal.')) {
-        localStorage.removeItem(key);
+    try {
+      await clearSession({ limpiarCuenta: true });
+    } finally {
+      limpiarEstadoSesion();
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('msal.')) localStorage.removeItem(key);
       }
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
-    window.history.replaceState({}, document.title, window.location.pathname);
   }, [limpiarEstadoSesion]);
 
   const obtenerInscripcionActiva = useCallback(async () => {

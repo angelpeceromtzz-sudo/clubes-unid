@@ -163,6 +163,21 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/migrate-otp-codigos.sql
 `otp_codigos` no se crea desde `schema.sql`; se aplica solo con la migración
 manual, con respaldo previo. No se ejecuta automáticamente al desplegar.
 
+Los JWT nuevos incluyen `auth_otp: true` cuando proceden de OTP (verificación o
+renovación de dispositivo) y `false` en login local/Microsoft. `authenticate`
+rechaza valores no booleanos y no permite que una sesión OTP conserve acceso
+cuando el rol actual de BD es admin, rectoría o coordinación. Los tokens legacy
+sin claim siguen siendo compatibles en los roles permitidos (1, 2, 5 y 6), pero
+**las cuentas admin, rectoría y coordinación con tokens viejos deberán iniciar
+sesión una vez**: el claim nuevo permite distinguir OTP de local/Microsoft sin
+invalidar innecesariamente a los roles que sí pueden usar OTP.
+
+La atomicidad de login/logout/renovación entre pestañas y la cadencia compartida
+del chat usan `navigator.locks`; el chat también usa `BroadcastChannel` para
+distribuir el snapshot ganador. En navegadores sin esas APIs se degrada a
+comportamiento local de una pestaña y el limitador del servidor sigue siendo la
+barrera final.
+
 (Opcional, solo desarrollo local) Sembrar datos de prueba. Úsalo **únicamente
 con una base de datos local desechable**: nunca contra Render, Supabase ni
 ninguna BD compartida o de producción (crea cuentas demo con contraseña

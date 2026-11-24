@@ -41,7 +41,7 @@ before(async () => {
 after(() => servidor?.close());
 function pedir(query = '', id = 3) {
   consultas.length = 0;
-  const token = jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  const token = jwt.sign({ id, auth_otp: false }, process.env.JWT_SECRET, { expiresIn: '5m' });
   return fetch(`${base}?${query}`, { headers: { Authorization: `Bearer ${token}` } });
 }
 

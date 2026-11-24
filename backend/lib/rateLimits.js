@@ -29,7 +29,9 @@ export const UMBRALES = {
   lecturasPesadasMinuto: enteroPositivo(process.env.RATE_LIMIT_LECTURAS_MINUTO, 60),
   escrituraMinuto: enteroPositivo(process.env.RATE_LIMIT_ESCRITURA_MINUTO, 60),
   chatLecturaMinuto: enteroPositivo(process.env.RATE_LIMIT_CHAT_LECTURA_MINUTO, 30),
-  chatPresenciaMinuto: enteroPositivo(process.env.RATE_LIMIT_CHAT_PRESENCIA_MINUTO, 10),
+  // El cliente visible genera hasta 24 pings/min (20 de escritura + 4 de
+  // heartbeat). 30 deja margen para montaje, visibilidad y cierre sin 429.
+  chatPresenciaMinuto: enteroPositivo(process.env.RATE_LIMIT_CHAT_PRESENCIA_MINUTO, 30),
   preferenciasMinuto: enteroPositivo(process.env.RATE_LIMIT_PREFERENCIAS_MINUTO, 30),
   registroMinuto: enteroPositivo(process.env.RATE_LIMIT_MISIONES_REGISTRO_MINUTO, enteroPositivo(process.env.RATE_LIMIT_MISIONES_REGISTRO_HORA, 60)),
 };

@@ -59,7 +59,7 @@ describe('integración de aprobación, eventos y mural', { skip: !databaseUrl },
 
   async function enviar(metodo, ruta, datos, rol = 3, usuario = rol) {
     const headers = { 'Content-Type': 'application/json' };
-    if (rol) headers.Authorization = `Bearer ${jwt.sign({ id: usuario, id_rol: rol, nombre_completo: 'Editor QA' }, process.env.JWT_SECRET)}`;
+    if (rol) headers.Authorization = `Bearer ${jwt.sign({ id: usuario, id_rol: rol, nombre_completo: 'Editor QA', auth_otp: false }, process.env.JWT_SECRET)}`;
     const respuesta = await fetch(`${base}${ruta}`, { method: metodo, headers, body: datos ? JSON.stringify(datos) : undefined });
     return { status: respuesta.status, datos: await respuesta.json() };
   }

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useBloqueoScroll } from '../../hooks/useBloqueoScroll';
@@ -13,6 +14,7 @@ function CapaMenu({ esMovil, children }) {
 }
 
 export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, onLogout, onLoginClick, onAyuda, itemsNav = [], onNavChange, ocultarHamburguesa = false }) {
+  const navigate = useNavigate();
   const { modoOscuro, setModoOscuro, tema } = useTheme();
 // const { noLeidas } = useNoticias();
   const dropdownRef = useRef(null);
@@ -73,7 +75,12 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
             <div dir="ltr">
               {user ? (
               <>
-                <div className="flex items-center gap-4 px-4 py-3 mb-2">
+                <button
+                  type="button"
+                  aria-label="Abrir mi perfil"
+                  onClick={() => { navigate('/perfil'); setMenuAbierto(false); }}
+                  className={`mb-2 flex w-full cursor-pointer items-center gap-4 rounded-lg px-4 py-3 text-left transition-colors ${tema.dropdownItem}`}
+                >
                   <div className="w-10 h-10 shrink-0 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-base">
                     {user.nombre_completo?.charAt(0) || '?'}
                   </div>
@@ -82,7 +89,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
                       {user.nombre_completo}
                     </p>
                   </div>
-                </div>
+                </button>
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 {!itemsNav.some((i) => i.key === 'usuarios') && (
                   <button

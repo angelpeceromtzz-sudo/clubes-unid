@@ -108,7 +108,7 @@ after(() => {
 });
 
 function token() {
-  return jwt.sign({ id: 100, nombre_completo: 'Admin', id_rol: 3 }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  return jwt.sign({ id: 100, nombre_completo: 'Admin', id_rol: 3, auth_otp: false }, process.env.JWT_SECRET, { expiresIn: '5m' });
 }
 
 async function pedirHistorial(query = '') {

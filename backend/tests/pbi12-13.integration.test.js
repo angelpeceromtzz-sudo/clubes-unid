@@ -84,7 +84,7 @@ beforeEach(async () => {
 async function enviar(method, ruta, datos, rol = 3, usuario) {
   const ids = { 1: 4, 2: 2, 3: 1, 4: 5, 5: 6 };
   const headers = { 'Content-Type': 'application/json' };
-  if (rol) headers.Authorization = `Bearer ${jwt.sign({ id: usuario || ids[rol], id_rol: rol, nombre_completo: 'Prueba' }, process.env.JWT_SECRET)}`;
+  if (rol) headers.Authorization = `Bearer ${jwt.sign({ id: usuario || ids[rol], id_rol: rol, nombre_completo: 'Prueba', auth_otp: false }, process.env.JWT_SECRET)}`;
   const res = await fetch(`${base}${ruta}`, { method, headers, body: datos ? JSON.stringify(datos) : undefined });
   return { status: res.status, datos: await res.json() };
 }

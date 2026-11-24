@@ -19,7 +19,14 @@ if (JWT_SECRET.length < 32) {
 // id (id_usuario), nombre_completo, correo_institucional, institutional_id,
 // id_rol y rol. Las sesiones confiables añaden el dispositivo y su generación;
 // esta última es obligatoria para evitar reactivar JWT antiguos sin ese vínculo.
-export function generarToken(user, { idDispositivoConfiable, generacion } = {}) {
+// Todos los JWT nuevos añaden auth_otp (boolean). Los tokens legacy sin claim
+// siguen siendo compatibles en roles permitidos; authenticate exige reautenticar
+// una vez si su rol actual es admin, rectoría o coordinación.
+export function generarToken(user, { idDispositivoConfiable, generacion, origenOtp = false } = {}) {
+  if (typeof origenOtp !== 'boolean') {
+    throw new Error('El origen OTP del JWT debe ser booleano.');
+  }
+
   const payload = {
     id: user.id_usuario,
     nombre_completo: user.nombre_completo,
@@ -27,6 +34,7 @@ export function generarToken(user, { idDispositivoConfiable, generacion } = {}) 
     institutional_id: user.institutional_id,
     id_rol: user.id_rol,
     rol: user.rol,
+    auth_otp: origenOtp,
   };
 
   if (idDispositivoConfiable != null) {

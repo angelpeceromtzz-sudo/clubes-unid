@@ -4,11 +4,15 @@ import { api } from '../../services/api';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
+import { crearCoordinadorPresencia, crearEjecutorConCadenciaCompartida } from '../../utils/chatClubCadencia';
 import './ChatClub.css';
 
 const MAX_CARACTERES = 400;
 const INTERVALO_SINCRONIZACION = 3500;
 const INTERVALO_PRESENCIA = 15000;
+// Un único tick de presencia activa cada 3 s por usuario/club entre pestañas.
+// El heartbeat de 15 s usa el estado omitido para no borrar el typing ajeno.
+const INTERVALO_PING_ESCRITURA = 3000;
 
 function fusionarMensajes(actuales = [], entrantes = []) {
   const porId = new Map();
@@ -68,6 +72,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
   const [cargandoAnteriores, setCargandoAnteriores] = useState(false);
   const chatDatosRef = useRef(null);
   const contextoChatRef = useRef(null);
+  const canalChatRef = useRef(null);
   const chatRef = useRef(null);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
@@ -77,10 +82,28 @@ export function ChatClub({ club, ocuparPantalla = false }) {
   const timerMantenerMensaje = useRef(null);
   const pulsacionLarga = useRef(false);
   const inicioRef = useRef(true);
-  const ultimoPingEscritura = useRef(0);
   const miId = Number(usuario?.id_usuario || usuario?.id);
   const esResponsable = Number(club.id_responsable_club) === miId;
   const temaClaro = !modoOscuro;
+  const puedeCompartirSnapshots = typeof globalThis.BroadcastChannel === 'function';
+  const ejecutarPollingCompartido = useMemo(() => crearEjecutorConCadenciaCompartida({
+    clave: `poll:${miId}:${club.id_club}`,
+    intervaloMs: INTERVALO_SINCRONIZACION,
+  }), [miId, club.id_club]);
+  const ejecutarPresenciaCompartida = useMemo(() => crearEjecutorConCadenciaCompartida({
+    clave: `presencia:${miId}:${club.id_club}`,
+    intervaloMs: INTERVALO_PING_ESCRITURA,
+  }), [miId, club.id_club]);
+  const controlPresencia = useMemo(() => crearCoordinadorPresencia({
+    intervaloMs: INTERVALO_PING_ESCRITURA,
+    enviar: (escribiendo, activo) => {
+      if (!activo) return api.actualizarPresenciaChat(club.id_club, false, false);
+      if (escribiendo == null) {
+        return ejecutarPresenciaCompartida(() => api.actualizarPresenciaChat(club.id_club));
+      }
+      return ejecutarPresenciaCompartida(() => api.actualizarPresenciaChat(club.id_club, escribiendo));
+    },
+  }), [club.id_club, ejecutarPresenciaCompartida]);
 
   const actualizarChat = useCallback((siguiente) => {
     chatDatosRef.current = siguiente;
@@ -132,11 +155,14 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     }
 
     contexto.leyendo = true;
+    const forzarPendiente = contexto.forzarLecturaPendiente;
     contexto.sincronizacionPendiente = false;
     contexto.forzarLecturaPendiente = false;
-    let forzarLectura = marcarLeido;
+    const forzarLectura = marcarLeido || forzarPendiente;
     try {
-      while (contextoChatRef.current === contexto && contexto.montado) {
+      // Un tick compartido realiza como máximo un GET normal. Las páginas para
+      // completar huecos son excepciones bajo demanda del propio tick.
+      if (contextoChatRef.current === contexto && contexto.montado) {
         const token = ++contexto.secuencia;
         const datosActuales = chatDatosRef.current;
         const anterior = datosActuales?.club?.id_club === club.id_club ? datosActuales : null;
@@ -177,7 +203,18 @@ export function ChatClub({ club, ocuparPantalla = false }) {
         const nuevosIds = new Set(mensajes
           .filter((mensaje) => Number(mensaje.id_mensaje) > ultimoAnterior)
           .map((mensaje) => Number(mensaje.id_mensaje)));
-        actualizarChat({ ...siguiente, mensajes, mas_anteriores: masAnteriores });
+        const snapshot = { ...siguiente, mensajes, mas_anteriores: masAnteriores };
+        actualizarChat(snapshot);
+        try {
+          canalChatRef.current?.postMessage({
+            tipo: 'snapshot',
+            idClub: club.id_club,
+            idUsuario: miId,
+            datos: snapshot,
+          });
+        } catch {
+          // BroadcastChannel es una optimización; el polling local sigue viable.
+        }
 
         if (!inicioRef.current && !pegadoAlFinal.current && nuevosIds.size) {
           setMensajesNuevos((cantidad) => cantidad + nuevosIds.size);
@@ -187,11 +224,8 @@ export function ChatClub({ club, ocuparPantalla = false }) {
         }
         if (contextoChatRef.current !== contexto || !contexto.montado || token !== contexto.secuencia) return;
         inicioRef.current = false;
-
-        if (contextoChatRef.current !== contexto || !contexto.montado || !contexto.sincronizacionPendiente) break;
-        forzarLectura = contexto.forzarLecturaPendiente;
-        contexto.sincronizacionPendiente = false;
-        contexto.forzarLecturaPendiente = false;
+        // Si hubo otra solicitud durante el GET, su bandera queda pendiente y
+        // el siguiente tick compartido la procesa; no se encadena otro GET.
       }
     } finally {
       if (contextoChatRef.current === contexto && contexto.montado) {
@@ -199,7 +233,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
         setCargandoAnteriores(false);
       }
     }
-  }, [club.id_club, actualizarChat, marcarChatLeido]);
+  }, [club.id_club, miId, actualizarChat, marcarChatLeido]);
 
   useEffect(() => {
     const contexto = {
@@ -218,6 +252,30 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     inicioRef.current = true;
     pegadoAlFinal.current = true;
 
+    let canal = null;
+    if (puedeCompartirSnapshots) {
+      canal = new BroadcastChannel(`clubsunid:chat:${miId}:${club.id_club}`);
+      canal.onmessage = (evento) => {
+        const datos = evento.data;
+        if (
+          !contexto.montado
+          || datos?.tipo !== 'snapshot'
+          || Number(datos.idClub) !== Number(club.id_club)
+          || Number(datos.idUsuario) !== miId
+          || !datos.datos
+        ) return;
+        // Un snapshot de otra pestaña invalida un GET local más antiguo y se
+        // fusiona para no perder mensajes que ya conocía esta pestaña.
+        contexto.secuencia += 1;
+        const actuales = chatDatosRef.current;
+        actualizarChat({
+          ...datos.datos,
+          mensajes: fusionarMensajes(actuales?.mensajes, datos.datos.mensajes),
+        });
+      };
+      canalChatRef.current = canal;
+    }
+
     const iniciar = async () => {
       setChat(null);
       setCargando(true);
@@ -225,7 +283,8 @@ export function ChatClub({ club, ocuparPantalla = false }) {
       setMensajesNuevos(0);
       setError('');
       try {
-        await api.actualizarPresenciaChat(club.id_club, false);
+        // La presencia es opcional: un 429 no debe impedir abrir el chat.
+        controlPresencia.publicarLatido();
         await sincronizar({ marcarLeido: true });
         if (contextoChatRef.current === contexto && contexto.montado) setError('');
       } catch (err) {
@@ -235,16 +294,24 @@ export function ChatClub({ club, ocuparPantalla = false }) {
       }
     };
     iniciar();
+
+    const sincronizarVisible = (marcarLeido = false) => {
+      const accion = () => sincronizar({ marcarLeido });
+      // Sin BroadcastChannel no podemos distribuir el snapshot ganador a las
+      // demás pestañas; en ese caso se degrada a polling local por visibilidad.
+      const resultado = puedeCompartirSnapshots ? ejecutarPollingCompartido(accion) : accion();
+      resultado.catch(() => {});
+    };
     const polling = window.setInterval(() => {
-      if (document.visibilityState === 'visible') sincronizar().catch(() => {});
+      if (document.visibilityState === 'visible') sincronizarVisible();
     }, INTERVALO_SINCRONIZACION);
     const presencia = window.setInterval(() => {
-      api.actualizarPresenciaChat(club.id_club, escribiendoRef.current).catch(() => {});
+      if (document.visibilityState === 'visible') controlPresencia.publicarLatido();
     }, INTERVALO_PRESENCIA);
     const alVolver = () => {
       if (document.visibilityState === 'visible') {
-        sincronizar({ marcarLeido: true }).catch(() => {});
-        api.actualizarPresenciaChat(club.id_club, escribiendoRef.current).catch(() => {});
+        sincronizarVisible(true);
+        controlPresencia.publicarLatido();
       }
     };
     document.addEventListener('visibilitychange', alVolver);
@@ -256,10 +323,13 @@ export function ChatClub({ club, ocuparPantalla = false }) {
       window.clearInterval(presencia);
       window.clearTimeout(timerEscritura.current);
       window.clearTimeout(timerMantenerMensaje.current);
-      api.actualizarPresenciaChat(club.id_club, false, false).catch(() => {});
+      controlPresencia.publicar(false, false);
+      controlPresencia.cancelarPendientes();
+      canal?.close();
+      if (canalChatRef.current === canal) canalChatRef.current = null;
       document.removeEventListener('visibilitychange', alVolver);
     };
-  }, [club.id_club, sincronizar]);
+  }, [club.id_club, miId, sincronizar, actualizarChat, controlPresencia, ejecutarPollingCompartido, puedeCompartirSnapshots]);
 
   const ultimoMensajeId = chat?.mensajes?.at(-1)?.id_mensaje;
   useEffect(() => {
@@ -300,7 +370,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     campo.style.overflowY = campo.scrollHeight > 128 ? 'auto' : 'hidden';
   }, [texto]);
 
-  const miembros = chat?.miembros || [];
+  const miembros = useMemo(() => chat?.miembros || [], [chat?.miembros]);
   const fijados = chat?.fijados || [];
   const conectados = useMemo(() => miembros.filter((m) => m.conectado), [miembros]);
   const escribiendo = useMemo(() => miembros.filter((m) => m.escribiendo && Number(m.id_usuario) !== miId), [miembros, miId]);
@@ -309,17 +379,13 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     return miembros.filter((m) => Number(m.id_usuario) !== miId && m.nombre_completo.toLowerCase().includes(seleccionMencion.toLowerCase())).slice(0, 5);
   }, [miembros, seleccionMencion, miId]);
 
-  async function avisarEscritura() {
+  function avisarEscritura() {
     escribiendoRef.current = true;
-    const ahora = Date.now();
-    if (ahora - ultimoPingEscritura.current >= 3000) {
-      ultimoPingEscritura.current = ahora;
-      api.actualizarPresenciaChat(club.id_club, true).catch(() => {});
-    }
+    controlPresencia.publicar(true);
     window.clearTimeout(timerEscritura.current);
     timerEscritura.current = window.setTimeout(() => {
       escribiendoRef.current = false;
-      api.actualizarPresenciaChat(club.id_club, false).catch(() => {});
+      controlPresencia.publicar(false);
     }, 5000);
   }
 
@@ -336,7 +402,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     else {
       escribiendoRef.current = false;
       window.clearTimeout(timerEscritura.current);
-      api.actualizarPresenciaChat(club.id_club, false).catch(() => {});
+      controlPresencia.publicar(false);
     }
   }
 
@@ -365,9 +431,12 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     try {
       if (editarId) await api.editarMensajeChat(club.id_club, editarId, texto.trim(), menciones.map((m) => m.id));
       else await api.enviarMensajeChat(club.id_club, texto.trim(), menciones.map((m) => m.id));
+      const contexto = contextoChatRef.current;
+      if (!contexto || contexto.idClub !== club.id_club || !contexto.montado) return;
       setTexto(''); setMenciones([]); setEditarId(null); setSeleccionMencion(null); setEspera(editarId ? 0 : 4);
+      window.clearTimeout(timerEscritura.current);
       escribiendoRef.current = false;
-      await api.actualizarPresenciaChat(club.id_club, false).catch(() => {});
+      controlPresencia.publicar(false);
       pegadoAlFinal.current = true;
       await sincronizar({ marcarLeido: true });
     } catch (err) {
@@ -530,8 +599,6 @@ export function ChatClub({ club, ocuparPantalla = false }) {
         {chat.mensajes.length === 0 && <div className={`grid min-h-64 place-content-center text-center ${secundaria}`}><p className="font-semibold">Este es el inicio del chat</p><p className="mt-1 text-sm">Envía un mensaje para comenzar la conversación.</p></div>}
         {chat.mensajes.map((mensaje) => {
           const mio = Number(mensaje.id_autor) === miId;
-          const puedeBorrar = mio || esResponsable;
-          const puedeEditar = mio && !mensaje.eliminado;
           return <article key={mensaje.id_mensaje}
             data-chat-mensaje
             onPointerDown={(evento) => iniciarMantenerMensaje(evento, mensaje.id_mensaje, mio)}
