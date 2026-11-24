@@ -26,6 +26,21 @@ export function montarInvitadosTrineo(router, {
   db, hoy, obtenerEdicion, comprobarPublica, edicionPublica, transaccion, auditar, catalogoEdicion, aportesRegistro,
   limitarEscritura, limitarRegistro, limitarReenvio, correoMisiones,
 }) {
+  function registrarError(tipo, detalle, edicion) {
+    console.error(`[trineo] ${tipo}: ${String(detalle || 'Sin detalle').slice(0, 1500)}`, {
+      edicion: edicion?.id_edicion || edicion?.nombre || 'desconocida',
+    });
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    const diagnosticoError = (_req, res) => {
+      registrarError('Error simulado', 'Prueba manual del módulo Trineo.', { id_edicion: 0, nombre: 'Diagnóstico local' });
+      res.json({ ok: true, mensaje: 'Error simulado registrado en la consola.' });
+    };
+    router.get('/trineo/diagnostico/error', diagnosticoError);
+    router.post('/trineo/diagnostico/error', diagnosticoError);
+  }
+
   function comprobarTrineo(edicion) {
     if (edicion.plantilla !== 'trineo') throw errorActividad('El registro de invitados corresponde al Trineo de los Sueños', 404);
   }
@@ -117,13 +132,24 @@ export function montarInvitadosTrineo(router, {
       if (!correoMisiones) throw new Error('Correo no configurado');
       const enlace = await correoMisiones.enviarEnlace({ correo: registro.correo, folio: registro.folio, token, edicion: edicion.nombre, ruta: 'trineo', titulo: 'Trineo de los Sueños', origen: origenFrontend });
       return { enviado: true, enlace };
-    } catch { return { enviado: false, enlace: null }; }
+    } catch (error) {
+      registrarError('Fallo al enviar enlace de invitado', `Correo: ${registro.correo}. Folio: ${registro.folio}. ${error.message}`, edicion);
+      return { enviado: false, enlace: null };
+    }
   }
 
   router.post('/trineo/ediciones/:idEdicion/invitados', limitarRegistro, async (req, _res, next) => {
     exigirAbierta(await obtenerEdicion(db, req.params.idEdicion)); next();
   }, async (req, res) => {
-    const resultado = await transaccion(async (cliente) => guardarInscripcion(cliente, req, await obtenerEdicion(cliente, req.params.idEdicion, true)));
+    let resultado;
+    let edicion;
+    try {
+      edicion = await obtenerEdicion(db, req.params.idEdicion);
+      resultado = await transaccion(async (cliente) => guardarInscripcion(cliente, req, await obtenerEdicion(cliente, req.params.idEdicion, true)));
+    } catch (error) {
+      if (!error.status || error.code || error.status >= 500 || (error.status === 409 && /existe|duplicad/i.test(error.message))) registrarError('Error al registrar invitado', error.message, edicion);
+      throw error;
+    }
     const origenFrontend = req.body?.origen || req.headers.origin || null;
     const envio = await enviarEnlace(resultado.registro, resultado.token, resultado.edicion, origenFrontend);
     const enlace = envio.enlace || null;

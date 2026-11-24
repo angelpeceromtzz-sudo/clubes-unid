@@ -33,6 +33,10 @@ try {
 // America/Merida aunque el servidor esté en UTC. No toca la configuración
 // TLS que construye dbTls (rejectUnauthorized: true con CA propia).
 config.options = `-c TimeZone=${TIMEZONE_IANA}`;
+config.max = Number.parseInt(process.env.DATABASE_POOL_MAX || '20', 10) || 20;
+config.connectionTimeoutMillis = Number.parseInt(process.env.DATABASE_CONNECTION_TIMEOUT_MS || '5000', 10) || 5000;
+config.idleTimeoutMillis = Number.parseInt(process.env.DATABASE_IDLE_TIMEOUT_MS || '10000', 10) || 10000;
+config.statement_timeout = Number.parseInt(process.env.DATABASE_STATEMENT_TIMEOUT_MS || '15000', 10) || 15000;
 
 const pool = new Pool(config);
 

@@ -29,6 +29,7 @@ export const UMBRALES = {
   lecturasPesadasMinuto: enteroPositivo(process.env.RATE_LIMIT_LECTURAS_MINUTO, 60),
   escrituraMinuto: enteroPositivo(process.env.RATE_LIMIT_ESCRITURA_MINUTO, 60),
   preferenciasMinuto: enteroPositivo(process.env.RATE_LIMIT_PREFERENCIAS_MINUTO, 30),
+  registroMinuto: enteroPositivo(process.env.RATE_LIMIT_MISIONES_REGISTRO_MINUTO, enteroPositivo(process.env.RATE_LIMIT_MISIONES_REGISTRO_HORA, 60)),
 };
 
 const MENSAJE_429 =
@@ -211,8 +212,8 @@ export const limitadorEscritura = crearLimitador({
 
 // Registro sin cuenta: cuota por IP; el reenvío además se limita por inscripción.
 export const limitadorMisionesRegistro = crearLimitador({
-  identifier: 'misiones-registro', windowMs: 60 * 60 * 1000,
-  limit: enteroPositivo(process.env.RATE_LIMIT_MISIONES_REGISTRO_HORA, 60),
+  identifier: 'misiones-registro', windowMs: 60 * 1000,
+  limit: UMBRALES.registroMinuto,
 });
 export const limitadorMisionesReenvio = crearLimitador({
   identifier: 'misiones-reenvio', windowMs: 15 * 60 * 1000,
