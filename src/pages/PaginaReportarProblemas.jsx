@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { BarraGeneral } from '../components/layout/barra-navegacion/BarraGeneral';
@@ -139,6 +140,10 @@ export default function PaginaReportarProblemas() {
       <section className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-8">
         <div className={`rounded-2xl border p-6 sm:p-8 ${oscuro ? 'bg-[#0e162c]/60 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500 mb-3">Soporte</p>
+    <main className={oscuro ? 'bg-[#0b111e] text-white' : 'bg-slate-50 text-slate-900'}>
+      <BarraGeneral logoTo={logoTo} />
+      <section className="max-w-4xl mx-auto px-6 sm:px-8 py-12 sm:py-16 space-y-8">
+        <div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Reportar un problema</h1>
           <p className={`mt-3 leading-relaxed ${oscuro ? 'text-slate-300' : 'text-slate-600'}`}>
             Cuéntanos qué ocurrió. Entre más claro seas (módulo, pasos y descripción), más rápido podremos ayudarte. Tu reporte se envía al equipo de administración.
