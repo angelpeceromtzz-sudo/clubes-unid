@@ -191,7 +191,7 @@ export function SeccionFeedClub({ club, esResponsableClub }) {
                   {!reaccionElegida && <button
                     type="button"
                     className={`reaccion-aviso__abrir ${menuReaccionId === aviso.id_aviso ? 'reaccion-aviso__abrir--abierta' : ''}`}
-                    onClick={() => setMenuReaccionId(aviso.id_aviso)}
+                    onClick={() => setMenuReaccionId((actual) => actual === aviso.id_aviso ? null : aviso.id_aviso)}
                     aria-expanded={menuReaccionId === aviso.id_aviso}
                     aria-haspopup="true"
                     aria-controls={`opciones-reaccion-${aviso.id_aviso}`}

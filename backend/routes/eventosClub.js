@@ -15,19 +15,26 @@ const CAMPOS = `id_evento_club, id_club, id_autor, titulo, descripcion,
   fecha_evento::text AS fecha_evento, fecha_fin_evento::text AS fecha_fin_evento,
   hora_evento, lugar_evento, fecha_creacion`;
 
-function validarEvento(body) {
+function validarEvento(body, fechasActuales = null) {
   const { titulo, descripcion, fecha_evento, fecha_fin_evento, hora_evento, lugar_evento } = body;
   if (typeof titulo !== 'string' || !titulo.trim() || titulo.trim().length > 150) return 'El título es obligatorio y debe tener máximo 150 caracteres';
   if (typeof descripcion !== 'string' || !descripcion.trim() || descripcion.trim().length > 2000) return 'La descripción es obligatoria y debe tener máximo 2000 caracteres';
   if (!fechaEventoValida(fecha_evento)) return 'La fecha del evento no es válida';
   const hoy = hoyEnCampus();
   const ultimoDiaDelAnio = `${hoy.slice(0, 4)}-12-31`;
-  if (fecha_evento < hoy) return 'La fecha de inicio no puede ser anterior a hoy';
-  if (fecha_evento > ultimoDiaDelAnio) return 'Solo puedes programar eventos dentro del año actual';
+  const inicioConservado = fechasActuales?.fecha_evento === fecha_evento;
+  if (!inicioConservado) {
+    if (fecha_evento < hoy) return 'La fecha de inicio no puede ser anterior a hoy';
+    if (fecha_evento > ultimoDiaDelAnio) return 'Solo puedes programar eventos dentro del año actual';
+  }
   if (fecha_fin_evento != null && fecha_fin_evento !== '') {
     if (!fechaEventoValida(fecha_fin_evento)) return 'La fecha de término no es válida';
     if (fecha_fin_evento < fecha_evento) return 'La fecha de término no puede ser anterior al inicio';
-    if (fecha_fin_evento > ultimoDiaDelAnio) return 'La fecha de término debe estar dentro del año actual';
+    const finConservado = fechasActuales?.fecha_fin_evento === fecha_fin_evento;
+    if (!finConservado) {
+      if (fecha_fin_evento < hoy) return 'La fecha de término no puede ser anterior a hoy';
+      if (fecha_fin_evento > ultimoDiaDelAnio) return 'La fecha de término debe estar dentro del año actual';
+    }
   }
   if (hora_evento != null && hora_evento !== '' && (typeof hora_evento !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(hora_evento))) return 'La hora del evento no es válida';
   if (lugar_evento != null && (typeof lugar_evento !== 'string' || lugar_evento.trim().length > 200)) return 'El lugar debe tener máximo 200 caracteres';
@@ -85,9 +92,15 @@ router.post('/:idClub', authenticate, requireClubLeader, async (req, res) => {
 });
 
 router.put('/:idClub/:idEvento', authenticate, requireClubLeader, async (req, res) => {
-  const error = validarEvento(req.body || {});
-  if (error) return res.status(400).json({ error });
   try {
+    const { rows: actuales } = await pool.query(
+      `SELECT fecha_evento::text AS fecha_evento, fecha_fin_evento::text AS fecha_fin_evento
+       FROM eventos_clubes WHERE id_evento_club=$1 AND id_club=$2`,
+      [req.params.idEvento, req.params.idClub]
+    );
+    if (!actuales[0]) return res.status(404).json({ error: 'Evento no encontrado' });
+    const error = validarEvento(req.body || {}, actuales[0]);
+    if (error) return res.status(400).json({ error });
     const { titulo, descripcion, fecha_evento, fecha_fin_evento, hora_evento, lugar_evento } = req.body;
     const { rows } = await pool.query(
       `UPDATE eventos_clubes SET titulo=$1, descripcion=$2, fecha_evento=$3, fecha_fin_evento=$4, hora_evento=$5, lugar_evento=$6

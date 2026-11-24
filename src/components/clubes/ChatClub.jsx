@@ -10,6 +10,18 @@ const MAX_CARACTERES = 400;
 const INTERVALO_SINCRONIZACION = 3500;
 const INTERVALO_PRESENCIA = 15000;
 
+function fusionarMensajes(actuales = [], entrantes = []) {
+  const porId = new Map();
+  for (const mensaje of [...actuales, ...entrantes]) {
+    if (mensaje?.id_mensaje != null) porId.set(Number(mensaje.id_mensaje), mensaje);
+  }
+  return [...porId.values()].sort((a, b) => Number(a.id_mensaje) - Number(b.id_mensaje));
+}
+
+function ultimoIdMensaje(mensajes = []) {
+  return Number(mensajes.at(-1)?.id_mensaje || 0);
+}
+
 function nombreClase(persona, club) {
   const idPersona = Number(persona.id_usuario ?? persona.id_autor);
   if (persona.es_responsable || idPersona === Number(club.id_responsable_club)) return 'chat-club__nombre chat-club__nombre--responsable';
@@ -53,6 +65,9 @@ export function ChatClub({ club, ocuparPantalla = false }) {
   const [menuMensaje, setMenuMensaje] = useState(null);
   const [menuSilencioId, setMenuSilencioId] = useState(null);
   const [mensajesNuevos, setMensajesNuevos] = useState(0);
+  const [cargandoAnteriores, setCargandoAnteriores] = useState(false);
+  const chatDatosRef = useRef(null);
+  const contextoChatRef = useRef(null);
   const chatRef = useRef(null);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
@@ -67,35 +82,157 @@ export function ChatClub({ club, ocuparPantalla = false }) {
   const esResponsable = Number(club.id_responsable_club) === miId;
   const temaClaro = !modoOscuro;
 
-  const sincronizar = useCallback(async ({ marcarLeido = false } = {}) => {
-    const siguiente = await api.obtenerChatClub(club.id_club);
-    setChat((anterior) => {
-      if (!anterior) return siguiente;
-      const existentes = new Map(anterior.mensajes.map((m) => [Number(m.id_mensaje), m]));
-      for (const m of siguiente.mensajes) existentes.set(Number(m.id_mensaje), m);
-      const mensajes = [...existentes.values()].sort((a, b) => Number(a.id_mensaje) - Number(b.id_mensaje));
-      const ultimoAnterior = Number(anterior.mensajes.at(-1)?.id_mensaje || 0);
-      const ultimoNuevo = Number(siguiente.mensajes.at(-1)?.id_mensaje || 0);
-      if (ultimoNuevo > ultimoAnterior && !pegadoAlFinal.current) setMensajesNuevos((n) => n + 1);
-      return { ...siguiente, mensajes };
-    });
-    if (marcarLeido || (pegadoAlFinal.current && !inicioRef.current)) {
-      await api.marcarChatClubLeido(club.id_club).catch(() => {});
-      window.dispatchEvent(new CustomEvent('clubsunid:notificaciones-refresh'));
-      setMensajesNuevos(0);
+  const actualizarChat = useCallback((siguiente) => {
+    chatDatosRef.current = siguiente;
+    setChat(siguiente);
+  }, []);
+
+  const marcarChatLeido = useCallback(async () => {
+    const contexto = contextoChatRef.current;
+    if (!contexto || contexto.idClub !== club.id_club || !contexto.montado) return;
+    const ultimo = ultimoIdMensaje(chatDatosRef.current?.mensajes);
+    if (ultimo <= contexto.ultimoIdMarcado) return;
+    if (contexto.marcandoLectura !== null) {
+      contexto.marcaPendiente = Math.max(contexto.marcaPendiente || 0, ultimo);
+      return;
     }
-    inicioRef.current = false;
+
+    async function ejecutarMarcado(objetivo) {
+      if (contextoChatRef.current !== contexto || !contexto.montado) return;
+      contexto.marcandoLectura = objetivo;
+      try {
+        await api.marcarChatClubLeido(club.id_club);
+        if (contextoChatRef.current === contexto && contexto.montado) {
+          contexto.ultimoIdMarcado = Math.max(contexto.ultimoIdMarcado, objetivo);
+          window.dispatchEvent(new CustomEvent('clubsunid:notificaciones-refresh'));
+          if (objetivo >= ultimoIdMensaje(chatDatosRef.current?.mensajes)) setMensajesNuevos(0);
+        }
+      } catch {
+        // La siguiente sincronización aplicable podrá reintentar la lectura.
+      } finally {
+        if (contextoChatRef.current === contexto && contexto.montado) {
+          contexto.marcandoLectura = null;
+          const pendiente = contexto.marcaPendiente;
+          contexto.marcaPendiente = null;
+          if (pendiente > contexto.ultimoIdMarcado) void ejecutarMarcado(pendiente);
+        }
+      }
+    }
+
+    await ejecutarMarcado(ultimo);
   }, [club.id_club]);
 
+  const sincronizar = useCallback(async ({ marcarLeido = false } = {}) => {
+    const contexto = contextoChatRef.current;
+    if (!contexto || contexto.idClub !== club.id_club || !contexto.montado) return;
+    if (contexto.leyendo) {
+      contexto.sincronizacionPendiente = true;
+      contexto.forzarLecturaPendiente ||= marcarLeido;
+      return;
+    }
+
+    contexto.leyendo = true;
+    contexto.sincronizacionPendiente = false;
+    contexto.forzarLecturaPendiente = false;
+    let forzarLectura = marcarLeido;
+    try {
+      while (contextoChatRef.current === contexto && contexto.montado) {
+        const token = ++contexto.secuencia;
+        const datosActuales = chatDatosRef.current;
+        const anterior = datosActuales?.club?.id_club === club.id_club ? datosActuales : null;
+        const siguiente = await api.obtenerChatClub(club.id_club);
+        if (contextoChatRef.current !== contexto || !contexto.montado || token !== contexto.secuencia) return;
+
+        const ultimoAnterior = ultimoIdMensaje(anterior?.mensajes);
+        let mensajes = fusionarMensajes(anterior?.mensajes, siguiente.mensajes || []);
+        let masAnteriores = anterior ? Boolean(anterior.mas_anteriores) : Boolean(siguiente.mas_anteriores);
+        const primeroNuevo = (siguiente.mensajes || [])
+          .map((mensaje) => Number(mensaje.id_mensaje))
+          .find((id) => id > ultimoAnterior);
+
+        if (anterior && primeroNuevo > ultimoAnterior + 1) {
+          setCargandoAnteriores(true);
+          try {
+            let cursor = primeroNuevo;
+            while (true) {
+              const pagina = await api.obtenerChatClub(club.id_club, cursor);
+              if (contextoChatRef.current !== contexto || !contexto.montado || token !== contexto.secuencia) return;
+              const paginaMensajes = pagina.mensajes || [];
+              if (!paginaMensajes.length) break;
+              const primeroPagina = Number(paginaMensajes[0].id_mensaje);
+              // Las páginas antiguas completan huecos, pero no sustituyen mensajes ya conocidos.
+              mensajes = fusionarMensajes(paginaMensajes, mensajes);
+              masAnteriores = Boolean(masAnteriores && pagina.mas_anteriores);
+              if (primeroPagina <= ultimoAnterior + 1 || !pagina.mas_anteriores) break;
+              if (primeroPagina >= cursor) throw new Error('No se pudo completar el historial intermedio.');
+              cursor = primeroPagina;
+            }
+          } finally {
+            if (contextoChatRef.current === contexto && contexto.montado) setCargandoAnteriores(false);
+          }
+        }
+
+        if (contextoChatRef.current !== contexto || !contexto.montado || token !== contexto.secuencia) return;
+        const ultimoNuevo = ultimoIdMensaje(mensajes);
+        const nuevosIds = new Set(mensajes
+          .filter((mensaje) => Number(mensaje.id_mensaje) > ultimoAnterior)
+          .map((mensaje) => Number(mensaje.id_mensaje)));
+        actualizarChat({ ...siguiente, mensajes, mas_anteriores: masAnteriores });
+
+        if (!inicioRef.current && !pegadoAlFinal.current && nuevosIds.size) {
+          setMensajesNuevos((cantidad) => cantidad + nuevosIds.size);
+        }
+        if (forzarLectura || (pegadoAlFinal.current && !inicioRef.current && ultimoNuevo > contexto.ultimoIdMarcado)) {
+          await marcarChatLeido();
+        }
+        if (contextoChatRef.current !== contexto || !contexto.montado || token !== contexto.secuencia) return;
+        inicioRef.current = false;
+
+        if (contextoChatRef.current !== contexto || !contexto.montado || !contexto.sincronizacionPendiente) break;
+        forzarLectura = contexto.forzarLecturaPendiente;
+        contexto.sincronizacionPendiente = false;
+        contexto.forzarLecturaPendiente = false;
+      }
+    } finally {
+      if (contextoChatRef.current === contexto && contexto.montado) {
+        contexto.leyendo = false;
+        setCargandoAnteriores(false);
+      }
+    }
+  }, [club.id_club, actualizarChat, marcarChatLeido]);
+
   useEffect(() => {
-    let montado = true;
+    const contexto = {
+      idClub: club.id_club,
+      montado: true,
+      leyendo: false,
+      secuencia: 0,
+      sincronizacionPendiente: false,
+      forzarLecturaPendiente: false,
+      marcandoLectura: null,
+      marcaPendiente: null,
+      ultimoIdMarcado: 0,
+    };
+    contextoChatRef.current = contexto;
+    chatDatosRef.current = null;
+    inicioRef.current = true;
+    pegadoAlFinal.current = true;
+
     const iniciar = async () => {
+      setChat(null);
+      setCargando(true);
+      setCargandoAnteriores(false);
+      setMensajesNuevos(0);
+      setError('');
       try {
         await api.actualizarPresenciaChat(club.id_club, false);
         await sincronizar({ marcarLeido: true });
-        if (montado) setError('');
-      } catch (err) { if (montado) setError(err.message || 'No se pudo abrir el chat del club.'); }
-      finally { if (montado) setCargando(false); }
+        if (contextoChatRef.current === contexto && contexto.montado) setError('');
+      } catch (err) {
+        if (contextoChatRef.current === contexto && contexto.montado) setError(err.message || 'No se pudo abrir el chat del club.');
+      } finally {
+        if (contextoChatRef.current === contexto && contexto.montado) setCargando(false);
+      }
     };
     iniciar();
     const polling = window.setInterval(() => {
@@ -112,7 +249,9 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     };
     document.addEventListener('visibilitychange', alVolver);
     return () => {
-      montado = false;
+      contexto.montado = false;
+      contexto.secuencia += 1;
+      if (contextoChatRef.current === contexto) contextoChatRef.current = null;
       window.clearInterval(polling);
       window.clearInterval(presencia);
       window.clearTimeout(timerEscritura.current);
@@ -122,9 +261,10 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     };
   }, [club.id_club, sincronizar]);
 
+  const ultimoMensajeId = chat?.mensajes?.at(-1)?.id_mensaje;
   useEffect(() => {
     if (pegadoAlFinal.current && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [chat?.mensajes?.length]);
+  }, [ultimoMensajeId]);
 
   useEffect(() => {
     if (!espera) return undefined;
@@ -237,15 +377,46 @@ export function ChatClub({ club, ocuparPantalla = false }) {
   }
 
   async function cargarAnteriores() {
-    const primero = chat?.mensajes?.[0]?.id_mensaje;
-    if (!primero) return;
+    const contexto = contextoChatRef.current;
+    const actual = chatDatosRef.current;
+    const primero = Number(actual?.mensajes?.[0]?.id_mensaje || 0);
+    if (!contexto || contexto.idClub !== club.id_club || !contexto.montado
+      || contexto.leyendo || !actual?.mas_anteriores || !primero) return;
+
     const panel = scrollRef.current;
     const alturaAnterior = panel?.scrollHeight || 0;
+    contexto.leyendo = true;
+    const token = ++contexto.secuencia;
+    setCargandoAnteriores(true);
     try {
       const anterior = await api.obtenerChatClub(club.id_club, primero);
-      setChat((actual) => ({ ...anterior, mensajes: [...anterior.mensajes, ...(actual?.mensajes || [])], mas_anteriores: anterior.mas_anteriores }));
-      window.requestAnimationFrame(() => { if (panel) panel.scrollTop = panel.scrollHeight - alturaAnterior; });
-    } catch (err) { setError(err.message || 'No se pudo cargar el historial.'); }
+      if (contextoChatRef.current !== contexto || !contexto.montado || token !== contexto.secuencia) return;
+      const vigente = chatDatosRef.current;
+      if (!vigente || Number(vigente.mensajes?.[0]?.id_mensaje) !== primero) return;
+      actualizarChat({
+        ...vigente,
+        mensajes: fusionarMensajes(anterior.mensajes || [], vigente.mensajes || []),
+        mas_anteriores: Boolean(vigente.mas_anteriores && anterior.mas_anteriores),
+      });
+      window.requestAnimationFrame(() => {
+        if (contextoChatRef.current === contexto && contexto.montado && panel) {
+          panel.scrollTop = panel.scrollHeight - alturaAnterior;
+        }
+      });
+    } catch (err) {
+      if (contextoChatRef.current === contexto && contexto.montado) setError(err.message || 'No se pudo cargar el historial.');
+    } finally {
+      if (contextoChatRef.current === contexto && contexto.montado) {
+        contexto.leyendo = false;
+        setCargandoAnteriores(false);
+        if (contexto.sincronizacionPendiente) {
+          const forzarLectura = contexto.forzarLecturaPendiente;
+          contexto.sincronizacionPendiente = false;
+          contexto.forzarLecturaPendiente = false;
+          void sincronizar({ marcarLeido: forzarLectura });
+        }
+      }
+    }
   }
 
   async function borrarMensaje(id) {
@@ -309,13 +480,20 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     inputRef.current?.focus();
   }
 
+  function irAlFinal() {
+    pegadoAlFinal.current = true;
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    setMensajesNuevos(0);
+    void marcarChatLeido();
+  }
+
   function alDesplazar() {
     const panel = scrollRef.current;
     if (!panel) return;
     pegadoAlFinal.current = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 80;
     if (pegadoAlFinal.current && mensajesNuevos) {
       setMensajesNuevos(0);
-      api.marcarChatClubLeido(club.id_club).then(() => window.dispatchEvent(new CustomEvent('clubsunid:notificaciones-refresh'))).catch(() => {});
+      void marcarChatLeido();
     }
   }
 
@@ -348,7 +526,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
 
     <div className="relative flex min-h-0 flex-1">
       <div ref={scrollRef} onScroll={alDesplazar} className={`chat-club__mensajes min-w-0 flex-1 space-y-2 overflow-y-auto px-3 py-3 md:space-y-3 md:px-5 md:py-4 ${miembrosAbiertos ? 'lg:pr-4' : ''}`}>
-        {chat.mas_anteriores && <div className="flex justify-center"><button type="button" onClick={cargarAnteriores} className="rounded-full px-4 py-2 text-xs font-bold text-amber-500 hover:bg-amber-400/10">Cargar mensajes anteriores</button></div>}
+        {chat.mas_anteriores && <div className="flex justify-center"><button type="button" onClick={cargarAnteriores} disabled={cargandoAnteriores} aria-busy={cargandoAnteriores} className="rounded-full px-4 py-2 text-xs font-bold text-amber-500 hover:bg-amber-400/10 disabled:cursor-wait disabled:opacity-60">{cargandoAnteriores ? 'Cargando mensajes…' : 'Cargar mensajes anteriores'}</button></div>}
         {chat.mensajes.length === 0 && <div className={`grid min-h-64 place-content-center text-center ${secundaria}`}><p className="font-semibold">Este es el inicio del chat</p><p className="mt-1 text-sm">Envía un mensaje para comenzar la conversación.</p></div>}
         {chat.mensajes.map((mensaje) => {
           const mio = Number(mensaje.id_autor) === miId;
@@ -430,7 +608,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
       </>}
     </div>
 
-    {!!mensajesNuevos && <button type="button" onClick={() => { pegadoAlFinal.current = true; scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); setMensajesNuevos(0); api.marcarChatClubLeido(club.id_club).then(() => window.dispatchEvent(new CustomEvent('clubsunid:notificaciones-refresh'))).catch(() => {}); }} className="chat-club__nuevos">{mensajesNuevos} mensajes nuevos · Ir al final</button>}
+    {!!mensajesNuevos && <button type="button" onClick={irAlFinal} className="chat-club__nuevos">{mensajesNuevos} mensajes nuevos · Ir al final</button>}
     {error && <p className="px-4 pb-2 text-xs text-red-500" role="alert">{error}</p>}
 
     <form className={`chat-club__composer relative p-3 md:p-4`} onSubmit={enviar}>

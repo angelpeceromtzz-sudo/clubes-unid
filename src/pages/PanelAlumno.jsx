@@ -34,12 +34,14 @@ const NAV_SIN_CLUB = [
 
 export function PanelAlumno() {
   const navigate=useNavigate();
-  const {usuario,esResponsableClub,esAdmin,esRectoria,esResponsableMural}=useAutenticacion();
+  const {usuario,esResponsableClub,esLiderClub,esAdmin,esRectoria,esResponsableMural}=useAutenticacion();
   const {tema,modoOscuro}=useTheme();
   const {setPanelNav}=usePanelNav();
   const d=usePanelAlumno();
   const asignacion=useActividadesAsignadas();
-  const { activo: tutorialActivo, paso: pasoTutorial, iniciar: iniciarTutorialPrincipal, reintentar: repetirTutorialPrincipal, siguiente: siguienteTutorialPrincipal, saltar: saltarTutorialPrincipal } = useTutorial('alumno');
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  const claveTutorialAlumno = idUsuario ? `tutorial_alumno_${idUsuario}_pending` : null;
+  const { activo: tutorialActivo, paso: pasoTutorial, iniciar: iniciarTutorialPrincipal, reintentar: repetirTutorialPrincipal, siguiente: siguienteTutorialPrincipal, saltar: saltarTutorialPrincipal } = useTutorial(idUsuario ? `alumno_${idUsuario}` : null);
   const { activo: tutorialMiembroActivo, paso: pasoTutorialMiembro, iniciar: iniciarTutorialMiembro, siguiente: siguienteTutorialMiembro, saltar: saltarTutorialMiembro } = useTutorial(`alumno_club_${usuario?.id_usuario}_${d.club?.id_club}`);
   const pasosTutorial = useMemo(() => [
     { titulo: 'Bienvenido a tu panel', texto: 'Aquí puedes consultar tu club, tus postulaciones y las actividades que tienes asignadas.', target: '[data-tutorial="panel-alumno"]' },
@@ -72,36 +74,37 @@ export function PanelAlumno() {
     try{return localStorage.getItem('dismiss_miembro_banner')==='true';}catch{return false;}
   });
   useEffect(()=>{
-    if(esResponsableClub) abrirPanelResponsable(navigate,{replace:true});
+    if(esResponsableClub || esLiderClub) abrirPanelResponsable(navigate,{replace:true});
     else if(esAdmin) navigate('/admin/panel',{replace:true});
     else if(esRectoria) navigate('/rectoria/panel',{replace:true});
     else if(esResponsableMural) navigate('/mural/panel',{replace:true});
-  },[esResponsableClub,esAdmin,esRectoria,esResponsableMural,navigate]);
+  },[esResponsableClub,esLiderClub,esAdmin,esRectoria,esResponsableMural,navigate]);
   useEffect(()=>{
-    if(esResponsableClub || esAdmin || esRectoria || esResponsableMural) return;
+    if(esResponsableClub || esLiderClub || esAdmin || esRectoria || esResponsableMural) return;
     setPanelNav({itemsNav:elementosNav,onNavChange:setVistaAlumno});
     return ()=>setPanelNav({itemsNav:[],onNavChange:null});
-  },[setPanelNav,elementosNav,setVistaAlumno,esResponsableClub,esAdmin,esRectoria,esResponsableMural]);
+  },[setPanelNav,elementosNav,setVistaAlumno,esResponsableClub,esLiderClub,esAdmin,esRectoria,esResponsableMural]);
   useEffect(() => {
-    if (d.loading || !d.club?.id_club || !usuario?.id_usuario) return;
-    const claveCompletado = `tutorial_alumno_club_${usuario.id_usuario}_${d.club.id_club}_done`;
+    if (d.loading || !d.club?.id_club || !idUsuario) return;
+    const claveCompletado = `tutorial_alumno_club_${idUsuario}_${d.club.id_club}_done`;
     try {
       if (localStorage.getItem(claveCompletado) === 'true') return;
-      if (tutorialActivo || localStorage.getItem('tutorial_alumno_pending')) return;
+      if (tutorialActivo || (claveTutorialAlumno && localStorage.getItem(claveTutorialAlumno))) return;
     } catch { /* El recorrido sigue disponible aunque el navegador limite el almacenamiento. */ }
     setVistaAlumno('mi-club');
     iniciarTutorialMiembro();
-  }, [d.loading, d.club?.id_club, usuario?.id_usuario, tutorialActivo, iniciarTutorialMiembro, setVistaAlumno]);
+  }, [d.loading, d.club?.id_club, idUsuario, claveTutorialAlumno, tutorialActivo, iniciarTutorialMiembro, setVistaAlumno]);
   useEffect(() => {
+    if (!claveTutorialAlumno) return;
     try {
-      const solicitud = localStorage.getItem('tutorial_alumno_pending');
+      const solicitud = localStorage.getItem(claveTutorialAlumno);
       if (solicitud) {
-        localStorage.removeItem('tutorial_alumno_pending');
+        localStorage.removeItem(claveTutorialAlumno);
         if (solicitud === 'repetir') repetirTutorialPrincipal();
         else iniciarTutorialPrincipal();
       }
     } catch { /* La guía es opcional. */ }
-  }, [iniciarTutorialPrincipal, repetirTutorialPrincipal]);
+  }, [claveTutorialAlumno, iniciarTutorialPrincipal, repetirTutorialPrincipal]);
   useEffect(() => {
     const iniciarTutorial = (evento) => evento.detail?.repetir ? repetirTutorialPrincipal() : iniciarTutorialPrincipal();
     window.addEventListener('clubsunid:iniciar-tutorial-alumno', iniciarTutorial);
@@ -133,7 +136,7 @@ export function PanelAlumno() {
     setDismissMiembroBanner(true);
     try{localStorage.setItem('dismiss_miembro_banner','true');}catch{ /* Preferencia opcional. */ }
   }
-  if(esResponsableClub || esAdmin || esRectoria || esResponsableMural || d.loading) return <Spinner className="py-32"/>;
+  if(esResponsableClub || esLiderClub || esAdmin || esRectoria || esResponsableMural || d.loading) return <Spinner className="py-32"/>;
   return <ErrorBoundary><RutaProtegida><NavegacionPanel elementosNav={elementosNav} vistaActiva={vistaAlumno} onVistaChange={setVistaAlumno} fullHeight={vistaAlumno === 'chat-club'}>
     {vistaAlumno !== 'chat-club' && <div data-tutorial="panel-alumno" className="mb-6 md:mb-8"><EncabezadoPagina titulo="Mi panel" subtitulo={'Bienvenido, '+(usuario?.nombre_completo || '')}/></div>}
 

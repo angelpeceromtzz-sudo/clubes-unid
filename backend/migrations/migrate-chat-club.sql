@@ -1,4 +1,5 @@
 -- Chat de texto por club: mensajes, menciones, presencia, fijados y moderación.
+BEGIN;
 CREATE TABLE IF NOT EXISTS club_chat_mensajes (
     id_mensaje BIGSERIAL PRIMARY KEY,
     id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
@@ -50,3 +51,4 @@ CREATE TABLE IF NOT EXISTS club_chat_notificaciones (
     id_mensaje BIGINT NOT NULL REFERENCES club_chat_mensajes(id_mensaje) ON DELETE CASCADE,
     id_destinatario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
+COMMIT;

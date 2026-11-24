@@ -79,7 +79,10 @@ router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_
     const limit = 50;
     const offset = (page - 1) * limit;
 
-    const countResult = await pool.query('SELECT COUNT(*)::int AS total FROM notificaciones');
+    // La actividad institucional no debe exponer extractos ni destinatarios
+    // de mensajes privados del chat. El conteo y el listado usan el mismo filtro.
+    const countResult = await pool.query(`SELECT COUNT(*)::int AS total FROM notificaciones n
+      WHERE NOT EXISTS (SELECT 1 FROM club_chat_notificaciones cn WHERE cn.id_notificacion = n.id_notificacion)`);
     const total = countResult.rows[0].total;
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -97,6 +100,7 @@ router.get('/actividad', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_
        JOIN cat_roles r ON r.id_rol = u.id_rol
        LEFT JOIN clubes_operativos c ON c.id_club = n.id_club
        LEFT JOIN usuarios dest ON dest.id_usuario = n.id_destinatario
+       WHERE NOT EXISTS (SELECT 1 FROM club_chat_notificaciones cn WHERE cn.id_notificacion = n.id_notificacion)
        ORDER BY n.fecha_creacion DESC
        LIMIT $1 OFFSET $2`,
       [limit, offset]
@@ -324,8 +328,8 @@ router.post('/leer-todas', authenticate, async (req, res) => {
     const roleId = req.user.id_rol;
 
     let clubId = null;
-    if (roleId === 2) {
-      const pres = await pool.query('SELECT id_club FROM clubes_operativos WHERE id_responsable_club = $1', [userId]);
+    if (roleId === 2 || roleId === 5) {
+      const pres = await pool.query('SELECT id_club FROM clubes_operativos WHERE id_responsable_club = $1 OR id_vicepresidente = $1', [userId]);
       if (pres.rows.length > 0) clubId = pres.rows[0].id_club;
     }
     if (roleId === 1) {
