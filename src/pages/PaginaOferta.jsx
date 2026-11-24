@@ -43,8 +43,8 @@ export default function PaginaOferta() {
       <section className="px-6 sm:px-8 lg:px-12 xl:px-16 pb-16 sm:pb-24">
         <div className="max-w-6xl mx-auto">
           <div className="space-y-10">
-            <CatalogoActividades soloDestacadas />
-            <section className="space-y-6"><h2 className="text-2xl font-black">Clubes y actividades</h2><p className={oscuro ? 'text-slate-400' : 'text-slate-600'}>Conoce nuestra oferta y consulta las opciones para participar.</p><CatalogoActividades enOferta /></section>
+            <CatalogoActividades enOferta soloInscripcionesAbiertas invitarParticipar />
+            <section className="space-y-6"><h2 className="text-2xl font-black">Clubes y actividades</h2><p className={oscuro ? 'text-slate-400' : 'text-slate-600'}>Conoce nuestra oferta y consulta las opciones para participar.</p><CatalogoActividades enOferta excluirConInscripcionAbierta /></section>
           </div>
         </div>
       </section>

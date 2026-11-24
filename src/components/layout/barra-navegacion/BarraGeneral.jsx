@@ -2,13 +2,18 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useScrollHeader } from '../../../hooks/useScrollHeader';
+import { useActividadRecurso } from '../../../hooks/useActividadRecurso';
 import { Icono } from '../../ui/Icono';
 
 export function BarraGeneral({ onLoginClick, ctaPortal = null, ocultarMenuMovil = false, splashActivo = false, flotante = false, mostrarSelectorTema = true }) {
   const { tema, modoOscuro, setModoOscuro } = useTheme();
   const oscuro = modoOscuro;
   const { scrolled } = useScrollHeader();
+  const { datos: datosActividades } = useActividadRecurso('/', 'publico', true);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const hayInscripcionesAbiertas = (datosActividades?.actividades || []).some((actividad) =>
+    (actividad.ediciones || []).some((edicion) => edicion.estado_registro === 'abierta')
+  );
 
   function cerrarMenu() {
     setMenuAbierto(false);
@@ -33,8 +38,13 @@ export function BarraGeneral({ onLoginClick, ctaPortal = null, ocultarMenuMovil 
 
         <div className="ml-auto flex items-center gap-5">
         <nav className={`hidden md:flex items-center gap-5 text-sm font-bold ${flotante && modoOscuro && !scrolled ? 'text-white' : ''}`}>
-          <Link to="/oferta" className="hover:text-amber-400 transition">Oferta</Link>
-          <Link to="/actividades" className="hover:text-amber-400 transition">Actividades</Link>
+          <Link to="/oferta" className={`inline-flex items-center gap-1.5 transition ${hayInscripcionesAbiertas ? 'text-amber-400 hover:text-amber-300' : 'hover:text-amber-400'}`} aria-label={`Oferta${hayInscripcionesAbiertas ? ', hay actividades con inscripción abierta' : ''}`}>
+            Oferta
+            {hayInscripcionesAbiertas && <span className="relative flex items-center justify-center h-2 w-2 shrink-0" aria-hidden="true">
+              <span className="absolute inset-0 rounded-full bg-amber-500/40 animate-ping" />
+              <span className="relative h-2 w-2 rounded-full bg-amber-500" />
+            </span>}
+          </Link>
           <Link to="/experiencia-estudiantil" className="hover:text-amber-400 transition">Experiencia Estudiantil</Link>
           <Link to="/campus" className="hover:text-amber-400 transition">Campus</Link>
           <Link to="/conocenos" className="hover:text-amber-400 transition">Conócenos</Link>
@@ -98,7 +108,13 @@ export function BarraGeneral({ onLoginClick, ctaPortal = null, ocultarMenuMovil 
       {menuAbierto && (
         <div className={`md:hidden border-t backdrop-blur-md ${modoOscuro ? 'border-slate-800 bg-[#0b111e]/95' : 'border-slate-200 bg-white/95'}`}>
           <nav className={`px-6 py-4 flex flex-col gap-3 text-sm font-bold ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>
-            <Link to="/oferta" onClick={cerrarMenu} className="hover:text-amber-400 transition">Oferta</Link>
+            <Link to="/oferta" onClick={cerrarMenu} className={`inline-flex items-center gap-1.5 transition ${hayInscripcionesAbiertas ? 'text-amber-400 hover:text-amber-300' : 'hover:text-amber-400'}`} aria-label={`Oferta${hayInscripcionesAbiertas ? ', hay actividades con inscripción abierta' : ''}`}>
+              Oferta
+              {hayInscripcionesAbiertas && <span className="relative flex items-center justify-center h-2 w-2 shrink-0" aria-hidden="true">
+                <span className="absolute inset-0 rounded-full bg-amber-500/40 animate-ping" />
+                <span className="relative h-2 w-2 rounded-full bg-amber-500" />
+              </span>}
+            </Link>
             <Link to="/experiencia-estudiantil" onClick={cerrarMenu} className="hover:text-amber-400 transition">Experiencia Estudiantil</Link>
             <Link to="/campus" onClick={cerrarMenu} className="hover:text-amber-400 transition">Campus</Link>
             <Link to="/conocenos" onClick={cerrarMenu} className="hover:text-amber-400 transition">Conócenos</Link>
