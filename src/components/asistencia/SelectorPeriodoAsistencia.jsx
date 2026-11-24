@@ -5,6 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 export function SelectorPeriodoAsistencia({ periodos, valor, onChange }) {
   const { modoOscuro } = useTheme();
   if (!periodos || periodos.length === 0) return null;
+  const hayPeriodoActivo = periodos.some((periodo) => periodo.activo);
 
   return (
     <div className="mb-4">
@@ -18,7 +19,7 @@ export function SelectorPeriodoAsistencia({ periodos, valor, onChange }) {
             : 'bg-white border-slate-300 text-slate-900'
         }`}
       >
-        <option value="">Periodo activo</option>
+        <option value="">{hayPeriodoActivo ? 'Periodo actual' : 'Selecciona un periodo'}</option>
         {periodos.map((p) => (
           <option key={p.id_periodo} value={p.id_periodo}>
             {p.nombre}

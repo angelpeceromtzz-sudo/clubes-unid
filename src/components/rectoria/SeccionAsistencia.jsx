@@ -18,13 +18,15 @@ export function SeccionAsistencia({ clubesDetalle, clubAsistenciaId, seleccionar
   const { modoOscuro, tema } = useTheme();
   const [subVista, setSubVista] = useState('padron');
   const [periodos, setPeriodos] = useState([]);
+  const [periodosListos, setPeriodosListos] = useState(false);
   const [idPeriodoSel, setIdPeriodoSel] = useState('');
 
   useEffect(() => {
     let montado = true;
     api.getAsistenciaPeriodos()
       .then((data) => { if (montado) setPeriodos(data); })
-      .catch(() => { /* selector auxiliar */ });
+      .catch(() => { /* selector auxiliar */ })
+      .finally(() => { if (montado) setPeriodosListos(true); });
     return () => { montado = false; };
   }, []);
 
@@ -104,7 +106,12 @@ export function SeccionAsistencia({ clubesDetalle, clubAsistenciaId, seleccionar
             valor={idPeriodoSel}
             onChange={setIdPeriodoSel}
           />
-          <EstadisticasAsistencia idClub={idClubSel} idPeriodo={idPeriodoSel || undefined} />
+          <EstadisticasAsistencia
+            idClub={idClubSel}
+            idPeriodo={idPeriodoSel || undefined}
+            periodos={periodos}
+            periodosListos={periodosListos}
+          />
         </>
       )}
 

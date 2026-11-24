@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useExpediente } from '../../hooks/useExpediente';
 import { api } from '../../services/api';
+import { BarraBusquedaUsuarios } from '../admin/BarraBusquedaUsuarios';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { Th, Td } from '../ui/CeldasTabla';
@@ -232,7 +233,7 @@ function VistaDetalle({ expediente, onVolver }) {
 }
 
 export function SeccionExpediente() {
-  const { modoOscuro } = useTheme();
+  const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls } = useTheme();
   const d = useExpediente();
   const [entrada, setEntrada] = useState('');
   const [licenciaturas, setLicenciaturas] = useState([]);
@@ -274,20 +275,19 @@ export function SeccionExpediente() {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={enviarBusqueda} className="flex flex-wrap gap-3 items-end">
-        <div>
-          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Buscar alumno</label>
-          <input type="text" value={entrada} onChange={e => setEntrada(e.target.value)}
-            placeholder="Nombre, matrícula o correo (mín. 3 caracteres)"
-            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-80`} />
-        </div>
-        <div>
-          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Licenciatura</label>
+      <form onSubmit={enviarBusqueda} className="flex flex-col sm:flex-row gap-3 mb-4">
+        <BarraBusquedaUsuarios
+          busqueda={entrada}
+          onChange={setEntrada}
+          placeholder="Buscar por nombre, matrícula o correo..."
+        />
+        <div className="flex-1 sm:flex-none">
           <select
             value={d.filtros.id_licenciatura}
             onChange={e => cambiarFiltro({ id_licenciatura: e.target.value })}
             disabled={false}
-            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-72`}
+            aria-label="Filtrar por licenciatura"
+            className={`w-full sm:w-72 px-1.5 py-0.5 rounded-lg border text-xs outline-none focus:ring-2 focus:ring-amber-400/50 ${selectCls}`}
           >
             <option value="">Todas las licenciaturas</option>
             <optgroup label="Escolarizadas">
@@ -312,12 +312,12 @@ export function SeccionExpediente() {
             </optgroup>
           </select>
         </div>
-        <div>
-          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Ordenar por</label>
+        <div className="flex-1 sm:flex-none">
           <select
             value={d.filtros.orden || ''}
             onChange={e => cambiarFiltro({ orden: e.target.value })}
-            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-48`}
+            aria-label="Ordenar resultados"
+            className={`w-full sm:w-48 px-1.5 py-0.5 rounded-lg border text-xs outline-none focus:ring-2 focus:ring-amber-400/50 ${selectCls}`}
           >
             <option value="">Nombre (A–Z)</option>
             <option value="registros_desc">Más registros primero</option>
@@ -339,34 +339,63 @@ export function SeccionExpediente() {
       ) : d.resultados.length === 0 ? (
         <EmptyState icono="users" titulo="Sin resultados" descripcion="Revisa el texto escrito e intenta de nuevo." />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <>
+        <div className={`${tableBg} rounded-2xl overflow-hidden hidden md:block`}>
+          <div className="overflow-x-auto">
+          <table className="min-w-max w-full text-sm">
             <thead>
-              <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                <Th>Nombre</Th><Th>Matrícula</Th><Th>Licenciatura</Th><Th>Correo</Th><Th>Registros</Th><Th>Cuenta</Th><Th></Th>
+              <tr className={`border-b text-left ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
+                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Nombre</th>
+                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Matrícula</th>
+                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Licenciatura</th>
+                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Correo</th>
+                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Registros</th>
+                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}>Cuenta</th>
+                <th className={`px-5 py-4 text-[10px] uppercase tracking-wider font-bold ${thCls}`}></th>
               </tr>
             </thead>
             <tbody>
               {d.resultados.map(a => (
-                <tr key={a.id_usuario} className={`border-b ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/20' : 'border-slate-100 hover:bg-slate-50'} transition-colors`}>
-                  <Td className="font-medium">{formatearNombre(a.nombre_completo)}</Td>
-                  <Td className="font-mono text-xs">{a.matricula || a.institutional_id || '—'}</Td>
-                  <Td>{a.licenciatura || '—'}</Td>
-                  <Td>{a.correo_institucional}</Td>
-                  <Td>{a.total_registros ?? 0}</Td>
-                  <Td>{a.cuenta_desactivada ? <Badge texto="Desactivada" color="red" /> : <Badge texto="Activa" color="emerald" />}</Td>
-                  <Td>
+                <tr key={a.id_usuario} className={`border-b transition-colors ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/30' : 'border-slate-100 hover:bg-slate-50'}`}>
+                  <td className={`px-5 py-4 font-medium ${tdTitle}`}>{formatearNombre(a.nombre_completo)}</td>
+                  <td className={`px-5 py-4 font-mono text-xs ${tdCls}`}>{a.matricula || a.institutional_id || '—'}</td>
+                  <td className={`px-5 py-4 ${tdCls}`}>{a.licenciatura || '—'}</td>
+                  <td className={`px-5 py-4 ${tdCls}`}>{a.correo_institucional}</td>
+                  <td className={`px-5 py-4 ${tdCls}`}>{a.total_registros ?? 0}</td>
+                  <td className="px-5 py-4">{a.cuenta_desactivada ? <Badge texto="Desactivada" color="red" /> : <Badge texto="Activa" color="emerald" />}</td>
+                  <td className="px-5 py-4">
                     <button onClick={() => d.seleccionar(a.id_usuario)}
                       className="text-xs font-bold uppercase tracking-wider text-amber-500 hover:text-amber-400 cursor-pointer">
                       Ver expediente
                     </button>
-                  </Td>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="text-xs text-slate-500 mt-2">{d.resultados.length} resultado(s), máximo 25. Afina la búsqueda si no aparece el alumno.</p>
+          </div>
         </div>
+        <div className="space-y-2 md:hidden">
+          {d.resultados.map(a => (
+            <div key={a.id_usuario} className={`${tableBg} rounded-xl border p-3`}>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className={`text-sm font-semibold ${tdTitle}`}>{formatearNombre(a.nombre_completo)}</p>
+                {a.cuenta_desactivada ? <Badge texto="Desactivada" color="red" /> : <Badge texto="Activa" color="emerald" />}
+              </div>
+              <p className={`text-xs mb-2 ${tdCls}`}>{a.correo_institucional}</p>
+              <div className={`grid grid-cols-2 gap-2 text-xs ${tdCls}`}>
+                <span>Matrícula: <strong>{a.matricula || a.institutional_id || '—'}</strong></span>
+                <span>Registros: <strong>{a.total_registros ?? 0}</strong></span>
+                <span className="col-span-2">Licenciatura: <strong>{a.licenciatura || '—'}</strong></span>
+              </div>
+              <button onClick={() => d.seleccionar(a.id_usuario)} className="mt-3 text-xs font-bold uppercase tracking-wider text-amber-500 hover:text-amber-400 cursor-pointer">
+                Ver expediente
+              </button>
+            </div>
+          ))}
+        </div>
+          <p className="text-xs text-slate-500 mt-2">{d.resultados.length} resultado(s), máximo 25. Afina la búsqueda si no aparece el alumno.</p>
+        </>
       )}
     </div>
   );

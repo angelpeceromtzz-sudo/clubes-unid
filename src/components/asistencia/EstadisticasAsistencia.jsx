@@ -11,15 +11,19 @@ import { Spinner } from '../ui/Spinner';
 import { TarjetaStat } from '../ui/TarjetaStat';
 import { colorPorcentaje, categoriaDePorcentaje, CATEGORIAS_ASISTENCIA } from './constantesAsistencia';
 
-export function EstadisticasAsistencia({ idClub, idPeriodo } = {}) {
+export function EstadisticasAsistencia({ idClub, idPeriodo, periodos = [], periodosListos = true } = {}) {
   const { modoOscuro, tema } = useTheme();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [integranteSel, setIntegranteSel] = useState(null);
+  const sinFechas = periodosListos && !idPeriodo && !periodos.some((periodo) => periodo.activo);
 
   useEffect(() => {
     let montado = true;
+    if (!periodosListos || sinFechas) {
+      return () => { montado = false; };
+    }
     (async () => {
       setLoading(true);
       setError('');
@@ -35,8 +39,16 @@ export function EstadisticasAsistencia({ idClub, idPeriodo } = {}) {
       }
     })();
     return () => { montado = false; };
-  }, [idClub, idPeriodo]);
+  }, [idClub, idPeriodo, periodosListos, sinFechas]);
 
+  if (!periodosListos) return <Spinner className="py-16" />;
+  if (sinFechas) {
+    return (
+      <Alerta tipo="warning">
+        Todavía no hay fechas de asistencia establecidas por Coordinación. Cuando las definan, aquí podrás consultar las estadísticas.
+      </Alerta>
+    );
+  }
   if (loading) return <Spinner className="py-16" />;
   if (error) return <Alerta tipo="error" mensaje={error} />;
   if (!stats) return null;

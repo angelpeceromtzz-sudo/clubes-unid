@@ -2,7 +2,7 @@
 import { Icono } from '../ui/Icono';
 import { useTheme } from '../../contexts/ThemeContext';
 
-export function BarraBusquedaUsuarios({ busqueda, onChange }) {
+export function BarraBusquedaUsuarios({ busqueda, onChange, placeholder = 'Buscar por ID, nombre o correo...' }) {
   const { modoOscuro } = useTheme();
   return (
     <div className="relative flex-1">
@@ -11,7 +11,7 @@ export function BarraBusquedaUsuarios({ busqueda, onChange }) {
         type="text"
         value={busqueda}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Buscar por ID, nombre o correo..."
+        placeholder={placeholder}
         className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-amber-400/50 ${
           modoOscuro
             ? 'bg-[#0e162c] border-slate-700 text-slate-200 placeholder-slate-500'

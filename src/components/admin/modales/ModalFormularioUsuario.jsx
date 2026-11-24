@@ -70,7 +70,7 @@ export function ModalFormularioUsuario({
           <label className={labelCls}>Rol <span className="text-red-400">*</span></label>
           <select name="id_rol" value={formUsuario.id_rol} onChange={onFormChange} className={inputCls}>
             <option value={1}>Alumno</option>
-            <option value={2}>Presidente</option>
+            <option value={2}>Responsable de club</option>
             <option value={4}>Rectoría</option>
           </select>
         </div>

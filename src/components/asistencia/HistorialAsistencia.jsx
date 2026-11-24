@@ -61,29 +61,34 @@ export function HistorialAsistencia({ idClub, idPeriodo } = {}) {
     }
   }
 
-  const visibles = filtro ? sesiones.filter((s) => s.estado === filtro) : sesiones;
+  const filtroActivo = filtro;
+  const visibles = filtroActivo ? sesiones.filter((s) => s.estado === filtroActivo) : sesiones;
 
   if (loading) return <Spinner className="py-16" />;
 
   return (
     <div>
-      {/* Filtros horizontales (scroll en móvil) */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
-        {FILTROS.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFiltro(f.key)}
-            className={`px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap cursor-pointer transition-all ${
-              filtro === f.key
-                ? 'bg-amber-400/20 text-amber-400 border border-amber-400/30'
-                : modoOscuro
-                  ? 'text-slate-400 border border-slate-700 hover:border-slate-600'
-                  : 'text-slate-500 border border-slate-200 hover:border-slate-300'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="mb-4 flex items-center gap-3">
+        <label htmlFor="filtro-estado-asistencia" className={`shrink-0 text-xs font-bold ${tema.subtitle}`}>
+          Filtrar por estado
+        </label>
+        <select
+          id="filtro-estado-asistencia"
+          value={filtroActivo}
+          onChange={(e) => setFiltro(e.target.value)}
+          className={`min-w-0 flex-1 sm:flex-none sm:min-w-[210px] rounded-xl border px-3 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-amber-400/50 cursor-pointer ${
+            modoOscuro
+              ? 'bg-[#18223f] border-slate-700 text-white'
+              : 'bg-white border-slate-300 text-slate-800'
+          }`}
+        >
+          {FILTROS.map((f) => {
+            const cantidad = f.key
+              ? sesiones.filter((sesion) => sesion.estado === f.key).length
+              : sesiones.length;
+            return <option key={f.key} value={f.key}>{f.label} ({cantidad})</option>;
+          })}
+        </select>
       </div>
 
       {error && <Alerta tipo="error" mensaje={error} className="mb-4" />}

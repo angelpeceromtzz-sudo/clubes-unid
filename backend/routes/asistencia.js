@@ -36,6 +36,7 @@ function categoriaDePorcentaje(porcentaje) {
 }
 
 const ESTADOS_ASISTENCIA = ['presente', 'ausente', 'justificado'];
+const MENSAJE_SIN_PERIODO = 'Aún no hay fechas establecidas para registrar asistencias. Cuando Coordinación las configure, podrás marcar la asistencia de tus sesiones.';
 
 // Estados efectivos calculados en lectura (PBI-05 §17–§19):
 // 'no_registrada' y 'no_completada' no se almacenan; se derivan de la fecha.
@@ -415,7 +416,7 @@ router.get('/sesiones/hoy', authenticate, requireClubPresident, async (req, res)
     const idPeriodoActivo = await obtenerPeriodoActivo();
     if (!idPeriodoActivo) {
       return res.status(400).json({
-        error: 'No hay un periodo de actividad activo. Configura el periodo institucional antes de usar Asistencia.',
+        error: MENSAJE_SIN_PERIODO,
       });
     }
 
@@ -740,7 +741,7 @@ router.get('/estadisticas/club', authenticate, requireClubPresident, async (req,
     const idPeriodo = idPeriodoDeQuery(req.query.id_periodo) ?? (await obtenerPeriodoActivo());
 
     if (!idPeriodo) {
-      return res.status(400).json({ error: 'No hay un periodo de actividad activo' });
+      return res.status(400).json({ error: MENSAJE_SIN_PERIODO });
     }
 
     res.json(await calcularEstadisticasClub(req.idClub, idPeriodo));
@@ -764,7 +765,7 @@ router.get('/estadisticas/integrante/:userId', authenticate, requireClubPresiden
     const idPeriodo = idPeriodoDeQuery(req.query.id_periodo) ?? (await obtenerPeriodoActivo());
 
     if (!idPeriodo) {
-      return res.status(400).json({ error: 'No hay un periodo de actividad activo' });
+      return res.status(400).json({ error: MENSAJE_SIN_PERIODO });
     }
 
     res.json(await calcularEstadisticasIntegrante(req.idClub, idPeriodo, idUsuario));
@@ -873,7 +874,7 @@ router.get('/coordinacion/clubes/:clubId/estadisticas', authenticate, requireAdm
     const idPeriodo = idPeriodoDeQuery(req.query.id_periodo) ?? (await obtenerPeriodoActivo());
 
     if (!idPeriodo) {
-      return res.status(400).json({ error: 'No hay un periodo de actividad activo' });
+      return res.status(400).json({ error: MENSAJE_SIN_PERIODO });
     }
 
     res.json(await calcularEstadisticasClub(idClub, idPeriodo));
@@ -900,7 +901,7 @@ router.get('/coordinacion/clubes/:clubId/estadisticas/integrante/:userId', authe
     const idPeriodo = idPeriodoDeQuery(req.query.id_periodo) ?? (await obtenerPeriodoActivo());
 
     if (!idPeriodo) {
-      return res.status(400).json({ error: 'No hay un periodo de actividad activo' });
+      return res.status(400).json({ error: MENSAJE_SIN_PERIODO });
     }
 
     res.json(await calcularEstadisticasIntegrante(idClub, idPeriodo, idUsuario));

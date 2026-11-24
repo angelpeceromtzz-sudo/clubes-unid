@@ -11,7 +11,7 @@ export function NavegacionActividades() {
   return <nav aria-label="Actividades" className="flex flex-wrap gap-3 text-sm font-semibold mb-7">
     <Link className="text-amber-600 dark:text-amber-400 hover:underline" to="/actividades">Todas las actividades</Link>
     <Link className="text-amber-600 dark:text-amber-400 hover:underline" to="/oferta">Oferta</Link>
-    {estaAutenticado && <Link className="text-amber-600 dark:text-amber-400 hover:underline" to="/panel">Mi panel</Link>}
+    {estaAutenticado && <Link className="text-amber-600 dark:text-amber-400 hover:underline" to="/campus/campeche/alumno/panel">Mi panel</Link>}
   </nav>;
 }
 

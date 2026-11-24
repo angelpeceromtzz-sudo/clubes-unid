@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { api } from '../../../services/api';
+import { api, request } from '../../../services/api';
 import { ModalBase } from '../../ui/ModalBase';
 import { BotonAccion } from '../../ui/BotonAccion';
 import { BotonCerrar } from '../../ui/BotonCerrar';
@@ -42,7 +42,7 @@ export function ModalConfigurarFormulario({ club, onClose }) {
       const configuracion = nueva.tipo === 'seleccion'
         ? { opciones: nueva.opciones.split(',').map((s) => s.trim()).filter(Boolean) }
         : {};
-      await api.request(`/clubes/${idClub}/preguntas`, {
+      await request(`/clubes/${idClub}/preguntas`, {
         method: 'POST',
         body: JSON.stringify({ etiqueta: nueva.etiqueta.trim(), tipo: nueva.tipo, configuracion, obligatorio: nueva.obligatorio }),
       });
@@ -57,7 +57,7 @@ export function ModalConfigurarFormulario({ club, onClose }) {
 
   async function eliminar(idPregunta) {
     try {
-      await api.request(`/clubes/${idClub}/preguntas/${idPregunta}`, { method: 'DELETE' });
+      await request(`/clubes/${idClub}/preguntas/${idPregunta}`, { method: 'DELETE' });
       await cargar();
     } catch (e) {
       setError(e?.message || 'No se pudo eliminar');
@@ -66,7 +66,7 @@ export function ModalConfigurarFormulario({ club, onClose }) {
 
   async function aplicarPlantilla(categoria) {
     try {
-      await api.request(`/clubes/${idClub}/preguntas/plantilla`, {
+      await request(`/clubes/${idClub}/preguntas/plantilla`, {
         method: 'POST',
         body: JSON.stringify({ categoria }),
       });
@@ -77,7 +77,7 @@ export function ModalConfigurarFormulario({ club, onClose }) {
   }
 
   return (
-    <ModalBase show={true} onClose={onClose}>
+    <ModalBase show={true} onClose={onClose} maxWidth="max-w-2xl">
       <div className="flex items-center justify-between mb-4">
         <h2 className={`text-xl font-black ${tema === 'dark' ? 'text-white' : 'text-slate-900'}`}>
           Configurar formulario — {club?.nombre_club || club?.nombre}
@@ -89,9 +89,9 @@ export function ModalConfigurarFormulario({ club, onClose }) {
 
       <div className="mb-4">
         <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${tema === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Aplicar plantilla</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {['Deportivos', 'Culturales', 'Tecnologicos', 'Sociales'].map((cat) => (
-            <BotonAccion key={cat} onClick={() => aplicarPlantilla(cat)} className="!rounded-lg text-xs">
+            <BotonAccion key={cat} onClick={() => aplicarPlantilla(cat)} className="!rounded-lg !px-2 !py-3 text-[10px] whitespace-nowrap">
               {cat}
             </BotonAccion>
           ))}
