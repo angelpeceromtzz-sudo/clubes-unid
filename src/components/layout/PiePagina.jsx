@@ -53,6 +53,9 @@ export function PiePagina() {
               <Link to="/privacidad" state={{ rutaOrigen }} className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
                 Aviso de Privacidad
               </Link>
+               <a href="tel:+529711006540" className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
+                +52 971 100 6540
+              </a>
 
               <span className={`text-xs sm:text-sm font-medium ${tema.subtitle}`}>Campeche, Campeche, MX</span>
               <Link to="/reportar-problemas" state={{ rutaOrigen }} className={`text-xs sm:text-sm font-medium transition-colors duration-200 hover:text-amber-400 ${tema.subtitle}`}>
