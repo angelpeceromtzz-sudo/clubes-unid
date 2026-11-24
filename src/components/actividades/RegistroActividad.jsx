@@ -11,7 +11,7 @@ import { ResumenCartaTrineo, SelectorCartaTrineo } from './CartaTrineo';
 import { CampoRegistroActividad } from './CampoRegistroActividad';
 import { ImagenesCuestionarioActividad } from './ImagenesCuestionarioActividad';
 import { SelectorOpciones } from '../ui/SelectorOpciones';
-import { ResumenCamisaTrineo, SelectorCompraCamisa } from './ResumenCamisaTrineo';
+import { ResumenCamisaTrineo } from './ResumenCamisaTrineo';
 
 export function RegistroActividad({ edicion, registro, onGuardado }) {
   if (edicion.configuracion_misiones?.version === 2) return <RegistroMisiones edicion={edicion} registro={registro} onGuardado={(resultado) => onGuardado(resultado.cancelado ? 'Tu inscripción fue cancelada.' : 'Tu inscripción está guardada.')} />;
@@ -148,8 +148,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
         </div>;
       })}
     </fieldset>}
-    {usaCartas && solicitaCamisa && <SelectorCompraCamisa campo={campoCamisa} valor={respuestas.talla} onChange={(valor) => responder('talla', valor)} />}
-    {usaCartas && <ResumenCamisaTrineo pedido={pedidoCamisa} />}
+    {usaCartas && <ResumenCamisaTrineo pedido={pedidoCamisa} campo={solicitaCamisa ? campoCamisa : null} valor={respuestas.talla} onChange={(valor) => responder('talla', valor)} />}
     <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} />
     {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
     <div className="flex flex-wrap gap-3"><BotonAccion type="submit" disabled={pendiente || Boolean(errorCamisa)}>{pendiente ? 'Guardando…' : confirmado ? 'Guardar cambios' : 'Confirmar inscripción'}</BotonAccion>{confirmado && <BotonAccion variant="outline" onClick={() => setEditando(false)}>Volver a mi registro</BotonAccion>}</div>
