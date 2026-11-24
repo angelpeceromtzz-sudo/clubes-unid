@@ -11,7 +11,7 @@ import { ResumenCartaTrineo, SelectorCartaTrineo } from './CartaTrineo';
 import { CampoRegistroActividad } from './CampoRegistroActividad';
 import { ImagenesCuestionarioActividad } from './ImagenesCuestionarioActividad';
 import { SelectorOpciones } from '../ui/SelectorOpciones';
-import { ResumenCamisaTrineo } from './ResumenCamisaTrineo';
+import { ResumenCamisaTrineo, SelectorCompraCamisa } from './ResumenCamisaTrineo';
 
 export function RegistroActividad({ edicion, registro, onGuardado }) {
   if (edicion.configuracion_misiones?.version === 2) return <RegistroMisiones edicion={edicion} registro={registro} onGuardado={(resultado) => onGuardado(resultado.cancelado ? 'Tu inscripción fue cancelada.' : 'Tu inscripción está guardada.')} />;
@@ -48,7 +48,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
   const campoCamisa = edicion.campos_registro.find((campo) => campo.clave === 'talla');
   let pedidoCamisa;
   let errorCamisa = '';
-  if (usaCartas && solicitaCamisa !== null) {
+  if (usaCartas && solicitaCamisa !== null && (!solicitaCamisa || respuestas.talla)) {
     try { pedidoCamisa = cotizarCamisaTrineo({ campo: campoCamisa, solicita: solicitaCamisa, talla: respuestas.talla, anterior: confirmado ? registro.pedido : null }); }
     catch (fallo) { errorCamisa = fallo.message; }
   }
@@ -121,14 +121,6 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
               alCambiar={(valor) => { const necesita = valor === 'no'; setSolicitaCamisa(necesita); if (!necesita) responder(campo.clave, ''); }}
               required opciones={[{ value: '', label: 'Selecciona una opción' }, { value: 'si', label: 'Sí, ya tengo camisa' }, { value: 'no', label: 'No, necesito una camisa' }]} botonClassName="h-11"
             />
-            {solicitaCamisa && <div className="space-y-2">
-              <span className="block text-sm font-semibold">Talla de camisa *</span>
-              <SelectorOpciones
-                id={id + '-talla'} name={campo.clave} etiqueta="Talla de camisa" valor={String(respuestas[campo.clave] ?? '')}
-                alCambiar={(valor) => responder(campo.clave, valor)} required
-                opciones={[{ value: '', label: 'Selecciona una talla' }, ...campo.opciones.map((opcion) => ({ value: opcion, label: opcion }))]} botonClassName="h-11"
-              />
-            </div>}
             {errorCamisa && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{errorCamisa}</p>}
           </div> : campo.tipo === 'seleccion' || campo.tipo === 'licenciatura' ? <SelectorOpciones
             id={id} name={campo.clave} etiqueta={etiqueta} descripcionId={comunes['aria-describedby']}
@@ -156,6 +148,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
         </div>;
       })}
     </fieldset>}
+    {usaCartas && solicitaCamisa && <SelectorCompraCamisa campo={campoCamisa} valor={respuestas.talla} onChange={(valor) => responder('talla', valor)} />}
     {usaCartas && <ResumenCamisaTrineo pedido={pedidoCamisa} />}
     <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} />
     {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
