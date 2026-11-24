@@ -19,7 +19,12 @@ export function RegistroInvitadoTrineo({ edicion, onLoginClick, onRegistroAbiert
     {invitado && <div ref={formularioRef}><p className="mb-3 text-sm">Completa tus datos para registrarte como invitado.</p><RegistroActividad edicion={edicion} invitado onGuardado={(resultado) => {
       const acceso = { folio: resultado.registro.folio, token: resultado.token };
       guardarAccesoTrineo(acceso, edicion.id_edicion);
-      navigate('/actividades/trineo/registro/' + acceso.folio + '#acceso=' + acceso.token, { state: { nuevaInscripcion: true, correoEnviado: resultado.correo_enviado } });
+      if (resultado?.enlace) {
+        const url = new URL(resultado.enlace);
+        const tokenEnlace = new URLSearchParams(url.hash.slice(1)).get('acceso');
+        if (tokenEnlace) acceso.token = tokenEnlace;
+      }
+      navigate('/actividades/trineo/registro/' + acceso.folio + '#acceso=' + acceso.token, { state: { nuevaInscripcion: true, correoEnviado: resultado.correo_enviado, enlace: resultado?.enlace } });
     }} /></div>}
   </div>;
 }

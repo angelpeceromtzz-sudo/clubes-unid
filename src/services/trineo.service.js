@@ -21,7 +21,7 @@ async function solicitar(ruta, { method = 'GET', datos, acceso } = {}) {
 }
 
 export const trineoService = {
-  crearInvitado: (id, datos) => solicitar('/trineo/ediciones/' + id + '/invitados', { method: 'POST', datos }),
+  crearInvitado: (id, datos) => solicitar('/trineo/ediciones/' + id + '/invitados', { method: 'POST', datos: { ...datos, origen: window.location.origin } }),
   consultarInvitado: (acceso) => solicitar('/trineo/invitados/' + acceso.folio, { acceso }),
   editarInvitado: (acceso, datos) => solicitar('/trineo/invitados/' + acceso.folio, { method: 'PUT', acceso, datos }),
   reenviarEnlace: (acceso) => solicitar('/trineo/invitados/' + acceso.folio + '/reenviar-enlace', { method: 'POST', acceso, datos: {} }),

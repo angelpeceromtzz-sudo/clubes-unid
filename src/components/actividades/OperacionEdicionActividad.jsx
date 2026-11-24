@@ -8,6 +8,8 @@ import {VistaPreviaActividad} from './VistaPreviaActividad';
 import {EstadoActividad} from './ActividadUI';
 import {AccionesRevisionActividad,FormularioOpcionAporte} from './EditoresActividad';
 import {GestorFotosActividad} from './GestorFotosActividad';
+import {GaleriaSocialActividad} from './GaleriaSocialActividad';
+
 import {TrasladoActividad} from './GestionCatalogoExtra';
 import {BotonAccion} from '../ui/BotonAccion';
 import {Spinner} from '../ui/Spinner';

@@ -24,7 +24,7 @@ async function solicitar(ruta, { method = 'GET', datos, pdf, acceso, multipart =
 }
 
 export const misionesService = {
-  crearInvitado: (id, datos, pdf) => solicitar('/ediciones/' + id + '/invitados', { method: 'POST', datos, pdf, multipart: true }),
+  crearInvitado: (id, datos, pdf) => solicitar('/ediciones/' + id + '/invitados', { method: 'POST', datos: { ...datos, origen: window.location.origin }, pdf, multipart: true }),
   consultarInvitado: (acceso) => solicitar('/invitados/' + acceso.folio, { acceso }),
   editarInvitado: (acceso, datos, pdf) => solicitar('/invitados/' + acceso.folio, { method: 'PUT', acceso, datos, pdf, multipart: true }),
   guardarUnid: (id, datos, pdf) => solicitar('/ediciones/' + id + '/registro', { method: 'PUT', datos, pdf, multipart: true }),

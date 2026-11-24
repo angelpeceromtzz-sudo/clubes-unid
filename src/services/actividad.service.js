@@ -52,6 +52,17 @@ export const actividadService = {
   revisarFoto: (id, estado) => enviar('/gestion/fotos/' + id, 'PUT', { estado }),
   subirImagen: (ruta, archivo, datos = {}) => subirArchivos(ruta, 'imagen', [archivo], datos),
   subirFotos: (idEdicion, archivos, pie) => subirArchivos('/gestion/ediciones/' + idEdicion + '/fotos/lote', 'imagenes', archivos, { pie }),
+  subirFotosParticipante: (idEdicion, archivos, pie, acceso) => {
+    const headers = acceso?.token ? { Authorization: 'Registro ' + acceso.token } : {};
+    const formulario = new FormData();
+    for (const archivo of archivos) formulario.append('imagenes', archivo);
+    if (pie) formulario.append('pie', pie);
+    return fetch(API_BASE + '/actividades/ediciones/' + idEdicion + '/fotos-participante', { method: 'POST', headers, body: formulario }).then(async (respuesta) => {
+      const cuerpo = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw new Error(cuerpo.error || 'No se pudieron subir las imágenes');
+      return cuerpo;
+    });
+  },
   subirFotosClub: (idClub, archivos, pie) => subirArchivos('/gestion/actividades/' + idClub + '/fotos/lote', 'imagenes', archivos, { pie }),
   subirImagenCampo,
   eliminarImagenCampo: (idEdicion, clave) => enviar('/gestion/ediciones/' + idEdicion + '/campos/' + encodeURIComponent(clave) + '/imagen', 'DELETE'),

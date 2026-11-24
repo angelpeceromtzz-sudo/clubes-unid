@@ -112,20 +112,22 @@ export function montarInvitadosTrineo(router, {
     });
   }
 
-  async function enviarEnlace(registro, token, edicion) {
+  async function enviarEnlace(registro, token, edicion, origenFrontend) {
     try {
       if (!correoMisiones) throw new Error('Correo no configurado');
-      await correoMisiones.enviarEnlace({ correo: registro.correo, folio: registro.folio, token, edicion: edicion.nombre, ruta: 'trineo', titulo: 'Trineo de los Sueños' });
-      return true;
-    } catch { return false; }
+      const enlace = await correoMisiones.enviarEnlace({ correo: registro.correo, folio: registro.folio, token, edicion: edicion.nombre, ruta: 'trineo', titulo: 'Trineo de los Sueños', origen: origenFrontend });
+      return { enviado: true, enlace };
+    } catch { return { enviado: false, enlace: null }; }
   }
 
   router.post('/trineo/ediciones/:idEdicion/invitados', limitarRegistro, async (req, _res, next) => {
     exigirAbierta(await obtenerEdicion(db, req.params.idEdicion)); next();
   }, async (req, res) => {
     const resultado = await transaccion(async (cliente) => guardarInscripcion(cliente, req, await obtenerEdicion(cliente, req.params.idEdicion, true)));
-    const correo_enviado = await enviarEnlace(resultado.registro, resultado.token, resultado.edicion);
-    res.status(201).json({ ...resultado, correo_enviado });
+    const origenFrontend = req.body?.origen || req.headers.origin || null;
+    const envio = await enviarEnlace(resultado.registro, resultado.token, resultado.edicion, origenFrontend);
+    const enlace = envio.enlace || null;
+    res.status(201).json({ ...resultado, correo_enviado: envio.enviado, enlace });
   });
 
   router.get('/trineo/invitados/:folio', limitarEscritura, async (req, res) => {

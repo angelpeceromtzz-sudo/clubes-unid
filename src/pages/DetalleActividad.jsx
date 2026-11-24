@@ -5,13 +5,14 @@ import { useAutenticacion } from '../contexts/AuthContext';
 import { useActividadRecurso } from '../hooks/useActividadRecurso';
 import { actividadService } from '../services/actividad.service';
 import { RegistroActividad } from '../components/actividades/RegistroActividad';
-import { GaleriaFotosActividad } from '../components/actividades/GaleriaFotosActividad';
+import { GaleriaSocialActividad } from '../components/actividades/GaleriaSocialActividad';
 import { NavegacionActividades, FechaActividad, EstadoActividad } from '../components/actividades/ActividadUI';
 import { BotonAccion } from '../components/ui/BotonAccion';
 import { Spinner } from '../components/ui/Spinner';
 import { FormularioAsistenciaActividad } from '../components/actividades/AsistenciaActividad';
 import { RegistroInvitadoMisiones } from '../components/actividades/RegistroInvitadoMisiones';
 import { RegistroInvitadoTrineo } from '../components/actividades/RegistroInvitadoTrineo';
+import { FotosParticipante } from '../components/actividades/FotosParticipante';
 import { UbicacionEdicionActividad } from '../components/actividades/LugarEdicionActividad';
 import { ReaccionesCatalogo } from '../components/actividades/ReaccionesCatalogo';
 
@@ -36,6 +37,7 @@ function ParticipacionEdicion({ actividad, edicion, onLoginClick }) {
         idEdicion={edicion.id_edicion} estadoInscripcion={datos.registro.estado} asistencia={datos.asistencia}
         disponibilidad={datos.disponibilidad_asistencia} />
     </section>}
+    {usuario && datos?.registro?.estado === 'confirmado' && <FotosParticipante idEdicion={edicion.id_edicion} fotos={edicion.fotos} onActualizar={(texto) => { setMensaje(texto); recargar(); }} />}
   </>;
 }
 
@@ -58,7 +60,7 @@ export function DetalleActividad({ onLoginClick }) {
       {ediciones.length > 1 && <label className="block font-semibold">Consultar edición<select className={inputCls + ' mt-2 max-w-md'} value={edicion.id_edicion} onChange={(evento) => setParametros({ edicion: evento.target.value })}>{ediciones.map((item) => <option key={item.id_edicion} value={item.id_edicion}>{item.nombre}</option>)}</select></label>}
       <section className="space-y-4"><EstadoActividad estado={edicion.estado_registro} /><h2 className={'text-2xl font-bold ' + tema.title}>{edicion.nombre}</h2><p><FechaActividad fecha={edicion.fecha_inicio} hora={edicion.hora_inicio} />{edicion.fecha_fin && edicion.fecha_fin !== edicion.fecha_inicio && <> al <FechaActividad fecha={edicion.fecha_fin} /></>}</p><UbicacionEdicionActividad edicion={edicion} /><p className={'whitespace-pre-line ' + tema.subtitle}>{edicion.descripcion}</p>{edicion.requiere_registro && <p className={'text-sm ' + tema.subtitle}>Inscripciones: <FechaActividad fecha={edicion.inscripcion_desde} /> al <FechaActividad fecha={edicion.inscripcion_hasta} /></p>}</section>
        <ParticipacionEdicion key={edicion.id_edicion + ':' + (usuario?.id_usuario || usuario?.id || 'invitado')} actividad={actividad} edicion={edicion} onLoginClick={onLoginClick} />
-      <GaleriaFotosActividad key={'galeria:' + edicion.id_edicion} fotos={edicion.fotos} titulo={actividad.nombre} />
+      <GaleriaSocialActividad key={'galeria:' + edicion.id_edicion} fotos={edicion.fotos} titulo={actividad.nombre} />
     </>}
   </main>;
 }
