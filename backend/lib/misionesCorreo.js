@@ -1,11 +1,12 @@
 import { leerConfiguracionResend } from './resendMailer.js';
 import { leerConfiguracionSmtp, crearOpcionesNodemailer } from './smtpMailer.js';
 
-export function construirEnlaceMisiones(folio, token, origen) {
+export function construirEnlaceMisiones(folio, token, origen, ruta = 'misiones') {
   const url = new URL(origen);
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) throw new Error('MISIONES_PUBLIC_URL inválida');
   if (url.username || url.password) throw new Error('MISIONES_PUBLIC_URL inválida');
-  return new URL('/actividades/misiones/registro/' + folio + '#acceso=' + token, url.origin).href;
+  if (!['misiones', 'trineo'].includes(ruta)) throw new Error('Ruta de invitado inválida');
+  return new URL('/actividades/' + ruta + '/registro/' + folio + '#acceso=' + token, url.origin).href;
 }
 
 // Canal operativo independiente: el acceso OTP conserva su validación institucional.
@@ -13,12 +14,12 @@ export function crearCorreoMisiones({ env = process.env, fetchImpl = globalThis.
   let transporte;
   return {
     enviados,
-    async enviarEnlace({ correo, folio, token, edicion }) {
-      const origen = env.MISIONES_PUBLIC_URL || env.CORS_ORIGIN?.split(',')[0]?.trim();
-      const enlace = construirEnlaceMisiones(folio, token, origen);
+    async enviarEnlace({ correo, folio, token, edicion, ruta = 'misiones', titulo = 'Misiones' }) {
+      const origen = env.MISIONES_PUBLIC_URL?.trim() || env.PUBLIC_URL?.trim() || 'https://clubsunid.com.mx';
+      const enlace = construirEnlaceMisiones(folio, token, origen, ruta);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) || /[\r\n]/.test(correo)) throw new Error('Destinatario inválido');
       const mensaje = {
-        to: correo, subject: 'Tu inscripción a Misiones',
+        to: correo, subject: 'Tu inscripción a ' + titulo,
         text: `Tu inscripción a ${edicion} está confirmada.\n\nFolio: ${folio}\n\nConsulta y edita tu registro desde este enlace privado:\n${enlace}\n\nTambién lo usarás para identificar tu inscripción al pasar lista por QR. Guarda este enlace y compártelo únicamente si necesitas ayuda del encargado.`,
       };
       const proveedor = (env.MISIONES_MAIL_PROVIDER || env.OTP_MAIL_PROVIDER || 'mock').toLowerCase();

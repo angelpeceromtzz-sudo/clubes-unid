@@ -5,6 +5,7 @@ import { registrarActividadCatalogo } from './actividadCatalogo.js';
 import { montarAsistenciaActividades, consultarAsistencia, asistenciaPropia } from './actividadesAsistencia.js';
 import { montarMisiones, registroMisionesSeguro, validarDocumentoConfiguracion } from './misionesRouter.js';
 import { montarCartasTrineo, completarCartasRegistros, prepararReservaCarta, guardarReservaCarta, liberarCartaPendiente, recibirRegaloCarta } from './trineoCartas.js';
+import { montarInvitadosTrineo } from './trineoInvitados.js';
 import {
   ROLES_CREAN_ACTIVIDADES, ROLES_SUPERVISAN_ACTIVIDADES, ROLES_APRUEBAN_EDICIONES, ROLES_PUBLICAN_ACTIVIDADES, REACCIONES_ACTIVIDAD,
   errorActividad, textoActividad, normalizarRecursoCatalogo, normalizarEdicionActividad,
@@ -17,7 +18,7 @@ import {
 } from './actividadesDominio.js';
 
 const FECHAS = ['fecha_inicio', 'fecha_fin', 'inscripcion_desde', 'inscripcion_hasta', 'destacada_desde', 'destacada_hasta'];
-const SELECT_EDICION = 'e.*, ' + FECHAS.map((clave) => 'e.' + clave + '::text AS ' + clave).join(', ') + ', a.plantilla, a.nombre AS actividad_nombre, a.slug AS actividad_slug, a.estado AS estado_actividad, a.id_responsable, a.id_autor';
+const SELECT_EDICION = 'e.*, ' + FECHAS.map((clave) => 'e.' + clave + '::text AS ' + clave).join(', ') + ', a.plantilla, a.nombre AS actividad_nombre, a.slug AS actividad_slug, a.estado AS estado_actividad, a.id_responsable, a.id_autor, COALESCE((SELECT array_agg(ar.id_usuario ORDER BY ar.id_usuario) FROM actividades_responsables ar WHERE ar.id_actividad=a.id_actividad), ARRAY[]::int[]) AS responsables_ids';
 const DESDE_EDICION = ' FROM actividades_ediciones e JOIN catalogo_recursos a ON a.id_actividad = e.id_actividad ';
 const TABLAS = { actividad: ['catalogo_recursos', 'id_actividad'], edicion: ['actividades_ediciones', 'id_edicion'] };
 const supervisa = (usuario) => ROLES_SUPERVISAN_ACTIVIDADES.includes(usuario.id_rol);
@@ -26,19 +27,19 @@ const apruebaEdicion = (usuario) => ROLES_APRUEBAN_EDICIONES.includes(usuario.id
 const publica = (usuario) => ROLES_PUBLICAN_ACTIVIDADES.includes(usuario.id_rol);
 const puedePublicar = (usuario, entidad) => publica(usuario) && (entidad.tipo === 'actividad' || Boolean(entidad.id_edicion));
 const permisosPublicacion = (usuario) => ({ puede_publicar_actividades: publica(usuario), puede_publicar_ediciones: publica(usuario) });
-const puedeGestionar = (usuario, actividad) => supervisa(usuario) || actividad.id_responsable === usuario.id || (!actividad.id_responsable && actividad.id_autor === usuario.id);
+const puedeGestionar = (usuario, actividad) => supervisa(usuario) || actividad.id_responsable === usuario.id || (actividad.responsables_ids || []).includes(Number(usuario.id)) || (!actividad.id_responsable && actividad.id_autor === usuario.id);
 
 function comprobarGestion(usuario, actividad) {
   if (!puedeGestionar(usuario, actividad)) throw errorActividad('No tienes acceso a esta actividad', 403);
 }
 
 function edicionPublica(edicion, hoy) {
-  const { propuesta: _propuesta, estado_propuesta: _revision, motivo_rechazo: _motivo, id_autor: _autor, id_responsable: _encargado, ...publica } = edicion;
+  const { propuesta: _propuesta, estado_propuesta: _revision, motivo_rechazo: _motivo, id_autor: _autor, id_responsable: _encargado, responsables_ids: _responsables, ...publica } = edicion;
   return { ...publica, destacada: esDestacadaActividad(edicion, hoy), estado_registro: estadoRegistroActividad(edicion, hoy) };
 }
 
 async function obtenerActividad(db, id, bloquear = false) {
-  const { rows } = await db.query('SELECT * FROM catalogo_recursos WHERE id_actividad = $1' + (bloquear ? ' FOR UPDATE' : ''), [id]);
+  const { rows } = await db.query('SELECT a.*, COALESCE((SELECT array_agg(ar.id_usuario ORDER BY ar.id_usuario) FROM actividades_responsables ar WHERE ar.id_actividad=a.id_actividad), ARRAY[]::int[]) AS responsables_ids FROM catalogo_recursos a WHERE a.id_actividad = $1' + (bloquear ? ' FOR UPDATE' : ''), [id]);
   if (!rows[0]) throw errorActividad('Actividad no encontrada', 404);
   rows[0].niveles = (await db.query('SELECT id_nivel FROM clubes_niveles WHERE id_club=$1 ORDER BY id_nivel', [id])).rows.map((fila) => fila.id_nivel);
   return rows[0];
@@ -83,10 +84,21 @@ async function auditar(db, usuario, accion, detalle) {
   await registrarActividadCatalogo(db, { idActor: usuario.id, accion, detalle });
 }
 
+async function listarResponsables(db, actividad) {
+  return (await db.query(`SELECT u.id_usuario,u.nombre_completo,u.id_rol,
+      (u.id_usuario=$2::int) AS principal
+    FROM usuarios u
+    WHERE u.deleted_at IS NULL
+      AND (u.id_usuario=$2::int OR EXISTS (
+        SELECT 1 FROM actividades_responsables ar
+        WHERE ar.id_actividad=$1 AND ar.id_usuario=u.id_usuario))
+    ORDER BY (u.id_usuario=$2::int) DESC,u.nombre_completo,u.id_usuario`, [actividad.id_actividad, actividad.id_responsable])).rows;
+}
+
 export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secretoAdmin, limpiarImagenes = async () => {}, limitarEscritura = (_req, _res, next) => next(), limitarSubida = (_req, _res, next) => next(), limitarRegistro = limitarEscritura, limitarReenvio = limitarEscritura, almacenPdf, correoMisiones }) {
   const router = Router();
   router.use((_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
-  for (const parametro of ['idActividad', 'idEdicion', 'idFoto', 'idAporte', 'idOpcion', 'idClub', 'idRegistro', 'idCarta', 'idReserva', 'idPublicacion']) {
+  for (const parametro of ['idActividad', 'idEdicion', 'idFoto', 'idAporte', 'idOpcion', 'idClub', 'idRegistro', 'idCarta', 'idReserva', 'idPublicacion', 'idUsuario']) {
     router.param(parametro, (_req, _res, next, valor) => {
       if (!/^[1-9]\d*$/.test(valor) || !Number.isSafeInteger(Number(valor))) return next(errorActividad('Identificador no válido'));
       next();
@@ -173,7 +185,9 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
 
   router.get('/gestion/asignadas', async (req, res) => {
     const { rows } = await db.query(`SELECT id_actividad,nombre,descripcion,categoria,estado,slug
-      FROM catalogo_recursos WHERE tipo='actividad' AND id_responsable=$1
+      FROM catalogo_recursos a WHERE tipo='actividad' AND (id_responsable=$1 OR EXISTS (
+        SELECT 1 FROM actividades_responsables ar
+        WHERE ar.id_actividad=a.id_actividad AND ar.id_usuario=$1))
       ORDER BY nombre,id_actividad`, [req.user.id]);
     res.json(rows);
   });
@@ -181,7 +195,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   async function actividadAsignada(req) {
     if (!/^[1-9]\d*$/.test(req.params.idActividad) || !Number.isSafeInteger(Number(req.params.idActividad))) throw errorActividad('Actividad no válida');
     const actividad = await obtenerActividad(db, req.params.idActividad);
-    if (actividad.tipo !== 'actividad' || actividad.id_responsable !== req.user.id) throw errorActividad('Esta actividad no está asignada a tu cuenta', 403);
+    if (actividad.tipo !== 'actividad' || !(actividad.id_responsable === req.user.id || (actividad.responsables_ids || []).includes(Number(req.user.id)))) throw errorActividad('Esta actividad no está asignada a tu cuenta', 403);
     return actividad;
   }
 
@@ -206,7 +220,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   });
 
   router.get('/gestion', async (req, res) => {
-    const actividades = (await db.query('SELECT a.*,u.nombre_completo AS responsable_nombre FROM catalogo_recursos a LEFT JOIN usuarios u ON u.id_usuario=a.id_responsable WHERE ($1::boolean OR a.id_responsable=$2 OR (a.id_responsable IS NULL AND a.id_autor=$2)) ORDER BY a.id_actividad', [supervisa(req.user), req.user.id])).rows;
+    const actividades = (await db.query('SELECT a.*,u.nombre_completo AS responsable_nombre, COALESCE((SELECT array_agg(ar.id_usuario ORDER BY ar.id_usuario) FROM actividades_responsables ar WHERE ar.id_actividad=a.id_actividad), ARRAY[]::int[]) AS responsables_ids FROM catalogo_recursos a LEFT JOIN usuarios u ON u.id_usuario=a.id_responsable WHERE ($1::boolean OR a.id_responsable=$2 OR (a.id_responsable IS NULL AND a.id_autor=$2) OR EXISTS (SELECT 1 FROM actividades_responsables ar WHERE ar.id_actividad=a.id_actividad AND ar.id_usuario=$2)) ORDER BY a.id_actividad', [supervisa(req.user), req.user.id])).rows;
     for (const actividad of actividades) actividad.niveles = (await db.query('SELECT id_nivel FROM clubes_niveles WHERE id_club=$1 ORDER BY id_nivel', [actividad.id_actividad])).rows.map((fila) => fila.id_nivel);
     const ids = actividades.map((item) => item.id_actividad);
     const ediciones = ids.length ? (await db.query('SELECT ' + SELECT_EDICION + DESDE_EDICION + 'WHERE e.id_actividad = ANY($1::int[]) ORDER BY e.id_edicion DESC', [ids])).rows : [];
@@ -217,6 +231,43 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     if (!supervisa(req.user)) throw errorActividad('Solo Coordinación y Rectoría asignan encargados', 403);
     const buscar = textoActividad(req.query.buscar, 100, 'Nombre');
     res.json((await db.query("SELECT id_usuario, nombre_completo FROM usuarios WHERE deleted_at IS NULL AND nombre_completo ILIKE $1 AND ($2::boolean=FALSE OR id_rol IN (1,2)) ORDER BY nombre_completo LIMIT 50", ['%' + buscar + '%',req.query.tipo==='club'])).rows);
+  });
+
+  router.get('/gestion/actividades/:idActividad/responsables', async (req, res) => {
+    const actividad = await obtenerActividad(db, req.params.idActividad);
+    comprobarGestion(req.user, actividad);
+    if (actividad.tipo !== 'actividad') throw errorActividad('Los responsables adicionales corresponden a actividades', 409);
+    res.json({ responsables: await listarResponsables(db, actividad) });
+  });
+
+  router.post('/gestion/actividades/:idActividad/responsables', async (req, res) => {
+    if (!supervisa(req.user)) throw errorActividad('Solo Coordinación y Rectoría asignan responsables', 403);
+    const id = Number(req.body?.id_responsable);
+    if (!Number.isSafeInteger(id) || id < 1) throw errorActividad('Selecciona un responsable');
+    res.json(await transaccion(async (cliente) => {
+      const actividad = await obtenerActividad(cliente, req.params.idActividad, true);
+      if (actividad.tipo !== 'actividad') throw errorActividad('Los responsables adicionales corresponden a actividades', 409);
+      const usuario = (await cliente.query('SELECT id_usuario FROM usuarios WHERE id_usuario=$1 AND deleted_at IS NULL FOR UPDATE', [id])).rows[0];
+      if (!usuario) throw errorActividad('Responsable no disponible');
+      if (actividad.id_responsable === id) throw errorActividad('Esta persona ya es el responsable principal', 409);
+      await cliente.query('INSERT INTO actividades_responsables(id_actividad,id_usuario) VALUES($1,$2) ON CONFLICT DO NOTHING', [actividad.id_actividad, id]);
+      await auditar(cliente, req.user, 'responsable_adicional_asignado', { id_actividad: actividad.id_actividad, id_responsable: id });
+      return { responsables: await listarResponsables(cliente, actividad) };
+    }));
+  });
+
+  router.delete('/gestion/actividades/:idActividad/responsables/:idUsuario', async (req, res) => {
+    if (!supervisa(req.user)) throw errorActividad('Solo Coordinación y Rectoría retiran responsables', 403);
+    res.json(await transaccion(async (cliente) => {
+      const actividad = await obtenerActividad(cliente, req.params.idActividad, true);
+      if (actividad.tipo !== 'actividad') throw errorActividad('Los responsables adicionales corresponden a actividades', 409);
+      const id = Number(req.params.idUsuario);
+      if (actividad.id_responsable === id) throw errorActividad('El responsable principal se cambia desde su asignación', 409);
+      const eliminado = (await cliente.query('DELETE FROM actividades_responsables WHERE id_actividad=$1 AND id_usuario=$2 RETURNING id_usuario', [actividad.id_actividad, id])).rows[0];
+      if (!eliminado) throw errorActividad('Responsable adicional no encontrado', 404);
+      await auditar(cliente, req.user, 'responsable_adicional_retirado', { id_actividad: actividad.id_actividad, id_responsable: id });
+      return { responsables: await listarResponsables(cliente, actividad) };
+    }));
   });
 
   router.get('/gestion/traslados/clubes', async (req,res) => {
@@ -270,6 +321,8 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
         await cliente.query('UPDATE usuarios SET id_rol=2 WHERE id_usuario=$1',[id]);
       }
       const fila = await guardarColumnas(cliente, 'catalogo_recursos', 'id_actividad', req.params.idActividad, { id_responsable: id });
+      if (recurso.id_responsable && recurso.id_responsable !== id) await cliente.query('DELETE FROM actividades_responsables WHERE id_actividad=$1 AND id_usuario=$2', [fila.id_actividad, recurso.id_responsable]);
+      await cliente.query('DELETE FROM actividades_responsables WHERE id_actividad=$1 AND id_usuario=$2', [fila.id_actividad, id]);
       await auditar(cliente, req.user, 'encargado_asignado', { id_actividad: fila.id_actividad, id_responsable: id });
       return fila;
     }));
@@ -920,6 +973,10 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
   montarMisiones(router, {
     db, autenticar, hoy, obtenerActividad, obtenerEdicion, comprobarGestion, comprobarPublica, edicionPublica,
     transaccion, auditar, catalogoEdicion, aportesRegistro, limitarEscritura, limitarSubida, limitarRegistro, limitarReenvio, almacenPdf, correoMisiones,
+  });
+  montarInvitadosTrineo(router, {
+    db, hoy, obtenerEdicion, comprobarPublica, edicionPublica, transaccion, auditar, catalogoEdicion, aportesRegistro,
+    limitarEscritura, limitarRegistro, limitarReenvio, correoMisiones,
   });
 
   router.put('/ediciones/:idEdicion/registro', autenticar, limitarEscritura, async (req, res) => {

@@ -1555,7 +1555,7 @@ GROUP BY cl.id_club;
 
 -- Este bloque forma parte del esquema completo; no requiere ejecutar archivos adicionales.
 -- También incorpora las versiones anteriores del módulo conservando sus correspondencias e historial.
--- Inventario actual: 13 tablas físicas del módulo.
+-- Inventario actual: 14 tablas físicas del módulo.
 --   Ediciones y registros: actividades_ediciones, actividades_registros.
 --   Aportaciones: actividades_aportes_catalogo, actividades_aportaciones.
 --   Publicaciones: publicaciones_oferta, publicaciones_imagenes, reacciones_catalogo.
@@ -1563,6 +1563,7 @@ GROUP BY cl.id_club;
 --   Asistencia: actividades_asistencia_accesos, actividades_asistencias.
 --   Misiones: misiones_documentos.
 --   Trineo: actividades_cartas, actividades_cartas_reservas.
+--   Responsables adicionales: actividades_responsables.
 -- Se reutilizan clubes y actividad_clubes. Los nombres anteriores actividades,
 -- actividades_fotos, actividades_reacciones, actividades_historial y
 -- actividades_legado_clubes se conservan como vistas sobre el modelo compartido.
@@ -1768,6 +1769,13 @@ FROM clubes;
 CREATE OR REPLACE VIEW actividades AS SELECT id_actividad,slug,nombre,descripcion,categoria,url_imagen,
        plantilla,mostrar_en_oferta,estado,id_autor,id_responsable,propuesta,estado_propuesta,
        motivo_rechazo,actualizado_en FROM catalogo_recursos WHERE tipo='actividad';
+CREATE TABLE IF NOT EXISTS actividades_responsables (
+  id_actividad INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+  id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (id_actividad, id_usuario)
+);
+CREATE INDEX IF NOT EXISTS idx_actividades_responsables_usuario ON actividades_responsables(id_usuario);
 CREATE OR REPLACE VIEW clubes_operativos AS SELECT * FROM clubes WHERE tipo='club' WITH LOCAL CHECK OPTION;
 CREATE VIEW clubes_con_estado AS
 SELECT cl.*,COUNT(f.id_formulario)::int AS formularios_recibidos,
@@ -2213,7 +2221,10 @@ BEGIN
     SELECT 1 FROM actividades_ediciones e JOIN clubes c ON c.id_club=e.id_actividad
     WHERE e.id_edicion=NEW.id_edicion AND c.tipo='actividad' AND c.plantilla='misiones'
       AND e.configuracion_misiones @> '{"version":2}'::jsonb
-  ) THEN RAISE EXCEPTION 'Los invitados solo se inscriben a nuevas ediciones de Misiones' USING ERRCODE='23514'; END IF;
+  ) AND NOT EXISTS (
+    SELECT 1 FROM actividades_ediciones e JOIN clubes c ON c.id_club=e.id_actividad
+    WHERE e.id_edicion=NEW.id_edicion AND c.tipo='actividad' AND c.plantilla='trineo'
+  ) THEN RAISE EXCEPTION 'Los invitados solo se inscriben a nuevas ediciones de Misiones o Trineo' USING ERRCODE='23514'; END IF;
   RETURN NEW;
 END $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_registro_invitado_misiones ON actividades_registros;
@@ -2306,7 +2317,7 @@ CREATE OR REPLACE FUNCTION fn_trineo_reserva() RETURNS trigger AS $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM actividades_cartas c
     JOIN actividades_registros r ON r.id_edicion=c.id_edicion
-    WHERE c.id_carta=NEW.id_carta AND r.id_registro=NEW.id_registro AND r.id_usuario IS NOT NULL) THEN
+    WHERE c.id_carta=NEW.id_carta AND r.id_registro=NEW.id_registro) THEN
     RAISE EXCEPTION 'La carta y el alumno deben pertenecer a la misma edición del Trineo' USING ERRCODE='23514';
   END IF;
   IF NEW.id_aportacion IS NOT NULL AND NOT EXISTS (
