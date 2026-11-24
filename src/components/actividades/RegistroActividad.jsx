@@ -114,23 +114,21 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
         const obligatorio = campo.obligatorio || esCamisa;
         const etiqueta = campo.etiqueta + (obligatorio ? ' *' : ' (opcional)');
         const comunes = { id, 'aria-describedby': campo.ayuda ? id + '-ayuda' : undefined, className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
-        return <CampoRegistroActividad id={id} etiqueta={esCamisa ? 'Camisa' : etiqueta} ayuda={campo.ayuda} className={esCamisa || campo.tipo === 'texto_largo' ? 'sm:col-span-2' : ''} key={campo.clave}>
+        return <CampoRegistroActividad id={id} etiqueta={esCamisa ? 'Camisa' : etiqueta} ayuda={campo.ayuda} className={campo.tipo === 'texto_largo' ? 'sm:col-span-2' : ''} key={campo.clave}>
           {esCamisa ? <div className="space-y-3">
-            <div className="grid items-start gap-4 sm:grid-cols-2">
+            <SelectorOpciones
+              id={id + '-tiene'} name="tiene_camisa" etiqueta="¿Cuentas con camisa?" valor={solicitaCamisa === null ? '' : solicitaCamisa ? 'no' : 'si'}
+              alCambiar={(valor) => { const necesita = valor === 'no'; setSolicitaCamisa(necesita); if (!necesita) responder(campo.clave, ''); }}
+              required opciones={[{ value: '', label: 'Selecciona una opción' }, { value: 'si', label: 'Sí, ya tengo camisa' }, { value: 'no', label: 'No, necesito una camisa' }]} botonClassName="h-11"
+            />
+            {solicitaCamisa && <div className="space-y-2">
+              <span className="block text-sm font-semibold">Talla de camisa *</span>
               <SelectorOpciones
-                id={id + '-tiene'} name="tiene_camisa" etiqueta="¿Cuentas con camisa?" valor={solicitaCamisa === null ? '' : solicitaCamisa ? 'no' : 'si'}
-                alCambiar={(valor) => { const necesita = valor === 'no'; setSolicitaCamisa(necesita); if (!necesita) responder(campo.clave, ''); }}
-                required opciones={[{ value: '', label: 'Selecciona una opción' }, { value: 'si', label: 'Sí, ya tengo camisa' }, { value: 'no', label: 'No, necesito una camisa' }]} botonClassName="h-11"
+                id={id + '-talla'} name={campo.clave} etiqueta="Talla de camisa" valor={String(respuestas[campo.clave] ?? '')}
+                alCambiar={(valor) => responder(campo.clave, valor)} required
+                opciones={[{ value: '', label: 'Selecciona una talla' }, ...campo.opciones.map((opcion) => ({ value: opcion, label: opcion }))]} botonClassName="h-11"
               />
-              {solicitaCamisa && <div className="space-y-2">
-                <span className="block text-sm font-semibold">Talla de camisa *</span>
-                <SelectorOpciones
-                  id={id + '-talla'} name={campo.clave} etiqueta="Talla de camisa" valor={String(respuestas[campo.clave] ?? '')}
-                  alCambiar={(valor) => responder(campo.clave, valor)} required
-                  opciones={[{ value: '', label: 'Selecciona una talla' }, ...campo.opciones.map((opcion) => ({ value: opcion, label: opcion }))]} botonClassName="h-11"
-                />
-              </div>}
-            </div>
+            </div>}
             {errorCamisa && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{errorCamisa}</p>}
           </div> : campo.tipo === 'seleccion' || campo.tipo === 'licenciatura' ? <SelectorOpciones
             id={id} name={campo.clave} etiqueta={etiqueta} descripcionId={comunes['aria-describedby']}
