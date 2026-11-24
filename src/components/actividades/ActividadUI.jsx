@@ -30,7 +30,6 @@ export function TarjetaActividad({ actividad, edicion }) {
   return <Link to={actividad.tipo==='club' ? '/campus/campeche/portal/club/'+actividad.id_club : '/actividades/' + actividad.slug + (edicion ? '?edicion=' + edicion.id_edicion : '')} className={'group block overflow-hidden rounded-2xl border transition-shadow hover:shadow-lg focus-visible:outline-2 focus-visible:outline-amber-400 ' + cardCls}>
     {actividad.url_imagen && <img src={actividad.url_imagen} alt="" loading="lazy" className="w-full aspect-[16/9] object-cover" />}
     <div className="p-5 space-y-3">
-      <p className="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">{actividad.tipo==='club' ? 'Club · ' : ''}{actividad.categoria}</p>
       <h3 className={'text-xl font-black ' + tema.title}>{actividad.nombre}</h3>
       <p className={'text-sm leading-relaxed whitespace-pre-line ' + tema.subtitle}>{actividad.descripcion}</p>
       {edicion && <><p className={'text-sm ' + tema.text}><FechaActividad fecha={edicion.fecha_inicio} hora={edicion.hora_inicio} /></p><EstadoActividad estado={edicion.estado_registro} /></>}

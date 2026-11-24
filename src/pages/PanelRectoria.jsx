@@ -45,7 +45,7 @@ export function PanelRectoria() {
       >
       <h1 className={`text-2xl font-black tracking-tight mb-6 ${tema.title}`}>Panel de Rectoría</h1>
       {d.vistaActiva === 'clubes' && <SeccionGestionClubs onVolver={d.recargarClubes}>
-        {(onPublicacion) => <SeccionClubes clubesDetalle={d.clubesDetalle} cargando={d.cargando} onPublicacion={onPublicacion}/>}
+        {(props) => <SeccionClubes clubesDetalle={d.clubesDetalle} cargando={d.cargando} onPublicacion={props.onPublicacion} />}
       </SeccionGestionClubs>}
       {d.vistaActiva === 'revision-actividades' && <GestionActividades integrada tipoFijo="actividad" estadoInicial="pendiente"/>}
 

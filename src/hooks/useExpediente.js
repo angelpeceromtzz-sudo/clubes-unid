@@ -11,18 +11,31 @@ export function useExpediente() {
   const [buscando, setBuscando] = useState(false);
   const [cargandoExpediente, setCargandoExpediente] = useState(false);
   const [error, setError] = useState('');
+  const [filtros, setFiltros] = useState({ id_licenciatura: '', con_expediente: true, orden: '' });
 
-  const buscar = useCallback(async (texto) => {
-    const limpio = texto.trim();
-    setTermino(texto);
+  const buscar = useCallback(async (texto, filtrosOverride) => {
+    const limpio = (texto ?? termino).trim();
+    const filtrosActivos = filtrosOverride ?? filtros;
+    setTermino(texto ?? termino);
     setError('');
-    if (limpio.length < MIN_BUSQUEDA) {
+    if (limpio.length > 0 && limpio.length < MIN_BUSQUEDA) {
       setResultados([]);
       return;
     }
     setBuscando(true);
     try {
-      const data = await api.get(`/expediente/buscar?q=${encodeURIComponent(limpio)}`);
+      const params = new URLSearchParams();
+      if (limpio) params.set('q', limpio);
+      if (filtrosActivos?.id_licenciatura) {
+        params.set('id_licenciatura', filtrosActivos.id_licenciatura);
+      }
+      if (filtrosActivos?.con_expediente) {
+        params.set('con_expediente', 'true');
+      }
+      if (filtrosActivos?.orden) {
+        params.set('orden', filtrosActivos.orden);
+      }
+      const data = await api.get(`/expediente/buscar?${params.toString()}`);
       setResultados(data);
     } catch (err) {
       setResultados([]);
@@ -30,6 +43,13 @@ export function useExpediente() {
     } finally {
       setBuscando(false);
     }
+  }, [termino, filtros]);
+
+  const actualizarFiltros = useCallback((nuevos) => {
+    setFiltros((prev) => {
+      const siguiente = { ...prev, ...nuevos };
+      return siguiente;
+    });
   }, []);
 
   const seleccionar = useCallback(async (idUsuario) => {
@@ -57,7 +77,9 @@ export function useExpediente() {
     buscando,
     cargandoExpediente,
     error,
+    filtros,
     buscar,
+    actualizarFiltros,
     seleccionar,
     volver,
   };

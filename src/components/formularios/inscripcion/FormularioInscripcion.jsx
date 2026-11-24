@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { ModalExito } from '../../modals/ModalExito';
 import { api } from '../../../services/api';
@@ -18,13 +18,13 @@ export function FormularioInscripcion({ club, onClose }) {
     id_club: club.id_club || club.id,
     nombre_completo: usuario?.nombre_completo || '',
     matricula: usuario?.institutional_id || '',
-    id_licenciatura: '',
-    cuatrimestre: '',
+    id_licenciatura: usuario?.id_licenciatura ? String(usuario.id_licenciatura) : '',    cuatrimestre: '',
 
     telefono_contacto: '',
     motivo_ingreso: '',
-    experiencia_previa: '',
   });
+  const [preguntasExtra, setPreguntasExtra] = useState([]);
+  const [respuestasExtra, setRespuestasExtra] = useState({});
   // La licenciatura se guarda como id del catálogo, no como texto: el backend lo
   // valida contra cat_licenciaturas y todas las lecturas lo traen con
   // LEFT JOIN ... AS carrera.
@@ -42,6 +42,40 @@ export function FormularioInscripcion({ club, onClose }) {
   const bloqueado = yaPostulado || limiteAlcanzado;
   const datosPrecargados = !!usuario?.institutional_id;
 
+  useEffect(() => {
+    const idClub = club.id_club || club.id;
+    if (!idClub) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const data = await api.get(`/clubes/${idClub}/preguntas`);
+        if (cancelado) return;
+        setPreguntasExtra(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelado) setPreguntasExtra([]);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [club.id_club, club.id]);
+
+  useEffect(() => {
+    if (usuario?.id_licenciatura) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const data = await api.get('/auth/me');
+        if (cancelado) return;
+        const lic = data?.id_licenciatura;
+        if (lic) {
+          setFormulario((prev) => (prev.id_licenciatura ? prev : { ...prev, id_licenciatura: String(lic) }));
+        }
+      } catch {
+        // Ignorar: el campo quedará editable.
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [usuario?.id_licenciatura]);
+
   const [errores, setErrores] = useState({});
   const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -55,6 +89,7 @@ export function FormularioInscripcion({ club, onClose }) {
 
   function manejarCambio(e) {
     const { name, value } = e.target;
+    if (name === 'id_licenciatura' && usuario?.id_licenciatura) return;
     if (name === 'matricula' || name === 'telefono_contacto') {
       if (!/^\d*$/.test(value)) return;
     }
@@ -78,6 +113,7 @@ export function FormularioInscripcion({ club, onClose }) {
         ...formulario,
         id_licenciatura: Number(formulario.id_licenciatura),
         cuatrimestre: parseInt(formulario.cuatrimestre, 10),
+        respuestas_extra: respuestasExtra,
       });
       await refrescarInscripcionActiva();
       actualizarClubesPostulados((prev) => [...prev, idClubActual]);
@@ -152,7 +188,7 @@ export function FormularioInscripcion({ club, onClose }) {
                 onChange={manejarCambio}
                 opciones={opcionesLicenciatura}
                 placeholder={cargandoCatalogos ? 'Cargando...' : 'Selecciona tu licenciatura'}
-                disabled={cargandoCatalogos}
+                disabled={cargandoCatalogos || !!usuario?.id_licenciatura}
                 required
                 error={errores.id_licenciatura}
               />
@@ -176,6 +212,60 @@ export function FormularioInscripcion({ club, onClose }) {
             <CampoTexto label="¿Por qué quieres unirte?" name="motivo_ingreso" value={formulario.motivo_ingreso} onChange={manejarCambio} placeholder="Cuéntanos tus motivaciones..." type="textarea" required error={errores.motivo_ingreso} maxLength={200} />
 
             <CampoTexto label="Experiencia Previa" name="experiencia_previa" value={formulario.experiencia_previa} onChange={manejarCambio} placeholder="¿Has participado en algo similar antes?" type="textarea" maxLength={200} />
+
+            {preguntasExtra.map((p) => (
+              <div key={p.id_pregunta} className="space-y-1">
+                <label className={`block text-sm font-bold ${tema.isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                  {p.etiqueta}{p.obligatorio ? ' *' : ''}
+                </label>
+                {p.tipo === 'textarea' ? (
+                  <textarea
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  />
+                ) : p.tipo === 'seleccion' ? (
+                  <select
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  >
+                    <option value="">Selecciona una opción</option>
+                    {(p.configuracion?.opciones || []).map((op, i) => (
+                      <option key={i} value={op}>{op}</option>
+                    ))}
+                  </select>
+                ) : p.tipo === 'numero' ? (
+                  <input
+                    type="number"
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    min={p.configuracion?.min}
+                    max={p.configuracion?.max}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  />
+                ) : p.tipo === 'fecha' ? (
+                  <input
+                    type="date"
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={respuestasExtra[p.id_pregunta] ?? ''}
+                    onChange={(e) => setRespuestasExtra((prev) => ({ ...prev, [p.id_pregunta]: e.target.value }))}
+                    required={p.obligatorio}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${tema.isDark ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                  />
+                )}
+              </div>
+            ))}
 
             <Alerta tipo="error" mensaje={errorApi} />
 

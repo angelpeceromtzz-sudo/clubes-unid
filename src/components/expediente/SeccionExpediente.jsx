@@ -1,7 +1,8 @@
 /* Expediente estudiantil: búsqueda de alumnos y consulta de su historial completo de participación en clubes. */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useExpediente } from '../../hooks/useExpediente';
+import { api } from '../../services/api';
 import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { Th, Td } from '../ui/CeldasTabla';
@@ -34,11 +35,12 @@ function Tarjeta({ titulo, valor, detalle }) {
   );
 }
 
-function Bloque({ titulo, children }) {
+function Bloque({ titulo, descripcion, children }) {
   const { modoOscuro } = useTheme();
   return (
     <section className={`rounded-xl border p-4 ${modoOscuro ? 'bg-[#18223f]/60 border-slate-700/60' : 'bg-white border-slate-200'}`}>
-      <h3 className={`text-sm font-black uppercase tracking-wider mb-3 ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{titulo}</h3>
+      <h3 className={`text-sm font-black uppercase tracking-wider mb-1 ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{titulo}</h3>
+      {descripcion && <p className={`text-xs mb-3 ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>{descripcion}</p>}
       <div className="overflow-x-auto">{children}</div>
     </section>
   );
@@ -46,7 +48,13 @@ function Bloque({ titulo, children }) {
 
 function VistaDetalle({ expediente, onVolver }) {
   const { modoOscuro } = useTheme();
-  const { alumno, resumen, membresias, postulaciones, asistencia_por_club, sesiones } = expediente;
+  const { alumno, resumen, membresias, postulaciones, asistencia_por_club, sesiones, actividades_asistencia } = expediente;
+  const clubActual = (membresias || []).find((m) => m.estatus === 'activo')?.nombre_club || null;
+  const membresiasOrdenadas = [...(membresias || [])].sort((a, b) => {
+    if (a.estatus === 'activo' && b.estatus !== 'activo') return -1;
+    if (a.estatus !== 'activo' && b.estatus === 'activo') return 1;
+    return 0;
+  });
   const filaCls = `border-b ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/20' : 'border-slate-100 hover:bg-slate-50'} transition-colors`;
 
   return (
@@ -68,12 +76,20 @@ function VistaDetalle({ expediente, onVolver }) {
               {alumno.licenciatura || 'Sin carrera registrada'}
               {alumno.cuatrimestre ? ` · Cuatrimestre ${alumno.cuatrimestre}` : ''}
             </p>
+            <p className="text-sm text-slate-500">
+              Club actual: <span className="font-medium">{clubActual || 'Sin club activo'}</span>
+            </p>
+            {alumno.fecha_nacimiento && (
+              <p className="text-sm text-slate-500">
+                Edad: {Math.floor((Date.now() - new Date(alumno.fecha_nacimiento + 'T00:00:00').getTime()) / (365.25 * 24 * 60 * 60 * 1000))} años
+              </p>
+            )}
           </div>
           {alumno.cuenta_desactivada && <Badge texto="Cuenta desactivada" color="red" size="md" />}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <Tarjeta titulo="Clubes" valor={resumen.clubes_distintos} detalle={`${resumen.membresias_activas} membresía(s) activa(s)`} />
         <Tarjeta titulo="Postulaciones" valor={resumen.total_postulaciones} />
         <Tarjeta titulo="Sesiones" valor={resumen.sesiones_registradas} detalle={`${resumen.sesiones_asistidas} con asistencia`} />
@@ -82,9 +98,10 @@ function VistaDetalle({ expediente, onVolver }) {
           valor={resumen.porcentaje_asistencia === null ? '—' : `${resumen.porcentaje_asistencia}%`}
           detalle={resumen.primer_registro ? `Desde ${fechaCorta(resumen.primer_registro)}` : 'Sin registros'}
         />
+        <Tarjeta titulo="Actividades" valor={resumen.actividades_asistidas ?? 0} detalle={`${resumen.actividades_registradas ?? 0} registro(s)`} />
       </div>
 
-      <Bloque titulo="Membresías en clubes">
+      <Bloque titulo="Membresías en clubes" descripcion="Clubes en los que ha sido o es miembro, con estatus y fechas.">
         <table className="w-full text-sm">
           <thead>
             <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
@@ -92,11 +109,11 @@ function VistaDetalle({ expediente, onVolver }) {
             </tr>
           </thead>
           <tbody>
-            {membresias.length === 0 && (
+            {membresiasOrdenadas.length === 0 && (
               <tr><td colSpan={4} className="text-center py-6 text-slate-500">Sin membresías registradas</td></tr>
             )}
-            {membresias.map(m => (
-              <tr key={m.id_inscripcion} className={filaCls}>
+            {membresiasOrdenadas.map(m => (
+              <tr key={m.id_inscripcion} className={m.estatus === 'activo' ? `border-b ${modoOscuro ? 'border-slate-800/50 bg-emerald-500/5' : 'border-slate-100 bg-emerald-50'} transition-colors` : filaCls}>
                 <Td className="font-medium">{m.nombre_club}</Td>
                 <Td><Badge texto={m.estatus} color={m.estatus === 'activo' ? 'emerald' : 'slate'} /></Td>
                 <Td>{fechaCorta(m.fecha_inscripcion)}</Td>
@@ -107,7 +124,7 @@ function VistaDetalle({ expediente, onVolver }) {
         </table>
       </Bloque>
 
-      <Bloque titulo="Postulaciones">
+      <Bloque titulo="Postulaciones" descripcion="Solicitudes de ingreso enviadas a clubes y su estado.">
         <table className="w-full text-sm">
           <thead>
             <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
@@ -131,7 +148,7 @@ function VistaDetalle({ expediente, onVolver }) {
         </table>
       </Bloque>
 
-      <Bloque titulo="Asistencia por club">
+      <Bloque titulo="Asistencia por club" descripcion="Resumen de sesiones registradas por club.">
         <table className="w-full text-sm">
           <thead>
             <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
@@ -156,7 +173,7 @@ function VistaDetalle({ expediente, onVolver }) {
         </table>
       </Bloque>
 
-      <Bloque titulo="Historial de sesiones">
+      <Bloque titulo="Historial de sesiones" descripcion="Detalle de cada sesión registrada.">
         <table className="w-full text-sm">
           <thead>
             <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
@@ -184,6 +201,32 @@ function VistaDetalle({ expediente, onVolver }) {
           </tbody>
         </table>
       </Bloque>
+
+      <Bloque titulo="Asistencia a actividades" descripcion="Registros y asistencia en actividades.">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
+              <Th>Actividad</Th><Th>Edición</Th><Th>Fecha</Th><Th>Estado</Th><Th>Origen</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {(actividades_asistencia || []).length === 0 && (
+              <tr><td colSpan={5} className="text-center py-6 text-slate-500">Sin asistencias a actividades</td></tr>
+            )}
+            {(actividades_asistencia || []).map(a => (
+              <tr key={a.id_registro} className={filaCls}>
+                <Td className="font-medium">{a.actividad}</Td>
+                <Td>{a.edicion}</Td>
+                <Td>{a.fecha_inicio ? fechaEventoCorta(a.fecha_inicio) : '—'}</Td>
+                <Td>
+                  <Badge texto={a.estado} color={a.estado === 'presente' ? 'emerald' : 'red'} />
+                </Td>
+                <Td>{a.origen}</Td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Bloque>
     </div>
   );
 }
@@ -192,10 +235,35 @@ export function SeccionExpediente() {
   const { modoOscuro } = useTheme();
   const d = useExpediente();
   const [entrada, setEntrada] = useState('');
+  const [licenciaturas, setLicenciaturas] = useState([]);
+  const [cargandoLicenciaturas, setCargandoLicenciaturas] = useState(false);
+
+  useEffect(() => {
+    d.buscar('', d.filtros);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let cancelado = false;
+    setCargandoLicenciaturas(true);
+    api.getLicenciaturas()
+      .then((data) => { if (!cancelado) setLicenciaturas(Array.isArray(data) ? data : []); })
+      .catch(() => { if (!cancelado) setLicenciaturas([]); })
+      .finally(() => { if (!cancelado) setCargandoLicenciaturas(false); });
+    return () => { cancelado = true; };
+  }, []);
 
   function enviarBusqueda(e) {
-    e.preventDefault();
-    d.buscar(entrada);
+    if (e) e.preventDefault();
+    d.buscar(entrada, d.filtros);
+  }
+
+  function cambiarFiltro(cambios) {
+    const siguientes = { ...d.filtros, ...cambios };
+    d.actualizarFiltros(siguientes);
+    if (entrada.trim().length === 0 || entrada.trim().length >= 3) {
+      d.buscar(entrada, siguientes);
+    }
   }
 
   if (d.cargandoExpediente) return <Spinner className="py-10" />;
@@ -213,10 +281,49 @@ export function SeccionExpediente() {
             placeholder="Nombre, matrícula o correo (mín. 3 caracteres)"
             className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-80`} />
         </div>
-        <button type="submit" disabled={d.buscando}
-          className="bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-900 text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-all cursor-pointer">
-          Buscar
-        </button>
+        <div>
+          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Licenciatura</label>
+          <select
+            value={d.filtros.id_licenciatura}
+            onChange={e => cambiarFiltro({ id_licenciatura: e.target.value })}
+            disabled={false}
+            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-72`}
+          >
+            <option value="">Todas las licenciaturas</option>
+            <optgroup label="Escolarizadas">
+              {licenciaturas.filter((l) => l.modalidad === 'escolarizada').map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Ejecutivas">
+              {licenciaturas.filter((l) => l.modalidad === 'ejecutiva').map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Duales">
+              {licenciaturas.filter((l) => l.modalidad === 'dual').map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Maestrías">
+              {licenciaturas.filter((l) => l.modalidad === 'maestria').map((l) => (
+                <option key={l.id_licenciatura} value={l.id_licenciatura}>{l.nombre}</option>
+              ))}
+            </optgroup>
+          </select>
+        </div>
+        <div>
+          <label className={`block text-xs font-bold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-600'} mb-1`}>Ordenar por</label>
+          <select
+            value={d.filtros.orden || ''}
+            onChange={e => cambiarFiltro({ orden: e.target.value })}
+            className={`${modoOscuro ? 'bg-[#18223f] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/50 w-48`}
+          >
+            <option value="">Nombre (A–Z)</option>
+            <option value="registros_desc">Más registros primero</option>
+          </select>
+        </div>
+        <button type="submit" className="hidden" aria-hidden="true" />
       </form>
 
       {d.error && (
@@ -227,8 +334,8 @@ export function SeccionExpediente() {
 
       {d.buscando ? (
         <Spinner className="py-10" />
-      ) : d.termino.trim().length < 3 ? (
-        <EmptyState icono="users" titulo="Busca un alumno" descripcion="Escribe su nombre, matrícula o correo institucional para ver su trayectoria." />
+      ) : d.resultados.length === 0 && d.termino.trim().length === 0 ? (
+        <EmptyState icono="users" titulo="Sin alumnos con registros" descripcion="Aún no hay alumnos o responsables con datos en su expediente." />
       ) : d.resultados.length === 0 ? (
         <EmptyState icono="users" titulo="Sin resultados" descripcion="Revisa el texto escrito e intenta de nuevo." />
       ) : (
@@ -236,7 +343,7 @@ export function SeccionExpediente() {
           <table className="w-full text-sm">
             <thead>
               <tr className={`border-b ${modoOscuro ? 'border-slate-700/50' : 'border-slate-200'}`}>
-                <Th>Nombre</Th><Th>Matrícula</Th><Th>Correo</Th><Th>Cuenta</Th><Th></Th>
+                <Th>Nombre</Th><Th>Matrícula</Th><Th>Licenciatura</Th><Th>Correo</Th><Th>Registros</Th><Th>Cuenta</Th><Th></Th>
               </tr>
             </thead>
             <tbody>
@@ -244,7 +351,9 @@ export function SeccionExpediente() {
                 <tr key={a.id_usuario} className={`border-b ${modoOscuro ? 'border-slate-800/50 hover:bg-slate-800/20' : 'border-slate-100 hover:bg-slate-50'} transition-colors`}>
                   <Td className="font-medium">{formatearNombre(a.nombre_completo)}</Td>
                   <Td className="font-mono text-xs">{a.matricula || a.institutional_id || '—'}</Td>
+                  <Td>{a.licenciatura || '—'}</Td>
                   <Td>{a.correo_institucional}</Td>
+                  <Td>{a.total_registros ?? 0}</Td>
                   <Td>{a.cuenta_desactivada ? <Badge texto="Desactivada" color="red" /> : <Badge texto="Activa" color="emerald" />}</Td>
                   <Td>
                     <button onClick={() => d.seleccionar(a.id_usuario)}

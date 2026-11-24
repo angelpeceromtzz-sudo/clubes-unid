@@ -22,16 +22,9 @@ export function SeccionGestionClubs({ onVolver, children }) {
   }
 
   return <section aria-label="Gestión de Clubs" className="min-w-0 space-y-6">
-    <div className="flex max-w-sm flex-col gap-2">
-      <label htmlFor="tipo-listado-catalogo" className={labelCls + ' !mb-0'}>Mostrar</label>
-      <select id="tipo-listado-catalogo" aria-label="Filtrar por tipo" className={inputCls + ' h-11'} value={tipo} onChange={(evento) => cambiarVista(evento.target.value)}>
-        <option value="club">Clubs</option>
-        <option value="actividad">Actividades</option>
-      </select>
-    </div>
     {tipo === 'actividad' ? <GestionActividades key="actividades" integrada tipoFijo="actividad"/> : detalleClub ? <>
       <BotonAccion variant="outline" onClick={() => { onVolver?.(); cambiarVista('club'); }}>Volver al listado de Clubs</BotonAccion>
       <GestionActividades key={'club-' + registro} integrada tipoFijo="club" soloDetalle/>
-    </> : children((club) => cambiarVista('club', club.id_club))}
+    </> : children({ onPublicacion: (club) => cambiarVista('club', club.id_club), tipo, onCambiarTipo: cambiarVista })}
   </section>;
 }
