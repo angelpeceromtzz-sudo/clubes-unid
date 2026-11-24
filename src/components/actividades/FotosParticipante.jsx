@@ -58,11 +58,12 @@ export function FotosParticipante({ idEdicion, fotos, onActualizar, acceso }) {
 
   return <section className="space-y-6" aria-label="Compartir fotografías">
     <form aria-label="Compartir fotografías" onSubmit={enviar} className={'space-y-4 rounded-2xl border p-4 sm:p-5 ' + cardCls}><fieldset disabled={pendiente} className="space-y-4">
-      <h3 className={'text-xl font-bold ' + tema.title}>Comparte un momento</h3>
-      <p className={'text-sm ' + tema.subtitle}>Comparte fotografías de tu participación en esta edición. Serán revisadas antes de publicarse.</p>
-      <label className={labelCls}>Descripción de las fotografías<textarea className={inputCls} value={pie} maxLength={300} rows={3} placeholder="Cuéntale a la comunidad qué están compartiendo…" onChange={(evento) => setPie(evento.target.value)} /></label>
-      <label className={labelCls}>Seleccionar fotografías<input ref={archivosRef} aria-label="Seleccionar fotografías" className={inputCls} type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple onChange={agregarArchivos} /></label>
-      <p className={'text-sm ' + tema.subtitle}>Hasta 10 fotografías por publicación; máximo 5 MB cada una.</p>
+      <div><h3 className={'text-xl font-bold ' + tema.title}>Comparte un momento</h3><p className={'mt-1 text-sm ' + tema.subtitle}>Comparte fotografías de tu participación; serán revisadas antes de publicarse.</p></div>
+      {seleccionadas.length === 0 && <button type="button" className="inline-flex w-full items-center justify-center gap-3 rounded-xl border border-amber-400/40 bg-amber-400/5 px-4 py-4 text-left transition hover:border-amber-400 hover:bg-amber-400/10 cursor-pointer" onClick={() => archivosRef.current?.click()}><Icono nombre="image" className="h-7 w-7 shrink-0 text-amber-500" /><span><strong className="block">Agrega una imagen</strong><span className={'text-sm ' + tema.subtitle}>Elige hasta 10 fotografías para compartir</span></span></button>}
+      <input ref={archivosRef} aria-label="Seleccionar fotografías" className="sr-only" type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple onChange={agregarArchivos} />
+      {seleccionadas.length > 0 && <button type="button" className="inline-flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-400 cursor-pointer" onClick={() => archivosRef.current?.click()}><Icono nombre="plus" className="h-4 w-4" />Agregar más fotografías</button>}
+      <label className={labelCls}>Cuéntale algo a la comunidad<textarea className={inputCls} value={pie} maxLength={300} rows={3} placeholder="¿Qué están compartiendo?" onChange={(evento) => setPie(evento.target.value)} /></label>
+      <p className={'text-xs ' + tema.subtitle}>JPG, PNG, GIF o WebP · máximo 5 MB por imagen</p>
       {seleccionadas.length > 0 && <><p className="text-sm font-semibold" role="status">{seleccionadas.length} {seleccionadas.length === 1 ? 'fotografía seleccionada' : 'fotografías seleccionadas'}</p><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {seleccionadas.map((foto) => <figure key={foto.id} className="relative"><img src={foto.url} alt={'Vista previa de ' + foto.archivo.name} className="aspect-square w-full rounded-xl object-cover" /><button type="button" aria-label={'Quitar ' + foto.archivo.name} className="absolute top-2 right-2 rounded-full bg-slate-950/80 p-2 text-white cursor-pointer focus-visible:outline-2 focus-visible:outline-amber-400" onClick={() => quitar(foto.id)}><Icono nombre="close" className="h-4 w-4" /></button></figure>)}
       </div></>}
