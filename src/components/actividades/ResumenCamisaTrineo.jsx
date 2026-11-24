@@ -11,8 +11,8 @@ export function SelectorCompraCamisa({ campo, valor, onChange }) {
       alCambiar={onChange}
       required
       opciones={[{ value: '', label: 'Selecciona una talla' }, ...(campo?.opciones || []).map((opcion) => ({ value: opcion, label: opcion }))]}
-      className="ml-auto max-w-xs"
-      botonClassName="h-10 text-sm"
+      className="ml-auto w-full max-w-sm"
+      botonClassName="h-11 text-base"
     />;
 }
 
