@@ -44,7 +44,7 @@ export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSelecci
             <p role="status" className={'text-sm ' + tema.subtitle}>{cartas.length ? cartas.length + (cartas.length === 1 ? ' carta disponible' : ' cartas disponibles') : 'No hay cartas disponibles con ese nombre. Verifica los datos con el encargado.'}</p>
             {cartas.length > 0 && <>
               {cartas.length > 1 && <p className={'text-xs sm:hidden ' + tema.subtitle}>Desplázate hacia abajo para ver las demás cartas</p>}
-              <div className="min-w-0 sm:max-h-[32rem] sm:overflow-y-auto">
+              <div className="min-w-0">
                 <div className="grid min-w-0 gap-3 sm:grid-cols-2">{cartas.map((carta) => <article key={carta.id_carta} className={'min-w-0 space-y-3 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ' + (seleccionada?.id_carta === carta.id_carta ? 'border-amber-400 bg-amber-400/10 shadow-sm' : 'border-slate-400/25')}>
                 <p className={'text-xs ' + tema.subtitle}>Carta #{carta.id_carta}</p>
                  <h4 className="break-words font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12))}</h4>
