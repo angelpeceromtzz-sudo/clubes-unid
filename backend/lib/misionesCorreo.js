@@ -15,7 +15,7 @@ export function crearCorreoMisiones({ env = process.env, fetchImpl = globalThis.
   return {
     enviados,
     async enviarEnlace({ correo, folio, token, edicion, ruta = 'misiones', titulo = 'Misiones' }) {
-      const origen = env.MISIONES_PUBLIC_URL || env.CORS_ORIGIN?.split(',')[0]?.trim();
+      const origen = env.MISIONES_PUBLIC_URL?.trim() || env.PUBLIC_URL?.trim() || 'https://clubsunid.com.mx';
       const enlace = construirEnlaceMisiones(folio, token, origen, ruta);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) || /[\r\n]/.test(correo)) throw new Error('Destinatario inválido');
       const mensaje = {

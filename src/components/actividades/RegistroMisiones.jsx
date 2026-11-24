@@ -145,7 +145,7 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   if (!abierta) return <p className={tema.subtitle}>{edicion.estado_registro === 'proxima' ? 'El formulario estará disponible al abrir las inscripciones.' : 'El periodo de inscripción y edición está cerrado.'}</p>;
   if (registro?.estado === 'cancelado' && invitado) return <p>Tu inscripción está cancelada. Consulta al encargado.</p>;
   const clavesBase = secciones.flatMap(({ claves }) => claves);
-  return <form aria-label="Registro a Misiones" onSubmit={guardar} className="registro-actividad space-y-6 rounded-2xl border border-slate-400/15 bg-white/95 p-6 shadow-[-4px_-4px_12px_rgba(0,0,0,0.08),4px_4px_12px_rgba(0,0,0,0.12)] dark:bg-[#12203f]">
+  return <form aria-label="Registro a Misiones" onSubmit={guardar} className="registro-actividad space-y-6">
     <fieldset disabled={pendiente} className="min-w-0 space-y-6">
       {!mega && <section className="space-y-3"><h4 className="text-lg font-bold">{invitado ? 'Registro de invitado' : 'Participante UNID'}</h4>
         <div className="grid gap-4 sm:grid-cols-2">{invitado ? [['nombre_completo', 'Nombre completo', 'text'], ['correo', 'Correo electrónico', 'email'], ['telefono', 'Teléfono', 'tel']].map(([clave, etiqueta, tipo]) => contactoCampo(clave, etiqueta, tipo)) : identificacionUnid}</div>

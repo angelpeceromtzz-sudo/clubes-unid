@@ -49,7 +49,7 @@ export function PaginaRegistroInvitadoTrineo() {
         <label className="block text-sm font-semibold">Guarda tu enlace privado<input className={inputCls + ' mt-2'} readOnly value={enlace} onFocus={(evento) => evento.target.select()} /></label>
         <div className="flex flex-wrap gap-3"><BotonAccion variant="outline" size="sm" onClick={async () => { try { await navigator.clipboard.writeText(enlace); setMensaje('Enlace copiado.'); } catch { setMensaje('Selecciona y copia el enlace que aparece arriba.'); } }}>Copiar enlace</BotonAccion><BotonAccion variant="outline" size="sm" disabled={reenviando} onClick={reenviar}>{reenviando ? 'Enviando…' : 'Reenviar correo'}</BotonAccion></div>
       </section>
-      <section aria-label="Formulario de registro"><RegistroActividad key={datos.registro.actualizado_en} edicion={datos.edicion} registro={datos.registro} invitado acceso={acceso} onGuardado={(resultado) => { setDatos(resultado); setMensaje('Cambios guardados.'); }} /></section>
+      <section className={'rounded-2xl border p-5 sm:p-7 ' + cardCls} aria-label="Formulario de registro"><RegistroActividad key={datos.registro.actualizado_en} edicion={datos.edicion} registro={datos.registro} invitado acceso={acceso} onGuardado={(resultado) => { setDatos(resultado); setMensaje('Cambios guardados.'); }} /></section>
       <section className={'rounded-2xl border p-5 space-y-4 ' + cardCls}><h2 className="text-xl font-bold">Mi asistencia</h2><FormularioAsistenciaActividad idEdicion={datos.registro.id_edicion} estadoInscripcion={datos.registro.estado} asistencia={datos.asistencia} disponibilidad={datos.disponibilidad_asistencia} accesoInvitado={acceso} servicioInvitado={trineoService} /></section>
     </>}
   </main>;

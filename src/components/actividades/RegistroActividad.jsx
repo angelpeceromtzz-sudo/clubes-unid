@@ -90,7 +90,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
   }
 
   if (!editando && confirmado) return <section className="space-y-4" aria-label="Tu inscripción">
-     <EstadoActividad estado="confirmado" /><p>{registro.nombre_completo} · {invitado ? 'Invitado' : 'Matrícula ' + registro.matricula}</p>
+     <EstadoActividad estado="confirmado" /><p className="font-bold">{registro.nombre_completo} · {invitado ? 'Invitado' : 'Matrícula ' + registro.matricula}</p>
      {invitado && registro.correo && <p className="text-sm">{registro.correo}{registro.telefono ? ' · ' + registro.telefono : ''}</p>}
     <ResumenCartaTrineo carta={registro.carta} />
     {usaCartas && !registro.carta && <p className="text-sm text-amber-700 dark:text-amber-300">Este registro anterior no tiene carta vinculada.{!regaloRecibido && abierta ? ' Edita tu registro para elegir al niño de tu carta.' : ' Consulta al encargado para revisar tu aportación.'}</p>}
@@ -104,7 +104,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
 
   if (!abierta) return <p className={tema.subtitle}>{edicion.estado_registro === 'proxima' ? 'El registro estará disponible durante el periodo de inscripción.' : 'Las inscripciones de esta edición están cerradas.'}</p>;
 
-  return <form onSubmit={guardar} className="registro-actividad space-y-6 rounded-2xl border border-slate-400/15 bg-white/95 p-6 shadow-[-4px_-4px_12px_rgba(0,0,0,0.08),4px_4px_12px_rgba(0,0,0,0.12)] dark:bg-[#12203f]" aria-label="Registro a la actividad">
+  return <form onSubmit={guardar} className="registro-actividad space-y-6" aria-label="Registro a la actividad">
     <fieldset disabled={pendiente} className="min-w-0 space-y-5">
     {registro?.estado && <EstadoActividad estado={registro.estado} />}
     {registro?.historial_cartas?.length > 0 && !registro.carta && <p className="text-sm">Tu reserva anterior fue liberada al cancelar la inscripción. Elige una carta disponible para registrarte de nuevo.</p>}
