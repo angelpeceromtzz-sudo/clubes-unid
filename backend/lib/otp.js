@@ -1,8 +1,17 @@
 import crypto from 'node:crypto';
+import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 
 export const LONGITUD_CODIGO_OTP = 6;
 export const MAX_INTENTOS_OTP = 5;
 export const MINUTOS_EXPIRACION_OTP_POR_DEFECTO = 10;
+
+// Estos roles deben usar los flujos locales/Microsoft. Tampoco pueden obtener
+// ni conservar una sesión confiable derivada de OTP si su rol cambia después.
+export const ROLES_SIN_OTP = new Set([ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION]);
+
+export function otpHabilitado() {
+  return String(process.env.AUTH_OTP_ENABLED || '').trim().toLowerCase() === 'true';
+}
 
 const LIMITE_CODIGO = 10 ** LONGITUD_CODIGO_OTP;
 

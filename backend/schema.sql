@@ -148,18 +148,84 @@ CREATE INDEX IF NOT EXISTS idx_usuarios_deleted_at ON usuarios(deleted_at);
 
 -- Una sola cuenta OTP recordada por navegador durante un máximo de 30 días.
 -- Los secretos se guardan como hashes y pueden rotarse o revocarse al cerrar sesión.
+-- La generación (32 bytes aleatorios representados como 64 hex) vincula el JWT
+-- con una reactivación concreta del dispositivo. Es nullable sólo para bases
+-- antiguas: sus filas sin generación se revocan y nunca se revalidan.
 CREATE TABLE IF NOT EXISTS dispositivos_confiables (
     id_dispositivo BIGSERIAL PRIMARY KEY,
     id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
     hash_dispositivo VARCHAR(64) NOT NULL UNIQUE,
     token_hash VARCHAR(64) NOT NULL,
+    generacion VARCHAR(64),
     creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ultimo_uso TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expira_en TIMESTAMPTZ NOT NULL,
     revocado_en TIMESTAMPTZ,
+    token_hash_anterior VARCHAR(64),
+    token_anterior_expira_en TIMESTAMPTZ,
     CONSTRAINT chk_dispositivo_hash CHECK (hash_dispositivo ~ '^[a-f0-9]{64}$'),
-    CONSTRAINT chk_dispositivo_token_hash CHECK (token_hash ~ '^[a-f0-9]{64}$')
+    CONSTRAINT chk_dispositivo_token_hash CHECK (token_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT chk_dispositivo_generacion
+        CHECK (generacion IS NULL OR generacion ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT chk_dispositivo_token_hash_anterior
+        CHECK (token_hash_anterior IS NULL OR token_hash_anterior ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT chk_dispositivo_gracia_token_anterior CHECK (
+        (token_hash_anterior IS NULL AND token_anterior_expira_en IS NULL)
+        OR
+        (token_hash_anterior IS NOT NULL AND token_anterior_expira_en IS NOT NULL)
+    )
 );
+
+-- Equivalente idempotente para bases existentes; ver también
+-- migrations/migrate-dispositivos-confiables-generacion.sql.
+ALTER TABLE dispositivos_confiables
+    ADD COLUMN IF NOT EXISTS generacion VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS token_hash_anterior VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS token_anterior_expira_en TIMESTAMPTZ;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_dispositivo_generacion'
+          AND conrelid = 'dispositivos_confiables'::regclass
+    ) THEN
+        ALTER TABLE dispositivos_confiables
+            ADD CONSTRAINT chk_dispositivo_generacion
+            CHECK (generacion IS NULL OR generacion ~ '^[a-f0-9]{64}$');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_dispositivo_token_hash_anterior'
+          AND conrelid = 'dispositivos_confiables'::regclass
+    ) THEN
+        ALTER TABLE dispositivos_confiables
+            ADD CONSTRAINT chk_dispositivo_token_hash_anterior
+            CHECK (token_hash_anterior IS NULL OR token_hash_anterior ~ '^[a-f0-9]{64}$');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_dispositivo_gracia_token_anterior'
+          AND conrelid = 'dispositivos_confiables'::regclass
+    ) THEN
+        ALTER TABLE dispositivos_confiables
+            ADD CONSTRAINT chk_dispositivo_gracia_token_anterior CHECK (
+                (token_hash_anterior IS NULL AND token_anterior_expira_en IS NULL)
+                OR
+                (token_hash_anterior IS NOT NULL AND token_anterior_expira_en IS NOT NULL)
+            );
+    END IF;
+END $$;
+
+-- Fail-closed: un registro previo no puede renovarse ni revalidar un JWT sin
+-- generación. Requerirá un nuevo OTP para reactivar la confianza del navegador.
+UPDATE dispositivos_confiables
+   SET revocado_en = CURRENT_TIMESTAMP
+ WHERE generacion IS NULL
+   AND revocado_en IS NULL;
+
 CREATE INDEX IF NOT EXISTS idx_dispositivos_confiables_usuario
     ON dispositivos_confiables (id_usuario, expira_en);
 

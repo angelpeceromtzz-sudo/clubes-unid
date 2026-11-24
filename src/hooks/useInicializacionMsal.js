@@ -1,12 +1,26 @@
 import { useRef, useEffect } from 'react';
-import { api, getSession, setSession, clearSession } from '../services/api';
-import { limpiarCuentaConfiable, obtenerCuentaConfiable, renovarSesionConfiable } from '../services/api-core';
+import { api, getSession, clearSession } from '../services/api';
+import {
+  capturarEpocaSesion,
+  conservaEpocaSesion,
+  iniciarSesionAlmacenada,
+  limpiarCuentaConfiable,
+  obtenerCuentaConfiable,
+  renovarSesionConfiable,
+} from '../services/api-core';
 import { msalInstance, loginRequest } from '../services/authConfig';
-import { jwtExpirado } from '../utils/jwt';
+import { jwtExpirado, jwtRequiereRenovacion } from '../utils/jwt';
 import { rutaRegresoActividades } from '../utils/rutaRegresoActividades';
 
 function rutaDeRegreso() {
   return rutaRegresoActividades(window.location.pathname, window.location.search);
+}
+
+function sesionActualVigente() {
+  const sesion = getSession();
+  if (!sesion?.token || !sesion?.user) return null;
+  if (jwtExpirado(sesion.token) || jwtRequiereRenovacion(sesion.token)) return null;
+  return sesion;
 }
 
 export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
@@ -16,6 +30,7 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
     cancelado.current = false;
 
     async function inicializar() {
+      const epocaInicial = capturarEpocaSesion();
       try {
         await msalInstance.initialize();
 
@@ -25,22 +40,47 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
         if (respuesta?.accessToken) {
           const data = await api.loginMicrosoft(respuesta.accessToken);
           if (cancelado.current) return;
-          setSession({ token: data.token, user: data.user });
+          // Una sesión previa con la misma época no sustituye este login recién
+          // completado. Sólo una pestaña que cambió la época durante la espera
+          // puede haber dejado una sesión concurrente más reciente.
+          if (!conservaEpocaSesion(epocaInicial)) {
+            const sesionGanadora = sesionActualVigente();
+            if (sesionGanadora) {
+              window.history.replaceState({}, document.title, rutaDeRegreso());
+              onLoggedIn?.({ user: sesionGanadora.user });
+              return;
+            }
+          }
+          iniciarSesionAlmacenada({ token: data.token, user: data.user });
           window.history.replaceState({}, document.title, rutaDeRegreso());
-          onLoggedIn?.(data);
+          onLoggedIn?.({ ...data, sesionPersistida: true });
+          return;
+        }
+
+        if (!conservaEpocaSesion(epocaInicial)) {
+          const sesionGanadora = sesionActualVigente();
+          if (sesionGanadora) {
+            window.history.replaceState({}, document.title, rutaDeRegreso());
+            onLoggedIn?.({ user: sesionGanadora.user });
+          } else {
+            onLoggedOut?.();
+            window.history.replaceState({}, document.title, rutaDeRegreso());
+          }
           return;
         }
 
         const cuentas = msalInstance.getAllAccounts();
         const sesion = getSession();
         const tokenExpirado = sesion?.token ? jwtExpirado(sesion.token) : true;
+        const requiereRenovacion = sesion?.token ? jwtRequiereRenovacion(sesion.token) : false;
+        const necesitaNuevaSesion = !sesion || tokenExpirado || requiereRenovacion;
 
         const cuentaConfiable = obtenerCuentaConfiable();
         const idSesion = sesion?.user?.id_usuario ?? sesion?.user?.id;
         const coincideCuentaConfiable = cuentaConfiable
           && (!idSesion || Number(cuentaConfiable.id_usuario) === Number(idSesion));
 
-        if ((!sesion || tokenExpirado) && coincideCuentaConfiable) {
+        if (necesitaNuevaSesion && coincideCuentaConfiable) {
           try {
             const data = await renovarSesionConfiable();
             if (cancelado.current) return;
@@ -48,13 +88,35 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
             onLoggedIn?.(data);
             return;
           } catch (err) {
+            if (Number(err?.status) === 409 && !cancelado.current) {
+              const sesionActual = sesionActualVigente();
+              if (sesionActual) {
+                // Otra pestaña hizo login mientras esperábamos la renovación.
+                // Usamos su sesión vigente y no limpiamos/reemplazamos la nueva.
+                window.history.replaceState({}, document.title, rutaDeRegreso());
+                onLoggedIn?.({ user: sesionActual.user });
+                return;
+              }
+            }
             if (Number(err?.status) === 401 || Number(err?.status) === 403) limpiarCuentaConfiable();
           }
         } else if (cuentaConfiable && idSesion && !coincideCuentaConfiable) {
           limpiarCuentaConfiable();
         }
 
-        if (cuentas.length > 0 && tokenExpirado) {
+        const sesionGanadora = sesionActualVigente();
+        if (sesionGanadora) {
+          window.history.replaceState({}, document.title, rutaDeRegreso());
+          onLoggedIn?.({ user: sesionGanadora.user });
+          return;
+        }
+        if (!conservaEpocaSesion(epocaInicial)) {
+          onLoggedOut?.();
+          window.history.replaceState({}, document.title, rutaDeRegreso());
+          return;
+        }
+
+        if (cuentas.length > 0 && necesitaNuevaSesion) {
           try {
             const silencioso = await msalInstance.acquireTokenSilent({
               ...loginRequest,
@@ -63,9 +125,20 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
             if (!cancelado.current && silencioso?.accessToken) {
               const data = await api.loginMicrosoft(silencioso.accessToken);
               if (!cancelado.current) {
-                setSession({ token: data.token, user: data.user });
+                if (!conservaEpocaSesion(epocaInicial)) {
+                  const sesionGanadora = sesionActualVigente();
+                  if (sesionGanadora) {
+                    window.history.replaceState({}, document.title, rutaDeRegreso());
+                    onLoggedIn?.({ user: sesionGanadora.user });
+                    return;
+                  }
+                  onLoggedOut?.();
+                  window.history.replaceState({}, document.title, rutaDeRegreso());
+                  return;
+                }
+                iniciarSesionAlmacenada({ token: data.token, user: data.user });
                 window.history.replaceState({}, document.title, rutaDeRegreso());
-                onLoggedIn?.(data);
+                onLoggedIn?.({ ...data, sesionPersistida: true });
                 return;
               }
             }
@@ -74,8 +147,19 @@ export function useInicializacionMsal({ onLoggedIn, onLoggedOut, onReady }) {
           }
         }
 
-        if (!sesion || tokenExpirado) {
-          if (tokenExpirado) clearSession();
+        if (necesitaNuevaSesion) {
+          if (!conservaEpocaSesion(epocaInicial)) {
+            const sesionGanadora = sesionActualVigente();
+            if (sesionGanadora) {
+              window.history.replaceState({}, document.title, rutaDeRegreso());
+              onLoggedIn?.({ user: sesionGanadora.user });
+              return;
+            }
+            onLoggedOut?.();
+            window.history.replaceState({}, document.title, rutaDeRegreso());
+            return;
+          }
+          if (tokenExpirado || requiereRenovacion) clearSession();
           onLoggedOut?.();
           window.history.replaceState({}, document.title, rutaDeRegreso());
         } else {
