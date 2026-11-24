@@ -154,7 +154,7 @@ export function EditorCamposActividad({ campos, plantilla, configuracion, idEdic
            <input className={inputCls} type="file" accept="image/jpeg,image/png,image/gif,image/webp" disabled={subiendoImagen === campo.clave} onChange={(evento) => { subirImagen(indice, evento.target.files?.[0]); evento.target.value = ''; }} />
          </label>
          {campo.imagen_url && <div className="flex flex-wrap items-start gap-3">
-           <img src={campo.imagen_url} alt={'Imagen para ' + (campo.etiqueta || 'la pregunta')} className="h-28 w-40 rounded-lg object-cover" />
+           <a href={campo.imagen_url} target="_blank" rel="noreferrer" aria-label="Abrir imagen completa"><img src={campo.imagen_url} alt={'Imagen para ' + (campo.etiqueta || 'la pregunta')} className="h-28 w-40 rounded-lg bg-slate-100 object-contain dark:bg-slate-800" /></a>
            <BotonAccion type="button" variant="outline" size="sm" disabled={subiendoImagen === campo.clave} onClick={() => quitarImagen(indice)}>{subiendoImagen === campo.clave ? 'Procesando…' : 'Quitar imagen'}</BotonAccion>
          </div>}
          {!idEdicion && <p className={'text-xs ' + tema.subtitle}>Guarda la edición para habilitar la carga de imágenes.</p>}
