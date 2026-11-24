@@ -112,13 +112,26 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
         const obligatorio = campo.obligatorio || esCamisa;
         const etiqueta = campo.etiqueta + (obligatorio ? ' *' : ' (opcional)');
         const comunes = { id, 'aria-describedby': campo.ayuda ? id + '-ayuda' : undefined, className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
-        return <CampoRegistroActividad id={id} etiqueta={etiqueta} ayuda={campo.ayuda} className={campo.tipo === 'texto_largo' ? 'sm:col-span-2' : ''} key={campo.clave}>
-          {campo.tipo === 'seleccion' || campo.tipo === 'licenciatura' ? <SelectorOpciones
+        return <CampoRegistroActividad id={id} etiqueta={esCamisa ? 'Camisa' : etiqueta} ayuda={campo.ayuda} className={campo.tipo === 'texto_largo' ? 'sm:col-span-2' : ''} key={campo.clave}>
+          {esCamisa ? <div className="space-y-3">
+            <SelectorOpciones
+              id={id + '-tiene'} name="tiene_camisa" etiqueta="¿Cuentas con camisa?" valor={solicitaCamisa === null ? '' : solicitaCamisa ? 'no' : 'si'}
+              alCambiar={(valor) => { const necesita = valor === 'no'; setSolicitaCamisa(necesita); if (!necesita) responder(campo.clave, ''); }}
+              required opciones={[{ value: '', label: 'Selecciona una opción' }, { value: 'si', label: 'Sí, ya tengo camisa' }, { value: 'no', label: 'No, necesito una camisa' }]} botonClassName="h-11"
+            />
+            {solicitaCamisa && <div className="space-y-2">
+              <span className="block text-sm font-semibold">Talla de camisa *</span>
+              <SelectorOpciones
+                id={id + '-talla'} name={campo.clave} etiqueta="Talla de camisa" valor={String(respuestas[campo.clave] ?? '')}
+                alCambiar={(valor) => responder(campo.clave, valor)} required
+                opciones={[{ value: '', label: 'Selecciona una talla' }, ...campo.opciones.map((opcion) => ({ value: opcion, label: opcion }))]} botonClassName="h-11"
+              />
+            </div>}
+          </div> : campo.tipo === 'seleccion' || campo.tipo === 'licenciatura' ? <SelectorOpciones
             id={id} name={campo.clave} etiqueta={etiqueta} descripcionId={comunes['aria-describedby']}
-            valor={esCamisa ? solicitaCamisa === null ? '' : solicitaCamisa ? String(respuestas[campo.clave] ?? '') : '__ya_tengo_camisa' : String(respuestas[campo.clave] ?? '')}
-            alCambiar={(valor) => { if (esCamisa) { const tieneCamisa = valor === '__ya_tengo_camisa'; setSolicitaCamisa(!tieneCamisa); responder(campo.clave, tieneCamisa ? '' : valor); } else responder(campo.clave, valor); }}
+            valor={String(respuestas[campo.clave] ?? '')} alCambiar={(valor) => responder(campo.clave, valor)}
             required={obligatorio} disabled={campo.tipo === 'licenciatura' && loading} botonClassName="h-11"
-            opciones={esCamisa ? [{ value: '', label: 'Selecciona una opción' }, { value: '__ya_tengo_camisa', label: 'Ya tengo camisa' }, ...campo.opciones.map((opcion) => ({ value: opcion, label: 'Necesito camisa · Talla ' + opcion }))] : [{ value: '', label: 'Selecciona una opción' }, ...(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ value: String(item.id_licenciatura), label: item.nombre })) : campo.opciones.map((opcion) => ({ value: opcion, label: opcion })))]}
+            opciones={[{ value: '', label: 'Selecciona una opción' }, ...(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ value: String(item.id_licenciatura), label: item.nombre })) : campo.opciones.map((opcion) => ({ value: opcion, label: opcion })))]}
           /> : campo.tipo === 'texto_largo' ? <textarea {...comunes} rows={4} maxLength={2000} /> : <input {...comunes} type={campo.tipo === 'fecha' ? 'date' : campo.tipo === 'numero' ? 'number' : 'text'} min={campo.minimo} max={campo.maximo} step={campo.tipo === 'numero' ? 1 : undefined} maxLength={500} />}
         </CampoRegistroActividad>;
       })}
