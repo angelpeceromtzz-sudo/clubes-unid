@@ -11,7 +11,7 @@ import { DocumentoMisiones } from './DocumentoMisiones';
 import { gruposPreguntasMisiones } from '../../constants/preguntasMisiones';
 import { ImagenPregunta } from './ImagenPregunta';
 import { CampoRegistroActividad } from './CampoRegistroActividad';
-import { ImagenesCuestionarioActividad } from './ImagenesCuestionarioActividad';
+import { ImagenesCuestionarioActividad, ImagenesResumenActividad } from './ImagenesCuestionarioActividad';
 import { SelectorOpciones } from '../ui/SelectorOpciones';
 
 const dinero = (centavos) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(centavos / 100);
@@ -30,8 +30,9 @@ export function ResumenRegistroMisiones({ registro, edicion, acceso, licenciatur
       <dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt>
       <dd className="whitespace-pre-wrap break-words font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : campo.tipo === 'fecha' && registro.respuestas[campo.clave] ? registro.respuestas[campo.clave].split('-').reverse().join('/') : registro.respuestas[campo.clave] ?? 'Sin especificar'}</dd>
       {mostrarImagenes && campo.imagen_url && <ImagenPregunta src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mt-2 h-28 w-full" />}
-    </div>)}</dl>
-    {registro.pedido?.lineas.length > 0 && <section className="rounded-xl border border-slate-400/25 p-4 space-y-2"><h4 className="font-bold">Tu pedido</h4>{registro.pedido.lineas.map((linea) => <p key={linea.id_producto + linea.talla} className="text-sm">{linea.cantidad} × {linea.nombre}{linea.talla ? ' · Talla ' + linea.talla : ''} · {dinero(linea.subtotal_centavos)}</p>)}<p className="font-bold">Total: {dinero(registro.pedido.total_centavos)} MXN</p><p className="text-sm">El pago se acuerda con el encargado.</p></section>}
+     </div>)}</dl>
+     {mostrarImagenes && <ImagenesResumenActividad campos={campos} respuestas={registro.respuestas} />}
+     {registro.pedido?.lineas.length > 0 && <section className="rounded-xl border border-slate-400/25 p-4 space-y-2"><h4 className="font-bold">Tu pedido</h4>{registro.pedido.lineas.map((linea) => <p key={linea.id_producto + linea.talla} className="text-sm">{linea.cantidad} × {linea.nombre}{linea.talla ? ' · Talla ' + linea.talla : ''} · {dinero(linea.subtotal_centavos)}</p>)}<p className="font-bold">Total: {dinero(registro.pedido.total_centavos)} MXN</p><p className="text-sm">El pago se acuerda con el encargado.</p></section>}
     {mostrarAportaciones && registro.aportaciones?.filter((aporte) => aporte.estado !== 'cancelada').map((aporte) => <p key={aporte.id_aportacion} className="text-sm">{aporte.nombre}: {Number(aporte.cantidad)} {aporte.unidad} · {aporte.estado}</p>)}
     <DocumentoMisiones id={registro.codigo_firmado_id} acceso={acceso} nombre="codigo-conducta-firmado.pdf">Descargar PDF firmado</DocumentoMisiones>
   </div>;
@@ -137,7 +138,7 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   }
 
   if (registro && !editando) return <section aria-label="Tu inscripción a Misiones" className="space-y-4">
-    <ResumenRegistroMisiones registro={registro} edicion={edicion} acceso={acceso} licenciaturas={licenciaturas} />
+    <ResumenRegistroMisiones registro={registro} edicion={edicion} acceso={acceso} licenciaturas={licenciaturas} mostrarImagenes />
     {abierta && registro.estado !== 'cancelado' && <div className="flex flex-wrap gap-3"><BotonAccion onClick={() => setEditando(true)}>Editar mi registro</BotonAccion>{!invitado && <BotonAccion variant="outline" onClick={() => setCancelando(true)}>Cancelar inscripción</BotonAccion>}</div>}
     {cancelando && <div role="alert" className="space-y-3"><p>¿Confirmas la cancelación? Tus aportaciones recibidas y asistencias conservarán su historial.</p><BotonAccion variant="danger" disabled={pendiente} onClick={cancelar}>Confirmar cancelación</BotonAccion> <BotonAccion variant="outline" onClick={() => setCancelando(false)}>Conservar mi inscripción</BotonAccion></div>}
     {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
@@ -181,6 +182,7 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
         <label className={labelCls}>PDF firmado{config.codigo_obligatorio ? ' *' : ' (opcional)'}<input type="file" className={inputCls} accept="application/pdf,.pdf" required={config.codigo_obligatorio && !registro?.codigo_firmado_id} onChange={(evento) => setPdf(evento.target.files?.[0] || null)} /></label><p className={'text-xs ' + tema.subtitle}>Tamaño máximo: 10 MB.</p>
       </section>}
       <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} />
+      <ImagenesResumenActividad campos={campos} respuestas={respuestas} />
       {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex flex-wrap gap-3"><BotonAccion type="submit" disabled={pendiente || Boolean(errorPedido)}>{pendiente ? 'Guardando…' : registro ? 'Guardar cambios' : 'Confirmar inscripción'}</BotonAccion>{registro && <BotonAccion variant="outline" onClick={() => setEditando(false)}>Volver a mi registro</BotonAccion>}</div>
     </fieldset>
