@@ -62,11 +62,10 @@ export function montarMisiones(router, {
     [randomUUID(), contexto.id_actividad, contexto.id_edicion || null, contexto.id_registro || null, contexto.tipo, archivo.public_id, archivo.nombre, archivo.bytes, archivo.sha256])).rows[0];
   }
 
-  async function enviarEnlace(registro, token, edicion) {
+  async function enviarEnlace(registro, token, edicion, origenFrontend) {
     try {
       if (!correoMisiones) throw new Error('Correo no configurado');
-      await correoMisiones.enviarEnlace({ correo: registro.correo, folio: registro.folio, token, edicion: edicion.nombre });
-      return true;
+      return await correoMisiones.enviarEnlace({ correo: registro.correo, folio: registro.folio, token, edicion: edicion.nombre, origen: origenFrontend });
     } catch { return false; }
   }
 
@@ -154,8 +153,10 @@ export function montarMisiones(router, {
   }, recibirPdfMisiones, async (req, res) => {
     const resultado = await transaccion(async (cliente) => guardarInscripcion(cliente, req, await obtenerEdicion(cliente, req.params.idEdicion, true), null));
     req.pdfsMisionesConfirmados = true;
-    const correo_enviado = await enviarEnlace(resultado.registro, resultado.token, resultado.edicion);
-    res.status(201).json({ ...resultado, correo_enviado });
+    const origenFrontend = req.body?.origen || req.headers.origin || null;
+    const correo_enviado = await enviarEnlace(resultado.registro, resultado.token, resultado.edicion, origenFrontend);
+    const enlace = typeof correo_enviado === 'string' ? correo_enviado : null;
+    res.status(201).json({ ...resultado, correo_enviado: Boolean(correo_enviado), enlace });
   });
 
   router.get('/invitados/:folio', limitarEscritura, async (req, res) => {

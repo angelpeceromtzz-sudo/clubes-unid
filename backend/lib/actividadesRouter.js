@@ -692,8 +692,34 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     };
     router.post('/gestion/ediciones/:idEdicion/fotos', autorizarSubida, limitarSubida, subirImagen.single('imagen'), guardarFotos);
     router.post('/gestion/ediciones/:idEdicion/fotos/lote', autorizarSubida, limitarSubida, subirImagen.array('imagenes', 10), guardarFotos);
-    router.post('/gestion/actividades/:idActividad/fotos/lote', autorizarSubida, limitarSubida, subirImagen.array('imagenes',10), guardarFotos);
   }
+
+
+  // Fotografías compartidas por participantes (alumnos registrados en la edición).
+  router.post('/ediciones/:idEdicion/fotos-participante', autenticar, limitarSubida, subirImagen.array('imagenes', 10), async (req, res) => {
+    const archivos = Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
+    if (!archivos.length || archivos.length > 10) throw errorActividad('Selecciona de 1 a 10 imágenes JPG, PNG, GIF o WebP de hasta 5 MB cada una');
+    const pie = textoActividad(req.body?.pie, 300, 'Descripción de las fotografías');
+    res.status(201).json(await transaccion(async (cliente) => {
+      const edicion = await obtenerEdicion(cliente, req.params.idEdicion, true);
+      comprobarPublica(edicion);
+      const token = req.headers.authorization?.replace(/^Registro /, '');
+      let registro;
+      let idAutor = null;
+      if (token && token !== req.headers.authorization) {
+        const { createHash } = await import('node:crypto');
+        const hash = createHash('sha256').update(token).digest('hex');
+        registro = (await cliente.query("SELECT id_registro, estado FROM actividades_registros WHERE id_edicion= AND invitado_token_hash= AND tipo_participante='invitado'", [edicion.id_edicion, hash])).rows[0];
+      } else {
+        registro = (await cliente.query('SELECT id_registro, estado FROM actividades_registros WHERE id_edicion= AND id_usuario=', [edicion.id_edicion, req.user.id])).rows[0];
+        idAutor = req.user.id;
+      }
+      if (!registro || registro.estado !== 'confirmado') throw errorActividad('Necesitas una inscripción confirmada para compartir fotografías', 403);
+      const resultado = await guardarPublicacionFotos(cliente, { idRecurso: edicion.id_actividad, idEdicion: edicion.id_edicion, pie, idAutor, publicada: false, archivos });
+      await auditar(cliente, req.user || { id: null }, 'fotos_participante_agregadas', { id_edicion: edicion.id_edicion, ids_fotos: resultado.map((foto) => foto.id_foto) });
+      return resultado;
+    }));
+  });
 
   router.put('/gestion/fotos/:idFoto', async (req, res) => {
     if (!['publicada', 'rechazada', 'eliminada'].includes(req.body.estado)) throw errorActividad('Estado de fotografía no válido');

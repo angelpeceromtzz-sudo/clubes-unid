@@ -5,6 +5,7 @@ import { trineoService } from '../services/trineo.service';
 import { extraerAccesoTrineo, leerAccesoTrineo, guardarAccesoTrineo, enlacePrivadoTrineo } from '../utils/accesoTrineo';
 import { RegistroActividad } from '../components/actividades/RegistroActividad';
 import { FormularioAsistenciaActividad } from '../components/actividades/AsistenciaActividad';
+import { FotosParticipante } from '../components/actividades/FotosParticipante';
 import { NavegacionActividades } from '../components/actividades/ActividadUI';
 import { BotonAccion } from '../components/ui/BotonAccion';
 import { Spinner } from '../components/ui/Spinner';
@@ -15,6 +16,7 @@ export function PaginaRegistroInvitadoTrineo() {
   const navigate = useNavigate();
   const { tema, cardCls, inputCls } = useTheme();
   const [acceso] = useState(() => extraerAccesoTrineo(window.location.href, window.location.origin) || leerAccesoTrineo(folio));
+  const [enlaceRecibido, setEnlaceRecibido] = useState(() => location.state?.enlace || '');
   const [datos, setDatos] = useState(null);
   const [version, setVersion] = useState(0);
   const [error, setError] = useState('');
@@ -31,7 +33,7 @@ export function PaginaRegistroInvitadoTrineo() {
     }).catch((fallo) => { if (activo) setError(fallo.message); });
     return () => { activo = false; };
   }, [acceso, version, location.hash, location.pathname, location.search, location.state, navigate]);
-  const enlace = acceso ? enlacePrivadoTrineo(acceso, window.location.origin) : '';
+  const enlace = enlaceRecibido || (acceso ? enlacePrivadoTrineo(acceso, window.location.origin) : '');
   async function reenviar() {
     setReenviando(true); setError('');
     try { await trineoService.reenviarEnlace(acceso); setMensaje('Enlace enviado a tu correo.'); }
@@ -49,7 +51,8 @@ export function PaginaRegistroInvitadoTrineo() {
         <label className="block text-sm font-semibold">Guarda tu enlace privado<input className={inputCls + ' mt-2'} readOnly value={enlace} onFocus={(evento) => evento.target.select()} /></label>
         <div className="flex flex-wrap gap-3"><BotonAccion variant="outline" size="sm" onClick={async () => { try { await navigator.clipboard.writeText(enlace); setMensaje('Enlace copiado.'); } catch { setMensaje('Selecciona y copia el enlace que aparece arriba.'); } }}>Copiar enlace</BotonAccion><BotonAccion variant="outline" size="sm" disabled={reenviando} onClick={reenviar}>{reenviando ? 'Enviando…' : 'Reenviar correo'}</BotonAccion></div>
       </section>
-      <section className={'rounded-2xl border p-5 sm:p-7 ' + cardCls} aria-label="Formulario de registro"><RegistroActividad key={datos.registro.actualizado_en} edicion={datos.edicion} registro={datos.registro} invitado acceso={acceso} onGuardado={(resultado) => { setDatos(resultado); setMensaje('Cambios guardados.'); }} /></section>
+      <section className={'rounded-2xl border p-5 sm:p-7 ' + cardCls} aria-label="Formulario de registro"><RegistroActividad key={datos.registro.actualizado_en} edicion={datos.edicion} registro={datos.registro} invitado acceso={acceso} onGuardado={(resultado) => { if (resultado?.enlace) setEnlaceRecibido(resultado.enlace); setDatos(resultado); setMensaje('Cambios guardados.'); }} /></section>
+      {datos.registro.estado === 'confirmado' && <FotosParticipante idEdicion={datos.registro.id_edicion} fotos={datos.edicion.fotos} acceso={acceso} onActualizar={(texto) => { setMensaje(texto); setVersion((actual) => actual + 1); }} />}
       <section className={'rounded-2xl border p-5 space-y-4 ' + cardCls}><h2 className="text-xl font-bold">Mi asistencia</h2><FormularioAsistenciaActividad idEdicion={datos.registro.id_edicion} estadoInscripcion={datos.registro.estado} asistencia={datos.asistencia} disponibilidad={datos.disponibilidad_asistencia} accesoInvitado={acceso} servicioInvitado={trineoService} /></section>
     </>}
   </main>;
