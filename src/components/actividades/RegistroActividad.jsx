@@ -48,7 +48,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
   const campoCamisa = edicion.campos_registro.find((campo) => campo.clave === 'talla');
   let pedidoCamisa;
   let errorCamisa = '';
-  if (usaCartas) {
+  if (usaCartas && solicitaCamisa !== null) {
     try { pedidoCamisa = cotizarCamisaTrineo({ campo: campoCamisa, solicita: solicitaCamisa, talla: respuestas.talla, anterior: confirmado ? registro.pedido : null }); }
     catch (fallo) { errorCamisa = fallo.message; }
   }
@@ -65,6 +65,8 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
     if (pendiente) return;
     setError('');
     try {
+      if (usaCartas && solicitaCamisa === null) throw new Error('Indica si ya tienes camisa o necesitas una');
+      if (usaCartas && solicitaCamisa && !respuestas.talla) throw new Error('Selecciona la talla de tu camisa');
       if (errorCamisa) throw new Error(errorCamisa);
       validarRespuestasActividad(campos, respuestas);
       validarAportacionesActividad(aportaciones, catalogo, edicion.requiere_aportacion, aportacionesAnteriores);
@@ -127,6 +129,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
                 opciones={[{ value: '', label: 'Selecciona una talla' }, ...campo.opciones.map((opcion) => ({ value: opcion, label: opcion }))]} botonClassName="h-11"
               />
             </div>}
+            {errorCamisa && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{errorCamisa}</p>}
           </div> : campo.tipo === 'seleccion' || campo.tipo === 'licenciatura' ? <SelectorOpciones
             id={id} name={campo.clave} etiqueta={etiqueta} descripcionId={comunes['aria-describedby']}
             valor={String(respuestas[campo.clave] ?? '')} alCambiar={(valor) => responder(campo.clave, valor)}
@@ -153,7 +156,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
         </div>;
       })}
     </fieldset>}
-    {usaCartas && (errorCamisa ? <p role="alert" className="text-red-600 dark:text-red-400">{errorCamisa}</p> : <ResumenCamisaTrineo pedido={pedidoCamisa} />)}
+    {usaCartas && <ResumenCamisaTrineo pedido={pedidoCamisa} />}
     <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} />
     {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
     <div className="flex flex-wrap gap-3"><BotonAccion type="submit" disabled={pendiente || Boolean(errorCamisa)}>{pendiente ? 'Guardando…' : confirmado ? 'Guardar cambios' : 'Confirmar inscripción'}</BotonAccion>{confirmado && <BotonAccion variant="outline" onClick={() => setEditando(false)}>Volver a mi registro</BotonAccion>}</div>
