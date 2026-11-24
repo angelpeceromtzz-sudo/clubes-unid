@@ -177,7 +177,7 @@ export function EditorCamposActividad({ campos, plantilla, configuracion, idEdic
       {campo.tipo === 'seleccion' && <label className={labelCls}>Opciones, una por línea<textarea className={inputCls} readOnly={opcionesFijas.includes(campo.clave)} value={campo.textoOpciones ?? (campo.opciones || []).join('\n')} rows={3} onChange={(evento) => cambiar(indice, 'textoOpciones', evento.target.value)} placeholder={campo.clave === 'talla' ? 'Escribe las tallas disponibles para esta edición' : 'Una opción por línea'} /></label>}
       {plantilla === 'trineo' && campo.clave === 'talla' && <div className="space-y-2">
         <label className={labelCls}>Precio de la camisa en MXN<input className={inputCls} type="number" min={0} max={1000000} step="0.01" value={campo.precio_camisa_centavos == null ? '' : campo.precio_camisa_centavos / 100} onChange={(evento) => cambiar(indice, 'precio_camisa_centavos', evento.target.value === '' ? null : Math.round(Number(evento.target.value) * 100))} /></label>
-        <p className={'text-sm ' + tema.subtitle}>Una camisa por participante. Quien ya tenga camisa puede inscribirse sin elegir talla. Define el precio y las tallas para ofrecerla.</p>
+         <p className={'text-sm ' + tema.subtitle}>Cada participante debe comprar una playera. Define el precio y las tallas disponibles.</p>
       </div>}
        {campo.tipo === 'numero' && <div className="grid gap-3 sm:grid-cols-2">{[['minimo', 'Mínimo'], ['maximo', 'Máximo']].map(([clave, titulo]) => <label className={labelCls} key={clave}>{titulo}<input className={inputCls} type="number" disabled={fijos.includes(campo.clave)} value={campo[clave] ?? ''} onChange={(evento) => cambiar(indice, clave, evento.target.value)} /></label>)}</div>}
        <div className="space-y-2">
