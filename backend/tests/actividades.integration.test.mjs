@@ -358,7 +358,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
 
   test('un alumno con club y tres postulaciones se registra sin alterar sus membresías', async () => {
     const ruta = '/ediciones/' + edicionTrineo + '/registro';
-    await enviar(1, 'PUT', ruta, { ...inscripcion(), respuestas: { edad: 20 } }, 400);
+    await enviar(1, 'PUT', ruta, { ...inscripcion(), respuestas: { talla: 'M' } }, 400);
     await enviar(1, 'PUT', ruta, { ...inscripcion(), aportaciones: [] }, 400);
     await enviar(1, 'PUT', ruta, { ...inscripcion(), aportaciones: [{ id_opcion: opcion1, cantidad: 0.5 }] }, 400);
     const registro = await enviar(1, 'PUT', ruta, inscripcion());

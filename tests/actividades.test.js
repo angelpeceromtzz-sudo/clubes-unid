@@ -95,12 +95,14 @@ test('las actividades generales no heredan requisitos específicos de Trineo', (
   assert.equal(normalizarEdicionActividad({ nombre: 'Informativa', requiere_aportacion: true }).requiere_aportacion, false);
 });
 
-test('Trineo y Misiones exigen edad y talla y permiten configurar las aportaciones por separado', () => {
+test('Trineo y Misiones configuran edad, talla y aportaciones por separado', () => {
   for (const plantilla of ['trineo', 'misiones']) {
-    const datos = normalizarEdicionActividad({ ...edicion, requiere_registro: false, requiere_aportacion: false }, plantilla);
+    const entrada = { ...edicion, campos_registro: campos.map((campo) => campo.clave === 'talla' ? { ...campo, obligatorio: plantilla !== 'trineo' } : campo) };
+    const datos = normalizarEdicionActividad({ ...entrada, requiere_registro: false, requiere_aportacion: false }, plantilla);
     assert.equal(datos.requiere_registro, true);
     assert.equal(datos.requiere_aportacion, false);
-    assert.equal(normalizarEdicionActividad({ ...edicion, requiere_aportacion: true }, plantilla).requiere_aportacion, true);
+    assert.equal(datos.campos_registro.find((campo) => campo.clave === 'talla').obligatorio, plantilla !== 'trineo');
+    assert.equal(normalizarEdicionActividad({ ...entrada, requiere_aportacion: true }, plantilla).requiere_aportacion, true);
     if (plantilla === 'trineo') assert.throws(() => normalizarEdicionActividad({ ...edicion, campos_registro: campos.filter((campo) => campo.clave !== 'talla') }, plantilla), /edad y talla/);
     else assert.ok(!normalizarEdicionActividad({ ...edicion, campos_registro: campos.filter((campo) => campo.clave !== 'talla') }, plantilla).campos_registro.some((campo) => campo.clave === 'talla'));
     assert.throws(() => normalizarEdicionActividad({ ...edicion, campos_registro: campos.map((campo) => campo.clave === 'edad' ? { ...campo, obligatorio: false } : campo) }, plantilla));
@@ -125,7 +127,9 @@ test('exige catálogo solo cuando las aportaciones son obligatorias y conserva l
   assert.doesNotThrow(() => validarPublicacionEdicion(datos, catalogo));
   assert.doesNotThrow(() => validarPublicacionEdicion({ ...datos, requiere_aportacion: false }, []));
   const sinTallas = normalizarEdicionActividad({ ...edicion, campos_registro: camposPlantillaActividad('trineo') }, 'trineo');
-  assert.throws(() => validarPublicacionEdicion(sinTallas, catalogo), /tallas/);
+  assert.doesNotThrow(() => validarPublicacionEdicion(sinTallas, catalogo));
+  const ofreceCamisas = { ...sinTallas, campos_registro: sinTallas.campos_registro.map((campo) => campo.clave === 'talla' ? { ...campo, precio_camisa_centavos: 16000 } : campo) };
+  assert.throws(() => validarPublicacionEdicion(ofreceCamisas, catalogo), /tallas/);
 });
 
 test('Oferta es independiente de la ventana del destacado y del periodo de inscripción', () => {
@@ -148,7 +152,8 @@ test('rechaza fechas inexistentes y periodos que exceden el evento', () => {
 
 test('valida edad, talla y respuestas configuradas sin almacenar claves ajenas', () => {
   assert.deepEqual(validarRespuestasActividad(campos, { edad: '20', talla: 'M', admin: true }), { edad: 20, talla: 'M' });
-  for (const respuestas of [{ talla: 'M' }, { edad: 20 }, { edad: 20, talla: 'inventada' }, { edad: true, talla: 'M' }, { edad: 20.5, talla: 'M' }]) assert.throws(() => validarRespuestasActividad(campos, respuestas));
+  assert.deepEqual(validarRespuestasActividad(campos, { edad: 20 }), { edad: 20 });
+  for (const respuestas of [{ talla: 'M' }, { edad: 20, talla: 'inventada' }, { edad: true, talla: 'M' }, { edad: 20.5, talla: 'M' }]) assert.throws(() => validarRespuestasActividad(campos, respuestas));
   assert.throws(() => normalizarEdicionActividad({ nombre: 'A', campos_registro: [{ clave: '__proto__', etiqueta: 'No', tipo: 'texto' }] }));
 });
 

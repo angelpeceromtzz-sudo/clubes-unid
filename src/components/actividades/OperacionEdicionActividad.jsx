@@ -16,6 +16,7 @@ import {ResumenRegistroMisiones} from './RegistroMisiones';
 import {GestionCartasTrineo} from './GestionCartasTrineo';
 import {ResumenCartaTrineo} from './CartaTrineo';
 import { ImagenPregunta } from './ImagenPregunta';
+import { ResumenCamisaTrineo } from './ResumenCamisaTrineo';
 
 export function OperacionEdicionActividad({ actividad, edicion, puedeAprobar, puedeAprobarEdicion=puedeAprobar, puedePublicar=false, puedeBorrar=false, operarRevision, pendienteRevision, seccion = 'todo' }) {
   const { usuario } = useAutenticacion();
@@ -66,6 +67,7 @@ export function OperacionEdicionActividad({ actividad, edicion, puedeAprobar, pu
         <div className="space-y-4">{registros.map((registro) => <article key={registro.id_registro} className="space-y-3 border-b border-slate-500/20 pb-5"><h4 className="font-bold">{registro.nombre_completo} · {registro.tipo_participante==='invitado' ? 'Invitado' : registro.matricula}</h4><EstadoActividad estado={registro.estado} />
            {registro.misiones_snapshot ? <ResumenRegistroMisiones registro={registro} edicion={datos.edicion} licenciaturas={licenciaturas} mostrarAportaciones={false} mostrarImagenes/> : <dl className="grid gap-2 sm:grid-cols-2">{registro.formulario_snapshot.map((campo) => <div key={campo.clave}>{campo.imagen_url && <ImagenPregunta src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-20 w-32" />}<dt className={'text-xs ' + tema.subtitle}>{campo.etiqueta}</dt><dd className="text-sm">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : registro.respuestas[campo.clave] ?? 'Sin especificar'}</dd></div>)}</dl>}
           <ResumenCartaTrineo carta={registro.carta} onRecibir={registro.estado === 'confirmado' ? () => operar(() => actividadService.recibirRegaloCarta(registro.carta.id_reserva)) : undefined} />
+           <ResumenCamisaTrineo pedido={registro.pedido} />
           {datos.edicion.plantilla === 'trineo' && !registro.carta && <p className="text-sm text-amber-700 dark:text-amber-300">Registro anterior sin carta vinculada.</p>}
           {registro.historial_cartas?.length > 0 && <details><summary className="cursor-pointer text-sm">Historial de cartas liberadas</summary><div className="space-y-3 pt-3">{registro.historial_cartas.map((carta) => <ResumenCartaTrineo key={carta.id_reserva} carta={carta} />)}</div></details>}
           {registro.aportaciones.filter((aporte) => !aporte.es_regalo_carta).map((aporte) => <div key={aporte.id_aportacion} className="flex flex-wrap items-center gap-3 text-sm"><span>{aporte.nombre}: {Number(aporte.cantidad)} {aporte.unidad} · {aporte.estado}</span>{aporte.estado === 'comprometida' && registro.estado === 'confirmado' && <BotonAccion size="sm" variant="outline" onClick={() => operar(() => actividadService.recibirAportacion(aporte.id_aportacion))}>Confirmar recepción de aportación</BotonAccion>}</div>)}

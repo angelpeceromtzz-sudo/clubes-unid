@@ -13,6 +13,7 @@ import {
   normalizarOpcionAportacion,
   disponibilidadAsistenciaActividad,
   configuracionMisionesInicial, camposMisiones, esFormatoMegamisiones,
+  camposRegistroTrineo, cotizarCamisaTrineo,
 } from './actividadesDominio.js';
 
 const FECHAS = ['fecha_inicio', 'fecha_fin', 'inscripcion_desde', 'inscripcion_hasta', 'destacada_desde', 'destacada_hasta'];
@@ -932,8 +933,14 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       const matricula = textoActividad(usuario.institutional_id || req.body.matricula, 50, 'Matrícula', true);
       if (!/^\d{1,30}$/.test(matricula)) throw errorActividad('La matrícula debe contener números');
       const anterior = (await cliente.query('SELECT * FROM actividades_registros WHERE id_edicion = $1 AND id_usuario = $2 FOR UPDATE', [edicion.id_edicion, req.user.id])).rows[0];
-      const campos = anterior?.estado === 'confirmado' ? anterior.formulario_snapshot : edicion.campos_registro;
+      const camposPrevios = anterior?.estado === 'confirmado' ? anterior.formulario_snapshot : edicion.campos_registro;
+      const campos = edicion.plantilla === 'trineo' ? camposRegistroTrineo(camposPrevios) : camposPrevios;
       const respuestas = validarRespuestasActividad(campos, req.body.respuestas || {});
+      const pedido = edicion.plantilla === 'trineo' ? cotizarCamisaTrineo({
+        campo: edicion.campos_registro.find((campo) => campo.clave === 'talla'), solicita: req.body.solicita_camisa,
+        talla: respuestas.talla, anterior: anterior?.estado === 'confirmado' ? anterior.pedido : null,
+      }) : null;
+      if (pedido && req.body.total_centavos !== undefined && req.body.total_centavos !== pedido.total_centavos) throw errorActividad('El precio de la camisa cambió. Actualiza el formulario y vuelve a intentarlo', 409);
       for (const campo of campos.filter((item) => item.tipo === 'licenciatura' && respuestas[item.clave])) {
         const existe = await cliente.query('SELECT id_licenciatura FROM cat_licenciaturas WHERE id_licenciatura = $1', [respuestas[campo.clave]]);
         if (!existe.rows.length) throw errorActividad('La licenciatura seleccionada no está disponible');
@@ -947,7 +954,7 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
       const aportes = validarAportacionesActividad(adicionales, await catalogoEdicion(cliente, edicion.id_edicion), edicion.requiere_aportacion, previosAdicionales);
       if (previosAdicionales.some((aporte) => aporte.estado === 'recibida' && !aportes.some((nuevo) => nuevo.id_opcion === aporte.id_opcion))) throw errorActividad('Conserva las aportaciones que ya fueron recibidas');
       const reserva = await prepararReservaCarta(cliente, { edicion, anterior, idCarta: req.body.id_carta });
-      const { rows } = await cliente.query("INSERT INTO actividades_registros (id_edicion,id_usuario,nombre_completo,matricula,respuestas,formulario_snapshot) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id_edicion,id_usuario) DO UPDATE SET nombre_completo = EXCLUDED.nombre_completo, matricula = EXCLUDED.matricula, respuestas = EXCLUDED.respuestas, formulario_snapshot = EXCLUDED.formulario_snapshot, estado = 'confirmado', actualizado_en = NOW() RETURNING *", [edicion.id_edicion, req.user.id, nombre, matricula, JSON.stringify(respuestas), JSON.stringify(campos)]);
+      const { rows } = await cliente.query("INSERT INTO actividades_registros (id_edicion,id_usuario,nombre_completo,matricula,respuestas,formulario_snapshot,pedido) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id_edicion,id_usuario) DO UPDATE SET nombre_completo = EXCLUDED.nombre_completo, matricula = EXCLUDED.matricula, respuestas = EXCLUDED.respuestas, formulario_snapshot = EXCLUDED.formulario_snapshot, pedido = EXCLUDED.pedido, estado = 'confirmado', actualizado_en = NOW() RETURNING *", [edicion.id_edicion, req.user.id, nombre, matricula, JSON.stringify(respuestas), JSON.stringify(campos), pedido ? JSON.stringify(pedido) : null]);
       const registro = rows[0];
       await cliente.query("UPDATE actividades_aportaciones p SET estado = 'cancelada' WHERE id_registro = $1 AND estado = 'comprometida' AND NOT (id_opcion = ANY($2::int[])) AND NOT EXISTS(SELECT 1 FROM actividades_cartas_reservas v WHERE v.id_aportacion=p.id_aportacion)", [registro.id_registro, aportes.map((item) => item.id_opcion)]);
       for (const aporte of aportes) await cliente.query("INSERT INTO actividades_aportaciones (id_registro,id_opcion,nombre,unidad,cantidad,cantidad_minima) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id_registro,id_opcion) DO UPDATE SET nombre = EXCLUDED.nombre, unidad = EXCLUDED.unidad, cantidad = EXCLUDED.cantidad, cantidad_minima = EXCLUDED.cantidad_minima, estado = 'comprometida' WHERE actividades_aportaciones.estado <> 'recibida'", [registro.id_registro, aporte.id_opcion, aporte.nombre, aporte.unidad, aporte.cantidad, aporte.cantidad_minima]);
