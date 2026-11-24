@@ -46,7 +46,7 @@ router.get('/', authenticate, async (req, res) => {
         LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
         LEFT JOIN notificaciones_eliminadas ne ON ne.id_notificacion = n.id_notificacion AND ne.id_usuario = $1
        WHERE ne.id_notificacion IS NULL
-         AND n.id_emisor != $1
+         AND (n.id_destinatario = $1 OR n.id_emisor != $1)
          AND (($2 IN (3, 4) AND ((n.audiencia = 'global' AND n.id_destinatario IS NULL)
                                 OR n.id_destinatario = $1))
            OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
