@@ -19,6 +19,7 @@ export function prepararDatosEdicion(datos, plantilla) {
     requiere_aportacion: requiereRegistro && datos.requiere_aportacion === true,
     campos_registro: (datos.campos_registro || []).map(({ textoOpciones, ...campo }) => ({
       ...campo,
+      ...(plantilla === 'trineo' && campo.clave === 'talla' ? { obligatorio: false } : {}),
       opciones: textoOpciones == null ? campo.opciones : textoOpciones.split(/\r?\n/).map((valor) => valor.trim()).filter(Boolean),
     })),
   };
@@ -57,7 +58,7 @@ export function pendientesEdicion(datos, plantilla, { catalogo = [], existente =
   if (inscripcionHasta && finEvento && inscripcionHasta > finEvento) agregar(2, 'Las inscripciones deben cerrar a más tardar al finalizar la actividad.');
   const campos = comprobar(2, () => normalizarCamposActividad(entrada.campos_registro, plantilla, entrada.configuracion_misiones));
   if (entrada.requiere_registro && campos) {
-    for (const campo of campos.filter((item) => item.tipo === 'seleccion' && item.obligatorio && !item.opciones.length)) agregar(2, 'Completa las opciones de: ' + campo.etiqueta);
+    for (const campo of campos.filter((item) => item.tipo === 'seleccion' && (item.obligatorio || item.precio_camisa_centavos != null) && !item.opciones.length)) agregar(2, 'Completa las opciones de: ' + campo.etiqueta);
   }
   if (plantilla === 'misiones' && entrada.configuracion_misiones != null) {
     const config = comprobar(2, () => normalizarConfiguracionMisiones(entrada.configuracion_misiones));

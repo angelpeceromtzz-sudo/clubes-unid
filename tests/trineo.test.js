@@ -1,6 +1,41 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizarCartaTrineo, validarSeleccionCartaTrineo } from '../backend/lib/trineoDominio.js';
+import { camposPlantillaActividad, camposRegistroTrineo, normalizarCamposActividad, cotizarCamisaTrineo } from '../shared/actividades.js';
+
+test('camisas: la talla de Trineo es opcional y el precio se valida en centavos', () => {
+  const campos = camposPlantillaActividad('trineo').map((campo) => campo.clave === 'talla' ? { ...campo, obligatorio: true, opciones: ['M', 'L'], precio_camisa_centavos: 16000 } : campo);
+  const normalizados = normalizarCamposActividad(campos, 'trineo');
+  assert.equal(normalizados.find((campo) => campo.clave === 'talla').obligatorio, false);
+  assert.equal(normalizados.find((campo) => campo.clave === 'talla').precio_camisa_centavos, 16000);
+  assert.equal(camposRegistroTrineo(campos).find((campo) => campo.clave === 'talla').obligatorio, false);
+  assert.equal(campos.find((campo) => campo.clave === 'talla').obligatorio, true);
+  assert.equal(camposPlantillaActividad('misiones').find((campo) => campo.clave === 'talla').obligatorio, true);
+  for (const precio of [-1, 1.5, '16000', true, 100000001]) assert.throws(() => normalizarCamposActividad(campos.map((campo) => campo.clave === 'talla' ? { ...campo, precio_camisa_centavos: precio } : campo), 'trineo'), { status: 400 });
+});
+
+test('camisas: no pedir camisa cuesta cero y pedirla requiere una talla y un precio válidos', () => {
+  const campo = { opciones: ['M', 'L'], precio_camisa_centavos: 16000 };
+  assert.equal(cotizarCamisaTrineo({ solicita: false }).total_centavos, 0);
+  assert.throws(() => cotizarCamisaTrineo({ campo, talla: 'L' }), { status: 400 });
+  assert.equal(cotizarCamisaTrineo({ campo, solicita: false, talla: 'L' }).lineas.length, 0);
+  const pedido = cotizarCamisaTrineo({ campo, solicita: true, talla: 'L' });
+  assert.equal(pedido.total_centavos, 16000);
+  assert.deepEqual(pedido.lineas.map(({ talla, cantidad, precio_centavos, subtotal_centavos }) => ({ talla, cantidad, precio_centavos, subtotal_centavos })), [{ talla: 'L', cantidad: 1, precio_centavos: 16000, subtotal_centavos: 16000 }]);
+  for (const cambio of [{ solicita: 'true' }, { talla: '' }, { talla: 'XXL' }]) assert.throws(() => cotizarCamisaTrineo({ campo, solicita: true, talla: 'L', ...cambio }), { status: 400 });
+  assert.throws(() => cotizarCamisaTrineo({ campo: { opciones: ['L'] }, solicita: true, talla: 'L' }), { status: 409 });
+  assert.equal(cotizarCamisaTrineo({ campo: { ...campo, precio_camisa_centavos: 0 }, solicita: true, talla: 'M' }).total_centavos, 0);
+});
+
+test('camisas: una inscripción conserva su cotización al editar otros datos y actualiza el precio al cambiar talla', () => {
+  const campo = { opciones: ['M', 'L'], precio_camisa_centavos: 16000 };
+  const anterior = cotizarCamisaTrineo({ campo, solicita: true, talla: 'L' });
+  const actualizado = { ...campo, precio_camisa_centavos: 18000 };
+  assert.equal(cotizarCamisaTrineo({ campo: actualizado, talla: 'L', anterior }), anterior);
+  assert.equal(cotizarCamisaTrineo({ campo: actualizado, solicita: true, talla: 'M', anterior }).total_centavos, 18000);
+  assert.equal(cotizarCamisaTrineo({ solicita: false, anterior }).total_centavos, 0);
+  assert.equal(cotizarCamisaTrineo({ campo: actualizado, solicita: true, talla: 'L' }).total_centavos, 18000);
+});
 
 const carta = { nombre: '  Niño QA  ', edad: '7', deseo: '  Un trompo  ' };
 const seleccion = { plantilla: 'trineo', idCarta: 3, actual: null, anteriorConfirmado: false };
