@@ -18,11 +18,11 @@ export function SelectorCompraCamisa({ campo, valor, onChange }) {
     />;
 }
 
-export function ResumenCamisaTrineo({ pedido, campo, valor, onChange }) {
+export function ResumenCamisaTrineo({ pedido, campo, valor, onChange, mostrarImagen = true }) {
   const [editarTalla, setEditarTalla] = useState(false);
   if (pedido?.tipo !== 'camisa_trineo' && !campo) return null;
   const camisa = pedido?.lineas?.[0];
-  const imagen = campo?.imagen_url || pedido?.imagen_url;
+  const imagen = mostrarImagen ? (campo?.imagen_url || pedido?.imagen_url) : null;
   const mostrarSelector = Boolean(campo && onChange && (!valor || editarTalla));
 
   return <section aria-label="Pedido de camisa del Trineo" className="space-y-3 rounded-xl border border-slate-400/25 p-4 shadow-[-4px_-4px_12px_rgba(0,0,0,0.08),4px_4px_12px_rgba(0,0,0,0.12)]">

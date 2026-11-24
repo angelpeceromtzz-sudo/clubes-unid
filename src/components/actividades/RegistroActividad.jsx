@@ -153,7 +153,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
         </div>;
       })}
     </fieldset></div></details>}
-     <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} />
+     <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} excluirClaves={usaCartas && solicitaCamisa !== null ? ['talla'] : []} />
      {usaCartas && <ResumenCamisaTrineo pedido={pedidoCamisa} campo={solicitaCamisa ? campoCamisa : null} valor={respuestas.talla} onChange={(valor) => responder('talla', valor)} />}
      <ImagenesResumenActividad campos={campos} respuestas={respuestas} excluirClaves={usaCartas ? ['talla'] : []} />
     {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}

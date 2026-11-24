@@ -48,7 +48,7 @@ export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSelecci
           <p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
           <BotonAccion size="sm" variant={seleccionada?.id_carta === carta.id_carta ? 'primary' : 'outline'} aria-pressed={seleccionada?.id_carta === carta.id_carta} onClick={() => onSeleccionar(carta)}>{seleccionada?.id_carta === carta.id_carta ? 'Carta seleccionada' : 'Elegir este niño'}</BotonAccion>
         </article>)}</div>
-        {cartasExtra.length > 0 && <details className="rounded-xl border border-slate-400/25 bg-slate-400/5 p-3">
+        {cartasExtra.length > 0 && <details className="mt-4 rounded-xl border border-slate-400/25 bg-slate-400/5 p-3">
           <summary className="cursor-pointer font-semibold">Ver más cartas ({cartasExtra.length})</summary>
           <div className="grid grid-cols-1 gap-3 pt-3 sm:grid-cols-2">{cartasExtra.map((carta) => <article key={carta.id_carta} className={'min-w-0 space-y-3 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ' + (seleccionada?.id_carta === carta.id_carta ? 'border-amber-400 bg-amber-400/10 shadow-sm' : 'border-slate-400/25')}>
             <p className={'text-xs ' + tema.subtitle}>Carta #{carta.id_carta}</p>
