@@ -92,10 +92,10 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
   if (!editando && confirmado) return <section className="space-y-4" aria-label="Tu inscripción">
      <EstadoActividad estado="confirmado" /><p className="font-bold">{registro.nombre_completo} · {invitado ? 'Invitado' : 'Matrícula ' + registro.matricula}</p>
      {invitado && registro.correo && <p className="text-sm">{registro.correo}{registro.telefono ? ' · ' + registro.telefono : ''}</p>}
-    <ResumenCartaTrineo carta={registro.carta} />
+     <ResumenCartaTrineo carta={registro.carta} />
     {usaCartas && !registro.carta && <p className="text-sm text-amber-700 dark:text-amber-300">Este registro anterior no tiene carta vinculada.{!regaloRecibido && abierta ? ' Edita tu registro para elegir al niño de tu carta.' : ' Consulta al encargado para revisar tu aportación.'}</p>}
      <dl className="grid gap-3 sm:grid-cols-2">{campos.map((campo) => <div key={campo.clave}><dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt><dd className="font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : registro.respuestas[campo.clave] || 'Sin especificar'}</dd></div>)}</dl>
-    <ResumenCamisaTrineo pedido={registro.pedido} />
+     <ResumenCamisaTrineo pedido={registro.pedido} campo={campoCamisa} />
     {aportacionesAnteriores.filter((aporte) => aporte.estado !== 'cancelada').map((aporte) => <p key={aporte.id_aportacion}>Aportación para la actividad · {aporte.nombre}: {Number(aporte.cantidad)} {aporte.unidad} · {aporte.estado}</p>)}
      {abierta && <div className="flex flex-wrap gap-3"><BotonAccion onClick={() => setEditando(true)}>Editar mi registro</BotonAccion>{!invitado && <BotonAccion variant="outline" onClick={() => setCancelando(true)}>Cancelar inscripción</BotonAccion>}</div>}
     {cancelando && <div className="space-y-3" role="alert"><p>¿Confirmas la cancelación de tu inscripción?{registro.carta?.estado === 'reservada' ? ' La carta quedará disponible para otro alumno.' : ''} Las aportaciones recibidas y cualquier asistencia registrada conservarán su historial.</p><div className="flex flex-wrap gap-3"><BotonAccion variant="danger" disabled={pendiente} onClick={cancelar}>Confirmar cancelación</BotonAccion><BotonAccion variant="outline" disabled={pendiente} onClick={() => setCancelando(false)}>Conservar mi inscripción</BotonAccion></div></div>}
