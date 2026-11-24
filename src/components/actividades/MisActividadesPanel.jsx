@@ -21,7 +21,10 @@ export function MisActividadesPanel({ onLoginClick }) {
         <EstadoActividad estado={registro.estado} /><h3 className={'text-xl font-bold ' + tema.title}>{registro.actividad_nombre}</h3>
         <p>{registro.edicion_nombre} · <FechaActividad fecha={registro.fecha_inicio} /></p>
         {registro.respuestas.talla && <p className="text-sm">Talla de camisa: {registro.respuestas.talla}</p>}
-        <ResumenCartaTrineo carta={registro.carta} />
+        <details className="rounded-xl border border-amber-400/40 bg-amber-400/5 p-3" open>
+          <summary className="cursor-pointer font-semibold text-amber-700 dark:text-amber-300">Carta del Trineo</summary>
+          <div className="accordion-content pt-3"><div><ResumenCartaTrineo carta={registro.carta} /></div></div>
+        </details>
         {registro.aportaciones.filter((aporte) => aporte.estado !== 'cancelada' && !aporte.es_regalo_carta).map((aporte) => <p key={aporte.id_aportacion} className="text-sm">Aportación para la actividad · {aporte.nombre}: {Number(aporte.cantidad)} {aporte.unidad} · {aporte.estado}</p>)}
         <section className="space-y-3 border-t border-slate-400/25 pt-4" aria-label={'Asistencia a ' + registro.edicion_nombre}>
           <h4 className={'font-bold ' + tema.title}>Mi asistencia</h4>

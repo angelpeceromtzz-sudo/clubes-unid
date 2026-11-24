@@ -99,7 +99,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
 
   if (!abierta) return <p className={tema.subtitle}>{edicion.estado_registro === 'proxima' ? 'El registro estará disponible durante el periodo de inscripción.' : 'Las inscripciones de esta edición están cerradas.'}</p>;
 
-  return <form onSubmit={guardar} className="registro-actividad space-y-5" aria-label="Registro a la actividad">
+  return <form onSubmit={guardar} className="registro-actividad space-y-6 rounded-2xl border border-slate-400/15 bg-white/95 p-6 shadow-[-4px_-4px_12px_rgba(0,0,0,0.08),4px_4px_12px_rgba(0,0,0,0.12)] dark:bg-slate-900" aria-label="Registro a la actividad">
     <fieldset disabled={pendiente} className="min-w-0 space-y-5">
     {registro?.estado && <EstadoActividad estado={registro.estado} />}
     {registro?.historial_cartas?.length > 0 && !registro.carta && <p className="text-sm">Tu reserva anterior fue liberada al cancelar la inscripción. Elige una carta disponible para registrarte de nuevo.</p>}
@@ -132,7 +132,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
       })}
     </div>
     {hayLicenciatura && errorLicenciaturas && <div role="alert"><p>No se pudieron cargar las licenciaturas.</p><BotonAccion variant="outline" onClick={recargar}>Volver a cargar licenciaturas</BotonAccion></div>}
-    {(edicion.requiere_aportacion || catalogo.length > 0) && <fieldset className="space-y-4"><legend className={'text-lg font-bold mb-3 ' + tema.title}>Aportaciones para la actividad{edicion.requiere_aportacion ? ' (obligatorias)' : ' (opcionales)'}</legend>
+    {(edicion.requiere_aportacion || catalogo.length > 0) && <details className="rounded-xl border border-slate-400/25 p-4" open><summary className={'cursor-pointer text-lg font-bold ' + tema.title}>Aportaciones para la actividad{edicion.requiere_aportacion ? ' (obligatorias)' : ' (opcionales)'}</summary><div className="accordion-content pt-4"><fieldset className="space-y-4">
       <p className={'text-sm ' + tema.subtitle}>Comida, globos u otros materiales para la actividad.{usaCartas ? ' Son independientes del regalo de tu carta.' : ''} El encargado registrará cada recepción por separado.</p>
       {catalogo.map((opcion) => {
         const seleccionada = aportaciones.find((aporte) => aporte.id_opcion === opcion.id_opcion);
@@ -147,7 +147,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
           {seleccionada && <label className={labelCls}>Cantidad · mínimo {Number(minimo)} {unidad}<input className={inputCls + ' max-w-xs'} type="number" min={minimo} max={1000000} step="0.001" required value={seleccionada.cantidad} readOnly={recibida} onChange={(evento) => setAportaciones((actual) => actual.map((aporte) => aporte.id_opcion === opcion.id_opcion ? { ...aporte, cantidad: evento.target.value } : aporte))} /></label>}
         </div>;
       })}
-    </fieldset>}
+    </fieldset></div></details>}
     {usaCartas && <ResumenCamisaTrineo pedido={pedidoCamisa} campo={solicitaCamisa ? campoCamisa : null} valor={respuestas.talla} onChange={(valor) => responder('talla', valor)} />}
     <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} />
     {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}

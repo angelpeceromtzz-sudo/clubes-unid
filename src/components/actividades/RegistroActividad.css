@@ -9,3 +9,51 @@
   min-height: 7rem;
   resize: vertical;
 }
+
+.registro-actividad {
+  animation: registroFadeIn 0.35s ease-out;
+}
+
+@keyframes registroFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.registro-actividad button,
+.registro-actividad select,
+.registro-actividad input {
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.registro-actividad button:hover {
+  transform: translateY(-1px);
+}
+
+.registro-actividad details {
+  transition: background-color 0.2s ease;
+}
+
+.registro-actividad details[open] {
+  background-color: rgba(251, 191, 36, 0.05);
+}
+
+.registro-actividad .accordion-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
+}
+
+.registro-actividad details[open] .accordion-content {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.registro-actividad .accordion-content > * {
+  overflow: hidden;
+}
+
+.registro-actividad :focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
