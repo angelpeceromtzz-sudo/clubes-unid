@@ -99,7 +99,7 @@ after(() => {
 
 function tokenDe(id, id_rol) {
   return jwt.sign(
-    { id, nombre_completo: 'Usuario Ficticio', correo_institucional: 'ficticio@unid.mx', institutional_id: 'F000', id_rol, rol: 'test' },
+    { id, nombre_completo: 'Usuario Ficticio', correo_institucional: 'ficticio@unid.mx', institutional_id: 'F000', id_rol, rol: 'test', auth_otp: false },
     SECRET,
     { expiresIn: '5m' }
   );

@@ -55,7 +55,7 @@ router.get('/:clubId/mis-reacciones', authenticate, async (req, res) => {
 // Registra, cambia o retira una reacción del aviso.
 router.put('/:id/reaccion', authenticate, async (req, res) => {
   const { id } = req.params;
-  const { reaccion } = req.body;
+  const reaccion = req.body?.reaccion;
   if (reaccion !== null && !REACCIONES_AVISO.includes(reaccion)) {
     return res.status(400).json({ error: 'Reacción no válida' });
   }

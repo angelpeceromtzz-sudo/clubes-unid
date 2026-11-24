@@ -26,6 +26,8 @@ import {
   generarHashOtp,
   normalizarCodigoOtp,
   obtenerMinutosExpiracionOtp,
+  otpHabilitado,
+  ROLES_SIN_OTP,
 } from '../lib/otp.js';
 import {
   limitadorOtpSolicitudIp,
@@ -41,9 +43,6 @@ const MENSAJE_VERIFICACION_GENERICO = 'Código inválido o expirado.';
 const MENSAJE_NO_DISPONIBLE = 'El acceso mediante código no está disponible.';
 const MENSAJE_ERROR_INTERNO = 'No se pudo procesar la solicitud.';
 
-import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
-
-const ROLES_SIN_OTP = new Set([]);
 const NOMBRES_ROL = {
   1: 'alumno',
   2: 'responsable_club',
@@ -53,10 +52,6 @@ const NOMBRES_ROL = {
   6: 'responsable_mural',
   7: 'coordinacion',
 };
-
-function otpHabilitado() {
-  return String(process.env.AUTH_OTP_ENABLED || '').trim().toLowerCase() === 'true';
-}
 
 function exigirOtpHabilitado(req, res, next) {
   if (!otpHabilitado()) {
@@ -114,7 +109,8 @@ function respuestaUsuario(usuario) {
 
 // Renueva una sesión OTP desde el secreto rotatorio de este navegador.
 // El identificador solo localiza el dispositivo; el token secreto demuestra confianza.
-router.post('/dispositivo/renovar', async (req, res) => {
+router.post('/dispositivo/renovar', exigirOtpHabilitado, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
     const idDispositivo = idDispositivoDesdeReq(req);
     const token = req.get('x-trusted-device') || '';
@@ -132,7 +128,11 @@ router.post('/dispositivo/renovar', async (req, res) => {
       id_licenciatura: dispositivo.id_licenciatura ?? null,
       rol: dispositivo.rol,
     };
-    const jwt = generarToken(usuario, { idDispositivoConfiable: dispositivo.id_dispositivo });
+    const jwt = generarToken(usuario, {
+      idDispositivoConfiable: dispositivo.id_dispositivo,
+      generacion: dispositivo.generacion,
+      origenOtp: true,
+    });
     return res.json({
       token: jwt,
       user: respuestaUsuario(usuario),
@@ -145,11 +145,20 @@ router.post('/dispositivo/renovar', async (req, res) => {
 });
 
 router.post('/dispositivo/revocar', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   try {
-    await revocarCuentaEnDispositivo({
-      idDispositivo: idDispositivoDesdeReq(req),
-      token: req.get('x-trusted-device') || '',
-    });
+    const idDispositivo = idDispositivoDesdeReq(req);
+    const token = req.get('x-trusted-device') || '';
+    if (!idDispositivo || !token) {
+      return res.status(401).json({ error: 'Este navegador necesita un nuevo código de acceso.' });
+    }
+
+    // El token actual o el anterior dentro de la gracia demuestra la posesión
+    // del dispositivo. El identificador por sí solo nunca puede revocarlo.
+    const revocada = await revocarCuentaEnDispositivo({ idDispositivo, token });
+    if (!revocada) {
+      return res.status(401).json({ error: 'Este navegador necesita un nuevo código de acceso.' });
+    }
     return res.json({ ok: true });
   } catch (err) {
     console.error('Error al revocar dispositivo confiable:', nombreError(err), codigoError(err));
@@ -194,8 +203,9 @@ router.post(
     try {
       const usuario = await otpStore.buscarUsuario({ correo });
 
-      // No se envía código a cuentas desactivadas ni a admin/rectoría. La
-      // respuesta sigue siendo genérica para no revelar el estado de la cuenta.
+      // No se envía código a cuentas desactivadas ni a admin/rectoría/
+      // coordinación. La respuesta sigue siendo genérica para no revelar el
+      // estado de la cuenta.
       if (usuario && usuarioBloqueadoParaOtp(usuario)) {
         res.locals.registrarOtp(usuario.deleted_at ? 'cuenta_desactivada' : 'rol_sin_otp');
         return responderSolicitudGenerica(res);
@@ -252,13 +262,15 @@ router.post(
 //
 // Verifica el código, lo consume de forma atómica y emite exactamente el mismo
 // JWT que login-local/login-microsoft. Nunca acepta un rol del cliente: el rol
-// sale de usuarios.id_rol. Admin y rectoría quedan fuera del flujo OTP.
+// sale de usuarios.id_rol. Admin, rectoría y coordinación quedan fuera del
+// flujo OTP.
 router.post(
   '/verificar',
   exigirOtpHabilitado,
   limitadorOtpVerificacionIp,
   limitadorOtpVerificacionCuenta,
   async (req, res) => {
+    res.set('Cache-Control', 'no-store');
     const correo = normalizarCorreoInstitucional(req.body?.correo);
     const codigo = normalizarCodigoOtp(req.body?.codigo);
 
@@ -375,8 +387,12 @@ router.post(
       }
 
       const token = generarToken(usuario, dispositivoConfiable
-        ? { idDispositivoConfiable: dispositivoConfiable.id_dispositivo }
-        : undefined);
+        ? {
+            idDispositivoConfiable: dispositivoConfiable.id_dispositivo,
+            generacion: dispositivoConfiable.generacion,
+            origenOtp: true,
+          }
+        : { origenOtp: true });
 
       return res.json({
         token,

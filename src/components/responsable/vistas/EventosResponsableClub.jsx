@@ -23,6 +23,7 @@ export function EventosResponsableClub({ club }) {
   const [eventos, setEventos] = useState([]);
   const [form, setForm] = useState(FORM_VACIO);
   const [eventoEditando, setEventoEditando] = useState(null);
+  const [fechasOriginales, setFechasOriginales] = useState(null);
   const [eventoAEliminar, setEventoAEliminar] = useState(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [cargando, setCargando] = useState(true);
@@ -33,6 +34,15 @@ export function EventosResponsableClub({ club }) {
   const campo = `w-full rounded-xl border px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-amber-400/40 ${modoOscuro ? 'border-slate-700 bg-slate-900/60 text-slate-100 placeholder:text-slate-500' : 'border-slate-300 bg-white text-slate-800 placeholder:text-slate-400'}`;
   const hoy = fechaActualCampus();
   const ultimoDiaDelAnio = `${hoy.slice(0, 4)}-12-31`;
+  const fechaMinimaInicio = eventoEditando && fechasOriginales?.fecha_evento < hoy
+    ? fechasOriginales.fecha_evento
+    : hoy;
+  const fechaMaximaInicio = eventoEditando && fechasOriginales?.fecha_evento > ultimoDiaDelAnio
+    ? fechasOriginales.fecha_evento
+    : ultimoDiaDelAnio;
+  const fechaMaximaFin = eventoEditando && fechasOriginales?.fecha_fin_evento > ultimoDiaDelAnio
+    ? fechasOriginales.fecha_fin_evento
+    : ultimoDiaDelAnio;
 
   const cargarEventos = useCallback(async () => {
     setCargando(true);
@@ -51,6 +61,7 @@ export function EventosResponsableClub({ club }) {
 
   function abrirNuevo() {
     setEventoEditando(null);
+    setFechasOriginales(null);
     setForm(FORM_VACIO);
     setError('');
     setExito('');
@@ -59,6 +70,7 @@ export function EventosResponsableClub({ club }) {
 
   function abrirEdicion(evento) {
     setEventoEditando(evento.id_evento_club);
+    setFechasOriginales({ fecha_evento: evento.fecha_evento, fecha_fin_evento: evento.fecha_fin_evento || '' });
     setForm({ titulo: evento.titulo, descripcion: evento.descripcion, fecha_evento: evento.fecha_evento, fecha_fin_evento: evento.fecha_fin_evento || '',
       hora_evento: evento.hora_evento ? String(evento.hora_evento).slice(0, 5) : '', lugar_evento: evento.lugar_evento || '' });
     setError('');
@@ -72,18 +84,27 @@ export function EventosResponsableClub({ club }) {
     setGuardando(true);
     setError('');
     setExito('');
-    if (form.fecha_evento < hoy) {
-      setError('La fecha de inicio no puede ser anterior a hoy.');
-      setGuardando(false);
-      return;
-    }
-    if (form.fecha_evento > ultimoDiaDelAnio || (form.fecha_fin_evento && form.fecha_fin_evento > ultimoDiaDelAnio)) {
-      setError('Solo puedes programar eventos dentro del año actual.');
+    const conservaFechaInicio = Boolean(eventoEditando && fechasOriginales && form.fecha_evento === fechasOriginales.fecha_evento);
+    const conservaFechaFin = Boolean(eventoEditando && fechasOriginales && form.fecha_fin_evento
+      && form.fecha_fin_evento === fechasOriginales.fecha_fin_evento);
+    if (form.fecha_evento < hoy && !conservaFechaInicio) {
+      setError('La fecha de inicio no puede ser anterior a hoy, salvo que conserves la fecha original.');
       setGuardando(false);
       return;
     }
     if (form.fecha_fin_evento && form.fecha_fin_evento < form.fecha_evento) {
       setError('La fecha de término no puede ser anterior a la fecha de inicio.');
+      setGuardando(false);
+      return;
+    }
+    if (form.fecha_fin_evento && form.fecha_fin_evento < hoy && !conservaFechaFin) {
+      setError('La fecha de término no puede ser anterior a hoy, salvo que conserves la fecha original.');
+      setGuardando(false);
+      return;
+    }
+    if ((!conservaFechaInicio && form.fecha_evento > ultimoDiaDelAnio)
+      || (!conservaFechaFin && form.fecha_fin_evento && form.fecha_fin_evento > ultimoDiaDelAnio)) {
+      setError('Solo puedes programar fechas nuevas dentro del año actual.');
       setGuardando(false);
       return;
     }
@@ -96,6 +117,7 @@ export function EventosResponsableClub({ club }) {
       setMostrarFormulario(false);
       setForm(FORM_VACIO);
       setEventoEditando(null);
+      setFechasOriginales(null);
       setExito(eventoEditando ? 'Evento actualizado.' : 'Evento publicado.');
       await cargarEventos();
     } catch (err) {
@@ -144,14 +166,16 @@ export function EventosResponsableClub({ club }) {
         <label className={`block space-y-1.5 text-xs font-bold ${tema.title}`}>Título <input className={campo} maxLength={150} required value={form.titulo} onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))} placeholder="Ej. Torneo Escolar" /><span className={`block text-right text-[10px] font-normal ${tema.subtitle}`}>{form.titulo.length}/150</span></label>
         <label className={`block space-y-1.5 text-xs font-bold ${tema.title}`}>Descripción <textarea className={`${campo} min-h-24 resize-y`} maxLength={2000} required value={form.descripcion} onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))} placeholder="Detalles del evento" /><span className={`block text-right text-[10px] font-normal ${tema.subtitle}`}>{form.descripcion.length}/2000</span></label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className={`block space-y-1.5 text-xs font-bold ${tema.title}`}>Fecha de inicio <input type="date" className={`${campo} cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer`} min={hoy} max={ultimoDiaDelAnio} required value={form.fecha_evento} onChange={(e) => setForm((f) => ({ ...f, fecha_evento: e.target.value, fecha_fin_evento: f.fecha_fin_evento && f.fecha_fin_evento < e.target.value ? '' : f.fecha_fin_evento }))} /></label>
+          <label className={`block space-y-1.5 text-xs font-bold ${tema.title}`}>Fecha de inicio <input type="date" className={`${campo} cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer`} min={fechaMinimaInicio} max={fechaMaximaInicio} required value={form.fecha_evento} onChange={(e) => setForm((f) => ({ ...f, fecha_evento: e.target.value, fecha_fin_evento: f.fecha_fin_evento && f.fecha_fin_evento < e.target.value ? '' : f.fecha_fin_evento }))} /></label>
           <label className={`block space-y-1.5 text-xs font-bold ${tema.title}`}>Hora (opcional) <input type="time" className={`${campo} cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer`} value={form.hora_evento} onChange={(e) => setForm((f) => ({ ...f, hora_evento: e.target.value }))} /></label>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className={`block space-y-1.5 text-xs font-bold ${tema.title}`}>Fecha de término (opcional) <input type="date" className={`${campo} cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer`} min={form.fecha_evento || hoy} max={ultimoDiaDelAnio} value={form.fecha_fin_evento} onChange={(e) => setForm((f) => ({ ...f, fecha_fin_evento: e.target.value }))} /></label>
+          <label className={`block space-y-1.5 text-xs font-bold ${tema.title}`}>Fecha de término (opcional) <input type="date" className={`${campo} cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer`} min={form.fecha_evento || fechaMinimaInicio} max={fechaMaximaFin} value={form.fecha_fin_evento} onChange={(e) => setForm((f) => ({ ...f, fecha_fin_evento: e.target.value }))} /></label>
           <label className={`block space-y-1.5 text-xs font-bold ${tema.title}`}>Lugar (opcional) <input className={campo} maxLength={200} value={form.lugar_evento} onChange={(e) => setForm((f) => ({ ...f, lugar_evento: e.target.value }))} placeholder="Ej. Cancha UNID" /><span className={`block text-right text-[10px] font-normal ${tema.subtitle}`}>{form.lugar_evento.length}/200</span></label>
         </div>
-        <p className={`text-[11px] ${tema.subtitle}`}>Solo se permiten eventos con fechas dentro del año actual. Aparecerán en la ficha pública mientras estén vigentes.</p>
+        <p className={`text-[11px] ${tema.subtitle}`}>{eventoEditando && fechasOriginales?.fecha_evento < hoy
+          ? 'Puedes conservar las fechas originales de este evento histórico. Cualquier fecha nueva debe ser de hoy en adelante y dentro del año actual.'
+          : 'Solo se permiten eventos con fechas dentro del año actual. Aparecerán en la ficha pública mientras estén vigentes.'}</p>
         <div className="flex justify-end gap-2">
           <button type="button" onClick={() => setMostrarFormulario(false)} className={`rounded-xl border px-4 py-2.5 text-xs font-bold ${modoOscuro ? 'border-slate-600 text-slate-300' : 'border-slate-300 text-slate-600'}`}>Cancelar</button>
           <button type="submit" disabled={guardando} className="rounded-xl bg-amber-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#0e162c] disabled:opacity-50">{guardando ? 'Guardando…' : eventoEditando ? 'Guardar cambios' : 'Publicar evento'}</button>

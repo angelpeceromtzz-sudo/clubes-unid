@@ -1,5 +1,6 @@
 -- Eventos propios por club, gestionados por presidencia/vicepresidencia.
 -- Ejecutar manualmente en la base de datos del proyecto.
+BEGIN;
 CREATE TABLE IF NOT EXISTS eventos_clubes (
     id_evento_club SERIAL PRIMARY KEY,
     id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
@@ -25,3 +26,4 @@ BEGIN
 END $$;
 CREATE INDEX IF NOT EXISTS idx_eventos_clubes_fecha
     ON eventos_clubes (id_club, fecha_evento, hora_evento, id_evento_club);
+COMMIT;

@@ -148,18 +148,84 @@ CREATE INDEX IF NOT EXISTS idx_usuarios_deleted_at ON usuarios(deleted_at);
 
 -- Una sola cuenta OTP recordada por navegador durante un máximo de 30 días.
 -- Los secretos se guardan como hashes y pueden rotarse o revocarse al cerrar sesión.
+-- La generación (32 bytes aleatorios representados como 64 hex) vincula el JWT
+-- con una reactivación concreta del dispositivo. Es nullable sólo para bases
+-- antiguas: sus filas sin generación se revocan y nunca se revalidan.
 CREATE TABLE IF NOT EXISTS dispositivos_confiables (
     id_dispositivo BIGSERIAL PRIMARY KEY,
     id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
     hash_dispositivo VARCHAR(64) NOT NULL UNIQUE,
     token_hash VARCHAR(64) NOT NULL,
+    generacion VARCHAR(64),
     creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ultimo_uso TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expira_en TIMESTAMPTZ NOT NULL,
     revocado_en TIMESTAMPTZ,
+    token_hash_anterior VARCHAR(64),
+    token_anterior_expira_en TIMESTAMPTZ,
     CONSTRAINT chk_dispositivo_hash CHECK (hash_dispositivo ~ '^[a-f0-9]{64}$'),
-    CONSTRAINT chk_dispositivo_token_hash CHECK (token_hash ~ '^[a-f0-9]{64}$')
+    CONSTRAINT chk_dispositivo_token_hash CHECK (token_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT chk_dispositivo_generacion
+        CHECK (generacion IS NULL OR generacion ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT chk_dispositivo_token_hash_anterior
+        CHECK (token_hash_anterior IS NULL OR token_hash_anterior ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT chk_dispositivo_gracia_token_anterior CHECK (
+        (token_hash_anterior IS NULL AND token_anterior_expira_en IS NULL)
+        OR
+        (token_hash_anterior IS NOT NULL AND token_anterior_expira_en IS NOT NULL)
+    )
 );
+
+-- Equivalente idempotente para bases existentes; ver también
+-- migrations/migrate-dispositivos-confiables-generacion.sql.
+ALTER TABLE dispositivos_confiables
+    ADD COLUMN IF NOT EXISTS generacion VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS token_hash_anterior VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS token_anterior_expira_en TIMESTAMPTZ;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_dispositivo_generacion'
+          AND conrelid = 'dispositivos_confiables'::regclass
+    ) THEN
+        ALTER TABLE dispositivos_confiables
+            ADD CONSTRAINT chk_dispositivo_generacion
+            CHECK (generacion IS NULL OR generacion ~ '^[a-f0-9]{64}$');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_dispositivo_token_hash_anterior'
+          AND conrelid = 'dispositivos_confiables'::regclass
+    ) THEN
+        ALTER TABLE dispositivos_confiables
+            ADD CONSTRAINT chk_dispositivo_token_hash_anterior
+            CHECK (token_hash_anterior IS NULL OR token_hash_anterior ~ '^[a-f0-9]{64}$');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_dispositivo_gracia_token_anterior'
+          AND conrelid = 'dispositivos_confiables'::regclass
+    ) THEN
+        ALTER TABLE dispositivos_confiables
+            ADD CONSTRAINT chk_dispositivo_gracia_token_anterior CHECK (
+                (token_hash_anterior IS NULL AND token_anterior_expira_en IS NULL)
+                OR
+                (token_hash_anterior IS NOT NULL AND token_anterior_expira_en IS NOT NULL)
+            );
+    END IF;
+END $$;
+
+-- Fail-closed: un registro previo no puede renovarse ni revalidar un JWT sin
+-- generación. Requerirá un nuevo OTP para reactivar la confianza del navegador.
+UPDATE dispositivos_confiables
+   SET revocado_en = CURRENT_TIMESTAMP
+ WHERE generacion IS NULL
+   AND revocado_en IS NULL;
+
 CREATE INDEX IF NOT EXISTS idx_dispositivos_confiables_usuario
     ON dispositivos_confiables (id_usuario, expira_en);
 
@@ -2267,6 +2333,129 @@ CREATE TABLE IF NOT EXISTS actividades_asistencias (
     CHECK (origen <> 'manual' OR motivo_correccion IS NOT NULL)
 );
 
+-- Insignias permanentes por asistencia confirmada a una edición.
+-- Se guardan copias del nombre y emblema; al borrar una edición, el historial
+-- conserva la insignia y solo desvincula su referencia a esa edición.
+-- En bases existentes, agrega la columna antes del trigger y la carga histórica.
+--
+-- Permisos: no se declara aquí un rol PostgreSQL de runtime ni ACL/RLS. El rol
+-- efectivo es el usuario de DATABASE_URL (o DB_USER en local) y debe verificarse
+-- en cada entorno. El trigger es SECURITY INVOKER: requiere SELECT en
+-- actividades_registros, actividades_ediciones y clubes, INSERT/DELETE en esta
+-- tabla y USAGE en expediente_reconocimientos_id_reconocimiento_seq. La lectura
+-- del expediente requiere SELECT. La restricción por alumno se aplica en Express.
+-- Ver también la nota de permisos de migrate-reconocimientos-permanentes.sql.
+ALTER TABLE actividades_registros
+    ADD COLUMN IF NOT EXISTS tipo_participante VARCHAR(10) NOT NULL DEFAULT 'unid';
+
+CREATE TABLE IF NOT EXISTS expediente_reconocimientos (
+    id_reconocimiento BIGSERIAL PRIMARY KEY,
+    id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+    id_edicion INT REFERENCES actividades_ediciones(id_edicion) ON DELETE SET NULL,
+    tipo_actividad VARCHAR(20) NOT NULL,
+    nombre_actividad VARCHAR(160) NOT NULL,
+    nombre_edicion VARCHAR(160) NOT NULL,
+    anio SMALLINT NOT NULL,
+    insignia_key VARCHAR(120),
+    otorgada_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_expediente_reconocimiento_usuario_edicion
+    ON expediente_reconocimientos (id_usuario, id_edicion)
+    WHERE id_edicion IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_expediente_reconocimientos_usuario
+    ON expediente_reconocimientos (id_usuario, anio DESC, otorgada_en DESC);
+
+CREATE OR REPLACE FUNCTION fn_sync_expediente_reconocimiento_actividad()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_usuario INT;
+    v_tipo_participante VARCHAR(10);
+    v_matricula VARCHAR(50);
+    v_id_edicion INT;
+    v_actividad VARCHAR(160);
+    v_plantilla VARCHAR(20);
+    v_edicion VARCHAR(160);
+    v_fecha DATE;
+    v_anio SMALLINT;
+    v_insignia_key VARCHAR(120);
+BEGIN
+    SELECT r.id_usuario, r.tipo_participante, r.matricula,
+           e.id_edicion, c.nombre_club, c.plantilla, e.nombre,
+           COALESCE(e.fecha_inicio, e.fecha_fin, (NEW.registrada_en AT TIME ZONE 'America/Merida')::date)
+      INTO v_usuario, v_tipo_participante, v_matricula,
+           v_id_edicion, v_actividad, v_plantilla, v_edicion, v_fecha
+      FROM actividades_registros r
+      JOIN actividades_ediciones e ON e.id_edicion = r.id_edicion
+      JOIN clubes c ON c.id_club = e.id_actividad
+     WHERE r.id_registro = NEW.id_registro;
+
+    IF NOT FOUND THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.estado <> 'presente' THEN
+        IF v_usuario IS NOT NULL AND v_id_edicion IS NOT NULL THEN
+            DELETE FROM expediente_reconocimientos
+             WHERE id_usuario = v_usuario AND id_edicion = v_id_edicion;
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF v_usuario IS NULL OR v_tipo_participante <> 'unid' OR NULLIF(BTRIM(v_matricula), '') IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    v_anio := EXTRACT(YEAR FROM v_fecha)::SMALLINT;
+    v_insignia_key := CASE v_plantilla
+        WHEN 'trineo' THEN 'trineo-de-los-suenos-' || v_anio::text
+        WHEN 'misiones' THEN 'misiones-' || v_anio::text
+        ELSE NULL
+    END;
+
+    INSERT INTO expediente_reconocimientos (
+        id_usuario, id_edicion, tipo_actividad, nombre_actividad,
+        nombre_edicion, anio, insignia_key, otorgada_en
+    ) VALUES (
+        v_usuario, v_id_edicion, v_plantilla, v_actividad,
+        v_edicion, v_anio, v_insignia_key, NEW.registrada_en
+    )
+    ON CONFLICT (id_usuario, id_edicion) WHERE id_edicion IS NOT NULL DO NOTHING;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_expediente_reconocimiento_actividad ON actividades_asistencias;
+CREATE TRIGGER trg_sync_expediente_reconocimiento_actividad
+    AFTER INSERT OR UPDATE OF estado ON actividades_asistencias
+    FOR EACH ROW
+    EXECUTE FUNCTION fn_sync_expediente_reconocimiento_actividad();
+
+INSERT INTO expediente_reconocimientos (
+    id_usuario, id_edicion, tipo_actividad, nombre_actividad,
+    nombre_edicion, anio, insignia_key, otorgada_en
+)
+SELECT r.id_usuario, e.id_edicion, c.plantilla, c.nombre_club, e.nombre,
+       EXTRACT(YEAR FROM COALESCE(
+           e.fecha_inicio, e.fecha_fin,
+           (a.registrada_en AT TIME ZONE 'America/Merida')::date
+       ))::SMALLINT,
+       CASE c.plantilla
+           WHEN 'trineo' THEN 'trineo-de-los-suenos-' || EXTRACT(YEAR FROM COALESCE(e.fecha_inicio, e.fecha_fin, (a.registrada_en AT TIME ZONE 'America/Merida')::date))::int::text
+           WHEN 'misiones' THEN 'misiones-' || EXTRACT(YEAR FROM COALESCE(e.fecha_inicio, e.fecha_fin, (a.registrada_en AT TIME ZONE 'America/Merida')::date))::int::text
+           ELSE NULL
+       END,
+       a.registrada_en
+  FROM actividades_asistencias a
+  JOIN actividades_registros r ON r.id_registro = a.id_registro
+  JOIN actividades_ediciones e ON e.id_edicion = r.id_edicion
+  JOIN clubes c ON c.id_club = e.id_actividad
+ WHERE a.estado = 'presente'
+   AND r.id_usuario IS NOT NULL
+   AND r.tipo_participante = 'unid'
+   AND NULLIF(BTRIM(r.matricula), '') IS NOT NULL
+ON CONFLICT (id_usuario, id_edicion) WHERE id_edicion IS NOT NULL DO NOTHING;
+
 -- MISIONES: registro v2 para nuevas ediciones
 
 ALTER TABLE actividades_ediciones ADD COLUMN IF NOT EXISTS configuracion_misiones JSONB;
@@ -2577,8 +2766,8 @@ CREATE TABLE IF NOT EXISTS preferencias_usuario (
     correo_eventos              BOOLEAN NOT NULL DEFAULT FALSE,
     correo_noticias             BOOLEAN NOT NULL DEFAULT FALSE,
     correo_recordatorios        BOOLEAN NOT NULL DEFAULT FALSE,
-    telefono_contacto          VARCHAR(20),
-    disposicion_responsable    VARCHAR(20),
+    telefono_contacto           VARCHAR(20),
+    disposicion_responsable     VARCHAR(20),
     onboarding_completado_en    TIMESTAMPTZ,
     onboarding_omitido_en       TIMESTAMPTZ,
     actualizado_en              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -2645,33 +2834,6 @@ CREATE INDEX IF NOT EXISTS idx_propuestas_texto_normalizado
     ON actividades_propuestas(texto_normalizado);
 
 -- ------------------------------------------------------------
--- Reportes / incidencias (apartado reportar problema)
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS reportes (
-    id_reporte SERIAL PRIMARY KEY,
-    folio VARCHAR(32) UNIQUE NOT NULL,
-    tipo VARCHAR(80) NOT NULL,
-    modulo VARCHAR(160) NOT NULL,
-    descripcion TEXT NOT NULL,
-    pasos TEXT,
-    importancia VARCHAR(20) NOT NULL,
-    correo_contacto VARCHAR(160) NOT NULL,
-    captura_url TEXT,
-    estado VARCHAR(30) NOT NULL DEFAULT 'Pendiente',
-    id_usuario INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
-    creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    notas_admin TEXT,
-    resuelto_en TIMESTAMPTZ,
-    CONSTRAINT chk_reportes_importancia CHECK (importancia IN ('Bajo', 'Medio', 'Alto', 'Crítico')),
-    CONSTRAINT chk_reportes_estado CHECK (estado IN ('Pendiente', 'En revisión', 'Resuelto', 'Cerrado'))
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS uq_reportes_folio ON reportes(folio);
-CREATE INDEX IF NOT EXISTS idx_reportes_estado ON reportes(estado);
-CREATE INDEX IF NOT EXISTS idx_reportes_creado_en ON reportes(creado_en DESC);
-
--- ------------------------------------------------------------
 -- Historial de consentimiento para correos OPCIONALES
 -- ------------------------------------------------------------
 
@@ -2698,5 +2860,32 @@ CREATE TABLE IF NOT EXISTS historial_consentimiento_correo (
 -- Cubre el historial de un alumno y el último estado por tipo (leading: id_usuario, tipo).
 CREATE INDEX IF NOT EXISTS idx_consentimiento_usuario_tipo_fecha
     ON historial_consentimiento_correo(id_usuario, tipo, creado_en DESC);
+
+-- ------------------------------------------------------------
+-- Reportes / incidencias (apartado reportar problema)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS reportes (
+    id_reporte SERIAL PRIMARY KEY,
+    folio VARCHAR(32) UNIQUE NOT NULL,
+    tipo VARCHAR(80) NOT NULL,
+    modulo VARCHAR(160) NOT NULL,
+    descripcion TEXT NOT NULL,
+    pasos TEXT,
+    importancia VARCHAR(20) NOT NULL,
+    correo_contacto VARCHAR(160) NOT NULL,
+    captura_url TEXT,
+    estado VARCHAR(30) NOT NULL DEFAULT 'Pendiente',
+    id_usuario INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    notas_admin TEXT,
+    resuelto_en TIMESTAMPTZ,
+    CONSTRAINT chk_reportes_importancia CHECK (importancia IN ('Bajo', 'Medio', 'Alto', 'Crítico')),
+    CONSTRAINT chk_reportes_estado CHECK (estado IN ('Pendiente', 'En revisión', 'Resuelto', 'Cerrado'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reportes_folio ON reportes(folio);
+CREATE INDEX IF NOT EXISTS idx_reportes_estado ON reportes(estado);
+CREATE INDEX IF NOT EXISTS idx_reportes_creado_en ON reportes(creado_en DESC);
 
 COMMIT;

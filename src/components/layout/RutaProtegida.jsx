@@ -4,7 +4,7 @@ import { useAutenticacion } from '../../contexts/AuthContext';
 import { useEstadoOnboarding } from '../../hooks/useEstadoOnboarding';
 
 export function RutaProtegida({ children, requiereAdmin = false, requiereAdminOCoordinacion = false, requiereCoordinacion = false, requierePresidente = false, requiereRectoria = false, requiereResponsableMural = false, requiereAlumno = false }) {
-  const { estaAutenticado, esAdmin, esCoordinacion, esResponsableClub, esRectoria, esResponsableMural, usuario } = useAutenticacion();
+  const { estaAutenticado, esAdmin, esCoordinacion, esLiderClub, esRectoria, esResponsableMural, usuario } = useAutenticacion();
   const { estado: estadoOnboarding } = useEstadoOnboarding(usuario);
 
   if (!estaAutenticado) {
@@ -31,7 +31,7 @@ export function RutaProtegida({ children, requiereAdmin = false, requiereAdminOC
     return <Navigate to="/campus/campeche/portal" replace />;
   }
 
-  if (requierePresidente && !esResponsableClub) {
+  if (requierePresidente && !esLiderClub) {
     return <Navigate to="/campus/campeche/portal" replace />;
   }
 

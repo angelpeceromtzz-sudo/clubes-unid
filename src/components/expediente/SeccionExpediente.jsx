@@ -8,6 +8,7 @@ import { Badge } from '../ui/Badge';
 import { Spinner } from '../ui/Spinner';
 import { Th, Td } from '../ui/CeldasTabla';
 import { EmptyState } from '../ui/EmptyState';
+import { ListaReconocimientos } from './ListaReconocimientos';
 import { formatearNombre, fechaCorta, fechaEventoCorta } from '../../utils/formato';
 
 const COLOR_ESTADO_POSTULACION = {
@@ -49,7 +50,7 @@ function Bloque({ titulo, descripcion, children }) {
 
 function VistaDetalle({ expediente, onVolver }) {
   const { modoOscuro } = useTheme();
-  const { alumno, resumen, membresias, postulaciones, asistencia_por_club, sesiones, actividades_asistencia } = expediente;
+  const { alumno, resumen, membresias, postulaciones, asistencia_por_club, sesiones, actividades_asistencia, reconocimientos = [] } = expediente;
   const clubActual = (membresias || []).find((m) => m.estatus === 'activo')?.nombre_club || null;
   const membresiasOrdenadas = [...(membresias || [])].sort((a, b) => {
     if (a.estatus === 'activo' && b.estatus !== 'activo') return -1;
@@ -101,6 +102,13 @@ function VistaDetalle({ expediente, onVolver }) {
         />
         <Tarjeta titulo="Actividades" valor={resumen.actividades_asistidas ?? 0} detalle={`${resumen.actividades_registradas ?? 0} registro(s)`} />
       </div>
+
+      <Bloque titulo="Reconocimientos" descripcion="Insignias que ganas al asistir a una edición de una actividad.">
+        <ListaReconocimientos
+          items={reconocimientos}
+          mensajeVacio="Cuando asistas a una edición, su insignia aparecerá aquí."
+        />
+      </Bloque>
 
       <Bloque titulo="Membresías en clubes" descripcion="Clubes en los que ha sido o es miembro, con estatus y fechas.">
         <table className="w-full text-sm">

@@ -34,12 +34,14 @@ const NAV_SIN_CLUB = [
 
 export function PanelAlumno() {
   const navigate=useNavigate();
-  const {usuario,esResponsableClub,esAdmin,esRectoria,esResponsableMural}=useAutenticacion();
+  const {usuario,esResponsableClub,esLiderClub,esAdmin,esRectoria,esResponsableMural}=useAutenticacion();
   const {tema,modoOscuro}=useTheme();
   const {setPanelNav}=usePanelNav();
   const d=usePanelAlumno();
   const asignacion=useActividadesAsignadas();
-  const { activo: tutorialActivo, paso: pasoTutorial, iniciar: iniciarTutorialPrincipal, reintentar: repetirTutorialPrincipal, siguiente: siguienteTutorialPrincipal, saltar: saltarTutorialPrincipal } = useTutorial('alumno');
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  const claveTutorialAlumno = idUsuario ? `tutorial_alumno_${idUsuario}_pending` : null;
+  const { activo: tutorialActivo, paso: pasoTutorial, iniciar: iniciarTutorialPrincipal, reintentar: repetirTutorialPrincipal, siguiente: siguienteTutorialPrincipal, saltar: saltarTutorialPrincipal } = useTutorial(idUsuario ? `alumno_${idUsuario}` : null);
   const { activo: tutorialMiembroActivo, paso: pasoTutorialMiembro, iniciar: iniciarTutorialMiembro, siguiente: siguienteTutorialMiembro, saltar: saltarTutorialMiembro } = useTutorial(`alumno_club_${usuario?.id_usuario}_${d.club?.id_club}`);
   const pasosTutorial = useMemo(() => [
     { titulo: 'Bienvenido a tu panel', texto: 'Aquí puedes consultar tu club, tus postulaciones y las actividades que tienes asignadas.', target: '[data-tutorial="panel-alumno"]' },
@@ -67,41 +69,42 @@ export function PanelAlumno() {
     const opciones=d.club ? ELEMENTOS_NAV_ALUMNO : NAV_SIN_CLUB;
     return usuario?.id_rol===1 ? opciones : opciones.filter((item)=>item.key!=='mis-actividades');
   },[d.club,usuario?.id_rol]);
-  const [vistaAlumno,setVistaAlumno]=useVistaPanel(elementosNav,d.club ? 'mi-club' : 'postulaciones');
+  const [vistaAlumno,setVistaAlumno]=useVistaPanel(elementosNav,d.club ? 'mi-club' : 'mi-panel');
   const [dismissMiembroBanner,setDismissMiembroBanner]=useState(()=>{
     try{return localStorage.getItem('dismiss_miembro_banner')==='true';}catch{return false;}
   });
   useEffect(()=>{
-    if(esResponsableClub) abrirPanelResponsable(navigate,{replace:true});
+    if(esResponsableClub || esLiderClub) abrirPanelResponsable(navigate,{replace:true});
     else if(esAdmin) navigate('/admin/panel',{replace:true});
     else if(esRectoria) navigate('/rectoria/panel',{replace:true});
     else if(esResponsableMural) navigate('/mural/panel',{replace:true});
-  },[esResponsableClub,esAdmin,esRectoria,esResponsableMural,navigate]);
+  },[esResponsableClub,esLiderClub,esAdmin,esRectoria,esResponsableMural,navigate]);
   useEffect(()=>{
-    if(esResponsableClub || esAdmin || esRectoria || esResponsableMural) return;
+    if(esResponsableClub || esLiderClub || esAdmin || esRectoria || esResponsableMural) return;
     setPanelNav({itemsNav:elementosNav,onNavChange:setVistaAlumno});
     return ()=>setPanelNav({itemsNav:[],onNavChange:null});
-  },[setPanelNav,elementosNav,setVistaAlumno,esResponsableClub,esAdmin,esRectoria,esResponsableMural]);
+  },[setPanelNav,elementosNav,setVistaAlumno,esResponsableClub,esLiderClub,esAdmin,esRectoria,esResponsableMural]);
   useEffect(() => {
-    if (d.loading || !d.club?.id_club || !usuario?.id_usuario) return;
-    const claveCompletado = `tutorial_alumno_club_${usuario.id_usuario}_${d.club.id_club}_done`;
+    if (d.loading || !d.club?.id_club || !idUsuario) return;
+    const claveCompletado = `tutorial_alumno_club_${idUsuario}_${d.club.id_club}_done`;
     try {
       if (localStorage.getItem(claveCompletado) === 'true') return;
-      if (tutorialActivo || localStorage.getItem('tutorial_alumno_pending')) return;
+      if (tutorialActivo || (claveTutorialAlumno && localStorage.getItem(claveTutorialAlumno))) return;
     } catch { /* El recorrido sigue disponible aunque el navegador limite el almacenamiento. */ }
     setVistaAlumno('mi-club');
     iniciarTutorialMiembro();
-  }, [d.loading, d.club?.id_club, usuario?.id_usuario, tutorialActivo, iniciarTutorialMiembro, setVistaAlumno]);
+  }, [d.loading, d.club?.id_club, idUsuario, claveTutorialAlumno, tutorialActivo, iniciarTutorialMiembro, setVistaAlumno]);
   useEffect(() => {
+    if (!claveTutorialAlumno) return;
     try {
-      const solicitud = localStorage.getItem('tutorial_alumno_pending');
+      const solicitud = localStorage.getItem(claveTutorialAlumno);
       if (solicitud) {
-        localStorage.removeItem('tutorial_alumno_pending');
+        localStorage.removeItem(claveTutorialAlumno);
         if (solicitud === 'repetir') repetirTutorialPrincipal();
         else iniciarTutorialPrincipal();
       }
     } catch { /* La guía es opcional. */ }
-  }, [iniciarTutorialPrincipal, repetirTutorialPrincipal]);
+  }, [claveTutorialAlumno, iniciarTutorialPrincipal, repetirTutorialPrincipal]);
   useEffect(() => {
     const iniciarTutorial = (evento) => evento.detail?.repetir ? repetirTutorialPrincipal() : iniciarTutorialPrincipal();
     window.addEventListener('clubsunid:iniciar-tutorial-alumno', iniciarTutorial);
@@ -133,10 +136,33 @@ export function PanelAlumno() {
     setDismissMiembroBanner(true);
     try{localStorage.setItem('dismiss_miembro_banner','true');}catch{ /* Preferencia opcional. */ }
   }
-  if(esResponsableClub || esAdmin || esRectoria || esResponsableMural || d.loading) return <Spinner className="py-32"/>;
+  if(esResponsableClub || esLiderClub || esAdmin || esRectoria || esResponsableMural || d.loading) return <Spinner className="py-32"/>;
   return <ErrorBoundary><RutaProtegida><NavegacionPanel elementosNav={elementosNav} vistaActiva={vistaAlumno} onVistaChange={setVistaAlumno} fullHeight={vistaAlumno === 'chat-club'}>
     {vistaAlumno !== 'chat-club' && <div data-tutorial="panel-alumno" className="mb-6 md:mb-8"><EncabezadoPagina titulo="Mi panel" subtitulo={'Bienvenido, '+(usuario?.nombre_completo || '')}/></div>}
 
+    {vistaAlumno==='mi-panel' && <section className="mb-6 space-y-4" data-tutorial="resumen-alumno">
+      <div>
+        <h2 className={'text-xl font-black '+tema.title}>Tu resumen</h2>
+        <p className={'mt-1 text-sm '+tema.subtitle}>Desde aquí puedes continuar con tus solicitudes o explorar los clubes.</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <article className="rounded-2xl border border-slate-400/25 p-5">
+          <p className={'text-sm '+tema.subtitle}>Mis postulaciones</p>
+          <p className={'mt-1 text-2xl font-black '+tema.title}>{d.postulaciones.length}</p>
+          <button type="button" onClick={()=>setVistaAlumno('postulaciones')} className="mt-4 cursor-pointer font-bold text-amber-600 underline dark:text-amber-400">Ver mis postulaciones</button>
+        </article>
+        <article className="rounded-2xl border border-slate-400/25 p-5">
+          <p className={'text-sm '+tema.subtitle}>Clubes</p>
+          <p className={'mt-1 text-sm font-semibold '+tema.title}>Encuentra una actividad para ti</p>
+          <Link to="/campus/campeche/portal" className="mt-4 inline-block font-bold text-amber-600 underline dark:text-amber-400">Explorar clubes</Link>
+        </article>
+        <article className="rounded-2xl border border-slate-400/25 p-5 sm:col-span-2">
+          <p className={'text-sm '+tema.subtitle}>Tu perfil</p>
+          <p className={'mt-1 text-sm font-semibold '+tema.title}>Revisa tus datos y reconocimientos.</p>
+          <button type="button" onClick={()=>navigate('/perfil')} className="mt-4 cursor-pointer font-bold text-amber-600 underline dark:text-amber-400">Ver mi perfil</button>
+        </article>
+      </div>
+    </section>}
     {['mi-club','postulaciones'].includes(vistaAlumno) && <TarjetasMiActividad asignacion={asignacion}/>}
     {vistaAlumno==='mis-actividades' && <MisActividadesPanel/>}
     {vistaAlumno==='chat-club' && d.club && <ChatClub club={d.club} ocuparPantalla/>}

@@ -51,7 +51,7 @@ pool.query = async (sql, params) => responder(sql, params);
 pool.connect = async () => ({ query: responder, release: () => {} });
 
 function token(id, nombre, rol) {
-  return jwt.sign({ id, nombre_completo: nombre, id_rol: rol }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  return jwt.sign({ id, nombre_completo: nombre, id_rol: rol, auth_otp: false }, process.env.JWT_SECRET, { expiresIn: '5m' });
 }
 const tokenAlumno = token(100, 'Alumno Ficticio', 1);
 const tokenRectoria = token(300, 'Rectoría Ficticia', 4);

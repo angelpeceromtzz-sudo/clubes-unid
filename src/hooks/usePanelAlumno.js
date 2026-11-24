@@ -5,6 +5,8 @@ import { api } from '../services/api';
 
 export function usePanelAlumno() {
   const { usuario, obtenerDatosPanel } = useAutenticacion();
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  const idRol = usuario?.id_rol;
   const [datos, setDatos] = useState(null);
   const [miembros, setMiembros] = useState([]);
   const [postulaciones, setPostulaciones] = useState([]);
@@ -22,7 +24,7 @@ export function usePanelAlumno() {
         setMiembros([]);
       }
     }
-    if (usuario?.id_rol === 1) {
+    if (idUsuario != null && idRol === 1) {
       try {
         const p = await api.getMisPostulaciones();
         setPostulaciones(p);
@@ -31,7 +33,7 @@ export function usePanelAlumno() {
       }
     }
     setCargando(false);
-  }, [obtenerDatosPanel, usuario]);
+  }, [obtenerDatosPanel, idRol, idUsuario]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

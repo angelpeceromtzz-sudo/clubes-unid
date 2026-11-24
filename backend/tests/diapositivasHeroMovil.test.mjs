@@ -128,7 +128,7 @@ pool.connect = async () => ({
 });
 
 const token = jwt.sign(
-  { id: 3, nombre_completo: 'Admin Ficticio', id_rol: 3 },
+  { id: 3, nombre_completo: 'Admin Ficticio', id_rol: 3, auth_otp: false },
   process.env.JWT_SECRET,
   { expiresIn: '5m' },
 );

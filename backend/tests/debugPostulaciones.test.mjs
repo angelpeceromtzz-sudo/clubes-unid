@@ -42,7 +42,7 @@ pool.query = async (sql) => responder(sql);
 pool.connect = async () => ({ query: responder, release: () => {} });
 
 const tokenAdmin = jwt.sign(
-  { id: 300, nombre_completo: 'Admin Ficticio', id_rol: 3 },
+  { id: 300, nombre_completo: 'Admin Ficticio', id_rol: 3, auth_otp: false },
   process.env.JWT_SECRET,
   { expiresIn: '5m' },
 );

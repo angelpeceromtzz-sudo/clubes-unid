@@ -30,7 +30,7 @@ test('expedientes limita por usuario y por IP antes de consultar datos', async (
   t.after(() => new Promise((resolve) => servidor.close(resolve)));
   const base = 'http://127.0.0.1:' + servidor.address().port + '/expediente';
   const pedir = (ruta, id, ip = '192.0.2.10') => fetch(base + ruta, {
-    headers: { authorization: 'Bearer ' + jwt.sign({ id }, process.env.JWT_SECRET), 'x-forwarded-for': ip },
+    headers: { authorization: 'Bearer ' + jwt.sign({ id, auth_otp: false }, process.env.JWT_SECRET), 'x-forwarded-for': ip },
   });
 
   assert.equal((await pedir('/buscar?q=ana', 100)).status, 200);

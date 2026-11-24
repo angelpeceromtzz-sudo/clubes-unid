@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { esIdEntero, validarParamsEnteros } from '../lib/validarId.js';
+import { limitadorChatLectura, limitadorChatPresencia } from '../lib/rateLimits.js';
 
 const router = Router();
 const MAX_CARACTERES = 400;
@@ -116,7 +117,7 @@ async function registrarMenciones(db, idMensaje, ids) {
   }
 }
 
-router.get('/clubes/:idClub/chat', async (req, res) => {
+router.get('/clubes/:idClub/chat', limitadorChatLectura, async (req, res) => {
   try {
     const antes = req.query.antes == null ? null : Number(req.query.antes);
     if (antes !== null && (!Number.isSafeInteger(antes) || antes < 1)) return res.status(400).json({ error: 'Referencia de historial no válida' });
@@ -128,7 +129,7 @@ router.get('/clubes/:idClub/chat', async (req, res) => {
   }
 });
 
-router.put('/clubes/:idClub/presencia', async (req, res) => {
+router.put('/clubes/:idClub/presencia', limitadorChatPresencia, async (req, res) => {
   try {
     const club = await consultarClub(pool, req.params.idClub, req.user.id);
     if (club.error) return res.status(club.status).json({ error: club.error });
@@ -136,16 +137,25 @@ router.put('/clubes/:idClub/presencia', async (req, res) => {
       await pool.query('DELETE FROM club_chat_presencia WHERE id_club=$1 AND id_usuario=$2', [req.params.idClub, req.user.id]);
       return res.json({ ok: true, conectado: false });
     }
-    const escribiendo = req.body?.escribiendo === true;
+    const estadoEscribiendo = req.body?.escribiendo;
+    if (estadoEscribiendo !== undefined && typeof estadoEscribiendo !== 'boolean') {
+      return res.status(400).json({ error: 'Estado de escritura inválido' });
+    }
+    // null = heartbeat: actualiza actividad sin borrar el typing de otra pestaña.
+    const escribiendo = estadoEscribiendo === undefined ? null : estadoEscribiendo;
     await pool.query(`INSERT INTO club_chat_presencia (id_club,id_usuario,ultima_actividad,escribiendo_hasta)
-      VALUES ($1,$2,NOW(),CASE WHEN $3 THEN NOW()+INTERVAL '6 seconds' ELSE NULL END)
+      VALUES ($1,$2,NOW(),CASE WHEN $3::boolean THEN NOW()+INTERVAL '6 seconds' ELSE NULL END)
       ON CONFLICT (id_club,id_usuario) DO UPDATE SET ultima_actividad=NOW(),
-      escribiendo_hasta=CASE WHEN $3 THEN NOW()+INTERVAL '6 seconds' ELSE NULL END`, [req.params.idClub, req.user.id, escribiendo]);
+      escribiendo_hasta=CASE
+        WHEN $3::boolean IS NULL THEN club_chat_presencia.escribiendo_hasta
+        WHEN $3::boolean THEN NOW()+INTERVAL '6 seconds'
+        ELSE NULL
+      END`, [req.params.idClub, req.user.id, escribiendo]);
     res.json({ ok: true });
   } catch (error) { res.status(500).json({ error: 'No se pudo actualizar la presencia' }); }
 });
 
-router.post('/clubes/:idClub/leer', async (req, res) => {
+router.post('/clubes/:idClub/leer', limitadorChatLectura, async (req, res) => {
   const client = await pool.connect();
   try {
     const club = await consultarClub(client, req.params.idClub, req.user.id);
@@ -181,6 +191,12 @@ router.post('/clubes/:idClub/mensajes', async (req, res) => {
 
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock($1,$2)', [idClub, req.user.id]);
+    // La membresía y el silencio pueden cambiar mientras esperamos el lock.
+    const clubActual = await consultarClub(client, idClub, req.user.id);
+    if (clubActual.error) throw Object.assign(new Error(clubActual.error), { status: clubActual.status });
+    const silenciadoActual = (await client.query(`SELECT 1 FROM club_chat_silencios WHERE id_club=$1 AND id_usuario=$2
+      AND (silenciado_hasta IS NULL OR silenciado_hasta>NOW())`, [idClub, req.user.id])).rows.length > 0;
+    if (silenciadoActual) throw Object.assign(new Error('El responsable del club ha pausado temporalmente tu participación en el chat'), { status: 403 });
     const ultimo = (await client.query(`SELECT EXTRACT(EPOCH FROM (NOW()-MAX(creado_en))) AS segundos
       FROM club_chat_mensajes WHERE id_club=$1 AND id_autor=$2`, [idClub, req.user.id])).rows[0].segundos;
     if (ultimo !== null && Number(ultimo) < ESPERA_ENVIO_SEGUNDOS) {
@@ -204,17 +220,17 @@ router.post('/clubes/:idClub/mensajes', async (req, res) => {
       const esMencion = menciones.ids.includes(destinatario);
       const notificacion = (await client.query(`INSERT INTO notificaciones (id_emisor,titulo,mensaje,audiencia,id_club,id_destinatario)
         VALUES ($1,$2,$3,'global',$4,$5) RETURNING id_notificacion`, [req.user.id,
-        esMencion ? `Te mencionaron en ${club.nombre_club}` : `Nuevo mensaje en ${club.nombre_club}`,
+        esMencion ? `Te mencionaron en ${clubActual.nombre_club}` : `Nuevo mensaje en ${clubActual.nombre_club}`,
         `${req.user.nombre_completo}: ${extracto}`, idClub, destinatario])).rows[0];
       await client.query('INSERT INTO club_chat_notificaciones (id_notificacion,id_mensaje,id_destinatario) VALUES ($1,$2,$3)', [notificacion.id_notificacion, mensaje.id_mensaje, destinatario]);
     }
     await client.query('COMMIT');
     res.status(201).json({ ...mensaje, autor: req.user.nombre_completo, id_rol: req.user.id_rol,
-      es_responsable: club.es_responsable, es_vicepresidente: club.es_vicepresidente,
+      es_responsable: clubActual.es_responsable, es_vicepresidente: clubActual.es_vicepresidente,
       fijado: false, menciones: menciones.ids.map((id) => ({ id_usuario: id })) });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('Error al enviar mensaje del chat:', error);
+    if (!error.status) console.error('Error al enviar mensaje del chat:', error);
     res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo enviar el mensaje' });
   } finally { client.release(); }
 });
@@ -224,16 +240,21 @@ router.put('/clubes/:idClub/mensajes/:idMensaje', async (req, res) => {
   try {
     const texto = typeof req.body?.contenido === 'string' ? req.body.contenido.trim() : '';
     if (!texto || cantidadCaracteres(texto) > MAX_CARACTERES) { return res.status(400).json({ error: 'El mensaje debe tener entre 1 y 400 caracteres' }); }
-    const club = await consultarClub(client, req.params.idClub, req.user.id);
-    if (club.error) { return res.status(club.status).json({ error: club.error }); }
-    const mensaje = (await client.query('SELECT id_autor, eliminado FROM club_chat_mensajes WHERE id_mensaje=$1 AND id_club=$2', [req.params.idMensaje, req.params.idClub])).rows[0];
-    if (!mensaje) { return res.status(404).json({ error: 'Mensaje no encontrado' }); }
-    if (mensaje.id_autor !== req.user.id) { return res.status(403).json({ error: 'Solo puedes editar tus propios mensajes' }); }
-    if (mensaje.eliminado) { return res.status(409).json({ error: 'Este mensaje ya fue eliminado' }); }
-    const menciones = await validarMenciones(client, Number(req.params.idClub), req.body?.menciones || []);
-    if (menciones.error) { return res.status(400).json({ error: menciones.error }); }
     await client.query('BEGIN');
-    const actualizado = (await client.query('UPDATE club_chat_mensajes SET contenido=$1,editado_en=NOW() WHERE id_mensaje=$2 RETURNING *', [censurarContenido(texto), req.params.idMensaje])).rows[0];
+    const club = await consultarClub(client, req.params.idClub, req.user.id);
+    if (club.error) throw Object.assign(new Error(club.error), { status: club.status });
+    // Edición y borrado bloquean la misma fila: una eliminación concurrente
+    // queda visible al terminar la espera y nunca puede sobrescribirse después.
+    const mensaje = (await client.query('SELECT id_autor, eliminado FROM club_chat_mensajes WHERE id_mensaje=$1 AND id_club=$2 FOR UPDATE', [req.params.idMensaje, req.params.idClub])).rows[0];
+    if (!mensaje) throw Object.assign(new Error('Mensaje no encontrado'), { status: 404 });
+    if (mensaje.id_autor !== req.user.id) throw Object.assign(new Error('Solo puedes editar tus propios mensajes'), { status: 403 });
+    if (mensaje.eliminado) throw Object.assign(new Error('Este mensaje ya fue eliminado'), { status: 409 });
+    const menciones = await validarMenciones(client, Number(req.params.idClub), req.body?.menciones || []);
+    if (menciones.error) throw Object.assign(new Error(menciones.error), { status: 400 });
+    const actualizado = (await client.query(`UPDATE club_chat_mensajes SET contenido=$1,editado_en=NOW()
+      WHERE id_mensaje=$2 AND id_club=$3 AND id_autor=$4 AND NOT eliminado RETURNING *`,
+    [censurarContenido(texto), req.params.idMensaje, req.params.idClub, req.user.id])).rows[0];
+    if (!actualizado) throw Object.assign(new Error('Este mensaje ya fue eliminado'), { status: 409 });
     await client.query('DELETE FROM club_chat_menciones WHERE id_mensaje=$1', [req.params.idMensaje]);
     await registrarMenciones(client, Number(req.params.idMensaje), menciones.ids);
     await client.query(`UPDATE notificaciones n
@@ -244,27 +265,36 @@ router.put('/clubes/:idClub/mensajes/:idMensaje', async (req, res) => {
       WHERE n.id_notificacion=cn.id_notificacion AND m.id_mensaje=$1`, [req.params.idMensaje]);
     await client.query('COMMIT');
     res.json(actualizado);
-  } catch (error) { await client.query('ROLLBACK').catch(() => {}); res.status(500).json({ error: 'No se pudo editar el mensaje' }); }
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (!error.status) console.error('Error al editar mensaje del chat:', error);
+    res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo editar el mensaje' });
+  }
   finally { client.release(); }
 });
 
 router.delete('/clubes/:idClub/mensajes/:idMensaje', async (req, res) => {
   const client = await pool.connect();
   try {
-    const club = await consultarClub(client, req.params.idClub, req.user.id);
-    if (club.error) return res.status(club.status).json({ error: club.error });
-    const mensaje = (await client.query('SELECT id_autor FROM club_chat_mensajes WHERE id_mensaje=$1 AND id_club=$2', [req.params.idMensaje, req.params.idClub])).rows[0];
-    if (!mensaje) return res.status(404).json({ error: 'Mensaje no encontrado' });
-    if (mensaje.id_autor !== req.user.id && !club.es_responsable) return res.status(403).json({ error: 'Solo puedes eliminar tus propios mensajes' });
     await client.query('BEGIN');
-    await client.query(`UPDATE club_chat_mensajes SET contenido='Mensaje eliminado',eliminado=TRUE,editado_en=NULL WHERE id_mensaje=$1`, [req.params.idMensaje]);
+    const club = await consultarClub(client, req.params.idClub, req.user.id);
+    if (club.error) throw Object.assign(new Error(club.error), { status: club.status });
+    const mensaje = (await client.query('SELECT id_autor FROM club_chat_mensajes WHERE id_mensaje=$1 AND id_club=$2 FOR UPDATE', [req.params.idMensaje, req.params.idClub])).rows[0];
+    if (!mensaje) throw Object.assign(new Error('Mensaje no encontrado'), { status: 404 });
+    if (mensaje.id_autor !== req.user.id && !club.es_responsable) throw Object.assign(new Error('Solo puedes eliminar tus propios mensajes'), { status: 403 });
+    await client.query(`UPDATE club_chat_mensajes SET contenido='Mensaje eliminado',eliminado=TRUE,editado_en=NULL
+      WHERE id_mensaje=$1 AND id_club=$2`, [req.params.idMensaje, req.params.idClub]);
     await client.query(`UPDATE notificaciones n SET mensaje='Mensaje eliminado'
       FROM club_chat_notificaciones cn WHERE n.id_notificacion=cn.id_notificacion AND cn.id_mensaje=$1`, [req.params.idMensaje]);
     await client.query('DELETE FROM club_chat_menciones WHERE id_mensaje=$1', [req.params.idMensaje]);
     await client.query('DELETE FROM club_chat_fijados WHERE id_mensaje=$1', [req.params.idMensaje]);
     await client.query('COMMIT');
     res.json({ ok: true });
-  } catch (error) { await client.query('ROLLBACK').catch(() => {}); res.status(500).json({ error: 'No se pudo eliminar el mensaje' }); }
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (!error.status) console.error('Error al eliminar mensaje del chat:', error);
+    res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo eliminar el mensaje' });
+  }
   finally { client.release(); }
 });
 

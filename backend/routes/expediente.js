@@ -8,6 +8,13 @@ import { UMBRALES, limitadorLecturasPesadas } from '../lib/rateLimits.js';
 
 const router = Router();
 
+// El expediente contiene datos personales. La política se aplica a todo el
+// router, incluidos 401/403/429 y errores, para que ninguna respuesta se cachee.
+router.use((req, res, next) => {
+  res.set('Cache-Control', 'private, no-store');
+  next();
+});
+
 // Un contador propio por IP protege también la revalidación de la sesión,
 // sin consumir por segunda vez el contador global de /api.
 router.use(rateLimit({
@@ -17,6 +24,26 @@ router.use(rateLimit({
   legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes. Espera un momento y vuelve a intentarlo.' },
 }));
+
+// El alumno puede consultar solo sus propias insignias desde Mi panel.
+router.get('/mis-reconocimientos', authenticate, requireRole(ROL_ALUMNO), async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id_reconocimiento, id_edicion, tipo_actividad AS plantilla,
+             nombre_actividad AS actividad, nombre_edicion AS edicion,
+             anio, insignia_key, otorgada_en
+      FROM expediente_reconocimientos
+      WHERE id_usuario = $1
+      ORDER BY anio DESC, otorgada_en DESC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener mis insignias:', err);
+    res.status(500).json({ error: 'No se pudieron cargar tus insignias' });
+  }
+});
+
 router.use(authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION));
 
 const MIN_BUSQUEDA = 3;
@@ -165,7 +192,7 @@ router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
       return res.status(404).json({ error: 'Alumno no encontrado' });
     }
 
-    const [membresias, postulaciones, asistencia, sesiones, actividadesAsistencia] = await Promise.all([
+    const [membresias, postulaciones, asistencia, sesiones, actividadesAsistencia, reconocimientos] = await Promise.all([
       pool.query(`
         SELECT i.id_inscripcion, i.id_club, c.nombre_club, ei.nombre_estatus AS estatus,
           i.fecha_inscripcion, i.fecha_baja
@@ -214,15 +241,31 @@ router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
         [id]
       ),
       pool.query(`
-        SELECT aa.id_registro, ae.id_edicion, c.nombre_club AS actividad,
+        SELECT aa.id_registro, ae.id_edicion, c.nombre_club AS actividad, c.plantilla,
                ae.nombre AS edicion, ae.fecha_inicio, ae.fecha_fin,
-               aa.estado, aa.origen, aa.registrada_en
+               aa.estado, aa.origen, aa.registrada_en,
+               EXTRACT(YEAR FROM COALESCE(
+                 ae.fecha_inicio,
+                 ae.fecha_fin,
+                 (aa.registrada_en AT TIME ZONE 'America/Merida')::date
+               ))::int AS anio
         FROM actividades_asistencias aa
         JOIN actividades_registros ar ON ar.id_registro = aa.id_registro
         JOIN actividades_ediciones ae ON ae.id_edicion = ar.id_edicion
         JOIN clubes c ON c.id_club = ae.id_actividad
         WHERE ar.id_usuario = $1
+          AND ar.tipo_participante = 'unid'
+          AND ar.matricula IS NOT NULL
         ORDER BY ae.fecha_inicio DESC NULLS LAST, aa.registrada_en DESC`,
+        [id]
+      ),
+      pool.query(`
+        SELECT id_reconocimiento, id_edicion, tipo_actividad AS plantilla,
+               nombre_actividad AS actividad, nombre_edicion AS edicion,
+               anio, insignia_key, otorgada_en
+        FROM expediente_reconocimientos
+        WHERE id_usuario = $1
+        ORDER BY anio DESC, otorgada_en DESC`,
         [id]
       ),
     ]);
@@ -246,6 +289,7 @@ router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
       asistencia_por_club: datos.asistencia,
       sesiones: sesiones.rows,
       actividades_asistencia: actividadesAsistencia.rows,
+      reconocimientos: reconocimientos.rows,
     });
   } catch (err) {
     console.error('Error al obtener expediente:', err);

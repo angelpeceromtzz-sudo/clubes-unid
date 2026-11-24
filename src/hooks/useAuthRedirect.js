@@ -24,7 +24,7 @@ export function useAuthRedirect() {
         if (id_rol === 4) navigate('/rectoria/panel', { replace: true });
         else if (id_rol === 3 || id_rol === 7) navigate('/admin/panel', { replace: true });
         else if (id_rol === 6) navigate('/mural/panel', { replace: true });
-        else if (id_rol === 2) abrirPanelResponsable(navigate, { replace: true });
+        else if (id_rol === 2 || id_rol === 5) abrirPanelResponsable(navigate, { replace: true });
         else if (id_rol === 1 && tieneInscripcionActiva) navigate('/campus/campeche/alumno/panel', { replace: true });
         // eslint-disable-next-line react-hooks/set-state-in-effect
         else if (id_rol === 1) setRedireccionPendiente(true);
@@ -49,7 +49,7 @@ export function useAuthRedirect() {
       if (id_rol === 4) navigate('/rectoria/panel', { replace: true });
       else if (id_rol === 3 || id_rol === 7) navigate('/admin/panel', { replace: true });
       else if (id_rol === 6) navigate('/mural/panel', { replace: true });
-      else if (id_rol === 2) abrirPanelResponsable(navigate, { replace: true });
+      else if (id_rol === 2 || id_rol === 5) abrirPanelResponsable(navigate, { replace: true });
       else if (id_rol === 1) {
         api.getInscripcionActiva().then((insc) => {
           if (insc) navigate('/campus/campeche/alumno/panel', { replace: true });

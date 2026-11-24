@@ -1,5 +1,7 @@
 -- Recuerda una sola cuenta OTP por navegador durante 30 días.
 -- Guarda hashes, nunca el token secreto del dispositivo.
+-- Después aplicar migrate-dispositivos-confiables-generacion.sql para vincular
+-- cada JWT confiable a una generación y habilitar la gracia de rotación.
 -- Aplicar manualmente una vez en cada base existente; no se ejecuta al arrancar.
 
 BEGIN;

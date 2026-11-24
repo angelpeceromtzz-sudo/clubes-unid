@@ -39,6 +39,7 @@ import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
 import { RutaClubActividad } from './components/actividades/RutaClubActividad';
 import { abrirPanelResponsable } from './services/panelResponsable';
 import PaginaPerfilPreferencias from './pages/PaginaPerfilPreferencias';
+import { PerfilAlumnoPanel } from './components/expediente/PerfilAlumnoPanel';
 import { FlujoOnboarding } from './components/onboarding/FlujoOnboarding';
 import { ModalConsentimientoLegal } from './components/legal/ModalConsentimientoLegal';
 import { api, request } from './services/api';
@@ -91,6 +92,8 @@ const RUTAS_CONOCIDAS = [
   '/campus/campeche',
   '/campus/campeche/portal',
   '/panel',
+  '/perfil',
+  '/perfil/preferencias',
   '/campus/campeche/alumno/panel',
   '/campus/campeche/portal/club/:id',
   '/campus/campeche/portal/responsable-de-club/panel',
@@ -137,15 +140,23 @@ function App() {
   const [consentimientoPendiente, setConsentimientoPendiente] = useState(false);
   const [consentimientoError, setConsentimientoError] = useState(false);
 
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  const claveTutorialAlumno = idUsuario ? `tutorial_alumno_${idUsuario}_pending` : null;
+
+  const dejarTutorialAlumnoPendiente = useCallback((repetir = false) => {
+    if (!claveTutorialAlumno) return;
+    try { localStorage.setItem(claveTutorialAlumno, repetir ? 'repetir' : 'true'); } catch { /* La solicitud se puede volver a iniciar desde Ayuda. */ }
+  }, [claveTutorialAlumno]);
+
   const lanzarTutorialAlumno = useCallback((repetir = false) => {
     const rutaPanelAlumno = '/campus/campeche/alumno/panel';
     if (location.pathname === rutaPanelAlumno) {
       window.dispatchEvent(new CustomEvent('clubsunid:iniciar-tutorial-alumno', { detail: { repetir } }));
       return;
     }
-    try { localStorage.setItem('tutorial_alumno_pending', repetir ? 'repetir' : 'true'); } catch { /* La solicitud se puede volver a iniciar desde Ayuda. */ }
+    dejarTutorialAlumnoPendiente(repetir);
     navigate(rutaPanelAlumno);
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, dejarTutorialAlumnoPendiente]);
 
   const lanzarTutorialResponsable = useCallback((repetir = false) => {
     const rutaPanelResponsable = '/campus/campeche/portal/responsable-de-club/panel';
@@ -233,11 +244,16 @@ function App() {
     setConsentimientoPendiente(false);
   }, []);
 
-   function handleLogout() {
-    cerrarSesion();
-    navigate('/campus/campeche/portal');
-    setMenuAbierto(false);
-    setConfirmarLogout(false);
+  async function handleLogout() {
+    try {
+      await cerrarSesion();
+    } catch (err) {
+      console.error('[Auth] No se pudo completar el cierre de sesión:', err);
+    } finally {
+      navigate('/campus/campeche/portal');
+      setMenuAbierto(false);
+      setConfirmarLogout(false);
+    }
   }
 
   const mostrarFiltros = location.pathname === '/campus/campeche/portal';
@@ -260,7 +276,7 @@ function App() {
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
   // coincide con NAVBAR_HEIGHT y no con la del logotipo de NAVBAR_HEIGHT_LOGO.
-  const esRutaPanel = ['/campus/campeche/alumno/panel', '/campus/campeche/portal/responsable-de-club/panel', '/admin/panel', '/rectoria/panel', '/mural/panel'].includes(location.pathname);
+  const esRutaPanel = ['/campus/campeche/alumno/panel', '/campus/campeche/portal/responsable-de-club/panel', '/admin/panel', '/rectoria/panel', '/mural/panel', '/perfil'].includes(location.pathname);
   const alturaNavbar = esRutaPanel ? NAVBAR_HEIGHT_LOGO : NAVBAR_HEIGHT;
   const chatClubAbierto = esRutaPanel && new URLSearchParams(location.search).get('seccion') === 'chat-club';
 
@@ -432,7 +448,8 @@ return (
               onCompletar={() => {
                 marcarCompletadoOnboarding();
                 setOnboardingAbierto(false);
-                lanzarTutorialAlumno(false);
+                if (location.pathname.startsWith('/actividades')) dejarTutorialAlumnoPendiente();
+                else lanzarTutorialAlumno(false);
               }}
             />
           </div>
@@ -467,6 +484,13 @@ return (
         <Route path="/perfil/preferencias" element={
           <RutaProtegida requiereAlumno>
             <PaginaPerfilPreferencias />
+          </RutaProtegida>
+        } />
+        <Route path="/perfil" element={
+          <RutaProtegida>
+            <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-8 md:py-8">
+              <PerfilAlumnoPanel />
+            </div>
           </RutaProtegida>
         } />
         <Route path="/campus/campeche/portal/club/:id" element={
