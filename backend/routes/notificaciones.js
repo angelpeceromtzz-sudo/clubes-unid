@@ -37,6 +37,8 @@ router.get('/', authenticate, async (req, res) => {
               u.nombre_completo AS emisor_nombre,
               r.nombre_rol AS emisor_rol,
               c.nombre_club AS club_nombre,
+              cn.id_notificacion IS NOT NULL AS es_chat_club,
+              cm.id_club AS chat_club_id,
               n.titulo, n.mensaje, n.audiencia, n.id_club, n.fecha_creacion,
               CASE WHEN nl.id_notificacion IS NOT NULL THEN TRUE ELSE FALSE END AS leido
        FROM notificaciones n
@@ -45,11 +47,13 @@ router.get('/', authenticate, async (req, res) => {
        LEFT JOIN clubes_operativos c ON c.id_club = n.id_club
         LEFT JOIN notificaciones_leidas nl ON nl.id_notificacion = n.id_notificacion AND nl.id_usuario = $1
         LEFT JOIN notificaciones_eliminadas ne ON ne.id_notificacion = n.id_notificacion AND ne.id_usuario = $1
+        LEFT JOIN club_chat_notificaciones cn ON cn.id_notificacion = n.id_notificacion
+        LEFT JOIN club_chat_mensajes cm ON cm.id_mensaje = cn.id_mensaje
        WHERE ne.id_notificacion IS NULL
          AND (n.id_destinatario = $1 OR n.id_emisor != $1)
          AND (($2 IN (3, 4) AND ((n.audiencia = 'global' AND n.id_destinatario IS NULL)
                                 OR n.id_destinatario = $1))
-           OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
+           OR ($2 IN (2, 5) AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
                         OR (n.audiencia = 'club' AND n.id_club = $3)
                         OR n.id_destinatario = $1))
            OR ($2 = 1 AND ((n.audiencia IN ('global', 'alumnos') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $4))
@@ -340,7 +344,7 @@ router.post('/leer-todas', authenticate, async (req, res) => {
          AND n.id_emisor != $1
          AND (($2 IN (3, 4) AND ((n.audiencia = 'global' AND n.id_destinatario IS NULL)
                                 OR n.id_destinatario = $1))
-           OR ($2 = 2 AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
+           OR ($2 IN (2, 5) AND ((n.audiencia IN ('global', 'presidentes') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))
                         OR (n.audiencia = 'club' AND n.id_club = $3)
                         OR n.id_destinatario = $1))
            OR ($2 = 1 AND ((n.audiencia IN ('global', 'alumnos') AND n.id_destinatario IS NULL AND (n.id_club IS NULL OR n.id_club = $3))

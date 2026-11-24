@@ -8,7 +8,7 @@ import {
   Palmtree, Pencil, Plus, QrCode, Search, Send, SquarePen, Star, Sun, Trash2,
   TriangleAlert, Trophy, UserRound, UsersRound, Video, X, Zap, Clock3,
   Activity, Cpu, HandHeart, Heart, HeartHandshake, Loader, Mail, Palette,
-  RefreshCw, Save, ShieldCheck, Sparkles, Square, SquareCheckBig,
+  RefreshCw, Save, ShieldCheck, Sparkles, Square, SquareCheckBig, ThumbsUp,
 } from 'lucide-react';
 
 // Mantiene los nombres usados por la aplicación con iconos oficiales de Lucide.
@@ -34,7 +34,7 @@ const ICONOS = {
   'hand-heart': HandHeart, activity: Activity, heart: Heart, mail: Mail, 'book-open': BookOpen,
   'shield-check': ShieldCheck, 'clock-3': Clock3, 'calendar-days': CalendarDays,
   'check-circle-2': CircleCheck, 'circle-check': CircleCheck, 'check-square': SquareCheckBig, square: Square,
-  loader: Loader, 'refresh-cw': RefreshCw,
+  loader: Loader, 'refresh-cw': RefreshCw, 'thumbs-up': ThumbsUp,
 };
 
 export function Icono({ nombre, className = 'h-5 w-5', strokeWidth = 1.75 }) {

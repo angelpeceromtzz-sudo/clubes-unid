@@ -17,6 +17,8 @@ import usuariosRoutes from './routes/usuarios.js';
 import clubesRoutes from './routes/clubes.js';
 import inscripcionesRoutes from './routes/inscripciones.js';
 import avisosRoutes from './routes/avisos.js';
+import eventosClubRoutes from './routes/eventosClub.js';
+import chatClubRoutes from './routes/chatClub.js';
 import formulariosRoutes from './routes/formularios.js';
 import ofertasRoutes from './routes/ofertas.js';
 import notificacionesRoutes from './routes/notificaciones.js';
@@ -75,7 +77,7 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Client-Device', 'X-Trusted-Device'],
   // El frontend (otro origen) necesita leer estos encabezados para respetar
   // el cooldown real que impone express-rate-limit en un 429.
   exposedHeaders: ['Retry-After', 'RateLimit', 'RateLimit-Reset', 'X-RateLimit-Reset'],
@@ -103,6 +105,8 @@ app.use('/api/clubes', clubFormularioRoutes);
 app.use('/api/inscripciones', inscripcionesRoutes);
 app.use('/api/formularios', formulariosRoutes);
 app.use('/api/avisos', avisosRoutes);
+app.use('/api/eventos-club', eventosClubRoutes);
+app.use('/api/chat-clubes', chatClubRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/historial', historialRoutes);
 app.use('/api/convocatorias', convocatoriasRoutes);

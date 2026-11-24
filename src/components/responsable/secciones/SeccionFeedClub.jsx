@@ -4,10 +4,13 @@ import { useState, useEffect } from 'react';
 import { api } from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Icono } from '../../ui/Icono';
+import { LoboReaccion } from '../../actividades/LoboReaccion';
 import { FormularioNotificacion } from '../../formularios/FormularioNotificacion';
 import { ModalConfirmacion } from '../../ui/ModalConfirmacion';
+import '../../actividades/ReaccionesCatalogo.css';
+import './ReaccionesAviso.css';
 
-export function SeccionFeedClub({ club, miembros = [], esResponsableClub }) {
+export function SeccionFeedClub({ club, esResponsableClub }) {
   const { tema, modoOscuro } = useTheme();
   const [avisos, setAvisos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -15,16 +18,41 @@ export function SeccionFeedClub({ club, miembros = [], esResponsableClub }) {
   const [avisoAEliminar, setAvisoAEliminar] = useState(null);
   const [eliminando, setEliminando] = useState(false);
   const [reacciones, setReacciones] = useState({});
+  const [menuReaccionId, setMenuReaccionId] = useState(null);
+  const [reaccionPendiente, setReaccionPendiente] = useState(null);
+  const [erroresReaccion, setErroresReaccion] = useState({});
 
   const esOscuro = modoOscuro;
   const cardCls = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
 
   useEffect(() => {
+    if (menuReaccionId == null) return undefined;
+    const cerrarFuera = (evento) => {
+      const objetivo = evento.target;
+      const grupo = objetivo instanceof Element ? objetivo.closest('[data-reacciones-aviso]') : null;
+      if (!grupo || grupo.dataset.reaccionesAviso !== String(menuReaccionId)) setMenuReaccionId(null);
+    };
+    const cerrarEscape = (evento) => { if (evento.key === 'Escape') setMenuReaccionId(null); };
+    document.addEventListener('pointerdown', cerrarFuera);
+    document.addEventListener('keydown', cerrarEscape);
+    return () => {
+      document.removeEventListener('pointerdown', cerrarFuera);
+      document.removeEventListener('keydown', cerrarEscape);
+    };
+  }, [menuReaccionId]);
+
+  useEffect(() => {
     let montado = true;
     async function cargar() {
       try {
-        const data = await api.getAvisos(club.id_club);
-        if (montado) setAvisos(data);
+        const [data, propias] = await Promise.all([
+          api.getAvisos(club.id_club),
+          api.getMisReaccionesAvisos(club.id_club).catch(() => ({})),
+        ]);
+        if (montado) {
+          setAvisos(data);
+          setReacciones(propias || {});
+        }
       } catch {
         if (montado) setAvisos([]);
       } finally {
@@ -71,29 +99,40 @@ export function SeccionFeedClub({ club, miembros = [], esResponsableClub }) {
     setAvisoAEliminar(null);
   }
 
-  function alternarReaccion(id) {
-    setReacciones((prev) => ({ ...prev, [id]: !prev[id] }));
+  async function alternarReaccion(id, tipo) {
+    if (reaccionPendiente === id) return;
+    const actual = reacciones[id] || null;
+    const destino = actual === tipo ? null : tipo;
+    setReaccionPendiente(id);
+    setErroresReaccion((prev) => ({ ...prev, [id]: '' }));
+    try {
+      const resultado = await api.guardarReaccionAviso(id, destino);
+      setReacciones((prev) => {
+        const siguiente = { ...prev };
+        if (resultado.reaccion) siguiente[id] = resultado.reaccion;
+        else delete siguiente[id];
+        return siguiente;
+      });
+      setAvisos((prev) => prev.map((aviso) => aviso.id_aviso === id
+        ? { ...aviso, reacciones: resultado.totales || [] }
+        : aviso));
+      setMenuReaccionId(null);
+    } catch (error) {
+      setErroresReaccion((prev) => ({ ...prev, [id]: error.message || 'No se pudo guardar la reacción.' }));
+    } finally {
+      setReaccionPendiente(null);
+    }
   }
 
-  const eventosMiembros = (miembros || []).slice(0, 5).map((m) => ({
-    tipo: 'miembro',
-    id: `m-${m.id_usuario || m.id}`,
-    texto: `${m.nombre_completo || m.nombre || 'Un alumno'} se unió al club`,
-    fecha: m.fecha_ingreso || m.fecha || null,
-  }));
-
-  const eventosAvisos = (avisos || []).map((a) => ({
-    tipo: 'aviso',
+  const feed = (avisos || []).map((a) => ({
     id: `a-${a.id_aviso}`,
     aviso: a,
   }));
 
-  const feed = [...eventosMiembros, ...eventosAvisos];
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>Actividad del Club</h3>
+        <h3 className={`text-lg font-black uppercase tracking-wider ${tema.title}`}>Avisos del Club</h3>
         {esResponsableClub && (
           <button
             onClick={() => setMostrarFormulario((p) => !p)}
@@ -120,21 +159,12 @@ export function SeccionFeedClub({ club, miembros = [], esResponsableClub }) {
           <div className="animate-spin w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full" />
         </div>
       ) : feed.length === 0 ? (
-        <p className={`text-sm text-center py-8 ${tema.subtitle}`}>Sin actividad reciente.</p>
+        <p className={`text-sm text-center py-8 ${tema.subtitle}`}>Aún no hay avisos publicados.</p>
       ) : (
         <div className="space-y-3">
           {feed.map((item) => {
-            if (item.tipo === 'miembro') {
-              return (
-                <div key={item.id} className={`${cardCls} rounded-xl p-4 flex items-center gap-3`}>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                  <p className={`text-sm ${tema.title}`}>{item.texto}</p>
-                  {item.fecha && <span className="text-xs text-slate-500 ml-auto">{new Date(item.fecha).toLocaleDateString('es-MX')}</span>}
-                </div>
-              );
-            }
             const aviso = item.aviso;
-            const reaccionado = !!reacciones[aviso.id_aviso];
+            const reaccionElegida = reacciones[aviso.id_aviso] || null;
             return (
               <div key={item.id} className={`${cardCls} rounded-xl p-5`}>
                 <div className="flex items-start justify-between gap-3">
@@ -157,23 +187,65 @@ export function SeccionFeedClub({ club, miembros = [], esResponsableClub }) {
                 <p className={`text-sm mt-3 leading-relaxed ${esOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
                   {aviso.contenido}
                 </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <button
+                <div className="reacciones-aviso" data-reacciones-aviso={aviso.id_aviso} role="group" aria-label={`Reacciones para ${aviso.titulo}`}>
+                  {!reaccionElegida && <button
                     type="button"
-                    onClick={() => alternarReaccion(aviso.id_aviso)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                      reaccionado
-                        ? 'bg-amber-400/20 border-amber-400/40 text-amber-400'
-                        : esOscuro
-                          ? 'border-slate-700 text-slate-400 hover:text-amber-400'
-                          : 'border-slate-200 text-slate-500 hover:text-amber-500'
-                    }`}
-                    aria-pressed={reaccionado}
+                    className={`reaccion-aviso__abrir ${menuReaccionId === aviso.id_aviso ? 'reaccion-aviso__abrir--abierta' : ''}`}
+                    onClick={() => setMenuReaccionId(aviso.id_aviso)}
+                    aria-expanded={menuReaccionId === aviso.id_aviso}
+                    aria-haspopup="true"
+                    aria-controls={`opciones-reaccion-${aviso.id_aviso}`}
+                    disabled={reaccionPendiente === aviso.id_aviso}
                   >
-                    <Icono nombre="thumbs-up" className="h-3.5 w-3.5" />
-                    {reaccionado ? 'Te gustó' : 'Me gusta'}
-                  </button>
+                    <span>Reaccionar</span>
+                  </button>}
+                  {[
+                    { tipo: 'like', nombre: 'Me gusta' },
+                    { tipo: 'love', nombre: 'Me encanta' },
+                    { tipo: 'clap', nombre: 'Aplausos' },
+                  ].map(({ tipo, nombre }) => {
+                    const seleccionada = reaccionElegida === tipo;
+                    const total = Number(aviso.reacciones?.find((item) => item.reaccion === tipo)?.total || 0);
+                    if (total < 1) return null;
+                    return <button
+                      key={`resumen-${tipo}`}
+                      type="button"
+                      className={`reaccion-aviso ${seleccionada ? 'reaccion-aviso--seleccionada' : ''}`}
+                      onClick={() => alternarReaccion(aviso.id_aviso, tipo)}
+                      disabled={reaccionPendiente === aviso.id_aviso}
+                      aria-pressed={seleccionada}
+                      aria-label={`${seleccionada ? 'Quitar tu reacción' : 'Reaccionar con'} ${nombre}. ${total} ${total === 1 ? 'reacción' : 'reacciones'}`}
+                      title={`${nombre} · ${total}`}
+                    >
+                      <span className="reaccion-aviso__icono"><LoboReaccion tipo={tipo} animado={seleccionada} /></span>
+                      <span className="reaccion-aviso__total">{total}</span>
+                    </button>;
+                  })}
+                  {menuReaccionId === aviso.id_aviso && <div id={`opciones-reaccion-${aviso.id_aviso}`} className={`reacciones-aviso__opciones ${esOscuro ? 'reacciones-aviso__opciones--oscuro' : 'reacciones-aviso__opciones--claro'}`} role="group" aria-label="Elige una reacción">
+                    {[
+                      { tipo: 'like', nombre: 'Me gusta' },
+                      { tipo: 'love', nombre: 'Me encanta' },
+                      { tipo: 'clap', nombre: 'Aplausos' },
+                    ].map(({ tipo, nombre }) => {
+                      const seleccionada = reaccionElegida === tipo;
+                      const total = Number(aviso.reacciones?.find((item) => item.reaccion === tipo)?.total || 0);
+                      return <button
+                        key={tipo}
+                        type="button"
+                        className={`reaccion-aviso ${seleccionada ? 'reaccion-aviso--seleccionada' : ''}`}
+                        onClick={() => alternarReaccion(aviso.id_aviso, tipo)}
+                        disabled={reaccionPendiente === aviso.id_aviso}
+                        aria-pressed={seleccionada}
+                        aria-label={`${seleccionada ? 'Quitar' : 'Reaccionar con'} ${nombre}${total ? `. ${total} ${total === 1 ? 'reacción' : 'reacciones'}` : ''}`}
+                        title={`${nombre}${total ? ` · ${total}` : ''}`}
+                      >
+                        <span className="reaccion-aviso__icono"><LoboReaccion tipo={tipo} animado={seleccionada} /></span>
+                        {total > 0 && <span className="reaccion-aviso__total">{total}</span>}
+                      </button>;
+                    })}
+                  </div>}
                 </div>
+                {erroresReaccion[aviso.id_aviso] && <p className="mt-1 text-xs text-red-400" role="alert">{erroresReaccion[aviso.id_aviso]}</p>}
               </div>
             );
           })}

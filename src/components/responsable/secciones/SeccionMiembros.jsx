@@ -3,14 +3,14 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { AvatarInicial } from '../../ui/AvatarInicial';
 import { etiquetaResponsable } from '../../../utils/club';
 
-export function SeccionMiembros({ miembros, club }) {
+export function SeccionMiembros({ miembros, club, tutorialTarget }) {
   const { tema, modoOscuro } = useTheme();
   const esOscuro = modoOscuro;
   const cardCls = esOscuro ? 'bg-[#0e162c] border-slate-700/50' : 'bg-white border-slate-200 shadow-sm';
 
   return (
     <div>
-      <h3 className={`text-lg font-black uppercase tracking-wider mb-5 ${tema.title}`}>
+      <h3 data-tutorial={tutorialTarget} className={`text-lg font-black uppercase tracking-wider mb-5 ${tema.title}`}>
         Miembros del Club ({miembros.length})
       </h3>
       <div className="space-y-2">

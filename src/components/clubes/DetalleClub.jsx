@@ -114,7 +114,7 @@ export function DetalleClub({ onLoginClick }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <HorariosClub club={club} modoOscuro={modoOscuro} />
-          <EventosClub modoOscuro={modoOscuro} />
+          <EventosClub modoOscuro={modoOscuro} idClub={club.id_club} />
           <ModalidadClub club={club} modoOscuro={modoOscuro} />
         </div>
 

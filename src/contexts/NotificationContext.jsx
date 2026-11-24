@@ -57,6 +57,12 @@ export function ProveedorNotificacion({ children: hijos }) {
     };
   }, [estaAutenticado, obtenerNotificaciones]);
 
+  useEffect(() => {
+    const actualizar = () => obtenerNotificaciones();
+    window.addEventListener('clubsunid:notificaciones-refresh', actualizar);
+    return () => window.removeEventListener('clubsunid:notificaciones-refresh', actualizar);
+  }, [obtenerNotificaciones]);
+
   const noLeidas = notificaciones.filter((n) => !n.leido).length;
 
   const marcarComoLeida = useCallback(async (id) => {

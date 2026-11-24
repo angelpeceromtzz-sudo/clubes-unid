@@ -1,0 +1,69 @@
+.reacciones-aviso {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.reaccion-aviso__abrir {
+  display: inline-flex;
+  min-height: 2.4rem;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #64748b55;
+  border-radius: 9999px;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.reaccion-aviso__abrir:hover,
+.reaccion-aviso__abrir--seleccionada,
+.reaccion-aviso__abrir--abierta { border-color: #fbbf2480; background: #fbbf2418; color: #fbbf24; }
+.reaccion-aviso__abrir:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
+.reaccion-aviso__abrir:disabled { cursor: wait; opacity: 0.65; }
+
+.reacciones-aviso__opciones {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid #64748b55;
+  border-radius: 9999px;
+  box-shadow: 0 8px 20px #0004;
+}
+.reacciones-aviso__opciones--oscuro { background: #0e162c; }
+.reacciones-aviso__opciones--claro { background: #fff; }
+
+.reaccion-aviso {
+  display: inline-flex;
+  min-width: 2.6rem;
+  min-height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.reaccion-aviso:hover { border-color: #fbbf2466; background: #fbbf2414; }
+.reaccion-aviso:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
+.reaccion-aviso:disabled { cursor: wait; opacity: 0.65; }
+.reaccion-aviso--seleccionada { border-color: #fbbf2466; background: #fbbf2426; color: #fbbf24; }
+.reaccion-aviso__icono { display: block; width: 1.65rem; height: 1.65rem; }
+.reaccion-aviso__total { min-width: 0.75rem; font-size: 0.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reaccion-aviso, .reaccion-aviso__abrir { transition: none; }
+}

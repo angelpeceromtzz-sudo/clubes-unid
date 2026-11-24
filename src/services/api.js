@@ -5,6 +5,7 @@ import { usuarioService } from './usuario.service';
 import { inscripcionService } from './inscripcion.service';
 import { notificacionService } from './notificacion.service';
 import { avisoService } from './aviso.service';
+import { chatClubService } from './chatClub.service';
 import { miembroService } from './miembro.service';
 import { historialService } from './historial.service';
 import { convocatoriaService } from './convocatoria.service';
@@ -20,6 +21,7 @@ import { asistenciaService } from './asistencia.service';
 import { preferenciasService } from './preferencias.service';
 
 export { API_BASE, getToken, setSession, clearSession, getSession, request } from './api-core';
+export { guardarCuentaConfiable, limpiarCuentaConfiable, obtenerCuentaConfiable, renovarSesionConfiable, revocarCuentaConfiableEnServidor } from './api-core';
 
 export { autenticacionService } from './autenticacion.service';
 export { clubService } from './club.service';
@@ -27,6 +29,7 @@ export { usuarioService } from './usuario.service';
 export { inscripcionService } from './inscripcion.service';
 export { notificacionService } from './notificacion.service';
 export { avisoService } from './aviso.service';
+export { chatClubService } from './chatClub.service';
 export { miembroService } from './miembro.service';
 export { historialService } from './historial.service';
 export { convocatoriaService } from './convocatoria.service';
@@ -92,8 +95,25 @@ export const api = {
   eliminarNotificacion: notificacionService.eliminarNotificacion,
 
   getAvisos: avisoService.getAvisos,
+  getMisReaccionesAvisos: avisoService.getMisReaccionesAvisos,
+  guardarReaccionAviso: avisoService.guardarReaccionAviso,
   createAviso: avisoService.createAviso,
   deleteAviso: avisoService.deleteAviso,
+
+  getEventosClub: (idClub) => request(`/eventos-club/${idClub}`),
+  getEventosClubGestion: (idClub) => request(`/eventos-club/gestionar/${idClub}`),
+  createEventoClub: (idClub, data) => request(`/eventos-club/${idClub}`, { method: 'POST', body: JSON.stringify(data) }),
+  updateEventoClub: (idClub, idEvento, data) => request(`/eventos-club/${idClub}/${idEvento}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteEventoClub: (idClub, idEvento) => request(`/eventos-club/${idClub}/${idEvento}`, { method: 'DELETE' }),
+
+  obtenerChatClub: chatClubService.obtenerChatClub,
+  actualizarPresenciaChat: chatClubService.actualizarPresenciaChat,
+  marcarChatClubLeido: chatClubService.marcarChatClubLeido,
+  enviarMensajeChat: chatClubService.enviarMensajeChat,
+  editarMensajeChat: chatClubService.editarMensajeChat,
+  eliminarMensajeChat: chatClubService.eliminarMensajeChat,
+  fijarMensajeChat: chatClubService.fijarMensajeChat,
+  silenciarMiembroChat: chatClubService.silenciarMiembroChat,
 
   getMiembros: miembroService.getMiembros,
   getHistorialMembresia: miembroService.getHistorialMembresia,
