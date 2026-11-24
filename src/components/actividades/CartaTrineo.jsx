@@ -42,12 +42,17 @@ export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSelecci
         {consulta ? (
           <>
             <p role="status" className={'text-sm ' + tema.subtitle}>{cartas.length ? cartas.length + (cartas.length === 1 ? ' carta disponible' : ' cartas disponibles') : 'No hay cartas disponibles con ese nombre. Verifica los datos con el encargado.'}</p>
-            {cartas.length > 0 && <div className="overflow-x-auto sm:max-h-[32rem] sm:overflow-y-auto sm:overflow-x-hidden"><div className="flex snap-x snap-mandatory gap-3 sm:grid sm:grid-cols-2">{cartas.map((carta) => <article key={carta.id_carta} className={'min-w-[85vw] snap-start space-y-3 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:min-w-0 ' + (seleccionada?.id_carta === carta.id_carta ? 'border-amber-400 bg-amber-400/10 shadow-sm' : 'border-slate-400/25')}>
+            {cartas.length > 0 && <>
+              {cartas.length > 1 && <p className={'text-xs sm:hidden ' + tema.subtitle}>Desliza horizontalmente para ver las demás cartas</p>}
+              <div className="-mx-1 overflow-x-auto overscroll-x-contain scroll-smooth px-1 pb-3 touch-pan-x snap-x snap-proximity sm:mx-0 sm:max-h-[32rem] sm:overflow-y-auto sm:overflow-x-hidden sm:px-0 sm:pb-0 sm:snap-none">
+                <div className="flex w-max gap-3 sm:w-auto sm:grid sm:grid-cols-2">{cartas.map((carta) => <article key={carta.id_carta} className={'w-[min(82vw,22rem)] shrink-0 snap-center space-y-3 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:w-auto sm:min-w-0 sm:snap-align-none ' + (seleccionada?.id_carta === carta.id_carta ? 'border-amber-400 bg-amber-400/10 shadow-sm' : 'border-slate-400/25')}>
                <p className={'text-xs ' + tema.subtitle}>Carta #{carta.id_carta}</p>
                 <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12))}</h4>
                <p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
                <BotonAccion size="sm" variant={seleccionada?.id_carta === carta.id_carta ? 'primary' : 'outline'} aria-pressed={seleccionada?.id_carta === carta.id_carta} onClick={() => onSeleccionar(carta)}>{seleccionada?.id_carta === carta.id_carta ? 'Carta seleccionada' : 'Elegir este niño'}</BotonAccion>
-             </article>)}</div></div>}
+              </article>)}</div>
+              </div>
+            </>}
           </>
         ) : (
           <p className={'text-sm ' + tema.subtitle}>Escribe el nombre o número de la carta para buscar.</p>
