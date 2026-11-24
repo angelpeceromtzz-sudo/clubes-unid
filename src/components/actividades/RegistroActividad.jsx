@@ -114,7 +114,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
         const obligatorio = campo.obligatorio || esCamisa;
         const etiqueta = campo.etiqueta + (obligatorio ? ' *' : ' (opcional)');
         const comunes = { id, 'aria-describedby': campo.ayuda ? id + '-ayuda' : undefined, className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
-        return <CampoRegistroActividad id={id} etiqueta={esCamisa ? 'Camisa' : etiqueta} ayuda={campo.ayuda} className={(campo.tipo === 'texto_largo' ? 'sm:col-span-2 ' : '') + (campo.clave === 'licenciatura' && solicitaCamisa ? 'sm:relative sm:-top-[10.75rem]' : '')} key={campo.clave}>
+        return <CampoRegistroActividad id={id} etiqueta={esCamisa ? 'Camisa' : etiqueta} ayuda={campo.ayuda} className={campo.tipo === 'texto_largo' ? 'sm:col-span-2' : ''} key={campo.clave}>
           {esCamisa ? <div className="space-y-3">
             <SelectorOpciones
               id={id + '-tiene'} name="tiene_camisa" etiqueta="¿Cuentas con camisa?" valor={solicitaCamisa === null ? '' : solicitaCamisa ? 'no' : 'si'}
