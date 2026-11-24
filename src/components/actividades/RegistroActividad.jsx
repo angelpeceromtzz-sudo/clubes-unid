@@ -29,7 +29,8 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
   const [matricula, setMatricula] = useState(usuario?.institutional_id || registro?.matricula || '');
   const [contacto, setContacto] = useState({ nombre_completo: registro?.nombre_completo || '', correo: registro?.correo || '', telefono: registro?.telefono || '' });
   const [respuestas, setRespuestas] = useState(registro?.respuestas || {});
-  const [solicitaCamisa, setSolicitaCamisa] = useState(registro?.pedido ? registro.pedido.lineas.length > 0 : null);
+  // La playera es obligatoria para todas las inscripciones de Trineo.
+  const solicitaCamisa = true;
   const aportacionesAnteriores = (registro?.aportaciones || []).filter((aporte) => !aporte.es_regalo_carta);
   const [aportaciones, setAportaciones] = useState(aportacionesAnteriores.filter((aporte) => aporte.estado !== 'cancelada').map((aporte) => ({ id_opcion: aporte.id_opcion, cantidad: aporte.cantidad })));
   const [carta, setCarta] = useState(registro?.carta || null);
@@ -40,8 +41,9 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
   const abierta = edicion.estado_registro === 'abierta';
   const usaCartas = edicion.plantilla === 'trineo';
   const regaloRecibido = registro?.carta?.estado === 'entregada';
-   const cartaObligatoria = edicion.carta_obligatoria !== false;
-   const requiereCarta = usaCartas && cartaObligatoria && (!confirmado || Boolean(carta));
+    const muestraCartas = usaCartas && edicion.cartas_habilitadas !== false;
+    const cartaObligatoria = edicion.carta_obligatoria !== false;
+    const requiereCarta = muestraCartas && cartaObligatoria && (!confirmado || Boolean(carta));
    const camposPrevios = confirmado ? registro.formulario_snapshot.map((campo) => {
      const actual = edicion.campos_registro.find((item) => item.clave === campo.clave);
      return actual ? { ...campo, imagen_url: actual.imagen_url, imagen_public_id: actual.imagen_public_id } : campo;
@@ -67,8 +69,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
     if (pendiente) return;
     setError('');
     try {
-      if (usaCartas && solicitaCamisa === null) throw new Error('Indica si ya tienes camisa o necesitas una');
-      if (usaCartas && solicitaCamisa && !respuestas.talla) throw new Error('Selecciona la talla de tu camisa');
+      if (usaCartas && !respuestas.talla) throw new Error('Selecciona la talla de tu playera');
       if (errorCamisa) throw new Error(errorCamisa);
       validarRespuestasActividad(campos, respuestas);
       validarAportacionesActividad(aportaciones, catalogo, edicion.requiere_aportacion, aportacionesAnteriores);
@@ -109,25 +110,20 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
     <fieldset disabled={pendiente} className="min-w-0 space-y-5">
     {registro?.estado && <EstadoActividad estado={registro.estado} />}
     {registro?.historial_cartas?.length > 0 && !registro.carta && <p className="text-sm">Tu reserva anterior fue liberada al cancelar la inscripción. Elige una carta disponible para registrarte de nuevo.</p>}
-     {usaCartas && (!regaloRecibido || registro?.carta) && <SelectorCartaTrineo idEdicion={edicion.id_edicion} actual={registro?.carta} seleccionada={carta} onSeleccionar={setCarta} bloqueada={Boolean(regaloRecibido)} obligatoria={cartaObligatoria} version={versionCartas} />}
+      {muestraCartas && (!regaloRecibido || registro?.carta) && <SelectorCartaTrineo idEdicion={edicion.id_edicion} actual={registro?.carta} seleccionada={carta} onSeleccionar={setCarta} bloqueada={Boolean(regaloRecibido)} obligatoria={cartaObligatoria} version={versionCartas} />}
     {usaCartas && confirmado && !carta && <p className="text-sm text-amber-700 dark:text-amber-300">Tu inscripción anterior puede conservarse sin carta. Puedes elegir una para registrar el compromiso de regalo, aparte de las aportaciones para la actividad.</p>}
     <div className="grid items-start gap-4 sm:grid-cols-2">
        {invitado ? <><CampoRegistroActividad id={idFormulario + '-nombre'} etiqueta="Nombre completo *"><input id={idFormulario + '-nombre'} className={inputCls} value={contacto.nombre_completo} onChange={(evento) => setContacto((actual) => ({ ...actual, nombre_completo: evento.target.value }))} maxLength={150} required /></CampoRegistroActividad><CampoRegistroActividad id={idFormulario + '-correo'} etiqueta="Correo electrónico *"><input id={idFormulario + '-correo'} className={inputCls} type="email" value={contacto.correo} onChange={(evento) => setContacto((actual) => ({ ...actual, correo: evento.target.value }))} maxLength={254} required /></CampoRegistroActividad><CampoRegistroActividad id={idFormulario + '-telefono'} etiqueta="Teléfono *"><input id={idFormulario + '-telefono'} className={inputCls} type="tel" value={contacto.telefono} onChange={(evento) => setContacto((actual) => ({ ...actual, telefono: evento.target.value }))} maxLength={40} required /></CampoRegistroActividad></> : <><CampoRegistroActividad id={idFormulario + '-nombre'} etiqueta="Nombre completo"><input id={idFormulario + '-nombre'} className={inputCls} value={usuario.nombre_completo || ''} readOnly /></CampoRegistroActividad><CampoRegistroActividad id={idFormulario + '-matricula'} etiqueta="Matrícula *"><input id={idFormulario + '-matricula'} className={inputCls} value={matricula} onChange={(evento) => setMatricula(evento.target.value)} readOnly={Boolean(usuario.institutional_id)} inputMode="numeric" pattern="[0-9]+" maxLength={30} required /></CampoRegistroActividad></>}
       {campos.map((campo) => {
         const id = idFormulario + '-' + campo.clave;
         const esCamisa = usaCartas && campo.clave === 'talla';
+        // La talla y su imagen se muestran únicamente en el bloque grande de compra.
+        if (esCamisa) return null;
         const obligatorio = campo.obligatorio || esCamisa;
         const etiqueta = campo.etiqueta + (obligatorio ? ' *' : ' (opcional)');
         const comunes = { id, 'aria-describedby': campo.ayuda ? id + '-ayuda' : undefined, className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
         return <CampoRegistroActividad id={id} etiqueta={esCamisa ? 'Camisa' : etiqueta} ayuda={campo.ayuda} className={campo.tipo === 'texto_largo' ? 'sm:col-span-2' : ''} key={campo.clave}>
-          {esCamisa ? <div className="space-y-3">
-            <SelectorOpciones
-              id={id + '-tiene'} name="tiene_camisa" etiqueta="¿Cuentas con camisa?" valor={solicitaCamisa === null ? '' : solicitaCamisa ? 'no' : 'si'}
-              alCambiar={(valor) => { const necesita = valor === 'no'; setSolicitaCamisa(necesita); if (!necesita) responder(campo.clave, ''); }}
-              required opciones={[{ value: '', label: 'Selecciona una opción' }, { value: 'si', label: 'Sí, ya tengo camisa' }, { value: 'no', label: 'No, necesito una camisa' }]} botonClassName="h-11"
-            />
-            {errorCamisa && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{errorCamisa}</p>}
-          </div> : campo.tipo === 'seleccion' || campo.tipo === 'licenciatura' ? <SelectorOpciones
+           {campo.tipo === 'seleccion' || campo.tipo === 'licenciatura' ? <SelectorOpciones
             id={id} name={campo.clave} etiqueta={etiqueta} descripcionId={comunes['aria-describedby']}
             valor={String(respuestas[campo.clave] ?? '')} alCambiar={(valor) => responder(campo.clave, valor)}
             required={obligatorio} disabled={campo.tipo === 'licenciatura' && loading} botonClassName="h-11"
