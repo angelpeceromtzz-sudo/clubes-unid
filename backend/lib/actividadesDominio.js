@@ -130,9 +130,31 @@ export function camposPlantillaActividad(plantilla = 'general', configuracion = 
   if (!['trineo', 'misiones'].includes(plantilla)) return [];
   return [
     { clave: 'edad', etiqueta: 'Edad', tipo: 'numero', obligatorio: true, minimo: 1, maximo: 120, opciones: [] },
-    { clave: 'talla', etiqueta: 'Talla de camisa', tipo: 'seleccion', obligatorio: true, opciones: [] },
+    { clave: 'talla', etiqueta: 'Talla de camisa', tipo: 'seleccion', obligatorio: plantilla !== 'trineo', opciones: [] },
     { clave: 'licenciatura', etiqueta: 'Licenciatura', tipo: 'licenciatura', obligatorio: false, opciones: [] },
   ];
+}
+
+export function camposRegistroTrineo(campos) {
+  return campos.map((campo) => campo.clave === 'talla' ? { ...campo, obligatorio: false } : campo);
+}
+
+export function cotizarCamisaTrineo({ campo, solicita, talla, anterior = null }) {
+  const previo = anterior?.tipo === 'camisa_trineo' ? anterior : null;
+  const necesita = solicita === undefined ? previo ? Boolean(previo.lineas.length) : null : solicita;
+  if (necesita === null) throw errorActividad('Indica si ya tienes camisa o necesitas una');
+  if (typeof necesita !== 'boolean') throw errorActividad('Indica si necesitas camisa');
+  if (!necesita) return { tipo: 'camisa_trineo', moneda: 'MXN', lineas: [], total_centavos: 0 };
+  if (typeof talla !== 'string' || !talla.trim()) throw errorActividad('Selecciona la talla de tu camisa');
+  if (previo?.lineas.length === 1 && previo.lineas[0].talla === talla) return previo;
+  if (!campo?.opciones?.includes(talla)) throw errorActividad('Selecciona una talla disponible para la camisa');
+  const precio = campo.precio_camisa_centavos;
+  if (!Number.isSafeInteger(precio) || precio < 0 || precio > 100000000) throw errorActividad('El encargado debe configurar el precio de la camisa', 409);
+  return {
+    tipo: 'camisa_trineo', moneda: 'MXN',
+    lineas: [{ id_producto: 'camisa_trineo', nombre: 'Camisa del Trineo de los Sueños', cantidad: 1, talla, precio_centavos: precio, subtotal_centavos: precio }],
+    total_centavos: precio,
+  };
 }
 
 export function normalizarCamposActividad(valor, plantilla = 'general', configuracion = null) {
@@ -148,9 +170,13 @@ export function normalizarCamposActividad(valor, plantilla = 'general', configur
     if (!Array.isArray(opciones) || opciones.length > 80) throw errorActividad('Opciones del campo no válidas');
     const resultado = {
       clave, etiqueta: textoActividad(campo.etiqueta, 120, 'Etiqueta del campo', true),
-      tipo: campo.tipo, obligatorio: campo.obligatorio === true,
+      tipo: campo.tipo, obligatorio: plantilla === 'trineo' && clave === 'talla' ? false : campo.obligatorio === true,
       opciones: [...new Set(opciones.map((opcion) => textoActividad(opcion, 120, 'Opción', true)))],
     };
+    if (plantilla === 'trineo' && clave === 'talla' && campo.precio_camisa_centavos != null) {
+      if (!Number.isSafeInteger(campo.precio_camisa_centavos) || campo.precio_camisa_centavos < 0 || campo.precio_camisa_centavos > 100000000) throw errorActividad('Indica un precio válido para la camisa');
+      resultado.precio_camisa_centavos = campo.precio_camisa_centavos;
+    }
     if (campo.imagen_url != null) {
       const imagen = textoActividad(campo.imagen_url, 1000, 'Imagen del campo');
       if (!/^(https?:\/\/|\/)[^\s<>"']+$/i.test(imagen)) throw errorActividad('La imagen del campo no es válida');
@@ -170,7 +196,7 @@ export function normalizarCamposActividad(valor, plantilla = 'general', configur
   for (const obligatorio of camposPlantillaActividad(plantilla)) {
     const campo = campos.find((item) => item.clave === obligatorio.clave);
     if (!campo && plantilla === 'misiones') continue;
-    if (!campo || campo.tipo !== obligatorio.tipo || campo.obligatorio !== obligatorio.obligatorio) throw errorActividad('Esta actividad requiere edad y talla obligatorias, y licenciatura opcional');
+    if (!campo || campo.tipo !== obligatorio.tipo || campo.obligatorio !== obligatorio.obligatorio) throw errorActividad('Esta actividad requiere edad y talla configuradas, y licenciatura opcional');
     if (campo.clave === 'edad') {
       campo.minimo = 1;
       campo.maximo = 120;
@@ -213,7 +239,7 @@ export function validarPublicacionEdicion(edicion, catalogo = []) {
   if (!edicion.fecha_inicio || !edicion.lugar) throw errorActividad('Completa la fecha y el lugar antes de publicar');
   if (edicion.requiere_registro) {
     if (!edicion.inscripcion_desde || !edicion.inscripcion_hasta) throw errorActividad('Configura el periodo de inscripción');
-    if (edicion.campos_registro.some((campo) => campo.tipo === 'seleccion' && campo.obligatorio && !campo.opciones.length)) throw errorActividad('Completa las opciones de los campos obligatorios, incluyendo las tallas');
+    if (edicion.campos_registro.some((campo) => campo.tipo === 'seleccion' && (campo.obligatorio || campo.precio_camisa_centavos != null) && !campo.opciones.length)) throw errorActividad('Completa las opciones de los campos obligatorios y las tallas de las camisas disponibles');
   }
   if (edicion.destacable && (!edicion.destacada_desde || !edicion.destacada_hasta)) throw errorActividad('Configura desde cuándo y hasta cuándo se destaca');
   if (edicion.requiere_aportacion && (!edicion.requiere_registro || !catalogo.some((opcion) => opcion.activa && Number(opcion.cantidad_minima) > 0))) throw errorActividad('Configura al menos una aportación disponible con su mínimo');

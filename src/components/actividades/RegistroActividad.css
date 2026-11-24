@@ -1,0 +1,11 @@
+.registro-actividad input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+  display: block;
+  min-width: 0;
+  height: 2.75rem;
+}
+
+.registro-actividad textarea {
+  display: block;
+  min-height: 7rem;
+  resize: vertical;
+}

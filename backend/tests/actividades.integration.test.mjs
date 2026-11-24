@@ -18,7 +18,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
   const limpiadas = [];
   const datosEdicion = (plantilla) => ({ nombre: 'Edición QA', descripcion: 'Edición ficticia de pruebas', lugar: 'Campus QA', fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', hora_inicio: '10:00', requiere_registro: true, requiere_aportacion: plantilla === 'trineo', ...(plantilla === 'misiones' ? { configuracion_misiones: configuracionMisionesInicial(null) } : {}), campos_registro: camposPlantillaActividad(plantilla, plantilla === 'misiones' ? configuracionMisionesInicial(null) : null).map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['CH', 'M', 'G'] } : campo), inscripcion_desde: '2026-11-01', inscripcion_hasta: '2026-12-04', destacable: true, destacada_desde: '2026-11-10', destacada_hasta: '2026-12-06' });
   const cartasQa = {};
-  const inscripcion = (aportes = true, usuario = 1) => ({ matricula: '99999999', respuestas: { edad: 20, talla: 'M', licenciatura: 1 }, ...(aportes ? { id_carta: cartasQa[usuario] } : {}), aportaciones: aportes ? [{ id_opcion: opcion1, cantidad: 1 }, { id_opcion: opcion2, cantidad: 2 }] : [] });
+  const inscripcion = (aportes = true, usuario = 1) => ({ matricula: '99999999', respuestas: { edad: 20, talla: 'M', licenciatura: 1 }, solicita_camisa: false, total_centavos: 0, ...(aportes ? { id_carta: cartasQa[usuario] } : {}), aportaciones: aportes ? [{ id_opcion: opcion1, cantidad: 1 }, { id_opcion: opcion2, cantidad: 2 }] : [] });
 
   async function enviar(usuario, metodo, ruta, datos, esperado = 200) {
     const respuesta = await fetch(base + ruta, { method: metodo, headers: { 'Content-Type': 'application/json', ...(usuario ? { 'x-usuario-qa': String(usuario) } : {}) }, ...(datos === undefined ? {} : { body: JSON.stringify(datos) }) });
@@ -358,7 +358,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
 
   test('un alumno con club y tres postulaciones se registra sin alterar sus membresías', async () => {
     const ruta = '/ediciones/' + edicionTrineo + '/registro';
-    await enviar(1, 'PUT', ruta, { ...inscripcion(), respuestas: { edad: 20 } }, 400);
+    await enviar(1, 'PUT', ruta, { ...inscripcion(), respuestas: { talla: 'M' } }, 400);
     await enviar(1, 'PUT', ruta, { ...inscripcion(), aportaciones: [] }, 400);
     await enviar(1, 'PUT', ruta, { ...inscripcion(), aportaciones: [{ id_opcion: opcion1, cantidad: 0.5 }] }, 400);
     const registro = await enviar(1, 'PUT', ruta, inscripcion());
