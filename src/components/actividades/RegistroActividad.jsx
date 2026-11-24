@@ -94,7 +94,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
      <EstadoActividad estado="confirmado" /><p className="font-bold">{registro.nombre_completo} · {invitado ? 'Invitado' : 'Matrícula ' + registro.matricula}</p>
      {invitado && registro.correo && <p className="text-sm">{registro.correo}{registro.telefono ? ' · ' + registro.telefono : ''}</p>}
      <ResumenCartaTrineo carta={registro.carta} />
-    {usaCartas && !registro.carta && <p className="text-sm text-amber-700 dark:text-amber-300">Este registro anterior no tiene carta vinculada.{!regaloRecibido && abierta ? ' Edita tu registro para elegir al niño de tu carta.' : ' Consulta al encargado para revisar tu aportación.'}</p>}
+     {muestraCartas && !registro.carta && <p className="text-sm text-amber-700 dark:text-amber-300">Este registro anterior no tiene carta vinculada.{!regaloRecibido && abierta ? ' Edita tu registro para elegir al niño de tu carta.' : ' Consulta al encargado para revisar tu aportación.'}</p>}
      <dl className="grid gap-3 sm:grid-cols-2">{campos.map((campo) => <div key={campo.clave}><dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt><dd className="font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : registro.respuestas[campo.clave] || 'Sin especificar'}</dd></div>)}</dl>
      <ImagenesResumenActividad campos={campos} respuestas={registro.respuestas} excluirClaves={usaCartas ? ['talla'] : []} />
      <ResumenCamisaTrineo pedido={registro.pedido} campo={campoCamisa} />
