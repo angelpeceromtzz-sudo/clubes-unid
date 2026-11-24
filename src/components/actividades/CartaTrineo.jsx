@@ -39,13 +39,19 @@ export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSelecci
       <BotonAccion variant="outline" size="sm" onClick={recargar}>Actualizar disponibilidad</BotonAccion>
       {actual && seleccionada?.id_carta !== actual.id_carta && <BotonAccion variant="outline" size="sm" onClick={() => onSeleccionar(actual)}>Conservar mi carta actual</BotonAccion>}
       {cargando ? <p role="status">Consultando cartas disponibles…</p> : error ? <p role="alert" className="text-red-600 dark:text-red-400">{error}</p> : <>
-        <p role="status" className={'text-sm ' + tema.subtitle}>{cartas.length ? cartas.length + (cartas.length === 1 ? ' carta disponible' : ' cartas disponibles') : consulta ? 'No hay cartas disponibles con ese nombre. Verifica los datos con el encargado.' : 'No hay cartas disponibles en este momento. Consulta al encargado.'}</p>
-        <div className="max-h-[22rem] grid grid-cols-1 gap-3 overflow-y-auto sm:max-h-[32rem] sm:grid-cols-2">{cartas.map((carta) => <article key={carta.id_carta} className={'min-w-0 space-y-3 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ' + (seleccionada?.id_carta === carta.id_carta ? 'border-amber-400 bg-amber-400/10 shadow-sm' : 'border-slate-400/25')}>
-           <p className={'text-xs ' + tema.subtitle}>Carta #{carta.id_carta}</p>
-            <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12))}</h4>
-           <p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
-           <BotonAccion size="sm" variant={seleccionada?.id_carta === carta.id_carta ? 'primary' : 'outline'} aria-pressed={seleccionada?.id_carta === carta.id_carta} onClick={() => onSeleccionar(carta)}>{seleccionada?.id_carta === carta.id_carta ? 'Carta seleccionada' : 'Elegir este niño'}</BotonAccion>
-         </article>)}</div>
+        {consulta ? (
+          <>
+            <p role="status" className={'text-sm ' + tema.subtitle}>{cartas.length ? cartas.length + (cartas.length === 1 ? ' carta disponible' : ' cartas disponibles') : 'No hay cartas disponibles con ese nombre. Verifica los datos con el encargado.'}</p>
+            {cartas.length > 0 && <div className="max-h-[16rem] grid grid-cols-1 gap-3 overflow-y-auto sm:max-h-[32rem] sm:grid-cols-2">{cartas.map((carta) => <article key={carta.id_carta} className={'min-w-0 space-y-3 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ' + (seleccionada?.id_carta === carta.id_carta ? 'border-amber-400 bg-amber-400/10 shadow-sm' : 'border-slate-400/25')}>
+               <p className={'text-xs ' + tema.subtitle}>Carta #{carta.id_carta}</p>
+                <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12))}</h4>
+               <p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
+               <BotonAccion size="sm" variant={seleccionada?.id_carta === carta.id_carta ? 'primary' : 'outline'} aria-pressed={seleccionada?.id_carta === carta.id_carta} onClick={() => onSeleccionar(carta)}>{seleccionada?.id_carta === carta.id_carta ? 'Carta seleccionada' : 'Elegir este niño'}</BotonAccion>
+             </article>)}</div>}
+          </>
+        ) : (
+          <p className={'text-sm ' + tema.subtitle}>Escribe el nombre o número de la carta para buscar.</p>
+        )}
       </>}
       </div>
     </details>}
