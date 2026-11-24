@@ -139,10 +139,14 @@ export function camposPlantillaActividad(plantilla = 'general', configuracion = 
 
 export function camposRegistroTrineo(campos) {
   const resultado = campos.map((campo) => campo.clave === 'talla' ? { ...campo, obligatorio: false } : campo);
-  if (!resultado.some((campo) => campo.clave === 'telefono')) {
-    resultado.push({ clave: 'telefono', etiqueta: 'Teléfono', tipo: 'texto', obligatorio: true, opciones: [], validacion: 'telefono' });
-  }
-  return resultado;
+  const indiceTelefono = resultado.findIndex((campo) => campo.clave === 'telefono');
+  const telefono = indiceTelefono >= 0
+    ? resultado[indiceTelefono]
+    : { clave: 'telefono', etiqueta: 'Teléfono', tipo: 'texto', obligatorio: true, opciones: [], validacion: 'telefono' };
+  const sinTelefono = resultado.filter((campo) => campo.clave !== 'telefono');
+  const indiceEdad = sinTelefono.findIndex((campo) => campo.clave === 'edad');
+  sinTelefono.splice(indiceEdad < 0 ? 0 : indiceEdad, 0, telefono);
+  return sinTelefono;
 }
 
 export function cotizarCamisaTrineo({ campo, solicita, talla, anterior = null }) {
