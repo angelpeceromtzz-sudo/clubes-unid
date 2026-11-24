@@ -9,7 +9,7 @@ import { EstadoActividad } from './ActividadUI';
 import { RegistroMisiones } from './RegistroMisiones';
 import { ResumenCartaTrineo, SelectorCartaTrineo } from './CartaTrineo';
 import { CampoRegistroActividad } from './CampoRegistroActividad';
-import { ImagenesCuestionarioActividad } from './ImagenesCuestionarioActividad';
+import { ImagenesCuestionarioActividad, ImagenesResumenActividad } from './ImagenesCuestionarioActividad';
 import { SelectorOpciones } from '../ui/SelectorOpciones';
 import { ResumenCamisaTrineo } from './ResumenCamisaTrineo';
 import { trineoService } from '../../services/trineo.service';
@@ -95,6 +95,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
      <ResumenCartaTrineo carta={registro.carta} />
     {usaCartas && !registro.carta && <p className="text-sm text-amber-700 dark:text-amber-300">Este registro anterior no tiene carta vinculada.{!regaloRecibido && abierta ? ' Edita tu registro para elegir al niño de tu carta.' : ' Consulta al encargado para revisar tu aportación.'}</p>}
      <dl className="grid gap-3 sm:grid-cols-2">{campos.map((campo) => <div key={campo.clave}><dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt><dd className="font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : registro.respuestas[campo.clave] || 'Sin especificar'}</dd></div>)}</dl>
+     <ImagenesResumenActividad campos={campos} respuestas={registro.respuestas} excluirClaves={usaCartas ? ['talla'] : []} />
      <ResumenCamisaTrineo pedido={registro.pedido} campo={campoCamisa} />
     {aportacionesAnteriores.filter((aporte) => aporte.estado !== 'cancelada').map((aporte) => <p key={aporte.id_aportacion}>Aportación para la actividad · {aporte.nombre}: {Number(aporte.cantidad)} {aporte.unidad} · {aporte.estado}</p>)}
      {abierta && <div className="flex flex-wrap gap-3"><BotonAccion onClick={() => setEditando(true)}>Editar mi registro</BotonAccion>{!invitado && <BotonAccion variant="outline" onClick={() => setCancelando(true)}>Cancelar inscripción</BotonAccion>}</div>}
@@ -152,8 +153,9 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado, invitado = f
         </div>;
       })}
     </fieldset></div></details>}
-    {usaCartas && <ResumenCamisaTrineo pedido={pedidoCamisa} campo={solicitaCamisa ? campoCamisa : null} valor={respuestas.talla} onChange={(valor) => responder('talla', valor)} />}
-    <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} />
+     <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} />
+     {usaCartas && <ResumenCamisaTrineo pedido={pedidoCamisa} campo={solicitaCamisa ? campoCamisa : null} valor={respuestas.talla} onChange={(valor) => responder('talla', valor)} />}
+     <ImagenesResumenActividad campos={campos} respuestas={respuestas} excluirClaves={usaCartas ? ['talla'] : []} />
     {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
     <div className="flex flex-wrap gap-3"><BotonAccion type="submit" disabled={pendiente || Boolean(errorCamisa)}>{pendiente ? 'Guardando…' : confirmado ? 'Guardar cambios' : 'Confirmar inscripción'}</BotonAccion>{confirmado && <BotonAccion variant="outline" onClick={() => setEditando(false)}>Volver a mi registro</BotonAccion>}</div>
     </fieldset>
