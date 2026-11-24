@@ -108,15 +108,13 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
     <div className="grid items-start gap-4 sm:grid-cols-2">
       <CampoRegistroActividad id={idFormulario + '-nombre'} etiqueta="Nombre completo"><input id={idFormulario + '-nombre'} className={inputCls} value={usuario.nombre_completo || ''} readOnly /></CampoRegistroActividad>
       <CampoRegistroActividad id={idFormulario + '-matricula'} etiqueta="Matrícula *"><input id={idFormulario + '-matricula'} className={inputCls} value={matricula} onChange={(evento) => setMatricula(evento.target.value)} readOnly={Boolean(usuario.institutional_id)} inputMode="numeric" pattern="[0-9]+" maxLength={30} required /></CampoRegistroActividad>
-      {campos.map((campo, indice) => {
+      {campos.map((campo) => {
         const id = idFormulario + '-' + campo.clave;
         const esCamisa = usaCartas && campo.clave === 'talla';
-        const tallaIndice = campos.findIndex((item) => item.clave === 'talla');
-        const despuesDeCamisa = solicitaCamisa && tallaIndice >= 0 && indice > tallaIndice;
         const obligatorio = campo.obligatorio || esCamisa;
         const etiqueta = campo.etiqueta + (obligatorio ? ' *' : ' (opcional)');
         const comunes = { id, 'aria-describedby': campo.ayuda ? id + '-ayuda' : undefined, className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
-        return <CampoRegistroActividad id={id} etiqueta={esCamisa ? 'Camisa' : etiqueta} ayuda={campo.ayuda} className={(campo.tipo === 'texto_largo' || despuesDeCamisa ? 'sm:col-span-2' : '')} key={campo.clave}>
+        return <CampoRegistroActividad id={id} etiqueta={esCamisa ? 'Camisa' : etiqueta} ayuda={campo.ayuda} className={campo.tipo === 'texto_largo' ? 'sm:col-span-2' : ''} key={campo.clave}>
           {esCamisa ? <div className="space-y-3">
             <SelectorOpciones
               id={id + '-tiene'} name="tiene_camisa" etiqueta="¿Cuentas con camisa?" valor={solicitaCamisa === null ? '' : solicitaCamisa ? 'no' : 'si'}
