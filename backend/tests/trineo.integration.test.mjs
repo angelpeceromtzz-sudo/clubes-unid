@@ -34,7 +34,7 @@ describe('Trineo: cartas, reserva exclusiva y recepción del regalo', { skip: !c
     return { id, opcion, ruta: '/ediciones/' + id + '/registro', gestion: '/gestion/ediciones/' + id + '/cartas' };
   }
   const datosCarta = (nombre = 'Niño QA') => ({ nombre, edad: 7, deseo: 'Un trompo de madera' });
-  const registro = (e, idCarta) => ({ respuestas: {}, aportaciones: [{ id_opcion: e.opcion, cantidad: 1 }], ...(idCarta === undefined ? {} : { id_carta: idCarta }) });
+  const registro = (e, idCarta) => ({ respuestas: {}, aportaciones: [{ id_opcion: e.opcion, cantidad: 1 }], solicita_camisa: false, total_centavos: 0, ...(idCarta === undefined ? {} : { id_carta: idCarta }) });
   const nuevaCarta = (e, nombre) => enviar(2, 'POST', e.gestion, datosCarta(nombre), 201);
   const recibirCarta = (carta) => '/gestion/cartas-reservas/' + carta.id_reserva + '/recibir';
   async function inscripcionAnterior(e) {

@@ -141,7 +141,8 @@ export function camposRegistroTrineo(campos) {
 
 export function cotizarCamisaTrineo({ campo, solicita, talla, anterior = null }) {
   const previo = anterior?.tipo === 'camisa_trineo' ? anterior : null;
-  const necesita = solicita === undefined ? Boolean(previo?.lineas.length) : solicita;
+  const necesita = solicita === undefined ? previo ? Boolean(previo.lineas.length) : null : solicita;
+  if (necesita === null) throw errorActividad('Indica si ya tienes camisa o necesitas una');
   if (typeof necesita !== 'boolean') throw errorActividad('Indica si necesitas camisa');
   if (!necesita) return { tipo: 'camisa_trineo', moneda: 'MXN', lineas: [], total_centavos: 0 };
   if (typeof talla !== 'string' || !talla.trim()) throw errorActividad('Selecciona la talla de tu camisa');

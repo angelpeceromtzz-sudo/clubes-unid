@@ -17,7 +17,8 @@ test('camisas: la talla de Trineo es opcional y el precio se valida en centavos'
 test('camisas: no pedir camisa cuesta cero y pedirla requiere una talla y un precio válidos', () => {
   const campo = { opciones: ['M', 'L'], precio_camisa_centavos: 16000 };
   assert.equal(cotizarCamisaTrineo({ solicita: false }).total_centavos, 0);
-  assert.equal(cotizarCamisaTrineo({ campo, talla: 'L' }).lineas.length, 0);
+  assert.throws(() => cotizarCamisaTrineo({ campo, talla: 'L' }), { status: 400 });
+  assert.equal(cotizarCamisaTrineo({ campo, solicita: false, talla: 'L' }).lineas.length, 0);
   const pedido = cotizarCamisaTrineo({ campo, solicita: true, talla: 'L' });
   assert.equal(pedido.total_centavos, 16000);
   assert.deepEqual(pedido.lineas.map(({ talla, cantidad, precio_centavos, subtotal_centavos }) => ({ talla, cantidad, precio_centavos, subtotal_centavos })), [{ talla: 'L', cantidad: 1, precio_centavos: 16000, subtotal_centavos: 16000 }]);

@@ -27,7 +27,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
   const [editando, setEditando] = useState(!confirmado);
   const [matricula, setMatricula] = useState(usuario.institutional_id || registro?.matricula || '');
   const [respuestas, setRespuestas] = useState(registro?.respuestas || {});
-  const [solicitaCamisa, setSolicitaCamisa] = useState(registro?.pedido?.tipo === 'camisa_trineo' && registro.pedido.lineas.length > 0);
+  const [solicitaCamisa, setSolicitaCamisa] = useState(registro?.pedido ? registro.pedido.lineas.length > 0 : null);
   const aportacionesAnteriores = (registro?.aportaciones || []).filter((aporte) => !aporte.es_regalo_carta);
   const [aportaciones, setAportaciones] = useState(aportacionesAnteriores.filter((aporte) => aporte.estado !== 'cancelada').map((aporte) => ({ id_opcion: aporte.id_opcion, cantidad: aporte.cantidad })));
   const [carta, setCarta] = useState(registro?.carta || null);
@@ -109,14 +109,16 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
       {campos.map((campo) => {
         const id = idFormulario + '-' + campo.clave;
         const esCamisa = usaCartas && campo.clave === 'talla';
-        const etiqueta = campo.etiqueta + (campo.obligatorio ? ' *' : ' (opcional)');
+        const obligatorio = campo.obligatorio || esCamisa;
+        const etiqueta = campo.etiqueta + (obligatorio ? ' *' : ' (opcional)');
         const comunes = { id, 'aria-describedby': campo.ayuda ? id + '-ayuda' : undefined, className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
         return <CampoRegistroActividad id={id} etiqueta={etiqueta} ayuda={campo.ayuda} className={campo.tipo === 'texto_largo' ? 'sm:col-span-2' : ''} key={campo.clave}>
           {campo.tipo === 'seleccion' || campo.tipo === 'licenciatura' ? <SelectorOpciones
             id={id} name={campo.clave} etiqueta={etiqueta} descripcionId={comunes['aria-describedby']}
-            valor={esCamisa && !solicitaCamisa ? '' : String(respuestas[campo.clave] ?? '')} alCambiar={(valor) => { if (esCamisa) setSolicitaCamisa(Boolean(valor)); responder(campo.clave, valor); }}
-            required={campo.obligatorio} disabled={campo.tipo === 'licenciatura' && loading} botonClassName="h-11"
-            opciones={[{ value: '', label: esCamisa ? 'Ya tengo camisa' : 'Selecciona una opción' }, ...(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ value: String(item.id_licenciatura), label: item.nombre })) : campo.opciones.map((opcion) => ({ value: opcion, label: esCamisa ? 'Necesito camisa · Talla ' + opcion : opcion })))]}
+            valor={esCamisa ? solicitaCamisa === null ? '' : solicitaCamisa ? String(respuestas[campo.clave] ?? '') : '__ya_tengo_camisa' : String(respuestas[campo.clave] ?? '')}
+            alCambiar={(valor) => { if (esCamisa) { const tieneCamisa = valor === '__ya_tengo_camisa'; setSolicitaCamisa(!tieneCamisa); responder(campo.clave, tieneCamisa ? '' : valor); } else responder(campo.clave, valor); }}
+            required={obligatorio} disabled={campo.tipo === 'licenciatura' && loading} botonClassName="h-11"
+            opciones={esCamisa ? [{ value: '', label: 'Selecciona una opción' }, { value: '__ya_tengo_camisa', label: 'Ya tengo camisa' }, ...campo.opciones.map((opcion) => ({ value: opcion, label: 'Necesito camisa · Talla ' + opcion }))] : [{ value: '', label: 'Selecciona una opción' }, ...(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ value: String(item.id_licenciatura), label: item.nombre })) : campo.opciones.map((opcion) => ({ value: opcion, label: opcion })))]}
           /> : campo.tipo === 'texto_largo' ? <textarea {...comunes} rows={4} maxLength={2000} /> : <input {...comunes} type={campo.tipo === 'fecha' ? 'date' : campo.tipo === 'numero' ? 'number' : 'text'} min={campo.minimo} max={campo.maximo} step={campo.tipo === 'numero' ? 1 : undefined} maxLength={500} />}
         </CampoRegistroActividad>;
       })}
