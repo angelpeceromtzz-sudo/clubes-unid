@@ -137,15 +137,23 @@ function App() {
   const [consentimientoPendiente, setConsentimientoPendiente] = useState(false);
   const [consentimientoError, setConsentimientoError] = useState(false);
 
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  const claveTutorialAlumno = idUsuario ? `tutorial_alumno_${idUsuario}_pending` : null;
+
+  const dejarTutorialAlumnoPendiente = useCallback((repetir = false) => {
+    if (!claveTutorialAlumno) return;
+    try { localStorage.setItem(claveTutorialAlumno, repetir ? 'repetir' : 'true'); } catch { /* La solicitud se puede volver a iniciar desde Ayuda. */ }
+  }, [claveTutorialAlumno]);
+
   const lanzarTutorialAlumno = useCallback((repetir = false) => {
     const rutaPanelAlumno = '/campus/campeche/alumno/panel';
     if (location.pathname === rutaPanelAlumno) {
       window.dispatchEvent(new CustomEvent('clubsunid:iniciar-tutorial-alumno', { detail: { repetir } }));
       return;
     }
-    try { localStorage.setItem('tutorial_alumno_pending', repetir ? 'repetir' : 'true'); } catch { /* La solicitud se puede volver a iniciar desde Ayuda. */ }
+    dejarTutorialAlumnoPendiente(repetir);
     navigate(rutaPanelAlumno);
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, dejarTutorialAlumnoPendiente]);
 
   const lanzarTutorialResponsable = useCallback((repetir = false) => {
     const rutaPanelResponsable = '/campus/campeche/portal/responsable-de-club/panel';
@@ -432,7 +440,8 @@ return (
               onCompletar={() => {
                 marcarCompletadoOnboarding();
                 setOnboardingAbierto(false);
-                lanzarTutorialAlumno(false);
+                if (location.pathname.startsWith('/actividades')) dejarTutorialAlumnoPendiente();
+                else lanzarTutorialAlumno(false);
               }}
             />
           </div>

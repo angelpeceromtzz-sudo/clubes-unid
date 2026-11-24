@@ -136,6 +136,10 @@ export function construirPayload(respuestas, origen) {
     genero: respuestas.genero ?? null,
     disposicion_responsable: respuestas.disposicion ?? null,
     telefono_contacto: respuestas.telefono ?? null,
+    ...(origen === 'onboarding' ? {
+      id_licenciatura: respuestas.licenciatura ?? null,
+      fecha_nacimiento: respuestas.fechaNacimiento ?? null,
+    } : {}),
     actividades_responsable: respuestas.disposicion === 'responsable' ? [...respuestas.actividadesResponsable] : [],
     correo: {
       activo: respuestas.correo.decision === 'aceptar',

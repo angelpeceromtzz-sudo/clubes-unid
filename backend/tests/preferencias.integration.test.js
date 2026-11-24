@@ -42,6 +42,9 @@ function cuerpo(extra = {}) {
     genero: null,
     correo: correoApagado,
     propuestas: [],
+    telefono_contacto: '5551234567',
+    id_licenciatura: 1,
+    fecha_nacimiento: '2000-01-01',
     ...extra,
   };
 }

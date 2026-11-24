@@ -67,6 +67,22 @@ async function reemplazarSeleccion(client, idUsuario, { tabla, columna }, ids) {
   );
 }
 
+async function guardarPerfilAcademicoOnboarding(client, idUsuario, datos) {
+  if (datos.origen !== 'onboarding') return;
+  const licenciatura = await client.query(
+    'SELECT 1 FROM cat_licenciaturas WHERE id_licenciatura = $1',
+    [datos.id_licenciatura],
+  );
+  if (licenciatura.rows.length === 0) {
+    throw new ErrorValidacion('La licenciatura seleccionada no está disponible');
+  }
+  await client.query(
+    `UPDATE usuarios SET id_licenciatura = $2, fecha_nacimiento = $3
+     WHERE id_usuario = $1`,
+    [idUsuario, datos.id_licenciatura, datos.fecha_nacimiento],
+  );
+}
+
 async function guardarPreferencias(client, idUsuario, datos) {
   await client.query(
     'INSERT INTO preferencias_usuario (id_usuario) VALUES ($1) ON CONFLICT (id_usuario) DO NOTHING',
@@ -76,6 +92,10 @@ async function guardarPreferencias(client, idUsuario, datos) {
     'SELECT * FROM preferencias_usuario WHERE id_usuario = $1 FOR UPDATE',
     [idUsuario],
   )).rows[0];
+  // Serializa preferencias y perfil académico por usuario. Sin este lock, dos
+  // onboarding concurrentes podrían dejar datos académicos de una petición y
+  // preferencias de la otra, aunque cada transacción fuese atómica.
+  await guardarPerfilAcademicoOnboarding(client, idUsuario, datos);
   const correoAnterior = correoDesdeFila(actual);
 
   await reemplazarSeleccion(client, idUsuario, SELECCIONES[0], datos.categorias);

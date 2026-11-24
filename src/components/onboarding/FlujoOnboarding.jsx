@@ -1,7 +1,7 @@
 /* Flujo completo del onboarding: conserva un borrador local por usuario para
    recuperar respuestas y paso si se cierra la página o se pierde internet. */
 import { useEffect, useRef, useState } from 'react';
-import { api, request } from '../../services/api';
+import { api } from '../../services/api';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useCatalogoIntereses } from '../../hooks/useCatalogoIntereses';
 import { Alerta } from '../ui/Alerta';
@@ -145,19 +145,6 @@ export function FlujoOnboarding({ onCompletar }) {
     setError('');
     try {
       const datos = await api.guardarPreferenciasOnboarding(construirPayload(respuestas, 'onboarding'));
-      // Guarda datos académicos (licenciatura y fecha de nacimiento) en el perfil del usuario.
-      try {
-        await request('/auth/me/perfil-academico', {
-          method: 'PATCH',
-          body: JSON.stringify({
-            id_licenciatura: respuestas.licenciatura ?? null,
-            fecha_nacimiento: respuestas.fechaNacimiento ?? null,
-          }),
-        });
-      } catch (errAcad) {
-        // No bloquea el onboarding si falla el guardado académico.
-        console.warn('No se pudo guardar el perfil académico:', errAcad?.message);
-      }
       setResumen(construirResumen(datos));
       setPaso('confirmacion');
     } catch (err) {

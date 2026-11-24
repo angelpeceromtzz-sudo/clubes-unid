@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export function useTutorial(id) {
-  const storageKey = `tutorial_${id}_done`;
+  const storageKey = id ? `tutorial_${id}_done` : null;
   const [activo, setActivo] = useState(false);
   const [paso, setPaso] = useState(0);
 
   useEffect(() => {
+    if (!storageKey) return;
     try {
       if (localStorage.getItem(storageKey) === 'true') return;
     } catch { /* ignore */ }
@@ -17,24 +18,29 @@ export function useTutorial(id) {
   }, []);
 
   const siguiente = useCallback((total) => {
-    setPaso((p) => {
-      if (p + 1 >= total) {
+    if (paso + 1 >= total) {
+      if (storageKey) {
         try { localStorage.setItem(storageKey, 'true'); } catch { /* ignore */ }
-        setActivo(false);
-        return 0;
       }
-      return p + 1;
-    });
-  }, [storageKey]);
+      setActivo(false);
+      setPaso(0);
+      return;
+    }
+    setPaso((p) => p + 1);
+  }, [paso, storageKey]);
 
   const saltar = useCallback(() => {
-    try { localStorage.setItem(storageKey, 'true'); } catch { /* ignore */ }
+    if (storageKey) {
+      try { localStorage.setItem(storageKey, 'true'); } catch { /* ignore */ }
+    }
     setActivo(false);
     setPaso(0);
   }, [storageKey]);
 
   const reintentar = useCallback(() => {
-    try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+    if (storageKey) {
+      try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+    }
     iniciar();
   }, [storageKey, iniciar]);
 
