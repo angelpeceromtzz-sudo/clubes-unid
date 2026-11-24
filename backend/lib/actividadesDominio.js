@@ -145,7 +145,8 @@ export function camposRegistroTrineo(campos) {
     : { clave: 'telefono', etiqueta: 'Teléfono', tipo: 'texto', obligatorio: true, opciones: [], validacion: 'telefono' };
   const sinTelefono = resultado.filter((campo) => campo.clave !== 'telefono');
   const indiceEdad = sinTelefono.findIndex((campo) => campo.clave === 'edad');
-  sinTelefono.splice(indiceEdad < 0 ? 0 : indiceEdad, 0, telefono);
+  // Después de edad: nombre/matrícula quedan primero en la cabecera del formulario.
+  sinTelefono.splice(indiceEdad < 0 ? 0 : indiceEdad + 1, 0, telefono);
   return sinTelefono;
 }
 
