@@ -32,7 +32,7 @@ export function SelectorCartaTrineo({ idEdicion, actual, seleccionada, onSelecci
      <legend className={'mb-2 text-lg font-bold ' + tema.title}>Carta de regalo ({obligatoria ? 'obligatoria' : 'opcional'})</legend>
      <p className={'text-sm ' + tema.subtitle}>{bloqueada ? 'El regalo de esta carta ya fue recibido. Sus datos se conservarán en tu registro.' : 'Busca al niño de la carta que recibiste en el salón. Se reservará exclusivamente para ti al confirmar tu inscripción. El regalo es independiente de las aportaciones para la actividad.' + (!obligatoria ? ' Puedes continuar sin seleccionar una carta.' : '')}</p>
     {seleccionada && <><ResumenCartaTrineo carta={seleccionada} />{seleccionada.estado !== 'entregada' && <p className="text-sm">Puedes elegir otra carta antes de guardar los cambios.</p>}</>}
-    {!bloqueada && <details className="rounded-xl border border-slate-400/25 p-3 shadow-[-4px_-4px_12px_rgba(0,0,0,0.08),4px_4px_12px_rgba(0,0,0,0.12)]" open={!seleccionada}>
+    {!bloqueada && <details className="rounded-xl border border-slate-400/25 bg-slate-400/5 p-3" open={!seleccionada}>
       <summary className="cursor-pointer font-semibold">Cartas disponibles</summary>
       <div className="accordion-content space-y-3 pt-3">
       <label className={labelCls}>Buscar niño por nombre o número de carta<input className={inputCls} type="search" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} placeholder="Nombre del niño" /></label>

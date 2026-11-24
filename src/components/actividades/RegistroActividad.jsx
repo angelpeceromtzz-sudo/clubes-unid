@@ -132,7 +132,7 @@ function RegistroActividadAnterior({ edicion, registro, onGuardado }) {
       })}
     </div>
     {hayLicenciatura && errorLicenciaturas && <div role="alert"><p>No se pudieron cargar las licenciaturas.</p><BotonAccion variant="outline" onClick={recargar}>Volver a cargar licenciaturas</BotonAccion></div>}
-    {(edicion.requiere_aportacion || catalogo.length > 0) && <details className="rounded-xl border border-slate-400/25 p-4" open><summary className={'cursor-pointer text-lg font-bold ' + tema.title}>Aportaciones para la actividad{edicion.requiere_aportacion ? ' (obligatorias)' : ' (opcionales)'}</summary><div className="accordion-content pt-4"><fieldset className="space-y-4">
+    {(edicion.requiere_aportacion || catalogo.length > 0) && <details className="rounded-xl border border-slate-400/25 bg-slate-400/5 p-4" open><summary className={'cursor-pointer text-lg font-bold ' + tema.title}>Aportaciones para la actividad{edicion.requiere_aportacion ? ' (obligatorias)' : ' (opcionales)'}</summary><div className="accordion-content pt-4"><fieldset className="space-y-4">
       <p className={'text-sm ' + tema.subtitle}>Comida, globos u otros materiales para la actividad.{usaCartas ? ' Son independientes del regalo de tu carta.' : ''} El encargado registrará cada recepción por separado.</p>
       {catalogo.map((opcion) => {
         const seleccionada = aportaciones.find((aporte) => aporte.id_opcion === opcion.id_opcion);
