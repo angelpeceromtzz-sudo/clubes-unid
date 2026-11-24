@@ -146,7 +146,7 @@ export function montarMisiones(router, {
   router.get('/ediciones/:idEdicion/acceso-invitados', async (req, res) => {
     const edicion = await obtenerEdicion(db, req.params.idEdicion);
     comprobarPublica(edicion);
-    res.json({ habilitado: esMisionesNueva(edicion) });
+    res.json({ habilitado: esMisionesNueva(edicion) || edicion.plantilla === 'trineo', tipo: edicion.plantilla === 'trineo' ? 'trineo' : 'misiones' });
   });
 
   router.post('/ediciones/:idEdicion/invitados', limitarRegistro, limitarSubida, async (req, _res, next) => {

@@ -66,6 +66,19 @@ export async function liberarCartaPendiente(db, registro, usuario, auditar) {
   }
 }
 
+export async function gestionarCartaRegistro(db, { edicion, registro, idCarta, usuario, auditar }) {
+  const actual = (await db.query(SELECT_RESERVA + ' WHERE v.id_registro=$1 AND v.cancelada_en IS NULL FOR UPDATE OF v', [registro.id_registro])).rows[0] || null;
+  if (idCarta === null) {
+    if (actual?.recibida) throw errorActividad('El regalo recibido conserva su carta', 409);
+    await liberarCartaPendiente(db, registro, usuario, auditar);
+  } else {
+    const reserva = await prepararReservaCarta(db, { edicion, anterior: registro, idCarta });
+    await guardarReservaCarta(db, { registro, reserva, usuario, auditar });
+  }
+  await completarCartasRegistros(db, [registro]);
+  return registro;
+}
+
 // Se usa también desde la recepción anterior de aportaciones vinculadas a regalos históricos.
 export async function recibirRegaloCarta(cliente, { idReserva, usuario, obtenerEdicion, comprobarGestion, auditar }) {
   const referencia = (await cliente.query(`SELECT c.id_edicion FROM actividades_cartas_reservas v
@@ -97,10 +110,10 @@ export function montarCartasTrineo(router, { db, autenticar, obtenerEdicion, com
     if (edicion.estado === 'archivada' || edicion.estado_actividad === 'archivada') throw errorActividad('La edición está archivada', 409);
   }
 
-  router.get('/ediciones/:idEdicion/cartas', autenticar, async (req, res) => {
+  router.get('/ediciones/:idEdicion/cartas', async (req, res) => {
     const edicion = await obtenerEdicion(db, req.params.idEdicion);
     comprobarPublica(edicion); comprobarTrineo(edicion);
-    // Solo se exponen cartas disponibles, nunca la identidad de otros alumnos.
+    // Solo se exponen cartas disponibles; la selección inicial también debe funcionar para invitados.
     const { rows } = await db.query(`SELECT c.id_carta,c.nombre,c.edad,c.deseo FROM actividades_cartas c
       WHERE c.id_edicion=$1 AND c.activa AND NOT EXISTS (
         SELECT 1 FROM actividades_cartas_reservas v WHERE v.id_carta=c.id_carta AND v.cancelada_en IS NULL)
@@ -139,6 +152,20 @@ export function montarCartasTrineo(router, { db, autenticar, obtenerEdicion, com
     res.json(await transaccion((cliente) => recibirRegaloCarta(cliente, {
       idReserva: Number(req.params.idReserva), usuario: req.user, obtenerEdicion, comprobarGestion, auditar,
     })));
+  });
+
+  router.put('/gestion/ediciones/:idEdicion/registros/:idRegistro/carta', async (req, res) => {
+    if (!Object.prototype.hasOwnProperty.call(req.body || {}, 'id_carta')) throw errorActividad('Indica la carta o null para liberar la selección');
+    const idCarta = req.body.id_carta == null ? null : Number(req.body.id_carta);
+    if (idCarta !== null && (!Number.isSafeInteger(idCarta) || idCarta < 1)) throw errorActividad('Carta no válida');
+    res.json(await transaccion(async (cliente) => {
+      const edicion = await obtenerEdicion(cliente, req.params.idEdicion, true);
+      comprobarGestion(req.user, edicion); comprobarTrineo(edicion); comprobarEdicionEditable(edicion);
+      const registro = (await cliente.query('SELECT * FROM actividades_registros WHERE id_edicion=$1 AND id_registro=$2 FOR UPDATE', [edicion.id_edicion, req.params.idRegistro])).rows[0];
+      if (!registro) throw errorActividad('Inscripción no encontrada en esta edición', 404);
+      if (registro.estado === 'cancelado') throw errorActividad('La inscripción está cancelada', 409);
+      return gestionarCartaRegistro(cliente, { edicion, registro, idCarta, usuario: req.user, auditar });
+    }));
   });
 
   router.put('/gestion/ediciones/:idEdicion/cartas/:idCarta', async (req, res) => {

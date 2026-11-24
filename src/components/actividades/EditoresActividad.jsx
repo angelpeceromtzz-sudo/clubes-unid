@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { actividadService } from '../../services/actividad.service';
 import { camposPlantillaActividad, esFormatoMegamisiones } from '../../../shared/actividades';
@@ -73,8 +73,17 @@ export function AsignarEncargadoActividad({ actividad, onGuardado }) {
   const [busqueda, setBusqueda] = useState('');
   const [opciones, setOpciones] = useState([]);
   const [seleccionado, setSeleccionado] = useState('');
+  const [responsables, setResponsables] = useState([]);
   const [error, setError] = useState('');
   const [pendiente, setPendiente] = useState(false);
+  useEffect(() => {
+    if (actividad.tipo !== 'actividad') return undefined;
+    let activo = true;
+    actividadService.listarResponsables(actividad.id_actividad).then((resultado) => {
+      if (activo) setResponsables(resultado.responsables || []);
+    }).catch((fallo) => { if (activo) setError(fallo.mensajeServidor || fallo.message); });
+    return () => { activo = false; };
+  }, [actividad.id_actividad, actividad.tipo]);
   async function buscar() {
     setPendiente(true); setError('');
     try { setOpciones(await actividadService.buscarEncargados(busqueda,actividad.tipo)); }
@@ -82,13 +91,30 @@ export function AsignarEncargadoActividad({ actividad, onGuardado }) {
   }
   async function asignar() {
     setPendiente(true); setError('');
-    try { await actividadService.asignarEncargado(actividad.id_actividad, Number(seleccionado)); onGuardado(); }
+    try { await actividadService.asignarEncargado(actividad.id_actividad, Number(seleccionado)); const resultado = await actividadService.listarResponsables(actividad.id_actividad); setResponsables(resultado.responsables || []); onGuardado(); }
     catch (fallo) { setError(fallo.message); } finally { setPendiente(false); }
   }
-  return <section className="space-y-3"><h3 className="font-bold">Responsable</h3><p className="text-sm">{actividad.responsable_nombre || 'Sin responsable asignado'}</p><div className="flex flex-wrap items-end gap-3"><label className={labelCls}>Buscar por nombre<input className={inputCls} value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} maxLength={100} /></label><BotonAccion variant="outline" disabled={pendiente} onClick={buscar}>Buscar</BotonAccion></div>
-    {opciones.length > 0 && <div className="flex flex-wrap items-end gap-3"><label className={labelCls}>Seleccionar encargado<select aria-label="Seleccionar encargado" className={inputCls} value={seleccionado} onChange={(evento) => setSeleccionado(evento.target.value)}><option value="">Selecciona una persona</option>{opciones.map((opcion) => <option key={opcion.id_usuario} value={opcion.id_usuario}>{opcion.nombre_completo}</option>)}</select></label><BotonAccion disabled={!seleccionado || pendiente} onClick={asignar}>Asignar encargado</BotonAccion></div>}
-    {error && <p role="alert">{error}</p>}
-  </section>;
+  async function agregar() {
+    if (!seleccionado || pendiente) return;
+    setPendiente(true); setError('');
+    try {
+      const resultado = await actividadService.agregarResponsable(actividad.id_actividad, Number(seleccionado));
+      setResponsables(resultado.responsables || []); setSeleccionado(''); onGuardado();
+    } catch (fallo) { setError(fallo.mensajeServidor || fallo.message); } finally { setPendiente(false); }
+  }
+  async function quitar(idResponsable) {
+    if (pendiente) return;
+    setPendiente(true); setError('');
+    try {
+      const resultado = await actividadService.quitarResponsable(actividad.id_actividad, idResponsable);
+      setResponsables(resultado.responsables || []); onGuardado();
+    } catch (fallo) { setError(fallo.mensajeServidor || fallo.message); } finally { setPendiente(false); }
+  }
+  const lista = responsables.length ? responsables : (actividad.responsable_nombre ? [{ id_usuario: actividad.id_responsable, nombre_completo: actividad.responsable_nombre, principal: true }] : []);
+  return <section className="space-y-3"><h3 className="font-bold">Responsables</h3>{lista.length ? <div className="space-y-2">{lista.map((responsable) => <div key={responsable.id_usuario} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-400/25 px-3 py-2 text-sm"><span>{responsable.nombre_completo}{responsable.principal ? ' · Principal' : ''}</span>{actividad.tipo === 'actividad' && !responsable.principal && <BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => quitar(responsable.id_usuario)}>Quitar</BotonAccion>}</div>)}</div> : <p className="text-sm">Sin responsable asignado</p>}<div className="flex flex-wrap items-end gap-3"><label className={labelCls}>Buscar por nombre<input className={inputCls} value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} maxLength={100} /></label><BotonAccion variant="outline" disabled={pendiente} onClick={buscar}>Buscar</BotonAccion></div>
+     {opciones.length > 0 && <div className="flex flex-wrap items-end gap-3"><label className={labelCls}>Seleccionar responsable<select aria-label="Seleccionar responsable" className={inputCls} value={seleccionado} onChange={(evento) => setSeleccionado(evento.target.value)}><option value="">Selecciona una persona</option>{opciones.map((opcion) => <option key={opcion.id_usuario} value={opcion.id_usuario}>{opcion.nombre_completo}</option>)}</select></label><BotonAccion disabled={!seleccionado || pendiente} onClick={actividad.tipo === 'actividad' ? agregar : asignar}>{actividad.tipo === 'actividad' ? 'Agregar responsable' : 'Asignar responsable principal'}</BotonAccion></div>}
+     {error && <p role="alert">{error}</p>}
+   </section>;
 }
 
 export function EditorCamposActividad({ campos, plantilla, configuracion, idEdicion, onChange }) {

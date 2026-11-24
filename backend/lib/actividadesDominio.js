@@ -36,6 +36,8 @@ export const ETIQUETAS_ACTIVIDAD_CATALOGO = {
   carta_actualizada: 'Carta del Trineo actualizada',
   carta_reservada: 'Carta del Trineo reservada',
   carta_liberada: 'Reserva de carta liberada',
+  responsable_adicional_asignado: 'Responsable adicional asignado',
+  responsable_adicional_retirado: 'Responsable adicional retirado',
   regalo_carta_recibido: 'Regalo de la carta recibido',
   portada_actualizada: 'Imagen de presentación actualizada',
   fotos_agregadas: 'Fotografías agregadas',
