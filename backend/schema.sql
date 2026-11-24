@@ -146,6 +146,34 @@ CREATE TABLE IF NOT EXISTS usuarios (
 CREATE INDEX IF NOT EXISTS idx_usuarios_institutional_id ON usuarios(institutional_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_deleted_at ON usuarios(deleted_at);
 
+-- Una sola cuenta OTP recordada por navegador durante un máximo de 30 días.
+-- Los secretos se guardan como hashes y pueden rotarse o revocarse al cerrar sesión.
+CREATE TABLE IF NOT EXISTS dispositivos_confiables (
+    id_dispositivo BIGSERIAL PRIMARY KEY,
+    id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    hash_dispositivo VARCHAR(64) NOT NULL UNIQUE,
+    token_hash VARCHAR(64) NOT NULL,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ultimo_uso TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expira_en TIMESTAMPTZ NOT NULL,
+    revocado_en TIMESTAMPTZ,
+    CONSTRAINT chk_dispositivo_hash CHECK (hash_dispositivo ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT chk_dispositivo_token_hash CHECK (token_hash ~ '^[a-f0-9]{64}$')
+);
+CREATE INDEX IF NOT EXISTS idx_dispositivos_confiables_usuario
+    ON dispositivos_confiables (id_usuario, expira_en);
+
+-- Aceptación de documentos legales requerida para acceder a la plataforma.
+-- La migración independiente se conserva para actualizar bases existentes.
+CREATE TABLE IF NOT EXISTS aceptaciones_legales (
+    id_usuario   INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    documento    VARCHAR(20) NOT NULL,
+    version      VARCHAR(20) NOT NULL,
+    aceptado_en  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id_usuario, documento),
+    CONSTRAINT chk_legal_documento CHECK (documento IN ('terminos', 'privacidad'))
+);
+
 -- ============================================================
 -- ACCESO MEDIANTE CÓDIGO OTP (Fase 1.5)
 -- ============================================================
@@ -217,6 +245,41 @@ CREATE TABLE IF NOT EXISTS avisos_clubes (
     CONSTRAINT fk_aviso_club FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE CASCADE,
     CONSTRAINT fk_aviso_autor FOREIGN KEY (id_autor) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS avisos_reacciones (
+    id_aviso INT NOT NULL REFERENCES avisos_clubes(id_aviso) ON DELETE CASCADE,
+    id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    reaccion VARCHAR(10) NOT NULL CHECK (reaccion IN ('like', 'love', 'clap')),
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id_aviso, id_usuario)
+);
+
+-- Eventos propios de cada club, distintos de noticias/eventos institucionales.
+CREATE TABLE IF NOT EXISTS eventos_clubes (
+    id_evento_club SERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_autor INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    titulo VARCHAR(150) NOT NULL,
+    descripcion TEXT NOT NULL,
+    fecha_evento DATE NOT NULL,
+    fecha_fin_evento DATE,
+    hora_evento TIME,
+    lugar_evento VARCHAR(200),
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_evento_club_titulo CHECK (char_length(trim(titulo)) > 0),
+    CONSTRAINT chk_evento_club_descripcion CHECK (char_length(trim(descripcion)) > 0),
+    CONSTRAINT chk_evento_club_fechas CHECK (fecha_fin_evento IS NULL OR fecha_fin_evento >= fecha_evento)
+);
+ALTER TABLE eventos_clubes ADD COLUMN IF NOT EXISTS fecha_fin_evento DATE;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_evento_club_fechas' AND conrelid = 'eventos_clubes'::regclass) THEN
+        ALTER TABLE eventos_clubes ADD CONSTRAINT chk_evento_club_fechas
+            CHECK (fecha_fin_evento IS NULL OR fecha_fin_evento >= fecha_evento);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_eventos_clubes_fecha
+    ON eventos_clubes (id_club, fecha_evento, hora_evento, id_evento_club);
 
 CREATE TABLE IF NOT EXISTS formularios (
     id_formulario SERIAL PRIMARY KEY,
@@ -367,6 +430,63 @@ CREATE TABLE IF NOT EXISTS notificaciones_eliminadas (
 );
 
 CREATE INDEX IF NOT EXISTS idx_eliminadas_usuario ON notificaciones_eliminadas(id_usuario);
+
+CREATE TABLE IF NOT EXISTS club_chat_mensajes (
+    id_mensaje BIGSERIAL PRIMARY KEY,
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_autor INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    contenido VARCHAR(400) NOT NULL,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    editado_en TIMESTAMPTZ,
+    eliminado BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS idx_club_chat_mensajes_lista ON club_chat_mensajes(id_club, id_mensaje DESC);
+CREATE INDEX IF NOT EXISTS idx_club_chat_mensajes_autor ON club_chat_mensajes(id_club, id_autor, creado_en DESC);
+
+CREATE TABLE IF NOT EXISTS club_chat_menciones (
+    id_mensaje BIGINT NOT NULL REFERENCES club_chat_mensajes(id_mensaje) ON DELETE CASCADE,
+    id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    PRIMARY KEY (id_mensaje, id_usuario)
+);
+
+CREATE TABLE IF NOT EXISTS club_chat_fijados (
+    id_mensaje BIGINT PRIMARY KEY REFERENCES club_chat_mensajes(id_mensaje) ON DELETE CASCADE,
+    id_fijado_por INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS club_chat_silencios (
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    id_moderador INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    silenciado_hasta TIMESTAMPTZ,
+    PRIMARY KEY (id_club, id_usuario)
+);
+ALTER TABLE club_chat_silencios ADD COLUMN IF NOT EXISTS silenciado_hasta TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS club_chat_presencia (
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    ultima_actividad TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    escribiendo_hasta TIMESTAMPTZ,
+    PRIMARY KEY (id_club, id_usuario)
+);
+CREATE INDEX IF NOT EXISTS idx_club_chat_presencia_actividad ON club_chat_presencia(id_club, ultima_actividad DESC);
+
+CREATE TABLE IF NOT EXISTS club_chat_lecturas (
+    id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
+    id_usuario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    ultimo_mensaje_id BIGINT NOT NULL DEFAULT 0,
+    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id_club, id_usuario)
+);
+
+CREATE TABLE IF NOT EXISTS club_chat_notificaciones (
+    id_notificacion INT PRIMARY KEY REFERENCES notificaciones(id_notificacion) ON DELETE CASCADE,
+    id_mensaje BIGINT NOT NULL REFERENCES club_chat_mensajes(id_mensaje) ON DELETE CASCADE,
+    id_destinatario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS historial_admin (
     id_historial SERIAL PRIMARY KEY,
