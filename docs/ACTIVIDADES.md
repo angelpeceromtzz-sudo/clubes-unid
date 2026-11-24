@@ -1,5 +1,11 @@
 # Catálogo unificado de clubes y actividades
 
+## Actualización del 23 de noviembre de 2026
+
+Para una base que ya tiene el catálogo unificado y las versiones anteriores de Misiones y Trineo, aplicar con respaldo previo `backend/migrations/migrate-actividades-20261123.sql`. Reúne la revisión de publicaciones y sus reacciones, la opción de carta obligatoria por edición y la conversión de edades del Trineo a años enteros. Se puede pegar el archivo completo en el editor SQL de Supabase; no requiere ejecutar `schema.sql` ni `seed.sql`. Conserva las publicaciones anteriores, inscripciones, reservas y entregas. Las edades decimales se convierten a años cumplidos y las menores de un año a `0`, igual que en la migración individual de edad.
+
+La actualización se ejecuta en una sola transacción, comprueba las consultas que usan la estructura nueva y admite una segunda ejecución sin reiniciar los datos. Si faltan las tablas anteriores del módulo, se detiene con un mensaje antes de realizar cambios. La aplicación de este archivo a una base compartida es manual; guardarlo en el repositorio no actualiza Supabase.
+
 ## Trineo: cartas y regalos
 
 En **Aportaciones → Cartas de regalo del Trineo**, el encargado captura nombre del niño, edad de 0 a 100 años y deseo de cada carta física. El valor `0` se muestra como **“Menos de 1 año”**. Cada edición define si la carta es obligatoria u opcional; las ediciones existentes conservan inicialmente la obligación actual, pero pueden cambiarse desde su editor. Misiones no utiliza cartas. Si la carta es opcional, el alumno puede inscribirse con o sin seleccionarla. Los registros confirmados anteriores sin carta se conservan y pueden corregir sus datos sin asignaciones inventadas.

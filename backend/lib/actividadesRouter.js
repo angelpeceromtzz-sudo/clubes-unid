@@ -691,61 +691,103 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
 
   const esModerador = (usuario) => [3, 4, 7].includes(usuario.id_rol);
   const esAlumno = (usuario) => usuario.id_rol === 1;
+  async function registrarBorrado(cliente, usuario, tipo, detalle) {
+    await cliente.query(`INSERT INTO actividad_clubes(tipo_evento,id_actor,descripcion,detalles,origen)
+      VALUES($1,$2,$3,$4,'catalogo')`, [tipo + '_borrada', usuario.id, tipo === 'actividad' ? 'Actividad borrada definitivamente' : 'Edición borrada definitivamente', JSON.stringify(detalle)]);
+  }
+  async function limpiarArchivosBorrados(imagenes, documentos) {
+    const tareas = [];
+    if (imagenes.length) tareas.push(limpiarImagenes(imagenes.map((filename) => ({ filename }))));
+    if (almacenPdf && documentos.length) tareas.push(...documentos.map((public_id) => almacenPdf.eliminar({ public_id })));
+    const resultados = await Promise.allSettled(tareas);
+    if (resultados.some((resultado) => resultado.status === 'rejected')) console.error('[actividades] No se pudieron limpiar todos los archivos borrados');
+  }
 
   // Borrado definitivo de ediciones.
   router.delete('/gestion/ediciones/:idEdicion', async (req, res) => {
     if (!esModerador(req.user)) throw errorActividad('Solo Coordinación o Rectoría pueden borrar ediciones', 403);
     if (req.body?.confirmar !== true && req.query?.confirmar !== 'true') throw errorActividad('Confirma el borrado definitivo');
-    res.json(await transaccion(async (cliente) => {
+    const imagenes = [];
+    const documentos = [];
+    const resultado = await transaccion(async (cliente) => {
       const edicion = await obtenerEdicion(cliente, req.params.idEdicion, true);
       comprobarGestion(req.user, edicion);
-      await auditar(cliente, req.user, 'edicion_borrada', { id_edicion: edicion.id_edicion, id_actividad: edicion.id_actividad });
-      // limpiar datos operativos
       const registros = (await cliente.query('SELECT id_registro FROM actividades_registros WHERE id_edicion=$1', [edicion.id_edicion])).rows.map(r => r.id_registro);
+      imagenes.push(...(await cliente.query("SELECT public_id FROM publicaciones_imagenes WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_edicion=$1) AND public_id IS NOT NULL", [edicion.id_edicion])).rows.map((fila) => fila.public_id));
+      documentos.push(...(await cliente.query("SELECT public_id FROM misiones_documentos WHERE id_edicion=$1 OR id_registro=ANY($2::int[])", [edicion.id_edicion, registros])).rows.map((fila) => fila.public_id));
       if (registros.length) {
-        await cliente.query('DELETE FROM actividades_asistencias WHERE id_registro = ANY($1::int[])', [registros]);
-        await cliente.query('DELETE FROM actividades_aportaciones WHERE id_registro = ANY($1::int[])', [registros]);
+        await cliente.query('UPDATE actividades_registros SET codigo_firmado_id=NULL WHERE id_registro=ANY($1::int[])', [registros]);
+        await cliente.query('DELETE FROM actividades_cartas_reservas WHERE id_registro=ANY($1::int[])', [registros]);
+        await cliente.query('DELETE FROM actividades_asistencias WHERE id_registro=ANY($1::int[])', [registros]);
+      }
+      await cliente.query('DELETE FROM misiones_documentos WHERE id_edicion=$1 OR id_registro=ANY($2::int[])', [edicion.id_edicion, registros]);
+      await cliente.query('DELETE FROM actividades_cartas WHERE id_edicion=$1', [edicion.id_edicion]);
+      if (registros.length) {
+        await cliente.query('DELETE FROM actividades_aportaciones WHERE id_registro=ANY($1::int[])', [registros]);
         await cliente.query('DELETE FROM actividades_registros WHERE id_edicion=$1', [edicion.id_edicion]);
       }
+      await cliente.query('DELETE FROM actividades_asistencia_accesos WHERE id_edicion=$1', [edicion.id_edicion]);
       await cliente.query('DELETE FROM actividades_aportes_catalogo WHERE id_edicion=$1', [edicion.id_edicion]);
       await cliente.query('DELETE FROM reacciones_catalogo WHERE id_edicion=$1', [edicion.id_edicion]);
+      await cliente.query('DELETE FROM actividad_clubes WHERE id_edicion=$1', [edicion.id_edicion]);
+      await cliente.query('DELETE FROM migraciones_catalogo WHERE id_edicion_destino=$1', [edicion.id_edicion]);
       await cliente.query('DELETE FROM reacciones_publicacion WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_edicion=$1)', [edicion.id_edicion]);
       await cliente.query('DELETE FROM publicaciones_imagenes WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_edicion=$1)', [edicion.id_edicion]);
       await cliente.query('DELETE FROM publicaciones_oferta WHERE id_edicion=$1', [edicion.id_edicion]);
       await cliente.query('DELETE FROM actividades_ediciones WHERE id_edicion=$1', [edicion.id_edicion]);
+      await registrarBorrado(cliente, req.user, 'edicion', { id_edicion: edicion.id_edicion, id_actividad: edicion.id_actividad });
       return { borrado: true, id_edicion: edicion.id_edicion };
-    }));
+    });
+    await limpiarArchivosBorrados(imagenes, documentos);
+    res.json(resultado);
   });
 
   // Borrado definitivo de actividades (no clubes).
   router.delete('/gestion/actividades/:idActividad', async (req, res) => {
     if (!esModerador(req.user)) throw errorActividad('Solo Coordinación o Rectoría pueden borrar actividades', 403);
     if (req.body?.confirmar !== true && req.query?.confirmar !== 'true') throw errorActividad('Confirma el borrado definitivo');
-    res.json(await transaccion(async (cliente) => {
+    const imagenes = [];
+    const documentos = [];
+    const resultado = await transaccion(async (cliente) => {
       const actividad = await obtenerActividad(cliente, req.params.idActividad, true);
       comprobarGestion(req.user, actividad);
       if (actividad.tipo === 'club') throw errorActividad('Los clubes no se pueden borrar desde aquí', 403);
-      await auditar(cliente, req.user, 'actividad_borrada', { id_actividad: actividad.id_actividad });
       const ediciones = (await cliente.query('SELECT id_edicion FROM actividades_ediciones WHERE id_actividad=$1', [actividad.id_actividad])).rows.map(r => r.id_edicion);
-      for (const idEdicion of ediciones) {
-        const registros = (await cliente.query('SELECT id_registro FROM actividades_registros WHERE id_edicion=$1', [idEdicion])).rows.map(r => r.id_registro);
-        if (registros.length) {
-          await cliente.query('DELETE FROM actividades_asistencias WHERE id_registro = ANY($1::int[])', [registros]);
-          await cliente.query('DELETE FROM actividades_aportaciones WHERE id_registro = ANY($1::int[])', [registros]);
-          await cliente.query('DELETE FROM actividades_registros WHERE id_edicion=$1', [idEdicion]);
-        }
-        await cliente.query('DELETE FROM actividades_aportes_catalogo WHERE id_edicion=$1', [idEdicion]);
-        await cliente.query('DELETE FROM reacciones_catalogo WHERE id_edicion=$1', [idEdicion]);
+      const registros = ediciones.length ? (await cliente.query('SELECT id_registro FROM actividades_registros WHERE id_edicion=ANY($1::int[])', [ediciones])).rows.map(r => r.id_registro) : [];
+      imagenes.push(...(await cliente.query("SELECT public_id FROM publicaciones_imagenes WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_club=$1) AND public_id IS NOT NULL", [actividad.id_actividad])).rows.map((fila) => fila.public_id));
+      documentos.push(...(await cliente.query("SELECT public_id FROM misiones_documentos WHERE id_actividad=$1 OR id_edicion=ANY($2::int[]) OR id_registro=ANY($3::int[])", [actividad.id_actividad, ediciones, registros])).rows.map((fila) => fila.public_id));
+      if (registros.length) {
+        await cliente.query('UPDATE actividades_registros SET codigo_firmado_id=NULL WHERE id_registro=ANY($1::int[])', [registros]);
+        await cliente.query('DELETE FROM actividades_cartas_reservas WHERE id_registro=ANY($1::int[])', [registros]);
+        await cliente.query('DELETE FROM actividades_asistencias WHERE id_registro=ANY($1::int[])', [registros]);
+      }
+      await cliente.query('DELETE FROM misiones_documentos WHERE id_actividad=$1 OR id_edicion=ANY($2::int[]) OR id_registro=ANY($3::int[])', [actividad.id_actividad, ediciones, registros]);
+      if (ediciones.length) {
+        await cliente.query('DELETE FROM actividades_cartas WHERE id_edicion=ANY($1::int[])', [ediciones]);
+        await cliente.query('DELETE FROM actividades_asistencia_accesos WHERE id_edicion=ANY($1::int[])', [ediciones]);
+        await cliente.query('DELETE FROM actividades_aportes_catalogo WHERE id_edicion=ANY($1::int[])', [ediciones]);
+        await cliente.query('DELETE FROM reacciones_catalogo WHERE id_edicion=ANY($1::int[])', [ediciones]);
+        await cliente.query('DELETE FROM actividad_clubes WHERE id_edicion=ANY($1::int[])', [ediciones]);
+        await cliente.query('DELETE FROM migraciones_catalogo WHERE id_edicion_destino=ANY($1::int[])', [ediciones]);
+      }
+      if (registros.length) {
+        await cliente.query('DELETE FROM actividades_aportaciones WHERE id_registro=ANY($1::int[])', [registros]);
+        await cliente.query('DELETE FROM actividades_registros WHERE id_registro=ANY($1::int[])', [registros]);
       }
       await cliente.query('DELETE FROM reacciones_catalogo WHERE id_club=$1', [actividad.id_actividad]);
+      await cliente.query('DELETE FROM actividad_clubes WHERE id_club=$1', [actividad.id_actividad]);
+      await cliente.query('DELETE FROM migraciones_catalogo WHERE id_club_destino=$1 OR id_actividad_anterior=$1', [actividad.id_actividad]);
       await cliente.query('DELETE FROM reacciones_publicacion WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_club=$1)', [actividad.id_actividad]);
       await cliente.query('DELETE FROM publicaciones_imagenes WHERE id_publicacion IN (SELECT id_publicacion FROM publicaciones_oferta WHERE id_club=$1)', [actividad.id_actividad]);
       await cliente.query('DELETE FROM publicaciones_oferta WHERE id_club=$1', [actividad.id_actividad]);
       await cliente.query('DELETE FROM actividades_ediciones WHERE id_actividad=$1', [actividad.id_actividad]);
       await cliente.query('DELETE FROM clubes_niveles WHERE id_club=$1', [actividad.id_actividad]);
-      await cliente.query('DELETE FROM catalogo_recursos WHERE id_actividad=$1', [actividad.id_actividad]);
+      await cliente.query('DELETE FROM clubes WHERE id_club=$1', [actividad.id_actividad]);
+      await registrarBorrado(cliente, req.user, 'actividad', { id_actividad: actividad.id_actividad });
       return { borrado: true, id_actividad: actividad.id_actividad };
-    }));
+    });
+    await limpiarArchivosBorrados(imagenes, documentos);
+    res.json(resultado);
   });
 
   // Publicaciones de alumnos.
