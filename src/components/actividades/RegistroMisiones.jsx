@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useLicenciaturas } from '../../hooks/useLicenciaturas';
@@ -10,6 +10,9 @@ import { EstadoActividad } from './ActividadUI';
 import { DocumentoMisiones } from './DocumentoMisiones';
 import { gruposPreguntasMisiones } from '../../constants/preguntasMisiones';
 import { ImagenPregunta } from './ImagenPregunta';
+import { CampoRegistroActividad } from './CampoRegistroActividad';
+import { ImagenesCuestionarioActividad } from './ImagenesCuestionarioActividad';
+import { SelectorOpciones } from '../ui/SelectorOpciones';
 
 const dinero = (centavos) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(centavos / 100);
 
@@ -23,9 +26,10 @@ export function ResumenRegistroMisiones({ registro, edicion, acceso, licenciatur
     <EstadoActividad estado={registro.estado} />
     <p className="font-bold">{registro.nombre_completo} · {registro.tipo_participante === 'invitado' ? 'Invitado' : 'Matrícula ' + registro.matricula}</p>
     {registro.correo && <p className="break-words text-sm">{registro.correo}{registro.telefono ? ' · ' + registro.telefono : ''}</p>}
-    <dl className="grid gap-3 sm:grid-cols-2">{campos.filter((campo) => campoActividadVisible(campo, registro.respuestas)).map((campo) => <div key={campo.clave}>{mostrarImagenes && campo.imagen_url && <ImagenPregunta src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-28 w-full" />}
+    <dl className="grid items-start gap-3 sm:grid-cols-2">{campos.filter((campo) => campoActividadVisible(campo, registro.respuestas)).map((campo) => <div key={campo.clave}>
       <dt className={'text-sm ' + tema.subtitle}>{campo.etiqueta}</dt>
       <dd className="whitespace-pre-wrap break-words font-semibold">{campo.tipo === 'licenciatura' ? licenciaturas.find((item) => item.id_licenciatura === Number(registro.respuestas[campo.clave]))?.nombre || 'Sin especificar' : campo.tipo === 'fecha' && registro.respuestas[campo.clave] ? registro.respuestas[campo.clave].split('-').reverse().join('/') : registro.respuestas[campo.clave] ?? 'Sin especificar'}</dd>
+      {mostrarImagenes && campo.imagen_url && <ImagenPregunta src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mt-2 h-28 w-full" />}
     </div>)}</dl>
     {registro.pedido?.lineas.length > 0 && <section className="rounded-xl border border-slate-400/25 p-4 space-y-2"><h4 className="font-bold">Tu pedido</h4>{registro.pedido.lineas.map((linea) => <p key={linea.id_producto + linea.talla} className="text-sm">{linea.cantidad} × {linea.nombre}{linea.talla ? ' · Talla ' + linea.talla : ''} · {dinero(linea.subtotal_centavos)}</p>)}<p className="font-bold">Total: {dinero(registro.pedido.total_centavos)} MXN</p><p className="text-sm">El pago se acuerda con el encargado.</p></section>}
     {mostrarAportaciones && registro.aportaciones?.filter((aporte) => aporte.estado !== 'cancelada').map((aporte) => <p key={aporte.id_aportacion} className="text-sm">{aporte.nombre}: {Number(aporte.cantidad)} {aporte.unidad} · {aporte.estado}</p>)}
@@ -36,6 +40,7 @@ export function ResumenRegistroMisiones({ registro, edicion, acceso, licenciatur
 export function RegistroMisiones({ edicion, registro, invitado = false, acceso, onGuardado }) {
   const { usuario } = useAutenticacion();
   const { tema, inputCls, labelCls } = useTheme();
+  const idFormulario = useId();
   const { licenciaturas, loading, error: errorLicenciaturas, recargar } = useLicenciaturas();
   const [respuestas, setRespuestas] = useState(registro?.respuestas || {});
   const [contacto, setContacto] = useState({ nombre_completo: registro?.nombre_completo || '', correo: registro?.correo || '', telefono: registro?.telefono || '' });
@@ -49,7 +54,6 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   const [cancelando, setCancelando] = useState(false);
   const config = registro?.misiones_snapshot || edicion.configuracion_misiones;
   const mega = esFormatoMegamisiones(config);
-  const etiquetaCampo = mega ? 'block space-y-2 text-sm font-semibold ' + tema.title : labelCls;
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const camposBase = registro?.estado === 'confirmado' ? registro.formulario_snapshot.map((campo) => {
     const actual = edicion.campos_registro.find((item) => item.clave === campo.clave);
@@ -104,8 +108,8 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
           const previa = registro?.pedido?.lineas.find((item) => item.id_producto === linea.id_producto && item.talla === linea.talla);
           return <div className="space-y-3 rounded-xl border border-slate-400/25 p-4" key={indice}>
             <p className="font-bold">{producto?.nombre || previa?.nombre || 'Artículo retirado'}{producto?.activo === false ? ' · Retirado' : ''}</p>
-            <div className="grid gap-3 sm:grid-cols-2"><label className={labelCls}>Cantidad<input className={inputCls} type="number" min={1} max={99} step={1} required value={linea.cantidad} onChange={(evento) => cambiarLinea(indice, { cantidad: Number(evento.target.value) })} /></label>
-              {(producto?.requiere_talla || linea.talla) && <label className={labelCls}>Talla *<select className={inputCls} required value={linea.talla} onChange={(evento) => cambiarLinea(indice, { talla: evento.target.value })}><option value="">Selecciona talla</option>{[...new Set([...(producto?.tallas || []), ...(linea.talla ? [linea.talla] : [])])].map((talla) => <option key={talla} value={talla}>{talla}</option>)}</select></label>}
+            <div className="grid items-start gap-3 sm:grid-cols-2"><CampoRegistroActividad id={idFormulario + '-pedido-' + indice + '-cantidad'} etiqueta="Cantidad"><input id={idFormulario + '-pedido-' + indice + '-cantidad'} className={inputCls} type="number" min={1} max={99} step={1} required value={linea.cantidad} onChange={(evento) => cambiarLinea(indice, { cantidad: Number(evento.target.value) })} /></CampoRegistroActividad>
+              {(producto?.requiere_talla || linea.talla) && <CampoRegistroActividad id={idFormulario + '-pedido-' + indice + '-talla'} etiqueta="Talla *"><SelectorOpciones id={idFormulario + '-pedido-' + indice + '-talla'} etiqueta="Talla" required valor={linea.talla} alCambiar={(talla) => cambiarLinea(indice, { talla })} botonClassName="h-11" opciones={[{ value: '', label: 'Selecciona talla' }, ...[...new Set([...(producto?.tallas || []), ...(linea.talla ? [linea.talla] : [])])].map((talla) => ({ value: talla, label: talla }))]} /></CampoRegistroActividad>}
             </div>
             <BotonAccion size="sm" variant="outline" onClick={() => setSeleccion((actual) => actual.filter((_linea, posicion) => posicion !== indice))}>Quitar del pedido</BotonAccion>
           </div>;
@@ -114,19 +118,22 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
         {errorPedido ? <p role="alert" className="text-red-600 dark:text-red-400">{errorPedido}</p> : <p className="text-lg font-bold" aria-live="polite">Total: {dinero(pedido.total_centavos)} MXN</p>}
       </section>
   );
-  const identificacionUnid = <><label className={etiquetaCampo}>Nombre completo<input className={inputCls} value={usuario?.nombre_completo || ''} readOnly /></label><label className={etiquetaCampo}>Matrícula *<input className={inputCls} value={matricula} readOnly={Boolean(usuario?.institutional_id)} inputMode="numeric" pattern="[0-9]+" maxLength={30} required onChange={(evento) => setMatricula(evento.target.value)} /></label></>;
-  const contactoCampo = (clave, etiqueta, tipo) => <label className={etiquetaCampo} key={clave}>{etiqueta} *<input className={inputCls} type={tipo} required maxLength={clave === 'correo' ? 254 : clave === 'telefono' ? 40 : 150} value={contacto[clave]} onChange={(evento) => setContacto((actual) => ({ ...actual, [clave]: evento.target.value }))} /></label>;
+  const identificacionUnid = <><CampoRegistroActividad id={idFormulario + '-nombre'} etiqueta="Nombre completo"><input id={idFormulario + '-nombre'} className={inputCls} value={usuario?.nombre_completo || ''} readOnly /></CampoRegistroActividad><CampoRegistroActividad id={idFormulario + '-matricula'} etiqueta="Matrícula *"><input id={idFormulario + '-matricula'} className={inputCls} value={matricula} readOnly={Boolean(usuario?.institutional_id)} inputMode="numeric" pattern="[0-9]+" maxLength={30} required onChange={(evento) => setMatricula(evento.target.value)} /></CampoRegistroActividad></>;
+  const contactoCampo = (clave, etiqueta, tipo) => <CampoRegistroActividad id={idFormulario + '-' + clave} etiqueta={etiqueta + ' *'} key={clave}><input id={idFormulario + '-' + clave} className={inputCls} type={tipo} required maxLength={clave === 'correo' ? 254 : clave === 'telefono' ? 40 : 150} value={contacto[clave]} onChange={(evento) => setContacto((actual) => ({ ...actual, [clave]: evento.target.value }))} /></CampoRegistroActividad>;
 
   function dibujarCampo(campo) {
     if (!campoActividadVisible(campo, respuestas)) return null;
-    const comunes = { id: 'mision-' + campo.clave, 'aria-label': campo.etiqueta + (campo.obligatorio ? ' *' : ' (opcional)'), className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
-     return <label className={etiquetaCampo + (campo.tipo === 'texto_largo' ? ' sm:col-span-2' : '')} key={campo.clave}>{campo.imagen_url && <ImagenPregunta src={campo.imagen_url} alt={'Imagen para ' + campo.etiqueta} className="mb-2 h-36 w-full" />}{campo.etiqueta}{campo.obligatorio ? ' *' : ' (opcional)'}
-      {['seleccion', 'licenciatura'].includes(campo.tipo) ? <select {...comunes} disabled={campo.tipo === 'licenciatura' && loading}>
-        <option value="">Selecciona una opción</option>
-        {(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ valor: item.id_licenciatura, texto: item.nombre })) : campo.opciones.map((opcion) => ({ valor: opcion, texto: opcion }))).map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.texto}</option>)}
-      </select> : campo.tipo === 'texto_largo' ? <textarea {...comunes} maxLength={2000} rows={4} /> : <input {...comunes} type={campo.tipo === 'fecha' ? 'date' : campo.tipo === 'numero' ? 'number' : campo.clave.endsWith('_telefono') ? 'tel' : 'text'} min={campo.minimo} max={campo.tipo === 'fecha' && campo.no_futura ? hoy : campo.maximo} step={campo.tipo === 'numero' ? 1 : undefined} maxLength={500} />}
-      {campo.ayuda && <span className={"block text-xs font-normal normal-case tracking-normal " + tema.subtitle}>{campo.ayuda}</span>}
-    </label>;
+    const id = idFormulario + '-' + campo.clave;
+    const etiqueta = campo.etiqueta + (campo.obligatorio ? ' *' : ' (opcional)');
+    const comunes = { id, 'aria-describedby': campo.ayuda ? id + '-ayuda' : undefined, className: inputCls, value: respuestas[campo.clave] ?? '', required: campo.obligatorio, onChange: (evento) => responder(campo.clave, evento.target.value) };
+    return <CampoRegistroActividad id={id} etiqueta={etiqueta} ayuda={campo.ayuda} className={campo.tipo === 'texto_largo' ? 'sm:col-span-2' : ''} key={campo.clave}>
+      {['seleccion', 'licenciatura'].includes(campo.tipo) ? <SelectorOpciones
+        id={id} name={campo.clave} etiqueta={etiqueta} descripcionId={comunes['aria-describedby']}
+        valor={String(respuestas[campo.clave] ?? '')} alCambiar={(valor) => responder(campo.clave, valor)}
+        required={campo.obligatorio} disabled={campo.tipo === 'licenciatura' && loading} botonClassName="h-11"
+        opciones={[{ value: '', label: 'Selecciona una opción' }, ...(campo.tipo === 'licenciatura' ? licenciaturas.map((item) => ({ value: String(item.id_licenciatura), label: item.nombre })) : campo.opciones.map((opcion) => ({ value: opcion, label: opcion })))]}
+      /> : campo.tipo === 'texto_largo' ? <textarea {...comunes} maxLength={2000} rows={4} /> : <input {...comunes} type={campo.tipo === 'fecha' ? 'date' : campo.tipo === 'numero' ? 'number' : campo.clave.endsWith('_telefono') ? 'tel' : 'text'} min={campo.minimo} max={campo.tipo === 'fecha' && campo.no_futura ? hoy : campo.maximo} step={campo.tipo === 'numero' ? 1 : undefined} maxLength={500} />}
+    </CampoRegistroActividad>;
   }
 
   if (registro && !editando) return <section aria-label="Tu inscripción a Misiones" className="space-y-4">
@@ -138,8 +145,8 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
   if (!abierta) return <p className={tema.subtitle}>{edicion.estado_registro === 'proxima' ? 'El formulario estará disponible al abrir las inscripciones.' : 'El periodo de inscripción y edición está cerrado.'}</p>;
   if (registro?.estado === 'cancelado' && invitado) return <p>Tu inscripción está cancelada. Consulta al encargado.</p>;
   const clavesBase = secciones.flatMap(({ claves }) => claves);
-  return <form aria-label="Registro a Misiones" onSubmit={guardar} className="space-y-6">
-    <fieldset disabled={pendiente} className="space-y-6">
+  return <form aria-label="Registro a Misiones" onSubmit={guardar} className="registro-actividad space-y-6">
+    <fieldset disabled={pendiente} className="min-w-0 space-y-6">
       {!mega && <section className="space-y-3"><h4 className="text-lg font-bold">{invitado ? 'Registro de invitado' : 'Participante UNID'}</h4>
         <div className="grid gap-4 sm:grid-cols-2">{invitado ? [['nombre_completo', 'Nombre completo', 'text'], ['correo', 'Correo electrónico', 'email'], ['telefono', 'Teléfono', 'tel']].map(([clave, etiqueta, tipo]) => contactoCampo(clave, etiqueta, tipo)) : identificacionUnid}</div>
       </section>}
@@ -147,16 +154,18 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
         <header className="space-y-1">{mega && <p className="text-xs font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">MEGAMISIONES · {indice + 1} de {secciones.length}</p>}<h4 className="text-lg font-bold">{grupo.titulo}</h4>{mega && <p className={'text-sm ' + tema.subtitle}>{grupo.descripcion}</p>}</header>
         {mega && grupo.id === 'contacto' && <>
           <p className={'text-sm leading-relaxed ' + tema.subtitle}>Tus datos se usarán para tu inscripción y la organización de la misión. El equipo puede contactarte por correo o WhatsApp con información de esta actividad.</p>
-          {invitado ? contactoCampo('correo', 'Correo electrónico', 'email') : <label className={etiquetaCampo}>Correo institucional<input className={inputCls} type="email" value={usuario?.correo_institucional || registro?.correo || ''} readOnly/><span className={'block text-xs font-normal ' + tema.subtitle}>Usamos el correo de tu cuenta UNID.</span></label>}
+          {invitado ? contactoCampo('correo', 'Correo electrónico', 'email') : <CampoRegistroActividad id={idFormulario + '-correo'} etiqueta="Correo institucional" ayuda="Usamos el correo de tu cuenta UNID."><input id={idFormulario + '-correo'} aria-describedby={idFormulario + '-correo-ayuda'} className={inputCls} type="email" value={usuario?.correo_institucional || registro?.correo || ''} readOnly/></CampoRegistroActividad>}
         </>}
-        {mega && grupo.id === 'personales' && <div className="grid gap-4 sm:grid-cols-2">{invitado ? contactoCampo('nombre_completo', 'Nombre completo', 'text') : identificacionUnid}{contactoCampo('telefono', 'Teléfono celular', 'tel')}</div>}
-        <div className="grid gap-4 sm:grid-cols-2">{campos.filter((campo) => grupo.claves.includes(campo.clave)).map(dibujarCampo)}</div>
+        <div className="grid items-start gap-4 sm:grid-cols-2">
+          {mega && grupo.id === 'personales' && <>{invitado ? contactoCampo('nombre_completo', 'Nombre completo', 'text') : identificacionUnid}{contactoCampo('telefono', 'Teléfono celular', 'tel')}</>}
+          {campos.filter((campo) => grupo.claves.includes(campo.clave)).map(dibujarCampo)}
+        </div>
         {mega && grupo.id === 'logistica' && <>
           {config.informacion_kit && <p className={'whitespace-pre-line text-sm ' + tema.subtitle}>{config.informacion_kit}</p>}
           {seccionPedido || <p className={'text-sm ' + tema.subtitle}>Los artículos extra se mostrarán cuando el encargado publique el catálogo con sus precios y tallas.</p>}
         </>}
       </section>)}
-      {campos.some((campo) => !clavesBase.includes(campo.clave)) && <div className="grid gap-4 sm:grid-cols-2">{campos.filter((campo) => !clavesBase.includes(campo.clave)).map(dibujarCampo)}</div>}
+      {campos.some((campo) => !clavesBase.includes(campo.clave)) && <div className="grid items-start gap-4 sm:grid-cols-2">{campos.filter((campo) => !clavesBase.includes(campo.clave)).map(dibujarCampo)}</div>}
       {!invitado && campos.some((campo) => campo.tipo === 'licenciatura') && errorLicenciaturas && <div role="alert"><p>No se pudieron cargar las licenciaturas.</p><BotonAccion variant="outline" onClick={recargar}>Volver a cargar</BotonAccion></div>}
       {!mega && seccionPedido}
       {(edicion.requiere_aportacion || edicion.catalogo?.length > 0 || registro?.aportaciones?.length > 0) && <section className="space-y-3"><h4 className="font-bold">Aportaciones para la actividad{edicion.requiere_aportacion ? ' (obligatorias)' : ' (opcionales)'}</h4><p className="text-sm">Comida, globos u otros materiales para la actividad.</p>{[...(edicion.catalogo || []), ...(registro?.aportaciones || []).filter((aporte) => aporte.estado !== 'cancelada' && !(edicion.catalogo || []).some((opcion) => opcion.id_opcion === aporte.id_opcion))].map((opcion) => {
@@ -171,6 +180,7 @@ export function RegistroMisiones({ edicion, registro, invitado = false, acceso, 
         <DocumentoMisiones id={registro?.codigo_firmado_id} acceso={acceso} nombre="codigo-conducta-firmado.pdf">Revisar mi PDF firmado</DocumentoMisiones>
         <label className={labelCls}>PDF firmado{config.codigo_obligatorio ? ' *' : ' (opcional)'}<input type="file" className={inputCls} accept="application/pdf,.pdf" required={config.codigo_obligatorio && !registro?.codigo_firmado_id} onChange={(evento) => setPdf(evento.target.files?.[0] || null)} /></label><p className={'text-xs ' + tema.subtitle}>Tamaño máximo: 10 MB.</p>
       </section>}
+      <ImagenesCuestionarioActividad campos={campos} respuestas={respuestas} />
       {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex flex-wrap gap-3"><BotonAccion type="submit" disabled={pendiente || Boolean(errorPedido)}>{pendiente ? 'Guardando…' : registro ? 'Guardar cambios' : 'Confirmar inscripción'}</BotonAccion>{registro && <BotonAccion variant="outline" onClick={() => setEditando(false)}>Volver a mi registro</BotonAccion>}</div>
     </fieldset>

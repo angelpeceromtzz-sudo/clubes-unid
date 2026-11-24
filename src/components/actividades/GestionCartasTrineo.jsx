@@ -17,6 +17,7 @@ export function GestionCartasTrineo({ idEdicion, onActualizar }) {
   const [formulario, setFormulario] = useState(VACIA);
   const [busqueda, setBusqueda] = useState('');
   const [estado, setEstado] = useState('todas');
+  const [cartasAbiertas, setCartasAbiertas] = useState(false);
   const [pendiente, setPendiente] = useState(false);
   const [errorOperacion, setErrorOperacion] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -70,17 +71,22 @@ export function GestionCartasTrineo({ idEdicion, onActualizar }) {
           <div className="flex flex-wrap gap-3"><BotonAccion type="submit">{pendiente ? 'Guardando…' : editada ? 'Guardar carta' : 'Agregar carta'}</BotonAccion>{editada && <BotonAccion variant="outline" onClick={limpiar}>Cancelar edición</BotonAccion>}</div>
         </fieldset>
       </form>}
-      <div className="grid gap-4 sm:grid-cols-2"><label className={labelCls}>Buscar carta o alumno<input className={inputCls} type="search" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} placeholder="Nombre, matrícula o número de carta" /></label><label className={labelCls}>Estado de la carta<select className={inputCls} value={estado} onChange={(evento) => setEstado(evento.target.value)}><option value="todas">Todas</option>{Object.entries(ETIQUETAS).map(([valor, etiqueta]) => <option key={valor} value={valor}>{etiqueta}</option>)}</select></label></div>
-      <BotonAccion variant="outline" size="sm" onClick={recargar}>Actualizar cartas</BotonAccion>
-      {!visibles.length && <p className={tema.subtitle}>{cartas.length ? 'No hay cartas que coincidan con la búsqueda.' : 'Todavía no hay cartas capturadas.'}</p>}
-      <div className="grid gap-4 sm:grid-cols-2">{visibles.map((carta) => <article key={carta.id_carta} className="min-w-0 space-y-3 rounded-xl border border-slate-400/25 p-4">
+       <div className="grid gap-4 sm:grid-cols-2"><label className={labelCls}>Buscar carta o alumno<input className={inputCls} type="search" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} placeholder="Nombre, matrícula o número de carta" /></label><label className={labelCls}>Estado de la carta<select className={inputCls} value={estado} onChange={(evento) => setEstado(evento.target.value)}><option value="todas">Todas</option>{Object.entries(ETIQUETAS).map(([valor, etiqueta]) => <option key={valor} value={valor}>{etiqueta}</option>)}</select></label></div>
+       <BotonAccion variant="outline" size="sm" onClick={recargar}>Actualizar cartas</BotonAccion>
+       <details open={cartasAbiertas || Boolean(consulta)} onToggle={(evento) => setCartasAbiertas(evento.currentTarget.open)} className="rounded-xl border border-slate-400/25">
+         <summary className="cursor-pointer px-4 py-3 font-semibold">Ver cartas ({cartas.length})</summary>
+         <div className="space-y-4 p-4">
+       {!visibles.length && <p className={tema.subtitle}>{cartas.length ? 'No hay cartas que coincidan con la búsqueda.' : 'Todavía no hay cartas capturadas.'}</p>}
+       <div className="grid gap-4 sm:grid-cols-2">{visibles.map((carta) => <article key={carta.id_carta} className="min-w-0 space-y-3 rounded-xl border border-slate-400/25 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-bold">Carta #{carta.id_carta}</span><span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold">{ETIQUETAS[carta.estado]}</span></div>
           <h4 className="font-bold">{carta.nombre} · {formatearEdadCarta(carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12))}</h4><p className="whitespace-pre-wrap break-words text-sm">{carta.deseo}</p>
         {carta.alumno_nombre && <div className="space-y-1 border-t border-slate-400/25 pt-3 text-sm"><p>Alumno: {carta.alumno_nombre} · {carta.matricula}</p><p>Compromiso: regalo de esta carta.</p></div>}
         {datos.editable && carta.estado === 'reservada' && carta.estado_registro === 'confirmado' && <BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => recibir(carta)}>Confirmar recepción del regalo</BotonAccion>}
         {carta.recibida_en && <p className={'text-xs ' + tema.subtitle}>Recibido el {new Date(carta.recibida_en).toLocaleString('es-MX', { timeZone: 'America/Merida' })}{carta.recibida_por_nombre ? ' por ' + carta.recibida_por_nombre : ''}.</p>}
          {datos.editable && ['disponible', 'retirada'].includes(carta.estado) && <div className="flex flex-wrap gap-2"><BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => { setEditada(carta); setFormulario({ nombre: carta.nombre, edad: carta.edad ?? Math.floor(Number(carta.edad_meses || 0) / 12), deseo: carta.deseo }); setErrorOperacion(''); }}>Editar carta</BotonAccion><BotonAccion variant="outline" size="sm" disabled={pendiente} onClick={() => alternar(carta)}>{carta.activa ? 'Retirar carta' : 'Volver a ofrecer'}</BotonAccion></div>}
-      </article>)}</div>
+       </article>)}</div>
+         </div>
+       </details>
     </>}
     {mensaje && <p role="status" className="text-emerald-700 dark:text-emerald-300">{mensaje}</p>}
     {errorOperacion && <p role="alert" className="text-red-600 dark:text-red-400">{errorOperacion}</p>}

@@ -34,7 +34,7 @@ describe('Trineo: cartas, reserva exclusiva y recepción del regalo', { skip: !c
     return { id, opcion, ruta: '/ediciones/' + id + '/registro', gestion: '/gestion/ediciones/' + id + '/cartas' };
   }
   const datosCarta = (nombre = 'Niño QA') => ({ nombre, edad: 7, deseo: 'Un trompo de madera' });
-  const registro = (e, idCarta) => ({ respuestas: {}, aportaciones: [{ id_opcion: e.opcion, cantidad: 1 }], ...(idCarta === undefined ? {} : { id_carta: idCarta }) });
+  const registro = (e, idCarta) => ({ respuestas: {}, aportaciones: [{ id_opcion: e.opcion, cantidad: 1 }], solicita_camisa: false, total_centavos: 0, ...(idCarta === undefined ? {} : { id_carta: idCarta }) });
   const nuevaCarta = (e, nombre) => enviar(2, 'POST', e.gestion, datosCarta(nombre), 201);
   const recibirCarta = (carta) => '/gestion/cartas-reservas/' + carta.id_reserva + '/recibir';
   async function inscripcionAnterior(e) {
@@ -78,7 +78,7 @@ describe('Trineo: cartas, reserva exclusiva y recepción del regalo', { skip: !c
     await enviar(null, 'POST', e.gestion, datosCarta(), 401);
     await enviar(9, 'POST', e.gestion, datosCarta(), 403);
     await enviar(22, 'POST', e.gestion, datosCarta(), 403);
-    for (const datos of [{ edad: 0 }, { edad: true }, { deseo: ' ' }, { nombre: '' }]) await enviar(2, 'POST', e.gestion, { ...datosCarta(), ...datos }, 400);
+    for (const datos of [{ edad: -1 }, { edad: true }, { deseo: ' ' }, { nombre: '' }]) await enviar(2, 'POST', e.gestion, { ...datosCarta(), ...datos }, 400);
     assert.equal((await db.query('SELECT cartas_habilitadas FROM actividades_ediciones WHERE id_edicion=$1', [e.id])).rows[0].cartas_habilitadas, false);
     const carta = await nuevaCarta(e);
     assert.equal((await db.query('SELECT cartas_habilitadas FROM actividades_ediciones WHERE id_edicion=$1', [e.id])).rows[0].cartas_habilitadas, true);
@@ -91,6 +91,33 @@ describe('Trineo: cartas, reserva exclusiva y recepción del regalo', { skip: !c
     assert.equal((await enviar(1, 'GET', '/ediciones/' + e.id + '/cartas')).cartas.length, 1);
     const otro = await edicion(misiones);
     await enviar(2, 'POST', otro.gestion, datosCarta(), 404);
+  });
+
+  test('camisas: omitir talla, cotizar en servidor y conservar el total al editar una inscripción', async () => {
+    const e = await edicion();
+    const anterior = await inscripcionAnterior(e);
+    const campo = { clave: 'talla', etiqueta: 'Talla de camisa', tipo: 'seleccion', obligatorio: true, opciones: ['M', 'L'], precio_camisa_centavos: 16000 };
+    await db.query('UPDATE actividades_ediciones SET campos_registro=$1 WHERE id_edicion=$2', [JSON.stringify([campo]), e.id]);
+    await db.query('UPDATE actividades_registros SET formulario_snapshot=$1 WHERE id_registro=$2', [JSON.stringify([campo]), anterior.id_registro]);
+    const sinCamisa = await enviar(1, 'PUT', e.ruta, { ...registro(e), respuestas: {}, solicita_camisa: false, total_centavos: 0 });
+    assert.equal(sinCamisa.pedido.total_centavos, 0);
+    assert.equal(sinCamisa.formulario_snapshot[0].obligatorio, false);
+    const carta = await nuevaCarta(e);
+    const pedir = { ...registro(e, carta.id_carta), respuestas: { talla: 'L' }, solicita_camisa: true, total_centavos: 16000 };
+    await enviar(9, 'PUT', e.ruta, { ...pedir, total_centavos: 1 }, 409);
+    assert.equal((await db.query('SELECT COUNT(*)::int AS total FROM actividades_registros WHERE id_edicion=$1 AND id_usuario=9', [e.id])).rows[0].total, 0);
+    const comprado = await enviar(9, 'PUT', e.ruta, pedir);
+    assert.equal(comprado.pedido.total_centavos, 16000);
+    assert.equal(comprado.pedido.lineas[0].talla, 'L');
+    await db.query('UPDATE actividades_ediciones SET campos_registro=$1 WHERE id_edicion=$2', [JSON.stringify([{ ...campo, precio_camisa_centavos: 18000 }]), e.id]);
+    assert.equal((await enviar(9, 'PUT', e.ruta, pedir)).pedido.total_centavos, 16000);
+    await enviar(9, 'PUT', e.ruta, { ...pedir, respuestas: { talla: 'M' } }, 409);
+    assert.equal((await enviar(9, 'PUT', e.ruta, { ...pedir, respuestas: { talla: 'M' }, total_centavos: 18000 })).pedido.total_centavos, 18000);
+    const gestion = await enviar(2, 'GET', '/gestion/ediciones/' + e.id);
+    assert.equal(gestion.registros.find((fila) => fila.id_usuario === 9).pedido.total_centavos, 18000);
+    const retirado = await enviar(9, 'PUT', e.ruta, { ...pedir, respuestas: {}, solicita_camisa: false, total_centavos: 0 });
+    assert.equal(retirado.pedido.lineas.length, 0);
+    assert.equal((await db.query('SELECT COUNT(*)::int AS total FROM actividades_registros WHERE id_edicion=$1', [e.id])).rows[0].total, 2);
   });
 
   test('los datos de niños requieren sesión y no aparecen en el detalle público', async () => {

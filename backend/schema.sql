@@ -94,6 +94,9 @@ CREATE TABLE IF NOT EXISTS cat_licenciaturas (
     modalidad      VARCHAR(20) NOT NULL DEFAULT 'escolarizada'
                    CONSTRAINT chk_licenciatura_modalidad CHECK (modalidad IN ('escolarizada', 'ejecutiva', 'dual', 'maestria'))
 );
+ALTER TABLE cat_licenciaturas ADD COLUMN IF NOT EXISTS modalidad VARCHAR(20) NOT NULL DEFAULT 'escolarizada';
+ALTER TABLE cat_licenciaturas DROP CONSTRAINT IF EXISTS chk_licenciatura_modalidad;
+ALTER TABLE cat_licenciaturas ADD CONSTRAINT chk_licenciatura_modalidad CHECK (modalidad IN ('escolarizada', 'ejecutiva', 'dual', 'maestria'));
 
 INSERT INTO cat_licenciaturas (nombre, orden, modalidad) VALUES
     ('Licenciatura en Administración Empresarial', 1, 'escolarizada'),

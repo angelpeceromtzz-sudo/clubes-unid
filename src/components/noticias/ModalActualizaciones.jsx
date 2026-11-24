@@ -4,10 +4,11 @@
    destacadas en banner, lista horizontal compacta para el resto y un detalle a
    pantalla completa. Se adapta al tema claro/oscuro del sitio y mantiene el
    indicador "No leído" y el color de categoría. Reutiliza NoticiasContext. */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ModalBase } from '../ui/ModalBase';
 import { Icono } from '../ui/Icono';
 import { ImagenAmpliable } from '../ui/ImagenAmpliable';
+import { SelectorOpciones } from '../ui/SelectorOpciones';
 import { useNoticias } from '../../contexts/NoticiasContext';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -32,146 +33,7 @@ const OPCIONES_FILTRO = [
 ];
 
 function SelectorCategorias({ id, valor, alCambiar }) {
-  const { modoOscuro } = useTheme();
-  const [abierto, setAbierto] = useState(false);
-  const [activo, setActivo] = useState(0);
-  const contenedorRef = useRef(null);
-  const botonRef = useRef(null);
-  const opcionesRef = useRef([]);
-  const seleccionada = OPCIONES_FILTRO.find((opcion) => opcion.value === valor) ?? OPCIONES_FILTRO[0];
-
-  useEffect(() => {
-    if (!abierto) return;
-    function cerrarAlPulsarFuera(evento) {
-      if (!contenedorRef.current?.contains(evento.target)) setAbierto(false);
-    }
-    document.addEventListener('pointerdown', cerrarAlPulsarFuera);
-    return () => document.removeEventListener('pointerdown', cerrarAlPulsarFuera);
-  }, [abierto]);
-
-  useEffect(() => {
-    if (abierto) opcionesRef.current[activo]?.focus();
-  }, [abierto, activo]);
-
-  function abrir() {
-    setActivo(Math.max(0, OPCIONES_FILTRO.findIndex((opcion) => opcion.value === valor)));
-    setAbierto(true);
-  }
-
-  function cerrar(devolverFoco = false) {
-    setAbierto(false);
-    if (devolverFoco) botonRef.current?.focus();
-  }
-
-  function elegir(valorElegido) {
-    alCambiar(valorElegido);
-    cerrar(true);
-  }
-
-  function manejarTeclaLista(evento) {
-    switch (evento.key) {
-      case 'ArrowDown':
-        evento.preventDefault();
-        setActivo((indice) => (indice + 1) % OPCIONES_FILTRO.length);
-        break;
-      case 'ArrowUp':
-        evento.preventDefault();
-        setActivo((indice) => (indice - 1 + OPCIONES_FILTRO.length) % OPCIONES_FILTRO.length);
-        break;
-      case 'Home':
-        evento.preventDefault();
-        setActivo(0);
-        break;
-      case 'End':
-        evento.preventDefault();
-        setActivo(OPCIONES_FILTRO.length - 1);
-        break;
-      case 'Escape':
-        evento.preventDefault();
-        evento.stopPropagation();
-        cerrar(true);
-        break;
-      case 'Enter':
-      case ' ':
-        evento.preventDefault();
-        elegir(OPCIONES_FILTRO[activo].value);
-        break;
-      case 'Tab':
-        setAbierto(false);
-        break;
-      default:
-        break;
-    }
-  }
-
-  return (
-    <div ref={contenedorRef} className="relative mt-3">
-      <span id={`${id}-label`} className={`mb-2 block text-xs font-semibold ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>Filtrar por categoría</span>
-      <button
-        ref={botonRef}
-        id={id}
-        type="button"
-        aria-labelledby={`${id}-label ${id}`}
-        aria-haspopup="listbox"
-        aria-expanded={abierto}
-        aria-controls={`${id}-opciones`}
-        onClick={() => (abierto ? cerrar() : abrir())}
-        onKeyDown={(evento) => {
-          if (evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
-            evento.preventDefault();
-            abrir();
-          }
-        }}
-        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-300/25 ${
-          modoOscuro ? 'bg-[#172238] text-white' : 'bg-white text-slate-900'
-        } ${
-          abierto
-            ? modoOscuro ? 'border-amber-300' : 'border-amber-500'
-            : modoOscuro ? 'border-slate-600 hover:border-amber-300/70' : 'border-slate-300 hover:border-amber-500'
-        }`}
-      >
-        <Icono nombre="filter" className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-amber-300' : 'text-amber-600'}`} strokeWidth={2} />
-        <span className="min-w-0 flex-1 truncate">{seleccionada.label}</span>
-        <Icono nombre="chevron-down" className={`h-4 w-4 shrink-0 transition-transform ${modoOscuro ? 'text-amber-300' : 'text-amber-600'} ${abierto ? 'rotate-180' : ''}`} strokeWidth={2.5} />
-      </button>
-      {abierto && (
-        <div
-          id={`${id}-opciones`}
-          role="listbox"
-          aria-labelledby={`${id}-label`}
-          onKeyDown={manejarTeclaLista}
-          className={`absolute top-full right-0 left-0 z-50 mt-2 rounded-xl border p-1.5 ${
-            modoOscuro
-              ? 'border-slate-600 bg-[#121d30] shadow-[0_14px_32px_rgba(2,6,23,0.45)]'
-              : 'border-slate-200 bg-white shadow-[0_14px_32px_rgba(15,23,42,0.16)]'
-          }`}
-        >
-          {OPCIONES_FILTRO.map((opcion, indice) => {
-            const elegida = valor === opcion.value;
-            return (
-              <button
-                key={opcion.value}
-                ref={(elemento) => { opcionesRef.current[indice] = elemento; }}
-                type="button"
-                role="option"
-                tabIndex={-1}
-                aria-selected={elegida}
-                onClick={() => elegir(opcion.value)}
-                className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-300/50 ${
-                  elegida
-                    ? modoOscuro ? 'bg-amber-300/15 font-semibold text-amber-200' : 'bg-amber-50 font-semibold text-amber-800'
-                    : modoOscuro ? 'text-slate-200 hover:bg-slate-700/70' : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <span className="flex-1">{opcion.label}</span>
-                {elegida && <Icono nombre="check" className={`h-4 w-4 shrink-0 ${modoOscuro ? 'text-amber-300' : 'text-amber-600'}`} strokeWidth={2.5} />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+  return <SelectorOpciones id={id} valor={valor} alCambiar={alCambiar} opciones={OPCIONES_FILTRO} etiqueta="Filtrar por categoría" mostrarEtiqueta icono="filter" className="mt-3" />;
 }
 
 function infoCategoria(categoria, modoOscuro) {
