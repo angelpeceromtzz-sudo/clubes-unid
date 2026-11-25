@@ -5,9 +5,9 @@ export const CATEGORIAS_EVENTO = [
 ];
 
 const ESTILOS_CATEGORIA_EVENTO = {
-  social: { punto: 'bg-indigo-400', claro: 'bg-indigo-100 text-indigo-800', oscuro: 'bg-indigo-500/20 text-indigo-200' },
-  deportivo: { punto: 'bg-red-400', claro: 'bg-red-100 text-red-800', oscuro: 'bg-red-500/20 text-red-200' },
-  cultural: { punto: 'bg-rose-400', claro: 'bg-rose-100 text-rose-800', oscuro: 'bg-rose-500/20 text-rose-200' },
+  social: { punto: 'bg-indigo-500', claro: 'bg-indigo-100 text-indigo-800', oscuro: 'bg-indigo-500/20 text-indigo-200' },
+  deportivo: { punto: 'bg-orange-500', claro: 'bg-orange-100 text-orange-800', oscuro: 'bg-orange-500/20 text-orange-200' },
+  cultural: { punto: 'bg-lime-500', claro: 'bg-lime-100 text-lime-900', oscuro: 'bg-lime-500/20 text-lime-200' },
 };
 
 export function estiloCategoriaEvento(value, modoOscuro) {

@@ -40,7 +40,7 @@ before(async () => {
       matricula TEXT, id_licenciatura INT, cuatrimestre INT, telefono_contacto TEXT, motivo_ingreso TEXT,
       experiencia_previa TEXT, status TEXT, fecha_envio TIMESTAMPTZ DEFAULT NOW(), id_convocatoria INT,
       bloque_asignado CHAR(1) DEFAULT 'E', fecha_oferta TIMESTAMPTZ, fecha_expiracion TIMESTAMPTZ,
-      fecha_respuesta TIMESTAMPTZ, motivo_rechazo TEXT);
+      fecha_respuesta TIMESTAMPTZ, motivo_rechazo TEXT, respuestas_extra JSONB NOT NULL DEFAULT '{}'::jsonb);
     CREATE TABLE notificaciones (id_notificacion SERIAL PRIMARY KEY, id_emisor INT, titulo TEXT, mensaje TEXT, audiencia TEXT, id_club INT, id_destinatario INT, CHECK (audiencia IN ('global','presidentes','alumnos','club')));
     CREATE TABLE actividad_clubes (id SERIAL PRIMARY KEY, tipo_evento TEXT, id_club INT, id_actor INT, descripcion TEXT, detalles JSONB);
     CREATE TABLE historial_admin (id SERIAL PRIMARY KEY, id_admin INT, admin_nombre TEXT, accion TEXT, descripcion TEXT, entidad_tipo TEXT, entidad_id INT, detalles JSONB);
