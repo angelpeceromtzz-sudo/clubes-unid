@@ -36,7 +36,7 @@ function categoriaDePorcentaje(porcentaje) {
 }
 
 const ESTADOS_ASISTENCIA = ['presente', 'ausente', 'justificado'];
-const MENSAJE_SIN_PERIODO = 'Aún no hay fechas establecidas para registrar asistencias. Cuando Coordinación las configure, podrás marcar la asistencia de tus sesiones.';
+const MENSAJE_SIN_PERIODO = 'No hay un periodo de actividad vigente. Aún no hay fechas establecidas para registrar asistencias. Cuando Coordinación las configure, podrás marcar la asistencia de tus sesiones.';
 
 // Estados efectivos calculados en lectura (PBI-05 §17–§19):
 // 'no_registrada' y 'no_completada' no se almacenan; se derivan de la fecha.

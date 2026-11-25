@@ -53,6 +53,21 @@ router.get('/', authenticate, requireClubReader, async (req, res) => {
 router.put('/', authenticate, requireRole(2), transaccion(async (req, client) => {
   const club = (await client.query('SELECT * FROM clubes_operativos WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
   if (!club) throw fallo(404, 'Club no encontrado');
+  const cicloActual = club.id_convocatoria_inscripcion_actual
+    ? (await client.query(
+      `SELECT fecha_apertura_programada, fecha_limite_cierre, max_postulaciones, cerrada_manualmente
+       FROM convocatorias_inscripcion
+       WHERE id_convocatoria_inscripcion = $1 AND id_club = $2
+       FOR UPDATE`,
+      [club.id_convocatoria_inscripcion_actual, club.id_club],
+    )).rows[0]
+    : null;
+  Object.assign(club, cicloActual || {
+    fecha_apertura_programada: null,
+    fecha_limite_cierre: null,
+    max_postulaciones: null,
+    cerrada_manualmente: false,
+  });
   if (!clubEstaActivo(club)) throw fallo(409, MENSAJE_CLUB_NO_ACTIVO);
   if (club.id_responsable_club !== req.user.id) throw fallo(403, 'Solo el presidente de este club puede proponer la convocatoria');
   await vencerInscripciones(client, req.params.id);
@@ -82,6 +97,21 @@ router.post('/revision', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION),
   if (observaciones.length > 2000 || (accion === 'rechazar' && !observaciones)) throw fallo(400, 'Explica las correcciones necesarias, en hasta 2000 caracteres');
   const club = (await client.query('SELECT * FROM clubes_operativos WHERE id_club = $1 FOR UPDATE', [req.params.id])).rows[0];
   if (!club) throw fallo(404, 'Club no encontrado');
+  const cicloActual = club.id_convocatoria_inscripcion_actual
+    ? (await client.query(
+      `SELECT fecha_apertura_programada, fecha_limite_cierre, max_postulaciones, cerrada_manualmente
+       FROM convocatorias_inscripcion
+       WHERE id_convocatoria_inscripcion = $1 AND id_club = $2
+       FOR UPDATE`,
+      [club.id_convocatoria_inscripcion_actual, club.id_club],
+    )).rows[0]
+    : null;
+  Object.assign(club, cicloActual || {
+    fecha_apertura_programada: null,
+    fecha_limite_cierre: null,
+    max_postulaciones: null,
+    cerrada_manualmente: false,
+  });
   if (accion === 'aprobar' && !clubEstaActivo(club)) throw fallo(409, MENSAJE_CLUB_NO_ACTIVO);
   await vencerInscripciones(client, req.params.id);
   const s = (await client.query('SELECT * FROM solicitudes_convocatoria WHERE id_club = $1 AND id_solicitud = $2 FOR UPDATE', [req.params.id, id_solicitud])).rows[0];
@@ -128,13 +158,17 @@ router.post('/revision', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION),
     }
 
     await client.query(
-      `UPDATE clubes_operativos
-       SET fecha_apertura_programada = $1, fecha_limite_cierre = $2, max_postulaciones = $3,
-           id_convocatoria_inscripcion_actual = $4,
-           postulaciones_actuales = (SELECT COUNT(*)::int FROM formularios WHERE id_convocatoria_inscripcion = $4),
-           cerrada_manualmente = CASE WHEN fecha_apertura_programada IS DISTINCT FROM $1::timestamptz THEN FALSE ELSE cerrada_manualmente END
-       WHERE id_club = $5`,
-      [c.fecha_apertura_programada, c.fecha_limite_cierre, c.max_postulaciones, idCiclo, req.params.id],
+      `UPDATE convocatorias_inscripcion
+       SET cerrada_manualmente = CASE
+         WHEN fecha_apertura_programada IS DISTINCT FROM $1::timestamptz THEN FALSE
+         ELSE cerrada_manualmente
+       END
+       WHERE id_convocatoria_inscripcion = $2 AND id_club = $3`,
+      [c.fecha_apertura_programada, idCiclo, req.params.id],
+    );
+    await client.query(
+      `UPDATE clubes_operativos SET id_convocatoria_inscripcion_actual = $1 WHERE id_club = $2`,
+      [idCiclo, req.params.id],
     );
   }
   await client.query('UPDATE solicitudes_convocatoria SET estado=$1,id_revisor=$2,observaciones=$3,fecha_revision=NOW() WHERE id_solicitud=$4',

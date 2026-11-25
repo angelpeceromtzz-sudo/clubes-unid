@@ -1,8 +1,8 @@
 // Generación de slugs para el enlace público de las encuestas.
 //
-// El slug ES la credencial de la encuesta: quien lo tiene puede responder, y no
-// hay login detrás (ver el bloque del módulo de encuestas en schema.sql). Por
-// eso tiene que ser aleatorio y no adivinable, no algo tipo 'encuesta-1'.
+// El slug identifica la encuesta y debe ser aleatorio, no adivinable. En el modo
+// público anónimo basta el enlace para responder; el modo institucional también
+// exige una sesión válida.
 import { randomBytes } from 'crypto';
 
 // Sin vocales ni 0/1/O/L. Motivo: el enlace se dicta por teléfono o se pega en
