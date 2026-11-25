@@ -125,16 +125,25 @@ export function PaginaCalendario({ onLoginClick }) {
                   const fechasAcademicas = elementosDia.filter((item) => item.origen === 'fecha');
                   const actividades = elementosDia.filter((item) => item.origen === 'evento');
                   const categorias = [...new Set(fechasAcademicas.map((item) => item.tipo))];
+                  const limiteMarcadores = elementosDia.length > 2 ? 1 : 2;
+                  const marcadores = elementosDia.slice(0, limiteMarcadores);
                   return <button key={clave} type="button" disabled={!dia} onClick={() => setDiaSeleccionado(clave)}
                     title={elementosDia.map((item) => `${item.origen === 'fecha' ? tipoFecha(item.tipo).label : nombreCategoriaEvento(item.tipo)}: ${item.titulo}`).join('\n') || undefined}
                     aria-label={dia ? `${fechaLegible(clave)}, ${elementosDia.length} fecha${elementosDia.length === 1 ? '' : 's'}` : undefined} aria-pressed={dia ? diaSeleccionado === clave : undefined}
                     className={`flex flex-col items-center gap-2 min-w-0 min-h-20 sm:min-h-24 px-1 py-2 border-t border-r focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-amber-400 ${modoOscuro ? 'border-slate-800/60' : 'border-slate-100'} ${dia ? 'cursor-pointer hover:bg-amber-400/5' : 'cursor-default'} ${diaSeleccionado === clave ? modoOscuro ? 'bg-amber-400/5 ring-1 ring-inset ring-amber-400/40' : 'bg-amber-50 ring-1 ring-inset ring-amber-300' : ''}`}>
                     {dia && <>
                       <span aria-current={clave === hoyClave ? 'date' : undefined} className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs ${clave === hoyClave ? 'bg-amber-400 font-bold text-slate-950' : tema.title}`}>{dia.getDate()}</span>
-                      {categorias.length > 0 && <span className="flex flex-wrap justify-center gap-0.5" aria-hidden="true">{categorias.slice(0, 2).map((valor) => <SimboloFecha key={valor} tipo={valor} compacto />)}{categorias.length > 2 && <span className={`text-[9px] self-center ${tema.subtitle}`}>+{categorias.length - 2}</span>}</span>}
-                      {actividades.length > 0 && <>
-                        <span className="flex flex-wrap justify-center gap-1 sm:hidden" aria-hidden="true">{[...new Set(actividades.map((item) => item.tipo))].slice(0, 3).map((valor) => <span key={valor} className={`h-2 w-2 rounded-full ${estiloCategoriaEvento(valor, modoOscuro).punto}`} />)}</span>
-                        <span className="hidden sm:flex flex-col gap-1 w-full" aria-hidden="true">{actividades.slice(0, categorias.length ? 1 : 2).map((item) => <span key={item.clave} className={`block truncate rounded px-1 py-1 text-left text-[9px] font-semibold ${estiloCategoriaEvento(item.tipo, modoOscuro).badge}`}>{item.titulo}</span>)}{actividades.length > (categorias.length ? 1 : 2) && <span className={`text-[9px] text-left ${tema.subtitle}`}>+{actividades.length - (categorias.length ? 1 : 2)} más</span>}</span>
+                      {elementosDia.length > 0 && <>
+                        <span className="flex max-w-full items-center justify-center gap-1 sm:hidden" aria-hidden="true">
+                          {marcadores.map((item) => item.origen === 'fecha'
+                            ? <SimboloFecha key={item.clave} tipo={item.tipo} mini />
+                            : <span key={item.clave} className={`h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-white/70 dark:ring-slate-900 ${estiloCategoriaEvento(item.tipo, modoOscuro).punto}`} />)}
+                          {elementosDia.length > marcadores.length && <span className={`text-[9px] font-semibold leading-none ${tema.subtitle}`}>+{elementosDia.length - marcadores.length}</span>}
+                        </span>
+                        {categorias.length > 0 && <span className="hidden sm:flex flex-wrap justify-center gap-0.5" aria-hidden="true">{categorias.slice(0, 2).map((valor) => <SimboloFecha key={valor} tipo={valor} compacto />)}{categorias.length > 2 && <span className={`text-[9px] self-center ${tema.subtitle}`}>+{categorias.length - 2}</span>}</span>}
+                        {actividades.length > 0 && <>
+                          <span className="hidden sm:flex flex-col gap-1 w-full" aria-hidden="true">{actividades.slice(0, categorias.length ? 1 : 2).map((item) => <span key={item.clave} className={`block truncate rounded px-1 py-1 text-left text-[9px] font-semibold ${estiloCategoriaEvento(item.tipo, modoOscuro).badge}`}>{item.titulo}</span>)}{actividades.length > (categorias.length ? 1 : 2) && <span className={`text-[9px] text-left ${tema.subtitle}`}>+{actividades.length - (categorias.length ? 1 : 2)} más</span>}</span>
+                        </>}
                       </>}
                     </>}
                   </button>;

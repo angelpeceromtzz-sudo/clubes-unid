@@ -59,12 +59,12 @@ export function QrMural({ editable = false }) {
       {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
       {mensaje && <p role="status" className="text-xs text-emerald-600">{mensaje}</p>}
       {cargando ? <p className={`text-xs ${tema.subtitle}`}>Cargando dirección del mural…</p> : <>
-        <div ref={svgRef} className="mx-auto w-fit rounded-xl bg-white p-3"><QRCodeSVG value={enlace} size={208} marginSize={4} level="M" bgColor="#ffffff" fgColor="#0e162c" title="Escanea para abrir el mural digital UNID" /></div>
+        <div ref={svgRef} className="mx-auto w-fit rounded-xl bg-white p-3"><QRCodeSVG value={enlace} size={208} marginSize={4} level="H" bgColor="#ffffff" fgColor="#0e162c" title="Escanea para abrir el mural digital UNID" imageSettings={{ src: '/branding/lobounid.png', width: 58, height: 49 }} /></div>
         <p className={`break-all text-center text-xs ${tema.subtitle}`}><a href={enlace} target="_blank" rel="noopener noreferrer" className="underline">{enlace}</a></p>
         {local && <p role="status" className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-600">Este QR apunta a esta computadora (localhost). Para abrirlo desde un teléfono, configura el dominio público del sitio.</p>}
         {pendiente && <p className={`text-xs ${tema.subtitle}`}>Guarda la nueva dirección para actualizar y descargar el QR.</p>}
         <div className="flex flex-wrap justify-center gap-2"><button type="button" disabled={pendiente || !!error} onClick={() => canvasRef.current?.toBlob((blob) => descargar(blob, 'mural-unid-qr.png'), 'image/png')} className={boton}>Descargar PNG</button><button type="button" disabled={pendiente || !!error} onClick={() => descargar(new Blob([new XMLSerializer().serializeToString(svgRef.current.querySelector('svg'))], { type: 'image/svg+xml;charset=utf-8' }), 'mural-unid-qr.svg')} className={boton}>Descargar SVG</button><button type="button" onClick={copiar} className={boton}>Copiar enlace</button></div>
-        <div className="hidden" aria-hidden="true"><QRCodeCanvas ref={canvasRef} value={enlace} size={1024} marginSize={4} level="M" bgColor="#ffffff" fgColor="#0e162c" /></div>
+        <div className="hidden" aria-hidden="true"><QRCodeCanvas ref={canvasRef} value={enlace} size={1024} marginSize={4} level="H" bgColor="#ffffff" fgColor="#0e162c" imageSettings={{ src: '/branding/lobounid.png', width: 286, height: 243 }} /></div>
       </>}
     </section>
   );

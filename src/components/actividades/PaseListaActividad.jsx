@@ -64,7 +64,7 @@ export function PaseListaActividad({ edicion }) {
         <div key={etiqueta} className={'rounded-xl border p-4 ' + cardCls}><p className={'text-2xl font-bold ' + tema.title}>{total}</p><p className={'text-sm ' + tema.subtitle}>{etiqueta}</p></div>)}
     </div>
     {codigo ? <div className={'flex flex-col items-start gap-5 rounded-xl border p-4 sm:flex-row ' + cardCls}>
-      <div className="max-w-full rounded-lg bg-white p-3"><QRCodeSVG value={enlace} size={208} marginSize={2} level="M" title={'Registrar asistencia a ' + edicion.nombre} style={{ maxWidth: '100%', height: 'auto' }} /></div>
+      <div className="max-w-full rounded-lg bg-white p-3"><QRCodeSVG value={enlace} size={208} marginSize={2} level="H" title={'Registrar asistencia a ' + edicion.nombre} imageSettings={{ src: '/branding/lobounid.png', width: 58, height: 49 }} style={{ maxWidth: '100%', height: 'auto' }} /></div>
       <div className="min-w-0 space-y-3"><p className="font-bold">Código de asistencia</p>
         <p className="font-mono text-2xl font-bold tracking-widest" aria-label="Código de asistencia">{codigo.slice(0, 4)} {codigo.slice(4)}</p>
         <p className={'text-sm ' + tema.subtitle}>Los inscritos pueden escanear este QR o escribir el código en Mis actividades.</p>
