@@ -85,6 +85,7 @@ test('el correo se normaliza antes de buscar la cuenta', async () => {
   // La consulta recibe el correo normalizado, no el que escribió el alumno.
   const busqueda = consultas.find((c) => /FROM usuarios u/.test(c.texto));
   assert.ok(busqueda, 'debe consultar la tabla de usuarios');
+  assert.match(busqueda.texto, /lower\(btrim\(u\.correo_institucional\)\)\s*=\s*\$1/i);
   assert.equal(busqueda.params[0], 'alumno@red.unid.mx');
 });
 

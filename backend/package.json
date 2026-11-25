@@ -8,6 +8,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
+    "migrate:managed": "node apply-migrations.js",
+    "db:audit:develop": "node diagnostics/auditar-develop.mjs",
     "test": "node --test"
   },
   "dependencies": {
