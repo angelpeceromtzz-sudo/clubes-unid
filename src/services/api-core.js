@@ -15,6 +15,24 @@ const FORMATO_TOKEN_DISPOSITIVO = /^[a-f0-9]{64}$/i;
 // la renovación de A, ni un login nuevo comparte la promesa de la época anterior.
 const renovacionesPendientes = new Map();
 let contadorEpoca = 0;
+let sesionExpiradaEnCurso = false;
+
+function limpiarSesionPor401() {
+  if (sesionExpiradaEnCurso) return;
+  sesionExpiradaEnCurso = true;
+  try {
+    localStorage.removeItem('unid_session');
+    localStorage.removeItem('unid_session_epoch');
+  } catch {
+    // Ignorar fallos de almacenamiento; el evento sigue notificando.
+  }
+  try {
+    window.dispatchEvent(new CustomEvent('clubsunid:session-expired'));
+    window.dispatchEvent(new StorageEvent('storage', { key: 'unid_session', newValue: null }));
+  } catch {
+    // Ignorar entornos sin window/dispatchEvent.
+  }
+}
 
 export function obtenerIdDispositivo() {
   try {
@@ -392,6 +410,7 @@ export async function setSession(data) {
     invalidarEpocaSesion();
     persistirSesion(data);
   });
+  sesionExpiradaEnCurso = false;
 }
 
 export async function iniciarSesionAlmacenada(data, {
@@ -407,6 +426,7 @@ export async function iniciarSesionAlmacenada(data, {
     // La sesión y su cuenta confiable se escriben en la misma sección crítica.
     if (dispositivoConfiable) guardarCuentaConfiable(dispositivoConfiable, data.user);
     else if (revocarDispositivo) limpiarCuentaConfiable();
+    sesionExpiradaEnCurso = false;
     return data;
   });
 }
@@ -418,6 +438,7 @@ export async function clearSession({ epocaEsperada, limpiarCuenta = false } = {}
     invalidarEpocaSesion();
     localStorage.removeItem('unid_session');
     if (limpiarCuenta) limpiarCuentaConfiable();
+    sesionExpiradaEnCurso = false;
     return true;
   });
 }
@@ -506,6 +527,7 @@ export async function request(endpoint, options = {}) {
   }
 
   if (!res.ok) {
+    if (res.status === 401) limpiarSesionPor401();
     const servidor = typeof data?.error === 'string' && data.error ? data.error : null;
     // H19: los fallos sistémicos llevan mensaje propio (el 500 del backend y
     // el 404 global no son texto pensado para pintarse); el resto de 4xx son

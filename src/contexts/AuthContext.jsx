@@ -58,9 +58,14 @@ export function ProveedorAutenticacion({ children: hijos }) {
     const alRenovarSesion = (evento) => {
       if (evento.detail) actualizarUsuario(evento.detail);
     };
+    const alExpirarSesion = () => limpiarEstadoSesion();
     window.addEventListener('clubsunid:session-refreshed', alRenovarSesion);
-    return () => window.removeEventListener('clubsunid:session-refreshed', alRenovarSesion);
-  }, [actualizarUsuario]);
+    window.addEventListener('clubsunid:session-expired', alExpirarSesion);
+    return () => {
+      window.removeEventListener('clubsunid:session-refreshed', alRenovarSesion);
+      window.removeEventListener('clubsunid:session-expired', alExpirarSesion);
+    };
+  }, [actualizarUsuario, limpiarEstadoSesion]);
 
   const obtenerMisFormularios = useCallback(async () => {
     try {

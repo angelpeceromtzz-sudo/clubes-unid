@@ -140,6 +140,12 @@ function App() {
   const [consentimientoPendiente, setConsentimientoPendiente] = useState(false);
   const [consentimientoError, setConsentimientoError] = useState(false);
 
+  useEffect(() => {
+    const alExpirarSesion = () => setShowLogin(true);
+    window.addEventListener('clubsunid:session-expired', alExpirarSesion);
+    return () => window.removeEventListener('clubsunid:session-expired', alExpirarSesion);
+  }, []);
+
   const idUsuario = usuario?.id_usuario ?? usuario?.id;
   const claveTutorialAlumno = idUsuario ? `tutorial_alumno_${idUsuario}_pending` : null;
 
