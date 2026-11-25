@@ -27,7 +27,8 @@ describe('integración de aprobación, eventos y mural', { skip: !databaseUrl },
     assert.ok(inicio >= 0 && fin > inicio);
     await cliente.query(sql.slice(0, inicio) + sql.slice(fin));
     await cliente.query(`INSERT INTO noticias (titulo, contenido, publicada) VALUES
-      ('Publicación anterior', 'Se conserva visible', TRUE), ('Borrador anterior', 'Se conserva oculto', FALSE)`);
+      ('Publicación anterior', '{"version":1,"blocks":[{"type":"paragraph","text":"Se conserva visible","marks":[]}]}'::jsonb, TRUE),
+      ('Borrador anterior', '{"version":1,"blocks":[{"type":"paragraph","text":"Se conserva oculto","marks":[]}]}'::jsonb, FALSE)`);
     await cliente.query(sql);
     await cliente.query(`INSERT INTO usuarios (id_usuario, nombre_completo, correo_institucional, id_rol) VALUES
       (1, 'Alumno QA', 'alumno@example.test', 1),
@@ -90,6 +91,27 @@ describe('integración de aprobación, eventos y mural', { skip: !databaseUrl },
     const anteriores = await cliente.query('SELECT titulo, status, publicada FROM noticias ORDER BY id_noticia');
     assert.deepEqual(anteriores.rows.map((fila) => [fila.status, fila.publicada]), [['published', true], ['draft', false]]);
     assert.equal((await cliente.query('SELECT nombre_rol FROM cat_roles WHERE id_rol = 6')).rows[0].nombre_rol, 'responsable_mural');
+  });
+
+  test('guarda contenido rico en JSONB y entrega texto plano para vistas previas', async () => {
+    const documento = {
+      version: 1,
+      blocks: [
+        { type: 'heading', level: 2, text: 'Aviso importante' },
+        { type: 'paragraph', text: 'Consulta los detalles.', marks: ['bold'] },
+        { type: 'image', url: 'https://res.cloudinary.com/demo/image/upload/aviso.jpg', alt: 'Cartel del aviso' },
+      ],
+    };
+    const creada = await enviar('POST', '/noticias', { titulo: 'Aviso JSON', contenido_json: documento });
+    assert.equal(creada.status, 201);
+    assert.deepEqual(creada.datos.contenido_json, documento);
+    assert.equal(creada.datos.contenido, 'Aviso importante\nConsulta los detalles.');
+
+    const invalida = await enviar('POST', '/noticias', {
+      titulo: 'Imagen inválida',
+      contenido_json: { version: 1, blocks: [{ type: 'image', url: 'javascript:alert(1)', alt: '' }] },
+    });
+    assert.equal(invalida.status, 400);
   });
 
   test('el responsable conserva periodo y selección del mural al editar solo sus borradores', async () => {

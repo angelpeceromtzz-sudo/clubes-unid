@@ -7,6 +7,7 @@ import { registrarHistorial } from '../lib/audit.js';
 import { eliminarImagenCloudinary } from '../lib/eliminarImagenCloudinary.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
 import { fechaEventoValida, errorProgramacionEvento, hoyEnCampus } from '../lib/fechasEvento.js';
+import { normalizarContenidoNoticia } from '../lib/contenidoNoticia.js';
 
 // 3 admin · 4 rectoría · 6 responsable_mural. Los tres redactan; sólo
 // rectoría (4) aprueba, rechaza u oculta. Ver `TRANSICIONES`.
@@ -19,7 +20,9 @@ const MOTIVO_MAX = 500;
 const CATEGORIAS_PERMITIDAS = ['promocion', 'evento', 'informativo'];
 const CATEGORIAS_EVENTO = ['social', 'deportivo', 'cultural'];
 
-const CAMPOS = `id_noticia, titulo, subtitulo, contenido, url_imagen, destacada,
+const CAMPOS = `id_noticia, titulo, subtitulo,
+                fn_noticia_texto_plano(contenido) AS contenido,
+                contenido AS contenido_json, url_imagen, destacada,
                 publicada, categoria, fecha_evento::text AS fecha_evento, fecha_fin_evento::text AS fecha_fin_evento,
                 mostrar_en_mural, hora_evento, lugar_evento, categoria_evento,
                 status, motivo_rechazo, fecha_revision,
@@ -228,17 +231,15 @@ router.get('/admin', authenticate, requireRole(...ROLES_EDITOR), async (req, res
 // Crea una noticia — admin / rectoría / responsable del mural
 router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
-    const { titulo, subtitulo, contenido, url_imagen, destacada, categoria, fecha_evento, fecha_fin_evento, mostrar_en_mural, solo_calendario, hora_evento, lugar_evento, categoria_evento, status } = req.body;
+    const { titulo, subtitulo, contenido, contenido_json, url_imagen, destacada, categoria, fecha_evento, fecha_fin_evento, mostrar_en_mural, solo_calendario, hora_evento, lugar_evento, categoria_evento, status } = req.body;
 
     if (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 200) {
       return res.status(400).json({ error: 'El título es obligatorio' });
     }
     if (solo_calendario !== undefined && typeof solo_calendario !== 'boolean') return res.status(400).json({ error: 'Opción de calendario no válida' });
     if (solo_calendario) return res.status(400).json({ error: 'Las fechas académicas se guardan desde Calendario académico, no como eventos' });
-    const contenidoFinal = typeof contenido === 'string' ? contenido.trim() : '';
-    if (!contenidoFinal) {
-      return res.status(400).json({ error: 'El contenido es obligatorio' });
-    }
+    const contenidoValidado = normalizarContenidoNoticia(contenido_json ?? contenido);
+    if (contenidoValidado.error) return res.status(400).json({ error: contenidoValidado.error });
     const categoriaFinal = categoria ?? 'informativo';
     if (!CATEGORIAS_PERMITIDAS.includes(categoriaFinal)) {
       return res.status(400).json({ error: 'Categoría no válida' });
@@ -270,12 +271,12 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
 
     const result = await pool.query(
       `INSERT INTO noticias (titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, hora_evento, lugar_evento, categoria_evento, status, id_autor, fecha_fin_evento, mostrar_en_mural)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+       VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING ${CAMPOS}`,
       [
         titulo.trim(),
         subtitulo?.trim() || null,
-        contenidoFinal,
+        JSON.stringify(contenidoValidado.documento),
         url_imagen || null,
         destacada === true,
         statusFinal === 'published',
@@ -314,14 +315,14 @@ router.post('/', authenticate, requireRole(...ROLES_EDITOR), async (req, res) =>
 router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, subtitulo, contenido, url_imagen, destacada, publicada, categoria, fecha_evento, fecha_fin_evento, mostrar_en_mural, solo_calendario, hora_evento, lugar_evento, categoria_evento, status } = req.body;
+    const { titulo, subtitulo, contenido, contenido_json, url_imagen, destacada, publicada, categoria, fecha_evento, fecha_fin_evento, mostrar_en_mural, solo_calendario, hora_evento, lugar_evento, categoria_evento, status } = req.body;
 
     if (titulo !== undefined && (typeof titulo !== 'string' || !titulo.trim() || titulo.length > 200)) {
       return res.status(400).json({ error: 'El título no puede quedar vacío' });
     }
-    if (contenido !== undefined && (typeof contenido !== 'string' || !contenido.trim())) {
-      return res.status(400).json({ error: 'El contenido no puede quedar vacío' });
-    }
+    const contenidoEntrada = contenido_json ?? contenido;
+    const contenidoValidado = contenidoEntrada === undefined ? null : normalizarContenidoNoticia(contenidoEntrada);
+    if (contenidoValidado?.error) return res.status(400).json({ error: contenidoValidado.error });
     if (categoria !== undefined && !CATEGORIAS_PERMITIDAS.includes(categoria)) {
       return res.status(400).json({ error: 'Categoría no válida' });
     }
@@ -338,8 +339,8 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     // endpoints de revisión (enviar-revision / aprobar / rechazar / ocultar).
     let statusParam = null;
     if (status !== undefined) {
-      if (req.user.id_rol !== ROL_RECTORIA && req.user.id_rol !== ROL_ADMIN) {
-        return res.status(403).json({ error: 'Sólo rectoría o administración pueden cambiar el estado de una publicación' });
+      if (req.user.id_rol !== ROL_RECTORIA) {
+        return res.status(403).json({ error: 'Sólo rectoría puede cambiar el estado de una publicación' });
       }
       if (!esEstadoValido(status)) {
         return res.status(400).json({ error: 'Estado no válido' });
@@ -361,7 +362,7 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
     }
     // El admin y el responsable corrigen borradores o rechazadas; mientras la
     // noticia está en revisión o publicada, el contenido lo decide rectoría.
-    if (req.user.id_rol !== ROL_RECTORIA && req.user.id_rol !== ROL_ADMIN && !['draft', 'rejected'].includes(noticiaActual.status)) {
+    if (req.user.id_rol !== ROL_RECTORIA && !['draft', 'rejected'].includes(noticiaActual.status)) {
       return res.status(409).json({
         error: 'Sólo puedes editar borradores o noticias rechazadas; mientras esté en revisión o publicada el contenido lo valida rectoría',
       });
@@ -387,7 +388,7 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
       `UPDATE noticias
        SET titulo      = COALESCE($1, titulo),
            subtitulo   = COALESCE($2, subtitulo),
-           contenido   = COALESCE($3, contenido),
+           contenido   = COALESCE($3::jsonb, contenido),
            url_imagen  = COALESCE($4, url_imagen),
            destacada   = COALESCE($5, destacada),
            publicada    = COALESCE($6, publicada),
@@ -404,7 +405,7 @@ router.put('/:id', authenticate, requireRole(...ROLES_EDITOR), async (req, res) 
       [
         titulo !== undefined ? titulo.trim() : null,
         subtitulo === undefined ? null : subtitulo?.trim() || '',
-        contenido !== undefined ? contenido.trim() : null,
+        contenidoValidado ? JSON.stringify(contenidoValidado.documento) : null,
         url_imagen !== undefined ? (url_imagen || null) : null,
         destacada === undefined ? null : destacada === true,
         // La bandera sólo la entiende rectoría; para los demás se ignora para
