@@ -23,7 +23,7 @@ const COLOR_FONDO = '#ffffff';
 // que es justo cómo lo va a mirar el alumno.
 const TAMANO = 176;
 const NIVEL = 'H';
-const LOGO = { src: '/branding/lobounid.png', width: 62, height: 53 };
+const LOGO = { src: '/branding/lobounid.png', width: 68, height: 58 };
 const ESCALA_DESCARGA = 4;
 
 export function QrEncuesta({ enlace, titulo, slug }) {
