@@ -131,7 +131,9 @@ export function PanelRespuestas({ idEncuesta }) {
                 >
                   <div className="min-w-0">
                     <p className={`text-sm font-bold ${tema.title}`}>
-                      {r.licenciatura || 'Sin programa'}
+                      {r.respondiente
+                        ? `${r.respondiente}${r.matricula ? ` · ${r.matricula}` : ''}`
+                        : r.licenciatura || 'Sin programa'}
                     </p>
                     <p className={`text-[11px] ${tema.subtitle}`}>{formatearFecha(r.fecha_envio)}</p>
                   </div>

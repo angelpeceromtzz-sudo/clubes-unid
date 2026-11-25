@@ -162,7 +162,7 @@ function ListaEncuestas({ hook }) {
     <div className="space-y-4">
       <EncabezadoPagina
         titulo="Encuestas"
-        subtitulo="Diagnóstico de intereses de los alumnos. El enlace es público y no pide sesión."
+        subtitulo="Diagnóstico de intereses con acceso público anónimo o institucional, según la privacidad elegida."
       />
 
 
@@ -360,6 +360,23 @@ function ListaEncuestas({ hook }) {
             maxLength={200}
           />
 
+          <label className="block space-y-1.5 text-sm font-semibold">
+            <span>Privacidad y acceso</span>
+            <select
+              value={formNueva.tipo_privacidad}
+              onChange={(e) => setFormNueva({ ...formNueva, tipo_privacidad: e.target.value })}
+              disabled={enviando}
+              className={`w-full rounded-xl border px-3 py-2 ${selectCls}`}
+            >
+              <option value="publico_anonimo">Pública y anónima</option>
+              <option value="institucional">Institucional (requiere iniciar sesión)</option>
+            </select>
+            <span className={`block text-xs font-normal ${tema.subtitle}`}>
+              La pública acepta respuestas sin cuenta y no guarda identidad. La institucional
+              requiere cuenta UNID y registra quién respondió.
+            </span>
+          </label>
+
           <div className="grid grid-cols-2 gap-3">
             <CampoTexto
               label="Abre (opcional)"
@@ -410,7 +427,7 @@ function ListaEncuestas({ hook }) {
                 borrando.estado === 'borrador' && borrando.total_respuestas > 0
                   ? ` Sus ${borrando.total_respuestas} ${
                       borrando.total_respuestas === 1 ? 'respuesta' : 'respuestas'
-                    } anónimas también se descartarán (requiere contraseña de administrador).`
+                    } también se descartarán, incluida la identidad asociada si era institucional (requiere contraseña de administrador).`
                   : borrando.total_respuestas > 0
                   ? ` Tiene ${borrando.total_respuestas} ${
                       borrando.total_respuestas === 1 ? 'respuesta' : 'respuestas'
@@ -468,10 +485,11 @@ function ListaEncuestas({ hook }) {
       />
 
       <p className={`text-[11px] ${tema.subtitle}`}>
-        <span className="opacity-70">Las respuestas son anónimas por diseño:</span> la encuesta
-        no guarda nombre ni matrícula, sólo el programa que el alumno elige. Por eso una
-        encuesta con respuestas sólo se puede borrar si está en borrador — ahí sus respuestas
-        se descartan —; en las demás no, sólo cerrar.
+        <span className="opacity-70">Privacidad:</span>{' '}
+        {hook.seleccion?.tipo_privacidad === 'institucional'
+          ? 'la identidad queda vinculada a la cuenta UNID y solo se muestra en el panel autorizado. '
+          : 'las respuestas no guardan nombre ni matrícula. '}
+        Una encuesta con respuestas solo se puede borrar si está en borrador; las demás se pueden cerrar.
       </p>
     </div>
   );

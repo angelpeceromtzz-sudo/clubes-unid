@@ -167,7 +167,7 @@ export const ACERCA = {
     colaboracion: [
       {
         nombre: 'David Antonio Chacón González',
-        rol: 'Rector de la universidad',
+        rol: 'Subsecretario de educación media superior y superior',
         aportacion: 'Beneficiario del proyecto: aporta necesidades que orientan su desarrollo.',
         frase: null,
         foto: '/personas/rector-campeche.png',

@@ -53,6 +53,7 @@ const ENCUESTA_NUEVA_VACIA = {
   descripcion: '',
   fecha_inicio: '',
   fecha_fin: '',
+  tipo_privacidad: 'publico_anonimo',
 };
 
 /**
@@ -73,6 +74,7 @@ function formDesdeDetalle(detalle) {
     estado: detalle.estado ?? ESTADO_ENCUESTA.BORRADOR,
     fecha_inicio: aInputDateTime(detalle.fecha_inicio),
     fecha_fin: aInputDateTime(detalle.fecha_fin),
+    tipo_privacidad: detalle.tipo_privacidad ?? 'publico_anonimo',
   };
 }
 
@@ -282,6 +284,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
       formEncuesta.estado !== detalle.estado ||
       formEncuesta.fecha_inicio !== aInputDateTime(detalle.fecha_inicio) ||
       formEncuesta.fecha_fin !== aInputDateTime(detalle.fecha_fin)
+      || formEncuesta.tipo_privacidad !== (detalle.tipo_privacidad ?? 'publico_anonimo')
     );
   }, [formEncuesta, detalle]);
 
@@ -492,6 +495,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
         descripcion: formNueva.descripcion,
         fecha_inicio: formNueva.fecha_inicio,
         fecha_fin: formNueva.fecha_fin,
+        tipo_privacidad: formNueva.tipo_privacidad,
       });
 
       setFormNueva(ENCUESTA_NUEVA_VACIA);
@@ -597,6 +601,7 @@ export function useSeccionEncuestas(setFeedbackExterno, usuario) {
           estado: estadoObjetivo,
           fecha_inicio: formEncuesta.fecha_inicio,
           fecha_fin: formEncuesta.fecha_fin,
+          tipo_privacidad: formEncuesta.tipo_privacidad,
         });
 
         // El detalle se reemplaza por lo que devolvió el servidor, no por el

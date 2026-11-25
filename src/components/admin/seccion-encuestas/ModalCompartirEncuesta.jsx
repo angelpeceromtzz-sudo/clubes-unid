@@ -115,9 +115,9 @@ export function ModalCompartirEncuesta({ encuesta, onClose }) {
       </div>
 
       <p className={`text-[11px] mt-5 ${tema.subtitle}`}>
-        El enlace es público y no pide sesión. Las respuestas son anónimas: la
-        encuesta guarda sólo el programa que el alumno elige, nunca su nombre ni
-        su matrícula.
+        {encuesta?.tipo_privacidad === 'institucional'
+          ? 'El enlace requiere iniciar sesión con cuenta UNID. La identidad del respondiente queda asociada y solo aparece en el panel autorizado.'
+          : 'El enlace es público y no pide sesión. Las respuestas son anónimas: no se guarda nombre ni matrícula.'}
       </p>
     </ModalBase>
   );

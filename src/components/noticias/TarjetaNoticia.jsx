@@ -10,6 +10,8 @@ import { periodoEvento } from '../../utils/calendario';
 import { nombreCategoriaEvento, estiloCategoriaEvento } from '../../constants/categoriasEvento';
 import { estiloPublicacion } from '../../constants/publicaciones';
 import { fechaHoyCampus } from '../../utils/fechas';
+import { textoPlanoNoticia } from '../../utils/contenidoNoticia';
+import { ContenidoNoticia } from './ContenidoNoticia';
 
 const LIMITE_PALABRAS = 50;
 
@@ -17,10 +19,9 @@ export function TarjetaNoticia({ noticia, interesado = false, interesReciente = 
   const { tema, modoOscuro } = useTheme();
   const [expandida, setExpandida] = useState(false);
 
-  const tieneMas = contarPalabras(noticia.contenido) > LIMITE_PALABRAS;
-  const contenido = tieneMas && !expandida
-    ? recortarPalabras(noticia.contenido, LIMITE_PALABRAS)
-    : noticia.contenido;
+  const textoPlano = textoPlanoNoticia(noticia.contenido_json ?? noticia.contenido);
+  const tieneMas = contarPalabras(textoPlano) > LIMITE_PALABRAS;
+  const contenido = recortarPalabras(textoPlano, LIMITE_PALABRAS);
   const esEvento = noticia.categoria === 'evento';
   const finalizado = esEvento && noticia.fecha_evento && String(noticia.fecha_fin_evento || noticia.fecha_evento).slice(0, 10) < fechaHoyCampus();
   const cantidadInteresados = Number(totalInteresados) || 0;
@@ -75,9 +76,9 @@ export function TarjetaNoticia({ noticia, interesado = false, interesReciente = 
           </div>
         )}
 
-        <p className={`mt-3 text-sm leading-relaxed whitespace-pre-line break-words ${tema.subtitle}`}>
-          {contenido}
-        </p>
+        {tieneMas && !expandida
+          ? <p className={`mt-3 text-sm leading-relaxed whitespace-pre-line break-words ${tema.subtitle}`}>{contenido}</p>
+          : <ContenidoNoticia contenido={noticia.contenido_json ?? noticia.contenido} className={`mt-3 text-sm ${tema.subtitle}`} />}
 
         {tieneMas && (
           <button

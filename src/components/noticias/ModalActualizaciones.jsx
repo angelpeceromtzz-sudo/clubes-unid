@@ -12,6 +12,7 @@ import { SelectorOpciones } from '../ui/SelectorOpciones';
 import { useNoticias } from '../../contexts/NoticiasContext';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { ContenidoNoticia } from './ContenidoNoticia';
 import { api } from '../../services/api';
 import { estiloPublicacion } from '../../constants/publicaciones';
 import { fechaHoyCampus } from '../../utils/fechas';
@@ -660,9 +661,7 @@ export function ModalActualizaciones({ onLoginClick }) {
               )}
               {renderInteres(noticia)}
               {/* Cuerpo */}
-              <p className={`mt-5 text-sm leading-relaxed whitespace-pre-line break-words ${tm.textoSuave}`}>
-                {noticia.contenido}
-              </p>
+              <ContenidoNoticia contenido={noticia.contenido_json ?? noticia.contenido} className={`mt-5 text-sm ${tm.textoSuave}`} />
 
               <p className={`mt-6 text-[10px] uppercase tracking-wider ${tm.textoTenue}`}>
                 Publicado el {fechaCorta(noticia.fecha_publicacion)}
@@ -749,9 +748,7 @@ export function ModalActualizaciones({ onLoginClick }) {
             </p>
           )}
           {renderInteres(noticiaMobile)}
-          <p className={`mt-4 text-sm leading-relaxed whitespace-pre-line break-words ${tm.textoSuave}`}>
-            {noticiaMobile.contenido}
-          </p>
+          <ContenidoNoticia contenido={noticiaMobile.contenido_json ?? noticiaMobile.contenido} className={`mt-4 text-sm ${tm.textoSuave}`} />
           <p className={`mt-6 shrink-0 pb-4 text-[10px] uppercase tracking-wider ${tm.textoTenue}`}>
             Publicado el {fechaCorta(noticiaMobile.fecha_publicacion)}
           </p>
