@@ -57,6 +57,8 @@ const PREGUNTAS = [
 
 const insertados = [];
 let ultimoInsert = null;
+let tipoPrivacidad = 'publico_anonimo';
+let encabezadoRespuestaInsertada = null;
 
 function responder(sql, params = []) {
   const texto = String(sql).trim();
@@ -64,9 +66,16 @@ function responder(sql, params = []) {
   // Revalidación de authenticate: admin ficticio.
   if (/FROM usuarios u[\s\S]*WHERE u\.id_usuario = \$1 AND u\.deleted_at IS NULL/.test(texto)) {
     return {
-      rows: [{ id_usuario: 300, nombre_completo: 'Admin Ficticio', id_rol: 3 }],
+      rows: [{ id_usuario: params[0], nombre_completo: 'Usuario Ficticio', id_rol: params[0] === 300 ? 3 : 1 }],
       rowCount: 1,
     };
+  }
+
+  if (/SELECT tipo_privacidad FROM encuestas WHERE slug/.test(texto)) {
+    return { rows: [{ tipo_privacidad: tipoPrivacidad }], rowCount: 1 };
+  }
+  if (/SELECT tipo_privacidad FROM encuestas[\s\S]*FOR SHARE/.test(texto)) {
+    return { rows: [{ tipo_privacidad: tipoPrivacidad }], rowCount: 1 };
   }
 
   // Definiciones de las preguntas (con sus opciones).
@@ -92,6 +101,7 @@ function responder(sql, params = []) {
           descripcion: '',
           mensaje_agradecimiento: '',
           estado: 'publicada',
+          tipo_privacidad: tipoPrivacidad,
           fecha_inicio: null,
           fecha_fin: null,
         },
@@ -119,6 +129,7 @@ function responder(sql, params = []) {
   }
 
   if (/INSERT INTO respuestas_encuesta/.test(texto)) {
+    encabezadoRespuestaInsertada = { sql: texto, params };
     return { rows: [{ id_respuesta: 500 }], rowCount: 1 };
   }
 
@@ -159,12 +170,11 @@ before(async () => {
 after(() => servidor?.close());
 
 async function pedir(metodo, ruta, cuerpo, tokenUsuario = tokenAdmin) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (tokenUsuario) headers.Authorization = `Bearer ${tokenUsuario}`;
   return fetch(`${base}${ruta}`, {
     method: metodo,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${tokenUsuario}`,
-    },
+    headers,
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
 }
@@ -183,17 +193,34 @@ test('el esquema declara la opción especial y su texto libre', async () => {
   assert.match(esquema, /chk_detalle_valor CHECK \(num_nonnulls\(id_opcion, texto, numero\) = 1\)/);
 });
 
-test('la migración es aditiva e idempotente', async () => {
-  const migracion = await readFile(
+test('la migración vigente es aditiva y la histórica no puede reinstalar el límite anterior', async () => {
+  const migracionHistorica = await readFile(
     path.join(__dirname, '..', 'migrations', 'migrate-encuestas-otro.sql'),
     'utf8'
   );
+  const migracionVigente = await readFile(
+    path.join(__dirname, '..', 'migrations', 'migrate-encuestas-otro-reglas.sql'),
+    'utf8'
+  );
 
-  assert.match(migracion, /ADD COLUMN IF NOT EXISTS es_otro/);
-  assert.match(migracion, /ADD COLUMN IF NOT EXISTS texto_otro/);
-  assert.match(migracion, /CREATE UNIQUE INDEX IF NOT EXISTS uq_opcion_otro/);
+  assert.match(migracionVigente, /ADD COLUMN IF NOT EXISTS es_otro/);
+  assert.match(migracionVigente, /ADD COLUMN IF NOT EXISTS texto_otro/);
+  assert.match(migracionVigente, /CREATE UNIQUE INDEX IF NOT EXISTS uq_opcion_otro/);
+  assert.match(migracionHistorica, /RAISE EXCEPTION/);
+  assert.doesNotMatch(migracionHistorica, /ALTER\s+TABLE/i);
   // No toca datos: ni DROP de tabla ni de columna.
-  assert.doesNotMatch(migracion, /DROP\s+(TABLE|COLUMN)/i);
+  assert.doesNotMatch(migracionVigente, /DROP\s+(TABLE|COLUMN)/i);
+});
+
+test('la migración de privacidad conserva respuestas y no retroasigna identidad', async () => {
+  const migracion = await readFile(
+    path.join(__dirname, '..', 'migrations', 'migrate-encuestas-privacidad.sql'),
+    'utf8',
+  );
+  assert.match(migracion, /tipo_privacidad VARCHAR\(24\) NOT NULL DEFAULT 'publico_anonimo'/);
+  assert.match(migracion, /ADD COLUMN IF NOT EXISTS id_usuario INT/);
+  assert.match(migracion, /ON DELETE SET NULL/);
+  assert.doesNotMatch(migracion, /UPDATE respuestas_encuesta|DELETE FROM|DROP\s+(TABLE|COLUMN)/i);
 });
 
 // --- opciones --------------------------------------------------------------
@@ -285,6 +312,7 @@ test('«Otro» con texto se guarda en la fila de esa opción', async () => {
   // id_opcion = la opción especial; el texto va en su propia columna.
   assert.equal(filas[0][2], 112);
   assert.equal(filas[0][5], 'Prefiero música');
+  assert.equal(filas[0][6], 1, 'el detalle debe guardar la encuesta validada por la ruta');
 });
 
 test('«Otro» sin texto se rechaza', async () => {
@@ -367,4 +395,34 @@ test('una pregunta sin «Otro» se comporta como antes', async () => {
   assert.equal(filas.length, 1);
   assert.equal(filas[0][3], 'hola');
   assert.equal(filas[0][5], null);
+});
+
+test('una encuesta institucional exige sesión antes de aceptar respuestas', async () => {
+  tipoPrivacidad = 'institucional';
+  const r = await pedir('POST', '/api/encuestas/publico/encuesta-de-prueba', { respuestas: [] }, null);
+  assert.equal(r.status, 401);
+  tipoPrivacidad = 'publico_anonimo';
+});
+
+test('la respuesta institucional guarda al usuario autenticado, nunca un id del payload', async () => {
+  tipoPrivacidad = 'institucional';
+  encabezadoRespuestaInsertada = null;
+  const tokenAlumno = token(301, 'Alumno Ficticio', 1);
+  const r = await pedir(
+    'POST',
+    '/api/encuestas/publico/encuesta-de-prueba',
+    { respuestas: [], id_usuario: 999 },
+    tokenAlumno,
+  );
+  assert.equal(r.status, 201);
+  assert.equal(encabezadoRespuestaInsertada.params[2], 301);
+  tipoPrivacidad = 'publico_anonimo';
+});
+
+test('una encuesta pública sigue guardando respuestas sin identidad aunque haya sesión', async () => {
+  tipoPrivacidad = 'publico_anonimo';
+  encabezadoRespuestaInsertada = null;
+  const r = await pedir('POST', '/api/encuestas/publico/encuesta-de-prueba', { respuestas: [] });
+  assert.equal(r.status, 201);
+  assert.equal(encabezadoRespuestaInsertada.params[2], null);
 });

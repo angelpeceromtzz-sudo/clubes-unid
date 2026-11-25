@@ -1,10 +1,8 @@
 // Módulo de encuestas (PBI-10).
 //
-// El modelo es asimétrico a propósito: el ADMIN escribe autenticado, el ALUMNO
-// responde sin sesión. La encuesta no guarda ni nombre ni matrícula —esa es la
-// razón de que la tabla respuestas_encuesta no tenga esas columnas—, así que
-// contestar no expone datos personales. La IP se lee para el rate limit, pero
-// nunca se escribe en la base.
+// La privacidad se configura por encuesta: las públicas aceptan respuestas
+// anónimas y las institucionales requieren sesión y vinculan la cuenta. La IP
+// se usa para el rate limit, pero nunca se escribe en la base.
 import { Router } from 'express';
 import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import pool from '../db.js';
@@ -19,6 +17,25 @@ validarParamsEnteros(router);
 
 const ROLES_ESCRITURA = [ROL_ADMIN, ROL_COORDINACION];
 const ROLES_LECTURA = [ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION];
+const PRIVACIDADES = ['publico_anonimo', 'institucional'];
+
+// Solo las encuestas institucionales autentican al respondiente. La privacidad
+// se consulta en BD por slug; nunca se decide a partir del payload del cliente.
+async function autenticarSiInstitucional(req, res, next) {
+  try {
+    const { rows } = await pool.query(
+      'SELECT tipo_privacidad FROM encuestas WHERE slug = $1 AND estado = \'publicada\'',
+      [req.params.slug],
+    );
+    if (rows[0]?.tipo_privacidad === 'institucional') {
+      return authenticate(req, res, next);
+    }
+    next();
+  } catch (err) {
+    console.error('Error al verificar privacidad de encuesta:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
 
 // Los tipos de la entrega 1, más 'licenciatura'. Los de la entrega 2 (número,
 // ranking, matriz) se validan al añadir la interfaz: meterlos aquí sin frontend
@@ -120,7 +137,7 @@ router.get('/publico/:slug', async (req, res) => {
 
   try {
     const encuesta = await pool.query(
-      `SELECT id_encuesta, titulo, descripcion, mensaje_agradecimiento, fecha_inicio, fecha_fin, estado FROM encuestas WHERE slug = $1`,
+      `SELECT id_encuesta, titulo, descripcion, mensaje_agradecimiento, fecha_inicio, fecha_fin, estado, tipo_privacidad FROM encuestas WHERE slug = $1`,
       [slug]
     );
 
@@ -163,6 +180,7 @@ router.get('/publico/:slug', async (req, res) => {
       descripcion: e.descripcion,
       mensaje_agradecimiento: e.mensaje_agradecimiento,
       fecha_fin: e.fecha_fin,
+      tipo_privacidad: e.tipo_privacidad,
       preguntas: preguntas.rows,
     });
   } catch (err) {
@@ -217,13 +235,13 @@ router.get('/publico/:slug/resumen', limitadorLecturasPesadas, async (req, res) 
  * respuesta a la pregunta de tipo 'licenciatura'. Si la encuesta no tiene esa
  * pregunta, no hay forma de mandar un programa y la columna queda en NULL.
  */
-router.post('/publico/:slug', limiteEnvio, async (req, res) => {
+router.post('/publico/:slug', limiteEnvio, autenticarSiInstitucional, async (req, res) => {
   const { slug } = req.params;
   const { respuestas } = req.body;
 
   try {
     const encuesta = await pool.query(
-      `SELECT id_encuesta, fecha_inicio, fecha_fin
+      `SELECT id_encuesta, fecha_inicio, fecha_fin, tipo_privacidad
        FROM encuestas
        WHERE slug = $1 AND estado = 'publicada'`,
       [slug]
@@ -276,11 +294,30 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
     try {
       await client.query('BEGIN');
 
+      // Serializa el envío con el cambio de privacidad. Si el modo cambió
+      // después del middleware, vuelve a decidirse aquí sobre la fila bloqueada.
+      const bloqueada = await client.query(
+        `SELECT tipo_privacidad FROM encuestas
+         WHERE id_encuesta = $1 AND estado = 'publicada'
+         FOR SHARE`,
+        [e.id_encuesta],
+      );
+      if (!bloqueada.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Encuesta no encontrada' });
+      }
+      const modoPrivacidad = bloqueada.rows[0].tipo_privacidad;
+      if (modoPrivacidad === 'institucional' && !req.user) {
+        await client.query('ROLLBACK');
+        return res.status(401).json({ error: 'Inicia sesión con tu cuenta institucional para responder.' });
+      }
+
       const envio = await client.query(
-        `INSERT INTO respuestas_encuesta (id_encuesta, id_licenciatura)
-         VALUES ($1, $2)
+        `INSERT INTO respuestas_encuesta (id_encuesta, id_licenciatura, id_usuario)
+         VALUES ($1, $2, $3)
          RETURNING id_respuesta`,
-        [e.id_encuesta, idLicenciatura.valor]
+        [e.id_encuesta, idLicenciatura.valor,
+         modoPrivacidad === 'institucional' ? req.user.id : null]
       );
 
       const idRespuesta = envio.rows[0].id_respuesta;
@@ -296,8 +333,8 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
       for (const fila of validado.filas) {
         await client.query(
           `INSERT INTO detalle_respuestas
-             (id_respuesta, id_pregunta, id_opcion, texto, numero, texto_otro)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
+             (id_respuesta, id_pregunta, id_opcion, texto, numero, texto_otro, id_encuesta)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [
             idRespuesta,
             fila.id_pregunta,
@@ -305,6 +342,7 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
             fila.texto ?? null,
             fila.numero ?? null,
             fila.texto_otro ?? null,
+            e.id_encuesta,
           ]
         );
       }
@@ -314,6 +352,9 @@ router.post('/publico/:slug', limiteEnvio, async (req, res) => {
       res.status(201).json({ message: 'Respuestas enviadas' });
     } catch (err) {
       await client.query('ROLLBACK');
+      if (err.code === '23505' && err.constraint === 'uq_respuesta_encuesta_usuario') {
+        return res.status(409).json({ error: 'Ya enviaste una respuesta a esta encuesta institucional.' });
+      }
       throw err;
     } finally {
       client.release();
@@ -693,7 +734,7 @@ function valorDeRespuesta(valorCrudo, definicion, textoOtroCrudo) {
 router.get('/admin', authenticate, requireRole(...ROLES_LECTURA), async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT e.id_encuesta, e.slug, e.titulo, e.descripcion, e.estado,
+      `SELECT e.id_encuesta, e.slug, e.titulo, e.descripcion, e.estado, e.tipo_privacidad,
               e.fecha_inicio, e.fecha_fin, e.fecha_creacion,
               (SELECT COUNT(*) FROM respuestas_encuesta r
                 WHERE r.id_encuesta = e.id_encuesta) AS total_respuestas,
@@ -717,7 +758,11 @@ router.get('/admin', authenticate, requireRole(...ROLES_LECTURA), async (req, re
  * no repartir un link a una encuesta a medio armar.
  */
 router.post('/admin', authenticate, requireRole(...ROLES_ESCRITURA), async (req, res) => {
-  const { titulo, descripcion, fecha_inicio, fecha_fin } = req.body;
+  const { titulo, descripcion, fecha_inicio, fecha_fin, tipo_privacidad = 'publico_anonimo' } = req.body;
+
+  if (!PRIVACIDADES.includes(tipo_privacidad)) {
+    return res.status(400).json({ error: 'Tipo de privacidad inválido' });
+  }
 
   if (!titulo || typeof titulo !== 'string' || titulo.trim().length === 0) {
     return res.status(400).json({ error: 'El título es obligatorio' });
@@ -742,12 +787,12 @@ router.post('/admin', authenticate, requireRole(...ROLES_ESCRITURA), async (req,
     const slug = await generarSlugLibre(pool);
 
     const result = await pool.query(
-      `INSERT INTO encuestas (titulo, descripcion, slug, id_creador, fecha_inicio, fecha_fin)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO encuestas (titulo, descripcion, slug, id_creador, fecha_inicio, fecha_fin, tipo_privacidad)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id_encuesta, slug, titulo, descripcion, estado,
-                 fecha_inicio, fecha_fin, fecha_creacion`,
+                 fecha_inicio, fecha_fin, fecha_creacion, tipo_privacidad`,
       [titulo.trim(), descripcion?.trim() || null, slug, req.user.id,
-       fechas.inicio, fechas.fin]
+       fechas.inicio, fechas.fin, tipo_privacidad]
     );
 
     res.status(201).json(result.rows[0]);
@@ -761,7 +806,7 @@ router.post('/admin', authenticate, requireRole(...ROLES_ESCRITURA), async (req,
 router.get('/admin/:id', authenticate, requireRole(...ROLES_LECTURA), async (req, res) => {
   try {
     const encuesta = await pool.query(
-      `SELECT id_encuesta, slug, titulo, descripcion, mensaje_agradecimiento, estado,
+      `SELECT id_encuesta, slug, titulo, descripcion, mensaje_agradecimiento, estado, tipo_privacidad,
               fecha_inicio, fecha_fin, fecha_creacion
        FROM encuestas WHERE id_encuesta = $1`,
       [req.params.id]
@@ -1058,9 +1103,13 @@ router.get(
     }
     try {
       const respuestas = await pool.query(
-        `SELECT r.id_respuesta, r.fecha_envio, r.id_licenciatura, l.nombre AS licenciatura
+        `SELECT r.id_respuesta, r.fecha_envio, r.id_licenciatura, l.nombre AS licenciatura,
+                CASE WHEN e.tipo_privacidad = 'institucional' THEN u.nombre_completo END AS respondiente,
+                CASE WHEN e.tipo_privacidad = 'institucional' THEN u.institutional_id END AS matricula
          FROM respuestas_encuesta r
+         JOIN encuestas e ON e.id_encuesta = r.id_encuesta
          LEFT JOIN cat_licenciaturas l ON l.id_licenciatura = r.id_licenciatura
+         LEFT JOIN usuarios u ON u.id_usuario = r.id_usuario
          WHERE r.id_encuesta = $1
          ORDER BY r.fecha_envio DESC`,
         [idEncuesta]
@@ -1086,6 +1135,8 @@ router.get(
           id_respuesta: r.id_respuesta,
           fecha_envio: r.fecha_envio,
           licenciatura: r.licenciatura || null,
+          respondiente: r.respondiente || null,
+          matricula: r.matricula || null,
           respuestas: [],
         });
       }
@@ -1376,7 +1427,11 @@ function porcentaje(conteo, base) {
  * COALESCE por columna para que un PUT no borre lo que el panel no mandó.
  */
 router.put('/admin/:id', authenticate, requireRole(...ROLES_ESCRITURA), async (req, res) => {
-  const { titulo, descripcion, mensaje_agradecimiento, estado, fecha_inicio, fecha_fin } = req.body;
+  const { titulo, descripcion, mensaje_agradecimiento, estado, fecha_inicio, fecha_fin, tipo_privacidad } = req.body;
+
+  if (tipo_privacidad !== undefined && !PRIVACIDADES.includes(tipo_privacidad)) {
+    return res.status(400).json({ error: 'Tipo de privacidad inválido' });
+  }
     if (estado === 'publicada') {
       const q = await pool.query('SELECT COUNT(*) as total FROM preguntas WHERE id_encuesta = $1', [req.params.id]);
       if (parseInt(q.rows[0].total, 10) === 0) {
@@ -1421,35 +1476,64 @@ router.put('/admin/:id', authenticate, requireRole(...ROLES_ESCRITURA), async (r
     if (errDesc) return res.status(400).json({ error: errDesc });
   }
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query('BEGIN');
+    if (tipo_privacidad !== undefined) {
+      const actual = await client.query(
+        `SELECT e.tipo_privacidad,
+                EXISTS (SELECT 1 FROM respuestas_encuesta r WHERE r.id_encuesta = e.id_encuesta) AS tiene_respuestas
+         FROM encuestas e WHERE e.id_encuesta = $1
+         FOR UPDATE`,
+        [req.params.id],
+      );
+      if (!actual.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Encuesta no encontrada' });
+      }
+      if (actual.rows[0].tipo_privacidad !== tipo_privacidad && actual.rows[0].tiene_respuestas) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({
+          error: 'La privacidad no puede cambiar después de recibir respuestas.',
+        });
+      }
+    }
+
+    const result = await client.query(
       `UPDATE encuestas
        SET titulo = COALESCE($2, titulo),
            descripcion = $3,
            mensaje_agradecimiento = $4,
            estado = COALESCE($5, estado),
            fecha_inicio = $6,
-           fecha_fin = $7
+           fecha_fin = $7,
+           tipo_privacidad = COALESCE($8, tipo_privacidad)
        WHERE id_encuesta = $1
        RETURNING id_encuesta, slug, titulo, descripcion, mensaje_agradecimiento,
-                 estado, fecha_inicio, fecha_fin`,
+                 estado, fecha_inicio, fecha_fin, tipo_privacidad`,
       [req.params.id,
        titulo?.trim() ?? null,
        descripcion === undefined ? null : descripcion?.trim() || null,
        mensaje_agradecimiento === undefined ? null : mensaje_agradecimiento?.trim() || null,
        estado ?? null,
        fechas.inicio,
-       fechas.fin]
+       fechas.fin,
+       tipo_privacidad ?? null]
     );
 
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Encuesta no encontrada' });
     }
 
+    await client.query('COMMIT');
     res.json(result.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error al actualizar encuesta:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    client.release();
   }
 });
 
