@@ -28,9 +28,10 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { abrirPanelResponsable } from '../services/panelResponsable';
 
 const NAV_SIN_CLUB = [
+  ELEMENTOS_NAV_ALUMNO.find((item) => item.key === 'panel'),
   { key:'postulaciones',label:'Mis postulaciones',icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5h6M9 12h6M9 16h6' },
   ...ELEMENTOS_NAV_ALUMNO.filter((item)=>item.key==='mis-actividades'),
-];
+].filter(Boolean);
 
 export function PanelAlumno() {
   const navigate=useNavigate();
@@ -46,6 +47,7 @@ export function PanelAlumno() {
   const pasosTutorial = useMemo(() => [
     { titulo: 'Bienvenido a tu panel', texto: 'Aquí puedes consultar tu club, tus postulaciones y las actividades que tienes asignadas.', target: '[data-tutorial="panel-alumno"]' },
     { titulo: 'Menú de navegación', texto: 'Abre este menú para entrar a tu panel, revisar tus postulaciones y consultar tus actividades.', target: '[data-tutorial="menu-panel"]' },
+    { titulo: 'Tu perfil', texto: 'Consulta y edita tu información personal, insignias e intereses desde aquí.', target: '[data-tutorial="perfil"]' },
     { titulo: 'Noticias y eventos', texto: 'Desde aquí puedes consultar las noticias, novedades y eventos de la universidad.', target: '[data-tutorial="noticias-eventos"]' },
     { titulo: 'Calendario', texto: 'Consulta en el calendario los eventos y actividades programados.', target: '[data-tutorial="calendario"]' },
     ...(d.club ? [
@@ -69,7 +71,7 @@ export function PanelAlumno() {
     const opciones=d.club ? ELEMENTOS_NAV_ALUMNO : NAV_SIN_CLUB;
     return usuario?.id_rol===1 ? opciones : opciones.filter((item)=>item.key!=='mis-actividades');
   },[d.club,usuario?.id_rol]);
-  const [vistaAlumno,setVistaAlumno]=useVistaPanel(elementosNav,d.club ? 'mi-club' : 'mi-panel');
+  const [vistaAlumno, setVistaAlumno] = useVistaPanel(elementosNav, d.club ? 'mi-club' : 'mi-panel');
   const [dismissMiembroBanner,setDismissMiembroBanner]=useState(()=>{
     try{return localStorage.getItem('dismiss_miembro_banner')==='true';}catch{return false;}
   });
@@ -140,7 +142,7 @@ export function PanelAlumno() {
   return <ErrorBoundary><RutaProtegida><NavegacionPanel elementosNav={elementosNav} vistaActiva={vistaAlumno} onVistaChange={setVistaAlumno} fullHeight={vistaAlumno === 'chat-club'}>
     {vistaAlumno !== 'chat-club' && <div data-tutorial="panel-alumno" className="mb-6 md:mb-8"><EncabezadoPagina titulo="Mi panel" subtitulo={'Bienvenido, '+(usuario?.nombre_completo || '')}/></div>}
 
-    {vistaAlumno==='mi-panel' && <section className="mb-6 space-y-4" data-tutorial="resumen-alumno">
+    {(vistaAlumno === 'panel' || vistaAlumno === 'mi-panel') && <section className="mb-6 space-y-4" data-tutorial="resumen-alumno">
       <div>
         <h2 className={'text-xl font-black '+tema.title}>Tu resumen</h2>
         <p className={'mt-1 text-sm '+tema.subtitle}>Desde aquí puedes continuar con tus solicitudes o explorar los clubes.</p>
@@ -169,7 +171,7 @@ export function PanelAlumno() {
     {vistaAlumno==='postulaciones' && <section data-tutorial="postulaciones" className="space-y-5"><h2 className={'text-2xl font-bold '+tema.title}>Mis postulaciones</h2>
       {d.postulaciones.length ? <SeccionPostulaciones postulaciones={d.postulaciones} onPostulacionesChange={d.recargar}/> : <div className="rounded-2xl border border-slate-400/25 p-6 space-y-3"><p className={tema.subtitle}>No tienes una inscripción activa ni postulaciones a clubes.</p><Link to="/campus/campeche/portal" className="inline-block font-semibold text-amber-600 dark:text-amber-400 underline">Explorar clubes</Link></div>}
     </section>}
-    {vistaAlumno==='mi-club' && d.club && <>
+    {(vistaAlumno === 'panel' || vistaAlumno === 'mi-club') && d.club && <>
       {!dismissMiembroBanner && <div className="mb-8 relative"><button type="button" onClick={descartarBanner} title="No mostrar más" aria-label="No mostrar aviso de membresía" className="absolute top-3 right-3 p-1 rounded-full cursor-pointer z-10"><Icono nombre="close" className="h-4 w-4"/></button><Alerta tipo="success"><div className="flex items-center gap-3"><span className="text-2xl">🎉</span><div><h2 className={'text-lg font-black '+(modoOscuro ? 'text-emerald-300' : 'text-emerald-700')}>Miembro de {d.club.nombre_club}</h2><p className="text-sm">Eres miembro oficial de este club</p></div></div></Alerta></div>}
       <div data-tutorial="mi-club" className="grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-2 space-y-8"><div data-tutorial="alumno-info-club"><InformacionClub club={d.club}/></div><div data-tutorial="avisos-club"><SeccionAvisos club={d.club} esResponsableClub={false}/></div></div><div data-tutorial="alumno-miembros-club" className="space-y-8"><SeccionMiembros miembros={d.miembros} club={d.club}/></div></div>
     </>}

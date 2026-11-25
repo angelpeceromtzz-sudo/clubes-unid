@@ -2187,6 +2187,8 @@ DO $$ BEGIN
 END $$;
 ALTER TABLE clubes ALTER COLUMN cupo_maximo DROP NOT NULL;
 ALTER TABLE clubes ALTER COLUMN participacion DROP NOT NULL;
+ALTER TABLE clubes ALTER COLUMN cupo_maximo DROP DEFAULT;
+ALTER TABLE clubes ALTER COLUMN participacion DROP DEFAULT;
 UPDATE clubes SET slug = 'club-' || id_club WHERE slug IS NULL;
 UPDATE clubes SET estado_publicacion = CASE WHEN id_estatus_club = 3 THEN 'archivada' ELSE 'publicada' END WHERE estado_publicacion IS NULL;
 ALTER TABLE clubes ALTER COLUMN estado_publicacion SET DEFAULT 'borrador';

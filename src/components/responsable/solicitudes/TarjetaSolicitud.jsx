@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { api } from '../../../services/api';
 import { AvatarInicial } from '../../ui/AvatarInicial';
 import { Badge } from '../../ui/Badge';
 
@@ -9,25 +8,8 @@ export function TarjetaSolicitud({ solicitud, seleccionados, onToggleSeleccion }
   const estatusActual = solicitud.status;
   const [motivoAbierto, setMotivoAbierto] = useState(false);
   const [extraAbierto, setExtraAbierto] = useState(false);
-  const [preguntasMap, setPreguntasMap] = useState({});
   const seleccionado = seleccionados.includes(solicitud.id_formulario);
-
-  useEffect(() => {
-    if (!solicitud.id_club) return;
-    let cancelado = false;
-    (async () => {
-      try {
-        const data = await api.get(`/clubes/${solicitud.id_club}/preguntas`);
-        if (cancelado) return;
-        const map = {};
-        (Array.isArray(data) ? data : []).forEach((p) => { map[p.id_pregunta] = p.etiqueta; });
-        setPreguntasMap(map);
-      } catch {
-        // Ignorar: se mostrarán los ids.
-      }
-    })();
-    return () => { cancelado = true; };
-  }, [solicitud.id_club]);
+  const respuestasExtra = solicitud.respuestas_extra || {};
 
   return (
     <div className={`rounded-xl p-4 transition-all ${modoOscuro ? 'bg-[#0e162c] border border-slate-700/50 hover:border-slate-600/50' : 'bg-white border border-slate-200 shadow-sm hover:border-slate-300'}`}>
@@ -97,7 +79,7 @@ export function TarjetaSolicitud({ solicitud, seleccionados, onToggleSeleccion }
             </div>
           )}
 
-          {solicitud.respuestas_extra && Object.keys(solicitud.respuestas_extra).length > 0 && (
+          {Object.keys(respuestasExtra).length > 0 && (
             <div className="mt-2">
               <button
                 onClick={() => setExtraAbierto((p) => !p)}
@@ -107,10 +89,10 @@ export function TarjetaSolicitud({ solicitud, seleccionados, onToggleSeleccion }
               </button>
               {extraAbierto && (
                 <div className={`mt-2 rounded-lg p-3 border ${modoOscuro ? 'bg-[#18223f] border-slate-700/30' : 'bg-slate-100 border-slate-200/30'}`}>
-                  {Object.entries(solicitud.respuestas_extra).map(([key, val]) => (
+                  {Object.entries(respuestasExtra).map(([key, val]) => (
                     <div key={key} className="mb-2">
                       <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">
-                        {preguntasMap[key] || `Pregunta ${key}`}
+                        {solicitud.respuestas_extra_preguntas?.[key] || `Pregunta ${key}`}
                       </p>
                       <p className={`text-sm ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>{String(val)}</p>
                     </div>

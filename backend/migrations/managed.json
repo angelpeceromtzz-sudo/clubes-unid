@@ -24,6 +24,7 @@
     "migrate-noticias-contenido-jsonb.sql",
     "migrate-reconocimientos-ocultar.sql",
     "migrate-encuestas-respuestas-restrict.sql",
-    "migrate-ciclo-inscripcion-configuracion-unica.sql"
+    "migrate-ciclo-inscripcion-configuracion-unica.sql",
+    "migrate-catalogo-tipo-datos-sin-defaults.sql"
   ]
 }
