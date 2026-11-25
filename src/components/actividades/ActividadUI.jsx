@@ -59,12 +59,7 @@ export function CatalogoActividades({
     ? actividades.filter((actividad) => !actividad.ediciones.some((edicion) => edicion.estado_registro === 'abierta'))
     : actividades;
   if (soloDestacadas && !destacadas.length) return null;
-  if (soloInscripcionesAbiertas && !abiertas.length) {
-    return <section aria-label="Inscripciones abiertas" className="space-y-5">
-      <h2 className={'text-2xl font-black ' + tema.title}>Inscripciones abiertas</h2>
-      <p className={tema.subtitle}>Por ahora no hay actividades con inscripción abierta. Vuelve pronto para descubrir nuevas oportunidades.</p>
-    </section>;
-  }
+  if (soloInscripcionesAbiertas && !abiertas.length) return null;
   return <section aria-label={soloInscripcionesAbiertas ? 'Inscripciones abiertas' : soloDestacadas ? 'Actividades destacadas' : 'Actividades universitarias'} className="space-y-5">
     {(soloDestacadas || soloInscripcionesAbiertas) && <h2 className={'text-2xl font-black ' + tema.title}>{soloInscripcionesAbiertas ? 'Inscripciones abiertas' : 'Actividades destacadas'}</h2>}
     <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">

@@ -66,7 +66,7 @@ export function PanelAdmin() {
 
           <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
           {d.vistaActiva === 'clubes' && <SeccionGestionClubs onVolver={d.refetchClubes}>
-            {(props) => <SeccionClubesAdmin d={d} onPublicacion={props.onPublicacion} tipo={props.tipo} onCambiarTipo={props.onCambiarTipo} />}
+            {(props) => <SeccionClubesAdmin d={d} onPublicacion={props.onPublicacion} />}
           </SeccionGestionClubs>}
           {d.vistaActiva === 'gestion-actividades' && <GestionActividades integrada tipoFijo="actividad" />}
 
