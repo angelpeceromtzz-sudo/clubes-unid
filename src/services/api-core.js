@@ -413,6 +413,31 @@ export async function setSession(data) {
   sesionExpiradaEnCurso = false;
 }
 
+// Actualiza el perfil almacenado con los datos autoritativos de /auth/me sin
+// iniciar una época nueva ni reemplazar el token. Esto permite que cambios de
+// rol hechos desde otra sesión se reflejen al volver a abrir la aplicación.
+export async function actualizarUsuarioSesion(usuario, { tokenEsperado, epocaEsperada } = {}) {
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  if (idUsuario == null) return false;
+
+  return ejecutarConBloqueSesion(() => {
+    if (epocaEsperada !== undefined && !conservaEpocaSesion(epocaEsperada)) return false;
+
+    const sesion = getSession();
+    if (
+      !sesion?.token
+      || (tokenEsperado && sesion.token !== tokenEsperado)
+      || !mismaCuentaDeSesion(sesion, { user: usuario })
+    ) return false;
+
+    if (JSON.stringify(sesion.user) === JSON.stringify(usuario)) return true;
+
+    persistirSesion({ ...sesion, user: usuario });
+    window.dispatchEvent(new CustomEvent('clubsunid:session-refreshed', { detail: usuario }));
+    return true;
+  });
+}
+
 export async function iniciarSesionAlmacenada(data, {
   epocaEsperada,
   dispositivoConfiable,

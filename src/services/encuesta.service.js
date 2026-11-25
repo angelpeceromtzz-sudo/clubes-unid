@@ -2,10 +2,10 @@ import { request } from './api-core';
 
 // Encuestas (PBI-10).
 //
-// Las dos funciones públicas se llaman sin sesión. `request` sólo adjunta el
-// Authorization si hay un token en localStorage, así que desde un navegador con
-// sesión iniciada el token sí viaja; es inofensivo porque el backend de
-// /publico/* no lo mira. Lo que no se hace en ningún caso es confiar en él.
+// Consultar la encuesta y su resumen no requiere sesión. Al enviar respuestas,
+// `request` adjunta el token disponible y el servidor exige una sesión solo si
+// la encuesta está en modo institucional; nunca confía en la privacidad enviada
+// por el cliente.
 export const encuestaService = {
   // --- público ---
   obtenerPublica: (slug) => request(`/encuestas/publico/${slug}`),

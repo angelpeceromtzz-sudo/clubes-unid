@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { api, getSession, clearSession } from '../services/api';
+import { api, getSession, clearSession, actualizarUsuarioSesion } from '../services/api';
 import {
   iniciarSesionAlmacenada,
   revocarCuentaConfiableEnServidor,
@@ -128,7 +128,7 @@ export function ProveedorAutenticacion({ children: hijos }) {
   }, [aplicarDatosLogin]);
 
   useInicializacionMsal({
-    onLoggedIn: (data) => {
+    onLoggedIn: async (data) => {
       if (data?.token && !data.sesionRenovada) {
         // El hook de MSAL ya creó la sesión y marcó el dato para no invalidar
         // la época una segunda vez. La carga posterior no bloquea authReady.
@@ -137,8 +137,28 @@ export function ProveedorAutenticacion({ children: hijos }) {
       } else if (data?.user) {
         // renovarSesionConfiable ya persistió la sesión y marcó el resultado.
         // Aquí sólo actualizamos usuario/datos, sin crear otra época de login.
-        actualizarUsuario(data.user);
-        void cargarDatosPosteriores(data.user).catch((err) => console.error('[Auth] No se pudieron cargar los datos posteriores:', err));
+        let usuarioVigente = data.user;
+        if (!data.sesionRenovada) {
+          try {
+            const perfilActual = await api.getMe();
+            // Capturamos la sesión DESPUÉS de la petición: api.getMe() puede haber
+            // renovado el token internamente, y usar el token anterior haría que
+            // actualizarUsuarioSesion abortara la sincronización (devolviendo false),
+            // dejando el rol antiguo en memoria y en localStorage hasta un re-login.
+            const sesionActual = getSession();
+            await actualizarUsuarioSesion(perfilActual, {
+              tokenEsperado: sesionActual?.token,
+            });
+            usuarioVigente = perfilActual;
+          } catch (err) {
+            // Un 401 ya limpia la sesión y abre el acceso; no reponer el usuario
+            // viejo. Ante fallos temporales se conserva el perfil guardado.
+            if (err?.status === 401 || err?.status === 409) return;
+            console.warn('[Auth] No se pudo actualizar el perfil desde el servidor:', err);
+          }
+        }
+        actualizarUsuario(usuarioVigente);
+        await cargarDatosPosteriores(usuarioVigente);
       }
     },
     onLoggedOut: () => {
