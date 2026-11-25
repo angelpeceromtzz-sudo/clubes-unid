@@ -108,7 +108,7 @@ function PerfilAlumnoPanelContenido({ esAlumno, idUsuario }) {
       </header>
 
       <div className={`${tarjeta} flex flex-col items-center text-center`}>
-        <div className="relative mb-5 mt-3 flex h-36 w-36 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 via-fuchsia-500 to-amber-400 p-[5px]">
+        <div className="relative mb-5 mt-3 flex h-36 w-36 items-center justify-center rounded-full bg-[linear-gradient(to_bottom,#fbbf24,#1e3a8a,#7c3aed)] p-[5px]">
           <div className={`flex h-full w-full items-center justify-center rounded-full ${modoOscuro ? 'bg-[#0b111e]' : 'bg-slate-50'}`}>
             <svg aria-label={`Avatar de ${perfil?.nombre_completo || 'usuario'}`} role="img" viewBox="0 0 100 100" className={`h-[5.75rem] w-[5.75rem] ${modoOscuro ? 'text-white' : 'text-slate-700'}`}>
               <circle cx="50" cy="31" r="18" fill="currentColor" />
