@@ -116,7 +116,7 @@ const tokenLider = jwt.sign(
   { expiresIn: '5m' },
 );
 const tokenAdmin = jwt.sign(
-  { id: 3, nombre_completo: 'Admin Ficticio', id_rol: 3 },
+  { id: 3, nombre_completo: 'Admin Ficticio', id_rol: 3, auth_otp: false },
   process.env.JWT_SECRET,
   { expiresIn: '5m' },
 );

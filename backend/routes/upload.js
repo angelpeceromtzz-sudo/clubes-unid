@@ -35,8 +35,7 @@ export const upload = multer({
 
 const router = Router();
 
-// 30/min por usuario (H5a): cada archivo tiene costo real de Cloudinary.
-// El límite va antes de multer para no procesar el multipart si ya se agotó.
+// 30/min (H5a): cada archivo tiene costo real de Cloudinary.
 router.post('/imagen', authenticate, requireRole(3, 4, 6), limitadorUpload, upload.single('imagen'), (req, res) => {
   try {
     if (!req.file) {
@@ -47,11 +46,26 @@ router.post('/imagen', authenticate, requireRole(3, 4, 6), limitadorUpload, uplo
     console.error('Error al subir imagen:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
-}, (err, req, res, next) => {
+});
+
+// Subida pública para capturas de reportes (cualquiera puede reportar)
+router.post('/reporte-imagen', limitadorUpload, upload.single('imagen'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No se envió ninguna imagen o el formato no es válido' });
+    }
+    res.json({ url: req.file.path });
+  } catch (err) {
+    console.error('Error al subir imagen de reporte:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ error: `Error de upload: ${err.message}` });
   }
-  if (err.message && err.message.includes('Cloudinary')) {
+  if (err && err.message && String(err.message).includes('Cloudinary')) {
     return res.status(500).json({ error: 'Error al subir a Cloudinary. Verifica CLOUDINARY_URL.' });
   }
   next(err);

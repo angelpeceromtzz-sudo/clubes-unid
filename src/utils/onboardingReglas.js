@@ -8,6 +8,8 @@ const CARACTERES_PROPUESTA = /^[\p{L}\p{N} .,'&()/-]+$/u;
 
 export const TIPOS_CORREO = Object.freeze([
   'clubes_convocatorias',
+  // El backend mantiene esta clave histórica, aunque ya no se ofrece como
+  // preferencia visible. Los avisos del club usan sus notificaciones internas.
   'mis_clubes',
   'eventos',
   'noticias',
@@ -37,6 +39,7 @@ export function respuestasIniciales() {
     fechaNacimiento: null,
     disposicion: null,
     telefono: null,
+    actividadesResponsable: [],
   };
 }
 
@@ -77,9 +80,13 @@ export function pasoEsValido(paso, respuestas) {
   if (paso === 4) return respuestas.genero !== null && respuestas.genero !== undefined;
   if (paso === 5) return respuestas.licenciatura !== null && respuestas.licenciatura !== undefined;
   if (paso === 6) return !!respuestas.fechaNacimiento;
-  if (paso === 7) return true; // teléfono opcional
-  if (paso === 8) return respuestas.disposicion !== null && respuestas.disposicion !== undefined;
+  if (paso === 7) return respuestas.disposicion !== null && respuestas.disposicion !== undefined;
+  if (paso === 8) return /^\d{10}$/.test(respuestas.telefono || '');
   if (paso === 9) {
+    if (respuestas.disposicion !== 'responsable') return true;
+    return Array.isArray(respuestas.actividadesResponsable) && respuestas.actividadesResponsable.length > 0;
+  }
+  if (paso === 10) {
     const decision = respuestas.correo?.decision;
     if (decision !== 'aceptar' && decision !== 'rechazar') return false;
     if (decision === 'aceptar') {
@@ -129,6 +136,11 @@ export function construirPayload(respuestas, origen) {
     genero: respuestas.genero ?? null,
     disposicion_responsable: respuestas.disposicion ?? null,
     telefono_contacto: respuestas.telefono ?? null,
+    ...(origen === 'onboarding' ? {
+      id_licenciatura: respuestas.licenciatura ?? null,
+      fecha_nacimiento: respuestas.fechaNacimiento ?? null,
+    } : {}),
+    actividades_responsable: respuestas.disposicion === 'responsable' ? [...respuestas.actividadesResponsable] : [],
     correo: {
       activo: respuestas.correo.decision === 'aceptar',
       frecuencia: respuestas.correo.frecuencia,

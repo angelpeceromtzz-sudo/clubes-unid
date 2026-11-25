@@ -345,6 +345,12 @@ SELECT setval(pg_get_serial_sequence('avisos_clubes', 'id_aviso'),
               COALESCE((SELECT MAX(id_aviso) FROM avisos_clubes), 0) + 1, false);
 SELECT setval(pg_get_serial_sequence('formularios', 'id_formulario'),
               COALESCE((SELECT MAX(id_formulario) FROM formularios), 0) + 1, false);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'reportes') THEN
+    PERFORM setval(pg_get_serial_sequence('reportes', 'id_reporte'), COALESCE((SELECT MAX(id_reporte) FROM reportes), 0) + 1, false);
+  END IF;
+END $$;
 
 -- ============================================================
 -- 9. PERIODOS DE ACTIVIDAD - MODULO ASISTENCIA V1

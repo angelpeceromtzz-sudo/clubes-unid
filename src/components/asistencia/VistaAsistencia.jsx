@@ -17,6 +17,13 @@ const SUB_VISTAS = [
   { key: 'historial', label: 'Historial' },
   { key: 'estadisticas', label: 'Estadísticas' },
 ];
+const MENSAJE_SIN_PERIODO = 'Aún no hay fechas establecidas para registrar asistencias. Cuando Coordinación las configure, podrás marcar la asistencia de tus sesiones.';
+
+async function consultarSesionesDeHoy() {
+  const periodoActivo = await api.getAsistenciaPeriodoActivo();
+  if (!periodoActivo) return { sesiones: [], sinPeriodo: true };
+  return { sesiones: await api.getAsistenciaSesionesHoy(), sinPeriodo: false };
+}
 
 export function VistaAsistencia({ club }) {
   const { modoOscuro } = useTheme();
@@ -24,11 +31,13 @@ export function VistaAsistencia({ club }) {
   const [sesionesHoy, setSesionesHoy] = useState([]);
   const [cargandoHoy, setCargandoHoy] = useState(true);
   const [errorHoy, setErrorHoy] = useState('');
+  const [sinPeriodoActivo, setSinPeriodoActivo] = useState(false);
   const [sesionAbierta, setSesionAbierta] = useState(null);
   const [modalCancelar, setModalCancelar] = useState(null);
   const [cargandoCancelar, setCargandoCancelar] = useState(false);
   const [errorCancelar, setErrorCancelar] = useState('');
   const [periodos, setPeriodos] = useState([]);
+  const [periodosListos, setPeriodosListos] = useState(false);
   const [idPeriodoSel, setIdPeriodoSel] = useState('');
 
   // Carga inicial (sin setState síncrono en el effect: el estado de carga parte en true)
@@ -36,10 +45,17 @@ export function VistaAsistencia({ club }) {
     let montado = true;
     (async () => {
       try {
-        const data = await api.getAsistenciaSesionesHoy();
-        if (montado) setSesionesHoy(data);
+        const resultado = await consultarSesionesDeHoy();
+        if (montado) {
+          setSesionesHoy(resultado.sesiones);
+          setSinPeriodoActivo(resultado.sinPeriodo);
+          setErrorHoy(resultado.sinPeriodo ? MENSAJE_SIN_PERIODO : '');
+        }
       } catch (err) {
-        if (montado) setErrorHoy(err.message);
+        if (montado) {
+          setSinPeriodoActivo(false);
+          setErrorHoy(err.message);
+        }
       } finally {
         if (montado) setCargandoHoy(false);
       }
@@ -52,7 +68,8 @@ export function VistaAsistencia({ club }) {
     let montado = true;
     api.getAsistenciaPeriodos()
       .then((data) => { if (montado) setPeriodos(data); })
-      .catch(() => { /* el selector es auxiliar; sin catálogo se usa el periodo activo */ });
+      .catch(() => { /* la vista conserva el aviso si no se pudo consultar el catálogo */ })
+      .finally(() => { if (montado) setPeriodosListos(true); });
     return () => { montado = false; };
   }, []);
 
@@ -60,10 +77,14 @@ export function VistaAsistencia({ club }) {
   async function recargarHoy() {
     setCargandoHoy(true);
     setErrorHoy('');
+    setSinPeriodoActivo(false);
     try {
-      const data = await api.getAsistenciaSesionesHoy();
-      setSesionesHoy(data);
+      const resultado = await consultarSesionesDeHoy();
+      setSesionesHoy(resultado.sesiones);
+      setSinPeriodoActivo(resultado.sinPeriodo);
+      if (resultado.sinPeriodo) setErrorHoy(MENSAJE_SIN_PERIODO);
     } catch (err) {
+      setSinPeriodoActivo(false);
       setErrorHoy(err.message);
     } finally {
       setCargandoHoy(false);
@@ -75,6 +96,7 @@ export function VistaAsistencia({ club }) {
       const detalle = await api.getAsistenciaSesion(sesion.id_sesion);
       setSesionAbierta(detalle);
     } catch (err) {
+      setSinPeriodoActivo(false);
       setErrorHoy(err.message);
     }
   }
@@ -137,7 +159,7 @@ export function VistaAsistencia({ club }) {
       {subVista === 'hoy' && (
         <>
           {errorHoy && (
-            <Alerta tipo="error" mensaje={errorHoy} className="mb-4" />
+            <Alerta tipo={sinPeriodoActivo ? 'warning' : 'error'} mensaje={errorHoy} className="mb-4" />
           )}
           {cargandoHoy ? (
             <Spinner className="py-16" />
@@ -172,7 +194,11 @@ export function VistaAsistencia({ club }) {
             valor={idPeriodoSel}
             onChange={setIdPeriodoSel}
           />
-          <EstadisticasAsistencia idPeriodo={idPeriodoSel || undefined} />
+          <EstadisticasAsistencia
+            idPeriodo={idPeriodoSel || undefined}
+            periodos={periodos}
+            periodosListos={periodosListos}
+          />
         </>
       )}
 

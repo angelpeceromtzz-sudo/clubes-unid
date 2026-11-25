@@ -1,9 +1,12 @@
 import jwt from 'jsonwebtoken';
 import pool from '../db.js';
 import { esIdEntero } from '../lib/validarId.js';
+import { otpHabilitado, ROLES_SIN_OTP } from '../lib/otp.js';
 import { ROL_ADMIN, ROL_RECTORIA, ROL_RESPONSABLE_CLUB, ROL_VICEPRESIDENTE, ROL_COORDINACION } from '../constants/roles.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const FORMATO_GENERACION = /^[a-f0-9]{64}$/i;
+const ROLES_SIN_OTP_VALORES = [...ROLES_SIN_OTP];
 if (!JWT_SECRET) {
   console.error('FATAL: JWT_SECRET no está definido en las variables de entorno');
   process.exit(1);
@@ -30,21 +33,69 @@ export async function authenticate(req, res, next) {
   }
 
   // El claim "id" es el id_usuario (ver generarToken en routes/auth.js).
-  if (!decoded?.id) {
+  if (!esIdEntero(decoded?.id)) {
+    return res.status(401).json({ error: 'Token inválido o expirado' });
+  }
+
+  const idDispositivoConfiable = decoded.id_dispositivo_confiable;
+  const esSesionConfiable = idDispositivoConfiable != null;
+  const claimOtpPresente = Object.prototype.hasOwnProperty.call(decoded, 'auth_otp');
+
+  // El claim es nuevo: su ausencia sigue siendo compatible con roles permitidos,
+  // pero una cuenta restringida con token legado deberá iniciar sesión una vez.
+  // Si está presente, debe ser booleano; cualquier otro tipo falla cerrado antes
+  // de consultar la base. Un dispositivo confiable solo puede proceder de OTP,
+  // incluso si un token antiguo no trae el claim.
+  if (claimOtpPresente && typeof decoded.auth_otp !== 'boolean') {
+    return res.status(401).json({ error: 'Token inválido o expirado' });
+  }
+  const esSesionOtp = decoded.auth_otp === true || esSesionConfiable;
+
+  // Una sesión confiable exige el vínculo completo con la fila del dispositivo.
+  // Los JWT anteriores no tienen generación: se rechazan aunque su firma y exp
+  // todavía sean válidas. Si OTP está deshabilitado, tampoco pueden revalidarse.
+  if (esSesionConfiable && (
+    !otpHabilitado()
+    || !esIdEntero(idDispositivoConfiable)
+    || !FORMATO_GENERACION.test(decoded.generacion_dispositivo_confiable || '')
+  )) {
     return res.status(401).json({ error: 'Token inválido o expirado' });
   }
 
   // 2)-4) Revalidación contra la BD (auditoría H2): la vigencia de la cuenta
   //      (deleted_at) y el rol actuales mandan, no los claims del token.
-  //      deleted_at IS NULL filtra cuentas desactivadas en la propia consulta.
+  //      En sesiones confiables también mandan la generación, la revocación,
+  //      la expiración y la política de roles sin OTP.
   let resultado;
   try {
-    resultado = await pool.query(
-      `SELECT u.id_usuario, u.nombre_completo, u.id_rol
-       FROM usuarios u
-       WHERE u.id_usuario = $1 AND u.deleted_at IS NULL`,
-      [decoded.id]
-    );
+    if (esSesionConfiable) {
+      resultado = await pool.query(
+        `SELECT u.id_usuario, u.nombre_completo, u.id_rol
+           FROM usuarios u
+           JOIN dispositivos_confiables d
+             ON d.id_dispositivo = $2
+            AND d.id_usuario = u.id_usuario
+            AND d.generacion = $3
+            AND d.revocado_en IS NULL
+            AND d.expira_en > CURRENT_TIMESTAMP
+          WHERE u.id_usuario = $1
+            AND u.deleted_at IS NULL
+            AND NOT (u.id_rol = ANY($4::int[]))`,
+        [
+          decoded.id,
+          idDispositivoConfiable,
+          decoded.generacion_dispositivo_confiable.toLowerCase(),
+          ROLES_SIN_OTP_VALORES,
+        ],
+      );
+    } else {
+      resultado = await pool.query(
+        `SELECT u.id_usuario, u.nombre_completo, u.id_rol
+         FROM usuarios u
+         WHERE u.id_usuario = $1 AND u.deleted_at IS NULL`,
+        [decoded.id],
+      );
+    }
   } catch (err) {
     // Fail closed: ante un fallo de la BD no se aceptan los claims del token
     // como respaldo ni se exponen detalles del error.
@@ -57,6 +108,15 @@ export async function authenticate(req, res, next) {
   }
 
   const fila = resultado.rows[0];
+
+  // Una sesión OTP no puede heredar privilegios de un rol que tiene prohibido
+  // este método. Los tokens legacy sin claim tampoco pueden autorizar roles
+  // restringidos: sin claim no se puede distinguir OTP de local/Microsoft, así
+  // que se exige una reautenticación única. Los tokens nuevos auth_otp=false de
+  // local/Microsoft y los legacy en roles permitidos conservan su flujo normal.
+  if (ROLES_SIN_OTP.has(Number(fila.id_rol)) && (esSesionOtp || !claimOtpPresente)) {
+    return res.status(401).json({ error: 'Sesión no válida. Inicia sesión nuevamente.' });
+  }
 
   // 5) req.user se construye SOLO con datos actuales de la BD. Los claims del
   //    token no se mezclan (ni siquiera en último lugar), para que un rol

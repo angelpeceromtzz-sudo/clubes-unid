@@ -17,6 +17,8 @@ import usuariosRoutes from './routes/usuarios.js';
 import clubesRoutes from './routes/clubes.js';
 import inscripcionesRoutes from './routes/inscripciones.js';
 import avisosRoutes from './routes/avisos.js';
+import eventosClubRoutes from './routes/eventosClub.js';
+import chatClubRoutes from './routes/chatClub.js';
 import formulariosRoutes from './routes/formularios.js';
 import ofertasRoutes from './routes/ofertas.js';
 import notificacionesRoutes from './routes/notificaciones.js';
@@ -44,6 +46,9 @@ import actividadesRoutes from './routes/actividades.js';
 import preferenciasRoutes from './routes/preferencias.js';
 import expedienteRoutes from './routes/expediente.js';
 import clubFormularioRoutes from './routes/clubFormulario.js';
+import consentimientoLegalRoutes from './routes/consentimientoLegal.js';
+import reportesRoutes from './routes/reportes.js';
+import { noCacheExpediente } from './lib/cacheExpediente.js';
 const app = express();
 // Render termina TLS y reenvía con X-Forwarded-For (un solo proxy).
 // Pendiente de verificar en Render: si algún día hay un proxy adicional
@@ -73,11 +78,15 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Client-Device', 'X-Trusted-Device'],
   // El frontend (otro origen) necesita leer estos encabezados para respetar
   // el cooldown real que impone express-rate-limit en un 429.
   exposedHeaders: ['Retry-After', 'RateLimit', 'RateLimit-Reset', 'X-RateLimit-Reset'],
 }));
+
+// La política del expediente debe preceder al límite global: un 429 se emite
+// antes de entrar al router y también debe ser privado y no cacheable.
+app.use(noCacheExpediente);
 
 // Cobertura general de API por IP (H5a): red de seguridad única para todas
 // las rutas /api. Va después de CORS (los OPTIONS de preflight los responde
@@ -101,6 +110,8 @@ app.use('/api/clubes', clubFormularioRoutes);
 app.use('/api/inscripciones', inscripcionesRoutes);
 app.use('/api/formularios', formulariosRoutes);
 app.use('/api/avisos', avisosRoutes);
+app.use('/api/eventos-club', eventosClubRoutes);
+app.use('/api/chat-clubes', chatClubRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/historial', historialRoutes);
 app.use('/api/convocatorias', convocatoriasRoutes);
@@ -120,6 +131,8 @@ app.use('/api/mural', muralRoutes);
 app.use('/api/actividades', actividadesRoutes);
 app.use('/api/me', preferenciasRoutes);
 app.use('/api/expediente', expedienteRoutes);
+app.use('/api/legal', consentimientoLegalRoutes);
+app.use('/api/reportes', reportesRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/api/health', (req, res) => {

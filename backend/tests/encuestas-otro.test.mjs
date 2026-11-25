@@ -136,7 +136,7 @@ pool.connect = async () => ({
 });
 
 function token(id, nombre, rol) {
-  return jwt.sign({ id, nombre_completo: nombre, id_rol: rol }, process.env.JWT_SECRET, {
+  return jwt.sign({ id, nombre_completo: nombre, id_rol: rol, auth_otp: false }, process.env.JWT_SECRET, {
     expiresIn: '5m',
   });
 }

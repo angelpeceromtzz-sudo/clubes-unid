@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { api } from '../../services/api';
 import { Alerta } from '../ui/Alerta';
+import { AutocompletadoCorreo } from '../ui/AutocompletadoCorreo';
 import { BotonMicrosoft } from '../ui/BotonMicrosoft';
+// Azure/Microsoft login deshabilitado temporalmente en frontend.
+// import { BotonMicrosoft } from '../ui/BotonMicrosoft';
 import { BotonCerrar } from '../ui/BotonCerrar';
 import { Icono } from '../ui/Icono';
 import { CampoTexto } from '../ui/CampoTexto';
+import { EntradaCodigoOtp } from '../ui/EntradaCodigoOtp';
 import { ModalBase } from '../ui/ModalBase';
 import {
   LARGO_CODIGO_OTP,
@@ -87,7 +92,36 @@ function IndicadorEspera({ segundos, prefijo = 'Podrás solicitar otro código e
   );
 }
 
-export function ModalInicioSesion({ onClose }) {
+function CheckboxesLegales({ esOscuro, terminos, privacidad, onTerminos, onPrivacidad }) {
+  return (
+    <div className={`space-y-2 rounded-xl border p-3 ${esOscuro ? 'border-slate-700/70 bg-slate-800/30' : 'border-slate-200 bg-slate-50'}`}>
+      <label className={`flex items-start gap-2 text-xs leading-relaxed ${esOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+        <input type="checkbox" checked={terminos} onChange={(evento) => onTerminos(evento.target.checked)} className="mt-0.5 accent-amber-400" />
+        <span>Acepto los <Link to="/terminos" target="_blank" rel="noopener noreferrer" className="font-bold text-amber-500 underline">Términos y condiciones</Link>.</span>
+      </label>
+      <label className={`flex items-start gap-2 text-xs leading-relaxed ${esOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+        <input type="checkbox" checked={privacidad} onChange={(evento) => onPrivacidad(evento.target.checked)} className="mt-0.5 accent-amber-400" />
+        <span>He leído y acepto la <Link to="/privacidad" target="_blank" rel="noopener noreferrer" className="font-bold text-amber-500 underline">Política de privacidad</Link>.</span>
+      </label>
+    </div>
+  );
+}
+
+function CheckboxRecordarCuenta({ esOscuro, checked, onChange }) {
+  return (
+    <label className={`flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-xs leading-relaxed ${
+      esOscuro ? 'border-slate-700/70 bg-slate-800/30 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'
+    }`}>
+      <input type="checkbox" checked={checked} onChange={(evento) => onChange(evento.target.checked)} className="mt-0.5 accent-amber-400" />
+      <span>
+        <span className={`block font-bold ${esOscuro ? 'text-white' : 'text-slate-900'}`}>Recordar esta cuenta por 30 días</span>
+        No se pedirá otro código en este navegador. Solo se recuerda una cuenta; al entrar con otra, se reemplaza.
+      </span>
+    </label>
+  );
+}
+
+export function ModalInicioSesion({ onClose, onAceptarLegal }) {
   const { modoOscuro } = useTheme();
   const { iniciarSesion, iniciarSesionOtp } = useAutenticacion();
   const [vista, setVista] = useState(VISTA.OPCIONES);
@@ -106,8 +140,16 @@ export function ModalInicioSesion({ onClose }) {
   const [cargandoOtp, setCargandoOtp] = useState(false);
   const [cooldownReenvio, setCooldownReenvio] = useState(0);
   const [cooldownVerificacion, setCooldownVerificacion] = useState(0);
+  const [terminosOtp, setTerminosOtp] = useState(false);
+  const [privacidadOtp, setPrivacidadOtp] = useState(false);
+  const [recordarCuenta, setRecordarCuenta] = useState(false);
+  const [metodoPendiente, setMetodoPendiente] = useState('');
+  const [solicitoAceptarLegal, setSolicitoAceptarLegal] = useState(false);
+  const [autenticadoPendienteLegal, setAutenticadoPendienteLegal] = useState(false);
+  const [guardandoLegal, setGuardandoLegal] = useState(false);
   const peticionOtpRef = useRef(false);
   const esOscuro = modoOscuro;
+  const documentosAceptados = terminosOtp && privacidadOtp;
   const hayCuentaAtras = cooldownReenvio > 0 || cooldownVerificacion > 0;
 
   useEffect(() => {
@@ -140,6 +182,13 @@ export function ModalInicioSesion({ onClose }) {
     setCargandoOtp(false);
     setCooldownReenvio(0);
     setCooldownVerificacion(0);
+    setTerminosOtp(false);
+    setPrivacidadOtp(false);
+    setRecordarCuenta(false);
+    setMetodoPendiente('');
+    setSolicitoAceptarLegal(false);
+    setAutenticadoPendienteLegal(false);
+    setGuardandoLegal(false);
     onClose();
   }
 
@@ -166,6 +215,44 @@ export function ModalInicioSesion({ onClose }) {
     setMensaje('');
     setCorreoTocado(false);
     setNombreTocado(false);
+    setRecordarCuenta(false);
+  }
+
+  function elegirMetodo(metodo) {
+    if (!documentosAceptados) {
+      setMetodoPendiente(metodo);
+      setSolicitoAceptarLegal(true);
+      setError('');
+      document.getElementById('login-legal-consent')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+
+    setMetodoPendiente('');
+    setSolicitoAceptarLegal(false);
+    setError('');
+    if (metodo === 'otp') irAOtpCorreo();
+    else setVista(VISTA.LOCAL);
+  }
+
+  function aceptarDocumento(campo, valor) {
+    if (campo === 'terminos') setTerminosOtp(valor);
+    else setPrivacidadOtp(valor);
+
+    const ambosAceptados = campo === 'terminos'
+      ? valor && privacidadOtp
+      : terminosOtp && valor;
+    if (!ambosAceptados || !metodoPendiente) return;
+
+    setVista(metodoPendiente === 'otp' ? VISTA.OTP_CORREO : VISTA.LOCAL);
+    setMetodoPendiente('');
+    setSolicitoAceptarLegal(false);
+    setError('');
+    setCodigo('');
+    setNombre('');
+    setErrorCorreo('');
+    setErrorCodigo('');
+    setErrorNombre('');
+    setMensaje('');
   }
 
   function volverAtras() {
@@ -193,6 +280,11 @@ export function ModalInicioSesion({ onClose }) {
       return;
     }
 
+    if (!documentosAceptados) {
+      setError('Acepta los Términos y condiciones y la Política de privacidad antes de iniciar sesión.');
+      return;
+    }
+
     if (!correo.trim() || !password.trim()) {
       setError('Todos los campos son obligatorios');
       return;
@@ -200,18 +292,25 @@ export function ModalInicioSesion({ onClose }) {
 
     setCargando(true);
     const result = await iniciarSesion(correo.trim(), password);
-    setCargando(false);
 
     if (!result.ok) {
+      setCargando(false);
       setError(result.error);
       return;
     }
 
-    cerrarModal();
+    setCargando(false);
+    setAutenticadoPendienteLegal(true);
+    await completarInicioSesion();
   }
 
   async function solicitarCodigo({ reenvio = false } = {}) {
     if (peticionOtpRef.current || cargandoOtp || cooldownReenvio > 0) {
+      return;
+    }
+
+    if (!documentosAceptados) {
+      setError('Acepta ambos documentos antes de solicitar el código.');
       return;
     }
 
@@ -277,8 +376,15 @@ export function ModalInicioSesion({ onClose }) {
     setErrorCorreo(validarCorreoOtp(correo));
   }
 
-  function manejarCambioCodigo(e) {
-    setCodigo(normalizarCodigoOtp(e.target.value));
+  function manejarSeleccionCorreo(valor) {
+    setCorreo(valor);
+    setError('');
+    setErrorCorreo('');
+    setMensaje('');
+  }
+
+  function manejarCambioCodigo(valor) {
+    setCodigo(normalizarCodigoOtp(valor));
     setError('');
     setErrorCodigo('');
   }
@@ -299,6 +405,26 @@ export function ModalInicioSesion({ onClose }) {
     setErrorNombre(validarNombreOtp(nombre, correo));
   }
 
+  async function completarInicioSesion() {
+    if (!documentosAceptados) {
+      setError('Acepta ambos documentos antes de iniciar sesión.');
+      return;
+    }
+    setGuardandoLegal(true);
+    setError('');
+    if (onAceptarLegal) {
+      try {
+        await onAceptarLegal();
+      } catch {
+        setError('No pudimos guardar tu aceptación. Intenta de nuevo para continuar.');
+        setGuardandoLegal(false);
+        return;
+      }
+    }
+    setGuardandoLegal(false);
+    cerrarModal();
+  }
+
   async function manejarVerificar(e) {
     e.preventDefault();
 
@@ -317,13 +443,14 @@ export function ModalInicioSesion({ onClose }) {
     peticionOtpRef.current = true;
     setMensaje('');
     setCargandoOtp(true);
-    const result = await iniciarSesionOtp(normalizarCorreoOtp(correo), codigo);
+    const result = await iniciarSesionOtp(normalizarCorreoOtp(correo), codigo, undefined, recordarCuenta);
     peticionOtpRef.current = false;
     setCargandoOtp(false);
 
     if (result.ok) {
       setCodigo('');
-      cerrarModal();
+      setAutenticadoPendienteLegal(true);
+      await completarInicioSesion();
       return;
     }
 
@@ -368,6 +495,7 @@ export function ModalInicioSesion({ onClose }) {
       normalizarCorreoOtp(correo),
       codigo,
       nombreNormalizado,
+      recordarCuenta,
     );
     peticionOtpRef.current = false;
     setCargandoOtp(false);
@@ -375,7 +503,8 @@ export function ModalInicioSesion({ onClose }) {
     if (result.ok) {
       setNombre('');
       setCodigo('');
-      cerrarModal();
+      setAutenticadoPendienteLegal(true);
+      await completarInicioSesion();
       return;
     }
 
@@ -408,33 +537,56 @@ export function ModalInicioSesion({ onClose }) {
         esOscuro ? 'bg-[#0e162c] border border-slate-700/30' : 'bg-white border border-slate-200/70 shadow-sm'
       }`}
     >
-      <div className="flex items-center justify-between mb-5">
-        {vista !== VISTA.OPCIONES ? (
-          <BotonVolver onClick={volverAtras} esOscuro={esOscuro} />
-        ) : (
-          <span />
-        )}
-        <BotonCerrar onClick={cerrarModal} />
-      </div>
+      {vista === VISTA.OPCIONES ? (
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="min-w-0 pt-1">
+            <h2 className={`text-2xl font-black ${esOscuro ? 'text-white' : 'text-slate-900'}`}>{titulo}</h2>
+            <p className={`mt-1.5 text-sm ${esOscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+              Acepta los documentos y elige cómo iniciar sesión
+            </p>
+          </div>
+          <BotonCerrar onClick={cerrarModal} />
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-5">
+            <BotonVolver onClick={volverAtras} esOscuro={esOscuro} />
+            <BotonCerrar onClick={cerrarModal} />
+          </div>
+          <div className="mb-6">
+            <h2 className={`text-2xl font-black ${esOscuro ? 'text-white' : 'text-slate-900'}`}>{titulo}</h2>
+          </div>
+        </>
+      )}
 
-      <div className="mb-6">
-        <h2 className={`text-2xl font-black ${esOscuro ? 'text-white' : 'text-slate-900'}`}>{titulo}</h2>
-        {vista === VISTA.OPCIONES && (
-          <p className={`mt-1.5 text-sm ${esOscuro ? 'text-slate-400' : 'text-slate-600'}`}>
-            Elige una opción para continuar
-          </p>
-        )}
-      </div>
-
+      {autenticadoPendienteLegal ? (
+        <div className="space-y-4">
+          {error ? (
+            <Alerta tipo="error" mensaje={error} />
+          ) : (
+            <p className={`text-sm ${esOscuro ? 'text-slate-300' : 'text-slate-600'}`}>
+              Estamos guardando tu aceptación para continuar.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={completarInicioSesion}
+            disabled={guardandoLegal}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 py-3.5 text-sm font-black uppercase tracking-widest text-[#0e162c] transition-colors hover:bg-amber-300 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+          >
+            {guardandoLegal && <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
+            {guardandoLegal ? 'Guardando...' : 'Reintentar y continuar'}
+          </button>
+        </div>
+      ) : (
+        <>
       {vista === VISTA.OPCIONES && (
         <div className="space-y-4">
           <div className="space-y-3">
-            <BotonMicrosoft />
-
             {OTP_HABILITADO && (
               <button
                 type="button"
-                onClick={irAOtpCorreo}
+                onClick={() => elegirMetodo('otp')}
                 className={`group flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 ${
                   esOscuro
                     ? 'border-amber-400/40 bg-amber-400/[0.04] hover:border-amber-400/70 hover:bg-amber-400/[0.08] focus-visible:ring-offset-[#0e162c]'
@@ -489,10 +641,7 @@ export function ModalInicioSesion({ onClose }) {
 
           <button
             type="button"
-            onClick={() => {
-              setVista(VISTA.LOCAL);
-              setError('');
-            }}
+            onClick={() => elegirMetodo('local')}
             className={`group flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/80 focus-visible:ring-offset-2 ${
               esOscuro
                 ? 'border-slate-700/60 text-slate-400 hover:border-slate-600 hover:bg-slate-800/40 hover:text-slate-200 focus-visible:ring-offset-[#0e162c]'
@@ -505,23 +654,43 @@ export function ModalInicioSesion({ onClose }) {
               <Icono nombre="lock" strokeWidth={2} className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold leading-snug">Iniciar sesión con cuenta local</span>
-              <span className={`mt-0.5 block text-[11px] font-medium ${esOscuro ? 'text-slate-500' : 'text-slate-500'}`}>
-                Para cuentas de prueba
-              </span>
+              <span className="block text-sm font-semibold leading-snug">Iniciar sesión con cuenta de administrador</span>
             </span>
           </button>
+
+          <div id="login-legal-consent" className={`space-y-2 rounded-xl transition-colors ${solicitoAceptarLegal && !documentosAceptados ? 'ring-1 ring-amber-400/60 p-2' : 'pt-1'}`}>
+            <p className={`text-xs ${esOscuro ? 'text-slate-400' : 'text-slate-600'}`}>
+              Antes de iniciar sesión, acepta estos documentos:
+            </p>
+            <CheckboxesLegales
+              esOscuro={esOscuro}
+              terminos={terminosOtp}
+              privacidad={privacidadOtp}
+              onTerminos={(valor) => aceptarDocumento('terminos', valor)}
+              onPrivacidad={(valor) => aceptarDocumento('privacidad', valor)}
+            />
+            {solicitoAceptarLegal && !documentosAceptados ? (
+              <p role="status" className={`text-xs font-medium ${esOscuro ? 'text-amber-300' : 'text-amber-700'}`}>
+                Acepta ambos documentos para continuar; después seguiremos con la opción que elegiste.
+              </p>
+            ) : !documentosAceptados && (
+              <p className={`text-xs ${esOscuro ? 'text-slate-500' : 'text-slate-500'}`}>
+                Puedes elegir una opción; te pediremos aceptar antes de continuar.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
       {vista === VISTA.LOCAL && (
         <form onSubmit={manejarEnvio} className="space-y-5">
-          <CampoTexto
+          <AutocompletadoCorreo
             label="Correo"
             name="correo"
             type="email"
             value={correo}
             onChange={(e) => setCorreo(e.target.value)}
+            onSeleccionar={manejarSeleccionCorreo}
             placeholder="correo@ejemplo.com"
             autoComplete="email"
           />
@@ -567,13 +736,14 @@ export function ModalInicioSesion({ onClose }) {
             Te enviaremos un código de 6 dígitos a tu correo institucional.
           </p>
 
-          <CampoTexto
+          <AutocompletadoCorreo
             label="Correo institucional"
             name="otp-correo"
             type="email"
             value={correo}
             onChange={manejarCambioCorreo}
             onBlur={manejarBlurCorreo}
+            onSeleccionar={manejarSeleccionCorreo}
             placeholder="usuario@red.unid.mx"
             autoComplete="email"
             autoFocus
@@ -611,6 +781,7 @@ export function ModalInicioSesion({ onClose }) {
             )}
             {cargandoOtp ? 'Enviando...' : 'Enviar código'}
           </button>
+
         </form>
       )}
 
@@ -626,20 +797,18 @@ export function ModalInicioSesion({ onClose }) {
             </div>
           )}
 
-          <CampoTexto
+          <EntradaCodigoOtp
             label="Código de verificación"
             name="otp-codigo"
-            type="text"
             value={codigo}
             onChange={manejarCambioCodigo}
-            placeholder="000000"
-            maxLength={LARGO_CODIGO_OTP}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="one-time-code"
+            length={LARGO_CODIGO_OTP}
+            disabled={cargandoOtp}
             autoFocus
             error={errorCodigo}
           />
+
+          <CheckboxRecordarCuenta esOscuro={esOscuro} checked={recordarCuenta} onChange={setRecordarCuenta} />
 
           {error && (
             <div aria-live="polite">
@@ -707,6 +876,8 @@ export function ModalInicioSesion({ onClose }) {
             Es tu primer acceso con <span className="font-semibold break-all">{correo}</span>.
             Escribe tu nombre completo para crear tu cuenta.
           </p>
+
+          <CheckboxRecordarCuenta esOscuro={esOscuro} checked={recordarCuenta} onChange={setRecordarCuenta} />
 
           <CampoTexto
             label="Nombre completo"
@@ -781,6 +952,9 @@ export function ModalInicioSesion({ onClose }) {
 
           <IndicadorEspera segundos={cooldownReenvio} />
         </form>
+      )}
+
+        </>
       )}
     </ModalBase>
   );

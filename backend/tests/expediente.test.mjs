@@ -94,7 +94,7 @@ after(() => {
 
 function token(idRol) {
   const usuario = usuariosPorRol[idRol];
-  return jwt.sign({ id: usuario.id_usuario, nombre_completo: usuario.nombre_completo, id_rol: idRol }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  return jwt.sign({ id: usuario.id_usuario, nombre_completo: usuario.nombre_completo, id_rol: idRol, auth_otp: false }, process.env.JWT_SECRET, { expiresIn: '5m' });
 }
 
 async function pedir(ruta, idRol = 3) {

@@ -104,6 +104,20 @@ function listaUnica(valor, nombre, maximo) {
   return valor;
 }
 
+function validarFechaNacimientoOnboarding(valor) {
+  if (typeof valor !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(valor) || valor.startsWith('0000-')) {
+    throw new ErrorValidacion('La fecha de nacimiento no es válida');
+  }
+  const fecha = new Date(`${valor}T00:00:00Z`);
+  if (Number.isNaN(fecha.getTime()) || fecha.toISOString().slice(0, 10) !== valor) {
+    throw new ErrorValidacion('La fecha de nacimiento no es válida');
+  }
+  if (valor > new Date().toISOString().slice(0, 10)) {
+    throw new ErrorValidacion('La fecha de nacimiento no puede ser futura');
+  }
+  return valor;
+}
+
 function validarCorreo(correo) {
   if (!correo || typeof correo !== 'object' || Array.isArray(correo)) {
     throw new ErrorValidacion('correo debe ser un objeto');
@@ -120,16 +134,22 @@ function validarCorreo(correo) {
   }
   const claves = Object.keys(tipos);
   const esperadas = [...TIPOS_CORREO_OPCIONAL].sort();
-  if (claves.length !== esperadas.length || claves.slice().sort().some((clave, i) => clave !== esperadas[i])) {
+  // mis_clubes dejó de ser una preferencia visible: las novedades del club
+  // llegan dentro de la plataforma. Se acepta si un cliente anterior la envía,
+  // pero no se exige para no rechazar el formulario actualizado.
+  const requeridas = esperadas.filter((tipo) => tipo !== 'mis_clubes');
+  const clavesInvalidas = claves.some((clave) => !esperadas.includes(clave));
+  const faltanRequeridas = requeridas.some((tipo) => !Object.hasOwn(tipos, tipo));
+  if (clavesInvalidas || faltanRequeridas) {
     throw new ErrorValidacion('correo.tipos debe incluir exactamente los tipos de novedades disponibles');
   }
-  if (!TIPOS_CORREO_OPCIONAL.every((tipo) => typeof tipos[tipo] === 'boolean')) {
+  if (claves.some((tipo) => typeof tipos[tipo] !== 'boolean')) {
     throw new ErrorValidacion('Cada tipo de novedades debe ser verdadero o falso');
   }
   return {
     activo: correo.activo,
     frecuencia: correo.frecuencia,
-    tipos: Object.fromEntries(TIPOS_CORREO_OPCIONAL.map((tipo) => [tipo, tipos[tipo]])),
+    tipos: Object.fromEntries(TIPOS_CORREO_OPCIONAL.map((tipo) => [tipo, tipo === 'mis_clubes' ? tipos[tipo] === true : tipos[tipo]])),
   };
 }
 
@@ -140,6 +160,7 @@ export function validarPreferencias(body, indice) {
   if (!ORIGENES.includes(body.origen)) {
     throw new ErrorValidacion('El origen de la solicitud no es válido');
   }
+  const esOnboarding = body.origen === 'onboarding';
 
   const categorias = listaUnica(body.categorias, 'categorias', MAX_CATEGORIAS);
   for (const id of categorias) {
@@ -172,8 +193,22 @@ export function validarPreferencias(body, indice) {
   }
 
   const telefono = body.telefono_contacto ?? null;
-  if (telefono !== null && telefono !== '' && !/^\d{10}$/.test(String(telefono))) {
+  if (esOnboarding) {
+    if (!/^\d{10}$/.test(String(telefono))) {
+      throw new ErrorValidacion('El teléfono debe ser de 10 dígitos');
+    }
+  } else if (telefono !== null && telefono !== '' && !/^\d{10}$/.test(String(telefono))) {
     throw new ErrorValidacion('El teléfono debe ser de 10 dígitos');
+  }
+
+  let idLicenciatura = null;
+  let fechaNacimiento = null;
+  if (esOnboarding) {
+    if (!esEnteroPositivo(body.id_licenciatura)) {
+      throw new ErrorValidacion('Selecciona una licenciatura válida');
+    }
+    idLicenciatura = body.id_licenciatura;
+    fechaNacimiento = validarFechaNacimientoOnboarding(body.fecha_nacimiento);
   }
 
   const correo = validarCorreo(body.correo);
@@ -198,6 +233,8 @@ export function validarPreferencias(body, indice) {
     genero,
     disposicion_responsable: disposicion,
     telefono_contacto: telefono || null,
+    id_licenciatura: idLicenciatura,
+    fecha_nacimiento: fechaNacimiento,
     correo,
     propuestas,
   };

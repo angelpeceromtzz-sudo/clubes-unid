@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useBloqueoScroll } from '../../hooks/useBloqueoScroll';
@@ -13,6 +14,7 @@ function CapaMenu({ esMovil, children }) {
 }
 
 export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, onLogout, onLoginClick, onAyuda, itemsNav = [], onNavChange, ocultarHamburguesa = false }) {
+  const navigate = useNavigate();
   const { modoOscuro, setModoOscuro, tema } = useTheme();
 // const { noLeidas } = useNoticias();
   const dropdownRef = useRef(null);
@@ -63,6 +65,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
             ref={panelRef}
             role="navigation"
             aria-label="Menú de usuario"
+            data-tutorial="menu-panel"
             className={`fixed ${ocultarHamburguesa ? 'left-0' : 'right-0'} top-0 z-[70] md:z-50 w-[70vw] max-h-dvh overflow-y-auto overflow-x-hidden overscroll-contain border shadow-2xl py-2 px-1 md:absolute md:left-auto md:right-0 md:top-12 md:bottom-auto md:w-72 md:h-auto md:max-h-none md:overflow-visible transition-colors duration-300 ${tema.dropdownBg} ${tema.dropdownBorder}`}
             style={{ animation: 'dropdownIn 0.2s ease-out', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', scrollbarColor: '#fbbf24 transparent', scrollbarWidth: 'thin' }}
             onWheel={(e) => e.stopPropagation()}
@@ -72,7 +75,12 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
             <div dir="ltr">
               {user ? (
               <>
-                <div className="flex items-center gap-4 px-4 py-3 mb-2">
+                <button
+                  type="button"
+                  aria-label="Abrir mi perfil"
+                  onClick={() => { navigate('/perfil'); setMenuAbierto(false); }}
+                  className={`mb-2 flex w-full cursor-pointer items-center gap-4 rounded-lg px-4 py-3 text-left transition-colors ${tema.dropdownItem}`}
+                >
                   <div className="w-10 h-10 shrink-0 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-base">
                     {user.nombre_completo?.charAt(0) || '?'}
                   </div>
@@ -81,7 +89,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
                       {user.nombre_completo}
                     </p>
                   </div>
-                </div>
+                </button>
                 <div className={`h-px ${tema.headerBorder} mx-3`} />
                 {!itemsNav.some((i) => i.key === 'usuarios') && (
                   <button
@@ -95,7 +103,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
                 {itemsNav.length > 0 && (
                   <div className="md:hidden">
                     <div className={`h-px ${tema.headerBorder} mx-3`} />
-                    {itemsNav.filter((item) => !['resumen','mis-actividades','actividades','expediente'].includes(item.key)).map((item) => {
+                    {itemsNav.filter((item) => !['resumen','actividades','expediente','principal'].includes(item.key)).map((item) => {
                     if (item.key === 'usuarios') return null;
                     if (item.children) {
                       const itemUsuarios = itemsNav.find((i) => i.key === 'usuarios');
@@ -170,6 +178,7 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
                           <div className={`h-px mx-3 my-1 border-t border-amber-400/40`} />
                         )}
                         <button
+                          data-tutorial={item.tutorialTarget || (item.key === 'postulaciones' ? 'postulaciones' : item.key === 'mis-actividades' ? 'mis-actividades' : ['miembros', 'horarios', 'asistencia', 'convocatorias', 'chat-club', 'eventos', 'historial'].includes(item.key) ? `responsable-${item.key}` : undefined)}
                           onClick={() => { onNavChange?.(item.key); setMenuAbierto(false); }}
                           className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors duration-200 rounded-lg cursor-pointer ${tema.dropdownItem} ${tema.text} flex items-center gap-3`}
                         >

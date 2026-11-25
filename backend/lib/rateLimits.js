@@ -28,6 +28,10 @@ export const UMBRALES = {
   notificacionesMinuto: enteroPositivo(process.env.RATE_LIMIT_NOTIFICACIONES_MINUTO, 30),
   lecturasPesadasMinuto: enteroPositivo(process.env.RATE_LIMIT_LECTURAS_MINUTO, 60),
   escrituraMinuto: enteroPositivo(process.env.RATE_LIMIT_ESCRITURA_MINUTO, 60),
+  chatLecturaMinuto: enteroPositivo(process.env.RATE_LIMIT_CHAT_LECTURA_MINUTO, 30),
+  // El cliente visible genera hasta 24 pings/min (20 de escritura + 4 de
+  // heartbeat). 30 deja margen para montaje, visibilidad y cierre sin 429.
+  chatPresenciaMinuto: enteroPositivo(process.env.RATE_LIMIT_CHAT_PRESENCIA_MINUTO, 30),
   preferenciasMinuto: enteroPositivo(process.env.RATE_LIMIT_PREFERENCIAS_MINUTO, 30),
   registroMinuto: enteroPositivo(process.env.RATE_LIMIT_MISIONES_REGISTRO_MINUTO, enteroPositivo(process.env.RATE_LIMIT_MISIONES_REGISTRO_HORA, 60)),
 };
@@ -197,17 +201,42 @@ export const limitadorLecturasPesadas = crearLimitador({
   keyGenerator: claveUsuario,
 });
 
+// Polling del chat: cuotas por usuario autenticado y revalidado. Se montan en
+// chatClub después de authenticate, no sobre la IP compartida del campus.
+export const limitadorChatLectura = crearLimitador({
+  identifier: 'chat-lectura-usuario',
+  windowMs: 60 * 1000,
+  limit: UMBRALES.chatLecturaMinuto,
+  keyGenerator: claveUsuario,
+});
+
+export const limitadorChatPresencia = crearLimitador({
+  identifier: 'chat-presencia-usuario',
+  windowMs: 60 * 1000,
+  limit: UMBRALES.chatPresenciaMinuto,
+  keyGenerator: claveUsuario,
+});
+
+const RUTA_LECTURA_CHAT = /^\/(?:api\/)?chat-clubes\/clubes\/[^/]+\/leer\/?$/i;
+const RUTA_PRESENCIA_CHAT = /^\/(?:api\/)?chat-clubes\/clubes\/[^/]+\/presencia\/?$/i;
+function esPollingChatClub(req) {
+  return (req.method === 'POST' && RUTA_LECTURA_CHAT.test(req.path)) ||
+    (req.method === 'PUT' && RUTA_PRESENCIA_CHAT.test(req.path));
+}
+
 // Limitador genérico para escrituras administrativas que antes solo dependían
-// del global (T-034). Se monta tras authenticate para usar la identidad
-// revalidada (H2).
+// del global (T-034). El montaje global ocurre antes de authenticate, por lo que
+// usa la IP salvo que un router lo vuelva a montar tras autenticar (H2).
 export const limitadorEscritura = crearLimitador({
   identifier: 'escritura-usuario',
   windowMs: 60 * 1000,
   limit: UMBRALES.escrituraMinuto,
   keyGenerator: claveUsuario,
   // Solo se aplica a operaciones de escritura; las lecturas ya tienen el
-  // global y, en su caso, limitadores específicos (lecturas pesadas).
-  skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
+  // global y, en su caso, limitadores específicos (lecturas pesadas). Las dos
+  // rutas de polling del chat tienen límites propios por usuario y son las
+  // únicas escrituras excluidas aquí.
+  skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method) || esPollingChatClub(req),
 });
 
 // Registro sin cuenta: cuota por IP; el reenvío además se limita por inscripción.

@@ -1,4 +1,6 @@
 import { useRef, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAutenticacion } from '../../contexts/AuthContext';
 import { createPortal } from 'react-dom';
 import { useNotificaciones } from '../../contexts/NotificationContext';
 import { useClickOutside } from '../../hooks/useClickOutside';
@@ -9,6 +11,8 @@ import { ModalNotificacion } from './navegacion/ModalNotificacion';
 import { ElementoNotificacion } from './navegacion/ElementoNotificacion';
 
 export function BadgeNotificaciones({ className = '', variante = 'dropdown', colorClase = null }) {
+  const navigate = useNavigate();
+  const { usuario } = useAutenticacion();
   const { modoOscuro, tema } = useTheme();
   const { notificaciones, noLeidas, marcarComoLeida, marcarTodasLeidas, eliminarNotificacion } = useNotificaciones();
   const [mostrarNotificaciones, setMostrarNotificaciones] = useState(false);
@@ -39,13 +43,22 @@ export function BadgeNotificaciones({ className = '', variante = 'dropdown', col
     setMostrarNotificaciones(false);
   }
 
+  function abrirChat(notif) {
+    setNotifModal(null);
+    setMostrarNotificaciones(false);
+    const ruta = Number(usuario?.id_rol) === 1
+      ? '/campus/campeche/alumno/panel?seccion=chat-club'
+      : '/campus/campeche/portal/responsable-de-club/panel?seccion=chat-club';
+    navigate(ruta);
+  }
+
   // El encabezado + la lista se comparten entre el dropdown (escritorio) y el
   // modal (móvil): mismo look, sólo cambia cómo se posiciona el contenedor.
   const panel = (
     <div className={`rounded-xl overflow-hidden ${modoOscuro ? 'bg-[#0e162c] border-slate-700' : 'bg-white border-slate-200'} ${tema.dropdownBorder}`}>
       <div className={`px-4 py-3 flex items-center justify-between ${modoOscuro ? 'border-b border-slate-700/50' : 'border-b border-slate-200'}`}>
         <p className={`text-xs font-semibold uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
-          Notificaciones {noLeidas > 0 && `(${noLeidas} sin leer)`}
+          Notificaciones {noLeidas > 0 && `(${noLeidas > 9 ? '9+' : noLeidas} sin leer)`}
         </p>
         {noLeidas > 0 && (
           <button
@@ -96,8 +109,8 @@ export function BadgeNotificaciones({ className = '', variante = 'dropdown', col
       >
         <Icono nombre="bell" className="h-5 w-5 lg:h-6 lg:w-6" strokeWidth={2} />
         {noLeidas > 0 && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
-            {noLeidas}
+          <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+            {noLeidas > 9 ? '9+' : noLeidas}
           </span>
         )}
       </button>
@@ -137,6 +150,7 @@ export function BadgeNotificaciones({ className = '', variante = 'dropdown', col
         tema={tema}
         modoOscuro={modoOscuro}
         onEliminar={eliminarNotificacion}
+        onAbrirChat={abrirChat}
       />
     </div>
   );

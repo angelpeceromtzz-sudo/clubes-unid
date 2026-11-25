@@ -3,7 +3,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { BotonCerrar } from '../../ui/BotonCerrar';
 import { ModalBase } from '../../ui/ModalBase';
 
-export function ModalAyuda({ show, onClose }) {
+export function ModalAyuda({ show, onClose, mostrarTutorial = false, onVerTutorial }) {
   const { tema, modoOscuro } = useTheme();
 
   return (
@@ -29,6 +29,15 @@ export function ModalAyuda({ show, onClose }) {
         >
           Ver preguntas frecuentes
         </Link>
+        {mostrarTutorial && (
+          <button
+            type="button"
+            onClick={onVerTutorial}
+            className="flex items-center justify-center w-full px-5 py-3 rounded-full border border-amber-400/50 text-amber-500 font-black text-sm hover:bg-amber-400/10 transition cursor-pointer"
+          >
+            Volver a ver el tutorial
+          </button>
+        )}
         <p className={`text-xs pt-2 ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
           ¿Dudas o reportes? Contacta al administrador del sistema.
           00906641@red.unid.mx

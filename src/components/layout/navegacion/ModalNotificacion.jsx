@@ -2,7 +2,7 @@ import { ModalBase } from '../../ui/ModalBase';
 import { Icono } from '../../ui/Icono';
 import { BotonCerrar } from '../../ui/BotonCerrar';
 
-export function ModalNotificacion({ notif, onClose, tema, modoOscuro, onEliminar }) {
+export function ModalNotificacion({ notif, onClose, tema, modoOscuro, onEliminar, onAbrirChat }) {
   if (!notif) return null;
   return (
     <ModalBase show={!!notif} onClose={onClose} maxWidth="max-w-lg">
@@ -31,6 +31,7 @@ export function ModalNotificacion({ notif, onClose, tema, modoOscuro, onEliminar
       <p className={`text-sm leading-relaxed whitespace-pre-wrap ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
         {notif.mensaje}
       </p>
+      {notif.es_chat_club && <div className="mt-5"><button type="button" onClick={() => onAbrirChat?.(notif)} className="rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#0b111e] hover:bg-amber-300">Abrir chat del club</button></div>}
       <div className={`flex items-center justify-between mt-6 pt-4 ${modoOscuro ? 'border-t border-slate-700/50' : 'border-t border-slate-200'}`}>
         <span className={`text-xs ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
           {new Date(notif.fecha_creacion).toLocaleDateString('es-MX', {

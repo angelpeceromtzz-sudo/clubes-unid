@@ -23,7 +23,7 @@ export function SeccionGestionClubs({ onVolver, children }) {
 
   return <section aria-label="Gestión de Clubs" className="min-w-0 space-y-6">
     {tipo === 'actividad' ? <GestionActividades key="actividades" integrada tipoFijo="actividad"/> : detalleClub ? <>
-      <BotonAccion variant="outline" onClick={() => { onVolver?.(); cambiarVista('club'); }}>Volver al listado de Clubs</BotonAccion>
+      <BotonAccion variant="primary" onClick={() => { onVolver?.(); cambiarVista('club'); }}>Volver al listado de Clubs</BotonAccion>
       <GestionActividades key={'club-' + registro} integrada tipoFijo="club" soloDetalle/>
     </> : children({ onPublicacion: (club) => cambiarVista('club', club.id_club), tipo, onCambiarTipo: cambiarVista })}
   </section>;

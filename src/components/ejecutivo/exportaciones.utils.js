@@ -40,7 +40,7 @@ export function crearReporteCompletoPDF(d, fecha = new Date()) {
     titulo: 'Reporte completo de estadísticas',
     generadoEn: secciones[0].generadoEn,
     actualizadoEn: secciones[0].actualizadoEn,
-    nota: 'Incluye Resumen ejecutivo, Clubes, Asistencia, Encuestas y Postulaciones. Cada bloque indica los filtros que le corresponden.',
+    nota: 'Incluye Resumen ejecutivo, Clubes, Asistencia, Encuestas, Postulaciones y Preferencias de alumnos. Cada bloque indica los filtros que le corresponden.',
     secciones,
   };
 }
@@ -137,6 +137,24 @@ function crearSeccionPDF(d, tab, fecha, todasLasPreguntas = false) {
     reporte.tablas = [{ titulo: 'Evolución mensual', encabezados: ['Mes', 'Postulaciones', 'Altas de inscripción'], pesos: [2, 2, 2], filas: filas.map((fila) => [fila[0], entero(fila[1]), entero(fila[2])]) }];
     reporte.graficas = [{ titulo: 'Postulaciones por mes', filas: filas.map((fila) => ({ nombre: fila[0], valor: fila[1] })) }];
     reporte.nota = 'Últimos 6 meses, dentro del periodo seleccionado si lo hay. Pendientes: estados Pendiente o En revisión. Licenciatura y estado filtran postulaciones; las altas de inscripción se filtran por club y periodo.';
+  } else if (tab === 'preferencias') {
+    const preferencias = d.preferencias || {};
+    const filasCategoria = (preferencias.por_categoria || []).map((fila) => [fila.categoria, entero(fila.total)]);
+    const filasActividad = (preferencias.por_actividad || []).map((fila) => [fila.actividad, fila.categoria || '—', entero(fila.total)]);
+    const filasMotivacion = (preferencias.por_motivacion || []).map((fila) => [fila.motivacion, entero(fila.total)]);
+    const filasDisposicion = (preferencias.por_disposicion || []).map((fila) => [fila.disposicion, entero(fila.total)]);
+    reporte.indicadores = [
+      ['Alumnos con onboarding completado', entero(preferencias.total_con_onboarding)],
+      ['Interesados en ser responsables', entero((preferencias.por_disposicion || []).filter((fila) => fila.disposicion === 'responsable').reduce((total, fila) => total + numero(fila.total), 0))],
+    ];
+    reporte.tablas = [
+      { titulo: 'Categorías de interés', encabezados: ['Categoría', 'Alumnos'], pesos: [4, 1], filas: filasCategoria },
+      { titulo: 'Actividades de interés', encabezados: ['Actividad', 'Categoría', 'Alumnos'], pesos: [3, 2, 1], filas: filasActividad },
+      { titulo: 'Motivaciones', encabezados: ['Motivación', 'Alumnos'], pesos: [4, 1], filas: filasMotivacion },
+      { titulo: 'Disposición para ser responsable', encabezados: ['Disposición', 'Alumnos'], pesos: [4, 1], filas: filasDisposicion },
+    ];
+    reporte.graficas = [{ titulo: 'Alumnos por categoría de interés', filas: (preferencias.por_categoria || []).map((fila) => ({ nombre: fila.categoria, valor: numero(fila.total) })) }];
+    reporte.nota = 'Resumen agregado de las preferencias declaradas por los alumnos que completaron el onboarding.';
   }
   return reporte;
 }

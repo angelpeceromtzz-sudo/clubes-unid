@@ -3,7 +3,7 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { ROL_ALUMNO, ROL_ADMIN, ROL_RECTORIA } from '../constants/roles.js';
+import { ROL_ALUMNO, ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { limitadorPreferencias } from '../lib/rateLimits.js';
 import { CORREOS_NO_CONFIGURABLES, VERSION_AVISO_PUBLICADA } from '../lib/preferenciasCorreo.js';
 import {
@@ -67,6 +67,22 @@ async function reemplazarSeleccion(client, idUsuario, { tabla, columna }, ids) {
   );
 }
 
+async function guardarPerfilAcademicoOnboarding(client, idUsuario, datos) {
+  if (datos.origen !== 'onboarding') return;
+  const licenciatura = await client.query(
+    'SELECT 1 FROM cat_licenciaturas WHERE id_licenciatura = $1',
+    [datos.id_licenciatura],
+  );
+  if (licenciatura.rows.length === 0) {
+    throw new ErrorValidacion('La licenciatura seleccionada no está disponible');
+  }
+  await client.query(
+    `UPDATE usuarios SET id_licenciatura = $2, fecha_nacimiento = $3
+     WHERE id_usuario = $1`,
+    [idUsuario, datos.id_licenciatura, datos.fecha_nacimiento],
+  );
+}
+
 async function guardarPreferencias(client, idUsuario, datos) {
   await client.query(
     'INSERT INTO preferencias_usuario (id_usuario) VALUES ($1) ON CONFLICT (id_usuario) DO NOTHING',
@@ -76,6 +92,10 @@ async function guardarPreferencias(client, idUsuario, datos) {
     'SELECT * FROM preferencias_usuario WHERE id_usuario = $1 FOR UPDATE',
     [idUsuario],
   )).rows[0];
+  // Serializa preferencias y perfil académico por usuario. Sin este lock, dos
+  // onboarding concurrentes podrían dejar datos académicos de una petición y
+  // preferencias de la otra, aunque cada transacción fuese atómica.
+  await guardarPerfilAcademicoOnboarding(client, idUsuario, datos);
   const correoAnterior = correoDesdeFila(actual);
 
   await reemplazarSeleccion(client, idUsuario, SELECCIONES[0], datos.categorias);
@@ -218,8 +238,9 @@ router.get('/preferencias/historial-correo', authenticate, requireRole(ROL_ALUMN
   }
 });
 
-// Resumen agregado de preferencias de onboarding (solo admin/rectoría).
-router.get('/resumen', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA), async (req, res) => {
+// Resumen agregado de preferencias de onboarding (admin, rectoría y coordinación).
+// Coordinación lo consulta desde la vista ejecutiva en modo lectura.
+router.get('/resumen', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
   try {
     const total = (await pool.query(
       `SELECT COUNT(*)::int AS n FROM preferencias_usuario WHERE estado_onboarding = 'completado'`,

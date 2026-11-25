@@ -135,7 +135,7 @@ function responderPool(sql, params = []) {
 }
 
 function token(id, rol) {
-  return jwt.sign({ id, nombre_completo: `Usuario ${id}`, id_rol: rol }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  return jwt.sign({ id, nombre_completo: `Usuario ${id}`, id_rol: rol, auth_otp: false }, process.env.JWT_SECRET, { expiresIn: '5m' });
 }
 
 before(async () => {

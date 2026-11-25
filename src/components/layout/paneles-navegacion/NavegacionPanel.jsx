@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { NAVBAR_HEIGHT_LOGO } from '../../../constants/limites';
 
-export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, children }) {
+export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, children, fullHeight = false }) {
   const { modoOscuro } = useTheme();
   const [abiertos, setAbiertos] = useState(() => new Set());
   const [cerrados, setCerrados] = useState(() => new Set());
@@ -15,8 +15,6 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
   const itemExpediente = elementosNav.find((i) => i.key === 'expediente');
   const itemGestionClubes = elementosNav.find((i) => i.key === 'gestion-clubes');
   const itemResumen = elementosNav.find((i) => i.key === 'resumen');
-  const itemActividades = elementosNav.find((i) => i.key === 'mis-actividades');
-  const itemPrincipal = elementosNav.find((i) => !i.children && i.key !== 'mis-actividades');
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -66,6 +64,7 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
     return (
       <button
         key={item.key}
+        data-tutorial={item.tutorialTarget || (item.key === 'postulaciones' ? 'postulaciones' : item.key === 'mis-actividades' ? 'mis-actividades' : ['miembros', 'horarios', 'asistencia', 'convocatorias', 'chat-club', 'eventos', 'historial'].includes(item.key) ? `responsable-${item.key}` : undefined)}
         onClick={() => !item.deshabilitado && onVistaChange(item.key)}
         disabled={item.deshabilitado}
         className={baseClases}
@@ -117,7 +116,7 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
     item.children ? renderGrupo(item, compacto) : renderBoton(item, compacto);
 
   return (
-    <div className="flex min-h-screen">
+    <div className={`flex ${fullHeight ? 'navegacion-panel--altura-completa min-h-0 overflow-hidden' : 'min-h-screen'}`}>
       <div
         className={`hidden md:flex flex-col shrink-0 border-r sticky self-start overflow-y-auto transition-all duration-300 ${sidebarAbierto ? 'w-64' : 'w-12'} ${modoOscuro ? 'bg-[#0a1128] border-slate-800/60' : 'bg-white border-slate-200 shadow-sm'}`}
         style={{ top: `${NAVBAR_HEIGHT_LOGO}px`, height: `calc(100vh - ${NAVBAR_HEIGHT_LOGO}px)`, direction: 'rtl', scrollbarColor: '#fbbf24 transparent', scrollbarWidth: 'thin' }}
@@ -132,7 +131,7 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
             {sidebarAbierto ? 'Cerrar' : 'Abrir'}
           </button>
           {sidebarAbierto && (
-            <nav aria-label="Menú del panel" className="pt-2 px-3 space-y-1">
+            <nav aria-label="Menú del panel" data-tutorial="menu-panel" className="pt-2 px-3 space-y-1">
               {tieneAdmin && (
                  <>
                    <div className={`px-4 py-2 text-xs font-black uppercase tracking-wider ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -175,11 +174,7 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
         </div>
       </div>
 
-      <main className="flex-1 p-4 md:p-8 overflow-auto">
-        {itemActividades && <nav aria-label="Secciones de mi panel" className="md:hidden flex flex-wrap gap-2 mb-6">
-          <button type="button" aria-pressed={!['mis-actividades','clubes'].includes(vistaActiva)} onClick={() => onVistaChange(itemPrincipal.key)} className="rounded-full border border-slate-400/30 px-4 py-2 text-xs font-semibold">Mi panel</button>
-          {itemActividades && <button type="button" aria-pressed={vistaActiva === 'mis-actividades'} onClick={() => onVistaChange('mis-actividades')} className={'rounded-full border px-4 py-2 text-xs font-semibold ' + (vistaActiva === 'mis-actividades' ? 'border-amber-400 bg-amber-400/15 text-amber-600 dark:text-amber-300' : 'border-slate-400/30')}>Mis actividades</button>}
-        </nav>}
+      <main className={`min-w-0 flex-1 ${fullHeight ? 'h-full min-h-0 overflow-hidden p-0' : 'overflow-auto p-4 md:p-8'}`}>
         {children}
       </main>
     </div>

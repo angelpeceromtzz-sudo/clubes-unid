@@ -129,7 +129,18 @@ export function BarraNavegacion({
         </div>
       </header>
 
-      <ModalAyuda show={mostrarAyuda} onClose={() => setMostrarAyuda(false)} />
+      <ModalAyuda
+        show={mostrarAyuda}
+        onClose={() => setMostrarAyuda(false)}
+        mostrarTutorial={[1, 2].includes(user?.id_rol)}
+        onVerTutorial={() => {
+          setMostrarAyuda(false);
+          const eventoTutorial = user?.id_rol === 2
+            ? 'clubsunid:repetir-tutorial-responsable'
+            : 'clubsunid:repetir-tutorial-alumno';
+          window.dispatchEvent(new CustomEvent(eventoTutorial));
+        }}
+      />
     </>
   );
 }

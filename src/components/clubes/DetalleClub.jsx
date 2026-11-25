@@ -45,7 +45,13 @@ export function DetalleClub({ onLoginClick }) {
   function formatearFecha(fechaIso) {
     if (!fechaIso) return '';
     const fecha = new Date(fechaIso);
-    return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+    return fecha.toLocaleString('es-MX', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   }
 
   function obtenerTextoBoton() {
@@ -108,7 +114,7 @@ export function DetalleClub({ onLoginClick }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <HorariosClub club={club} modoOscuro={modoOscuro} />
-          <EventosClub modoOscuro={modoOscuro} />
+          <EventosClub modoOscuro={modoOscuro} idClub={club.id_club} />
           <ModalidadClub club={club} modoOscuro={modoOscuro} />
         </div>
 

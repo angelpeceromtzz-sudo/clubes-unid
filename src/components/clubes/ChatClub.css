@@ -1,0 +1,56 @@
+.navegacion-panel--altura-completa { height: calc(100dvh - 7.4375rem - env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 1024px) {
+  .navegacion-panel--altura-completa { height: calc(100dvh - max(4rem, var(--navbar-height, 0px))); }
+}
+.chat-club { height: min(78vh, 860px); min-height: 32rem; }
+.chat-club--pantalla { width: 100%; height: 100%; min-height: 0; max-height: 100%; border-radius: 0; border-left: 0; border-right: 0; box-shadow: none; }
+.chat-club__mensajes { scrollbar-width: thin; scrollbar-color: #64748b transparent; }
+.chat-club__mensaje { overflow-wrap: anywhere; transition: outline-color 300ms ease, outline-offset 300ms ease, background-color 300ms ease, box-shadow 300ms ease; }
+.chat-club__mensaje--seleccionado { outline: 2px solid #fbbf24; outline-offset: 1px; background-color: #fbbf2426; box-shadow: 0 0 0 4px #fbbf2412, 0 0 18px #fbbf242b; }
+.chat-club__menu-toggle { position: absolute; top: -0.55rem; right: 0.35rem; z-index: 2; width: 1.65rem; height: 1.65rem; place-items: center; border: 1px solid #ffffff20; border-radius: 999px; opacity: 0; pointer-events: none; box-shadow: 0 4px 12px #0003; transition: opacity 140ms ease, background-color 140ms ease, color 140ms ease; }
+.chat-club__mensaje:hover .chat-club__menu-toggle, .chat-club__menu-toggle:focus-visible, .chat-club__menu-toggle[aria-expanded="true"] { opacity: 1; pointer-events: auto; }
+.chat-club__menu-toggle--oscuro { color: #f8fafc; background: #27334a; }
+.chat-club__menu-toggle--oscuro:hover { background: #35435c; }
+.chat-club__menu-toggle--claro { color: #334155; background: #fff; border-color: #cbd5e1; }
+.chat-club__menu-toggle--claro:hover { background: #f1f5f9; }
+.chat-club__nombre { color: inherit; font-weight: 700; }
+.chat-club__nombre--responsable { color: #fbbf24; }
+.chat-club__nombre--vicepresidente { color: #38bdf8; }
+.chat-club__rol { border-radius: 999px; padding: 0.08rem 0.45rem; font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.chat-club__rol--responsable { background: #fbbf2426; color: #f59e0b; }
+.chat-club__rol--vicepresidente { background: #38bdf826; color: #0ea5e9; }
+.chat-club__mencion { border-radius: 0.35rem; background: #6366f133; color: #818cf8; padding: 0.05rem 0.2rem; font-weight: 700; }
+.chat-club__accion { border-radius: 0.45rem; padding: 0.25rem 0.55rem; color: #fbbf24; font-size: 0.66rem; font-weight: 700; }
+.chat-club__accion:hover { background: #fbbf2418; }
+.chat-club__accion--peligro { color: #f87171; }
+.chat-club__puntos::before { content: '•••'; display: inline-block; margin-right: 0.4rem; color: #10b981; letter-spacing: 0.1em; animation: chat-pulso 1s ease-in-out infinite alternate; }
+.chat-club__nuevos { position: absolute; bottom: 6.7rem; left: 50%; z-index: 10; transform: translateX(-50%); border-radius: 999px; background: #fbbf24; padding: 0.55rem 1rem; color: #0b111e; font-size: 0.75rem; font-weight: 800; box-shadow: 0 8px 24px #0004; white-space: nowrap; }
+.chat-club__miembros { position: fixed; top: 4rem; right: 0; bottom: 4.25rem; width: 100vw; box-shadow: -12px 0 32px #0003; }
+.chat-club__spinner { width: 1.7rem; height: 1.7rem; border: 2px solid #fbbf24; border-right-color: transparent; border-radius: 50%; animation: chat-giro 700ms linear infinite; }
+.chat-club__composer textarea { max-height: 8rem; overflow-y: auto; resize: none; }
+.chat-club__composer { flex: none; background: transparent; }
+.chat-club__composer-bar { min-height: 3.25rem; box-shadow: 0 8px 24px #0002; transition: border-color 150ms ease, box-shadow 150ms ease; }
+.chat-club__composer-bar:focus-within { border-color: #fbbf24; box-shadow: 0 8px 28px #0003, 0 0 0 2px #fbbf2426; }
+.chat-club__sugerencias { max-height: 13rem; }
+.chat-club__menu-acciones { position: fixed; z-index: 130; display: flex; width: min(14rem, calc(100vw - 1rem)); max-height: calc(100dvh - 1rem); flex-direction: column; overflow-y: auto; border: 1px solid #ffffff18; border-radius: 0.9rem; padding: 0.35rem; box-shadow: 0 16px 40px #0007; backdrop-filter: blur(12px); }
+.chat-club__menu-acciones--oscuro { color: #f8fafc; background: #111827f5; }
+.chat-club__menu-acciones--claro { color: #0f172a; background: #fffF; border-color: #cbd5e1; }
+.chat-club__menu-acciones button { display: flex; min-height: 2.5rem; align-items: center; gap: 0.65rem; border-radius: 0.6rem; padding: 0.45rem 0.7rem; text-align: left; font-size: 0.82rem; font-weight: 650; }
+.chat-club__menu-acciones button:hover { background: #fbbf241f; }
+.chat-club__menu-acciones button.chat-club__menu-acciones--eliminar { color: #f87171; }
+@keyframes chat-giro { to { transform: rotate(360deg); } }
+@keyframes chat-pulso { to { opacity: 0.35; } }
+@media (min-width: 1024px) {
+  .chat-club__miembros { position: absolute; top: 0; right: 0; bottom: 0; width: 19rem; }
+  .chat-club:has(.chat-club__miembros) .chat-club__mensajes { padding-right: 20rem; }
+}
+@media (max-width: 640px) {
+  .chat-club { height: calc(100dvh - 12rem); min-height: 27rem; border-radius: 1rem; }
+  .chat-club__header { padding-top: 0.7rem; padding-bottom: 0.7rem; }
+  .chat-club__nuevos { bottom: 7.3rem; }
+}
+.chat-club.chat-club--pantalla { height: 100%; min-height: 0; max-height: 100%; border-right: 0; border-left: 0; border-radius: 0; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .chat-club__puntos::before, .chat-club__spinner { animation: none; }
+  .chat-club__mensaje { transition: none; }
+}

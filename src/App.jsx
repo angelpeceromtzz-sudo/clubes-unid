@@ -39,7 +39,10 @@ import PaginaExperienciaEstudiantil from './pages/PaginaExperienciaEstudiantil';
 import { RutaClubActividad } from './components/actividades/RutaClubActividad';
 import { abrirPanelResponsable } from './services/panelResponsable';
 import PaginaPerfilPreferencias from './pages/PaginaPerfilPreferencias';
+import { PerfilAlumnoPanel } from './components/expediente/PerfilAlumnoPanel';
 import { FlujoOnboarding } from './components/onboarding/FlujoOnboarding';
+import { ModalConsentimientoLegal } from './components/legal/ModalConsentimientoLegal';
+import { api, request } from './services/api';
 
 import PaginaEncuesta from './pages/PaginaEncuesta';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
@@ -88,6 +91,10 @@ const RUTAS_CONOCIDAS = [
   '/campus',
   '/campus/campeche',
   '/campus/campeche/portal',
+  '/panel',
+  '/perfil',
+  '/perfil/preferencias',
+  '/campus/campeche/alumno/panel',
   '/campus/campeche/portal/club/:id',
   '/campus/campeche/portal/responsable-de-club/panel',
   '/campus/campeche/coordinacion/panel',
@@ -108,7 +115,6 @@ const RUTAS_CONOCIDAS = [
   '/noticias',
   '/eventos',
   '/calendario',
-  '/panel',
   '/admin/panel',
   '/rectoria/panel',
   '/mural/panel',
@@ -131,9 +137,77 @@ function App() {
   const [heroVisible, setHeroVisible] = useState(true);
   const [splashDone, setSplashDone] = useState(false);
   const [onboardingAbierto, setOnboardingAbierto] = useState(false);
+  const [consentimientoPendiente, setConsentimientoPendiente] = useState(false);
+  const [consentimientoError, setConsentimientoError] = useState(false);
+
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  const claveTutorialAlumno = idUsuario ? `tutorial_alumno_${idUsuario}_pending` : null;
+
+  const dejarTutorialAlumnoPendiente = useCallback((repetir = false) => {
+    if (!claveTutorialAlumno) return;
+    try { localStorage.setItem(claveTutorialAlumno, repetir ? 'repetir' : 'true'); } catch { /* La solicitud se puede volver a iniciar desde Ayuda. */ }
+  }, [claveTutorialAlumno]);
+
+  const lanzarTutorialAlumno = useCallback((repetir = false) => {
+    const rutaPanelAlumno = '/campus/campeche/alumno/panel';
+    if (location.pathname === rutaPanelAlumno) {
+      window.dispatchEvent(new CustomEvent('clubsunid:iniciar-tutorial-alumno', { detail: { repetir } }));
+      return;
+    }
+    dejarTutorialAlumnoPendiente(repetir);
+    navigate(rutaPanelAlumno);
+  }, [location.pathname, navigate, dejarTutorialAlumnoPendiente]);
+
+  const lanzarTutorialResponsable = useCallback((repetir = false) => {
+    const rutaPanelResponsable = '/campus/campeche/portal/responsable-de-club/panel';
+    const idUsuario = usuario?.id_usuario ?? usuario?.id;
+    if (location.pathname === rutaPanelResponsable) {
+      window.dispatchEvent(new CustomEvent('clubsunid:iniciar-tutorial-responsable', { detail: { repetir } }));
+      return;
+    }
+    if (idUsuario) {
+      try { localStorage.setItem(`tutorial_responsable_${idUsuario}_pending`, repetir ? 'repetir' : 'true'); } catch { /* La solicitud se puede volver a iniciar desde Ayuda. */ }
+    }
+    navigate(rutaPanelResponsable);
+  }, [location.pathname, navigate, usuario?.id_usuario, usuario?.id]);
+
+  useEffect(() => {
+    const controlarMenuTutorial = (evento) => setMenuAbierto(evento.detail?.abierto === true);
+    const eventos = ['clubsunid:menu-tutorial', 'clubsunid:menu-tutorial-alumno'];
+    eventos.forEach((nombre) => window.addEventListener(nombre, controlarMenuTutorial));
+    return () => eventos.forEach((nombre) => window.removeEventListener(nombre, controlarMenuTutorial));
+  }, []);
+
+  useEffect(() => {
+    const solicitarRepeticion = () => lanzarTutorialAlumno(true);
+    window.addEventListener('clubsunid:repetir-tutorial-alumno', solicitarRepeticion);
+    return () => window.removeEventListener('clubsunid:repetir-tutorial-alumno', solicitarRepeticion);
+  }, [lanzarTutorialAlumno]);
+
+  useEffect(() => {
+    const solicitarRepeticion = () => lanzarTutorialResponsable(true);
+    window.addEventListener('clubsunid:repetir-tutorial-responsable', solicitarRepeticion);
+    return () => window.removeEventListener('clubsunid:repetir-tutorial-responsable', solicitarRepeticion);
+  }, [lanzarTutorialResponsable]);
+
+  useEffect(() => {
+    if (!authReady || !estaAutenticado || showLogin) return undefined;
+    let vigente = true;
+    api.get('/legal/estado').then((data) => {
+      if (!vigente) return;
+      setConsentimientoError(false);
+      setConsentimientoPendiente(!data?.completo);
+    }).catch(() => {
+      if (vigente) {
+        setConsentimientoError(true);
+        setConsentimientoPendiente(true);
+      }
+    });
+    return () => { vigente = false; };
+  }, [authReady, estaAutenticado, showLogin, usuario?.id_usuario]);
 
   const debeAbrirOnboarding =
-    authReady && estaAutenticado && esAlumnoOnboarding && estadoOnboarding === 'pendiente' && !onboardingAbierto;
+    authReady && estaAutenticado && esAlumnoOnboarding && estadoOnboarding === 'pendiente' && !onboardingAbierto && !consentimientoPendiente;
 
   const onboardingAbiertoEfectivo =
     onboardingAbierto || debeAbrirOnboarding;
@@ -165,14 +239,25 @@ function App() {
     if (!actualizacionesAbiertas && location.pathname !== '/noticias' && location.pathname !== '/calendario' && !location.pathname.startsWith('/actividades')) redirigirPostLogin();
   }, [redirigirPostLogin, location.pathname, actualizacionesAbiertas]);
 
-   function handleLogout() {
-    cerrarSesion();
-    navigate('/campus/campeche/portal');
-    setMenuAbierto(false);
-    setConfirmarLogout(false);
+  const aceptarLegalDesdeLogin = useCallback(async () => {
+    await request('/legal/aceptar', { method: 'POST', body: JSON.stringify({ terminos: true, privacidad: true }) });
+    setConsentimientoPendiente(false);
+  }, []);
+
+  async function handleLogout() {
+    try {
+      await cerrarSesion();
+    } catch (err) {
+      console.error('[Auth] No se pudo completar el cierre de sesión:', err);
+    } finally {
+      navigate('/campus/campeche/portal');
+      setMenuAbierto(false);
+      setConfirmarLogout(false);
+    }
   }
 
   const mostrarFiltros = location.pathname === '/campus/campeche/portal';
+  const esDetalleClubPortal = location.pathname.startsWith('/campus/campeche/portal/club/');
 
   // La landing /conoce-clubs y la página /acerca-del-proyecto se montan
   // fuera del layout del sistema con este return temprano (mismo patrón que
@@ -191,8 +276,9 @@ function App() {
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
   // coincide con NAVBAR_HEIGHT y no con la del logotipo de NAVBAR_HEIGHT_LOGO.
-  const esRutaPanel = ['/panel', '/campus/campeche/portal/responsable-de-club/panel', '/admin/panel', '/rectoria/panel', '/mural/panel'].includes(location.pathname);
+  const esRutaPanel = ['/campus/campeche/alumno/panel', '/campus/campeche/portal/responsable-de-club/panel', '/admin/panel', '/rectoria/panel', '/mural/panel', '/perfil'].includes(location.pathname);
   const alturaNavbar = esRutaPanel ? NAVBAR_HEIGHT_LOGO : NAVBAR_HEIGHT;
+  const chatClubAbierto = esRutaPanel && new URLSearchParams(location.search).get('seccion') === 'chat-club';
 
   // La encuesta pública se monta FUERA del layout de abajo, a propósito: es la
   // única ruta que no vive dentro de la aplicación. El catálogo ("/" y
@@ -268,7 +354,7 @@ function App() {
           {esPreguntasFrecuentes && <Route path="/preguntas-frecuentes" element={<PaginaPreguntasFrecuentes />} />}
           {esLandingCampeche && <Route path="/campus/campeche" element={<PaginaConoceClubs />} />}
         </Routes>
-        {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} />}
+        {showLogin && <ModalInicioSesion onClose={handleLoginSuccess} onAceptarLegal={aceptarLegalDesdeLogin} />}
       </>
     );
   }
@@ -285,7 +371,7 @@ function App() {
     } else if (esResponsableMural) {
       navigate('/mural/panel');
     } else {
-      navigate('/panel');
+      navigate('/campus/campeche/alumno/panel');
     }
     setMenuAbierto(false);
   }
@@ -297,9 +383,21 @@ function App() {
 
 return (
       <div
-        className={`min-h-dvh font-sans transition-colors duration-300 overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pb-0 ${esLandingGeneral ? '' : 'lg:pt-[var(--navbar-height)]'} ${tema.bg} ${tema.text}`}
+        className={`min-h-dvh font-sans transition-colors duration-300 overflow-x-clip ${chatClubAbierto ? 'pb-[calc(3.4375rem+env(safe-area-inset-bottom,0px))]' : 'pb-[calc(4rem+env(safe-area-inset-bottom,0px))]'} lg:pb-0 ${esLandingGeneral ? '' : 'lg:pt-[var(--navbar-height)]'} ${tema.bg} ${tema.text}`}
       style={{ '--navbar-height': modoOscuro && !esLandingGeneral && !esOferta && location.pathname !== '/campus/campeche/portal' ? `${alturaNavbar}px` : '0px' }}
     >
+      {consentimientoPendiente && estaAutenticado && !['/terminos', '/privacidad'].includes(location.pathname) && (
+        consentimientoError ? (
+          <div className="fixed inset-0 z-[1000] bg-slate-50 dark:bg-[#0b111e] flex items-center justify-center px-4">
+            <div className="w-full max-w-md rounded-2xl p-8 border bg-white dark:bg-[#0e162c] border-slate-200 dark:border-slate-700/50">
+              <p className="text-sm text-red-500">No se pudo verificar la aceptación de los documentos legales.</p>
+              <button type="button" onClick={() => window.location.reload()} className="mt-4 bg-amber-400 text-[#0e162c] font-black text-xs uppercase tracking-wider rounded-xl px-4 py-3 cursor-pointer">Reintentar</button>
+            </div>
+          </div>
+        ) : (
+          <ModalConsentimientoLegal onAceptar={async () => { await request('/legal/aceptar', { method: 'POST', body: JSON.stringify({ terminos: true, privacidad: true }) }); setConsentimientoPendiente(false); }} />
+        )
+      )}
       <SplashScreen authReady={authReady} clubesLoading={clubesLoading} onFinish={() => setSplashDone(true)} />
 
       {!esLandingGeneral && !esOferta && (
@@ -313,7 +411,7 @@ return (
           onLogout={() => setConfirmarLogout(true)}
           onPanelClick={irAPanel}
           mostrarFiltros={mostrarFiltros}
-          mostrarNoticias={mostrarFiltros || location.pathname === '/admin/panel'}
+          mostrarNoticias={mostrarFiltros || esDetalleClubPortal || location.pathname === '/calendario' || location.pathname === '/admin/panel' || location.pathname === '/campus/campeche/alumno/panel' || location.pathname === '/campus/campeche/portal/responsable-de-club/panel'}
           mostrarLogo={esRutaPanel}
           onVolverCatalogo={irACatalogo}
           contenidoMax={location.pathname.startsWith('/campus/campeche/portal/club/') ? '7xl' : null}
@@ -340,7 +438,7 @@ return (
       />
 
       {showLogin && (
-        <ModalInicioSesion onClose={handleLoginSuccess} />
+        <ModalInicioSesion onClose={handleLoginSuccess} onAceptarLegal={aceptarLegalDesdeLogin} />
       )}
 
       {onboardingAbiertoEfectivo && (
@@ -350,6 +448,8 @@ return (
               onCompletar={() => {
                 marcarCompletadoOnboarding();
                 setOnboardingAbierto(false);
+                if (location.pathname.startsWith('/actividades')) dejarTutorialAlumnoPendiente();
+                else lanzarTutorialAlumno(false);
               }}
             />
           </div>
@@ -365,7 +465,7 @@ return (
         <Route path="/actividades/trineo/registro/:folio" element={<PaginaRegistroInvitadoTrineo key={location.pathname} />} />
         <Route path="/actividades/:slug" element={<DetalleActividad onLoginClick={() => setShowLogin(true)} />} />
         <Route path="/campus/campeche/portal" element={
-          <PaginaInicio key={catalogoKey} />
+          <PaginaInicio key={catalogoKey} onLoginClick={() => setShowLogin(true)} />
         } />
         <Route path="/noticias" element={<RedireccionNoticias />} />
         <Route path="/eventos" element={<RedireccionNoticias />} />
@@ -386,10 +486,18 @@ return (
             <PaginaPerfilPreferencias />
           </RutaProtegida>
         } />
+        <Route path="/perfil" element={
+          <RutaProtegida>
+            <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-8 md:py-8">
+              <PerfilAlumnoPanel />
+            </div>
+          </RutaProtegida>
+        } />
         <Route path="/campus/campeche/portal/club/:id" element={
           <RutaClubActividad onLoginClick={() => setShowLogin(true)} />
         } />
-        <Route path="/panel" element={
+        <Route path="/panel" element={<Navigate to="/campus/campeche/alumno/panel" replace />} />
+        <Route path="/campus/campeche/alumno/panel" element={
           <RutaProtegida>
             <PanelAlumno />
           </RutaProtegida>

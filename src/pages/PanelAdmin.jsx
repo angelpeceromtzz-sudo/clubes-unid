@@ -25,6 +25,7 @@ import { ModalPasswordAdmin } from '../components/admin/modales/ModalPasswordAdm
 import { SeccionDiapositivas } from '../components/admin/seccion-diapositivas/SeccionDiapositivas';
 import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
 import { SeccionNoticias } from '../components/admin/seccion-noticias/SeccionNoticias';
+import { SeccionReportesAdmin } from '../components/admin/secciones/SeccionReportesAdmin';
 import { Spinner } from '../components/ui/Spinner';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -36,6 +37,7 @@ import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActivid
 
 export function PanelAdmin() {
   const { usuario } = useAutenticacion();
+  const esCoordinacion = usuario?.id_rol === 7;
   const asignacion=useActividadesAsignadas();
   const d = usePanelAdmin(usuario);
   const ejecutivo = useVistaEjecutiva();
@@ -61,7 +63,10 @@ export function PanelAdmin() {
         onVistaChange={d.setVistaActiva}
       >
         <div className="mb-6 md:mb-8">
-            <EncabezadoPagina titulo="Panel de Administración" subtitulo={`Bienvenido, ${formatearNombre(d.user.nombre_completo)}`} />
+            <EncabezadoPagina
+              titulo={esCoordinacion ? 'Panel de Coordinación' : 'Panel de Administración'}
+              subtitulo={`Bienvenido, ${formatearNombre(d.user.nombre_completo)}`}
+            />
           </div>
 
           <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
@@ -95,6 +100,8 @@ export function PanelAdmin() {
           {d.vistaActiva === 'noticias' && (
             <SeccionNoticias gestion={d.noticias} />
           )}
+
+          {d.vistaActiva === 'reportes' && <SeccionReportesAdmin />}
 
           {d.vistaActiva === 'expediente' && <SeccionExpediente />}
           {d.vistaActiva === 'historial' && (

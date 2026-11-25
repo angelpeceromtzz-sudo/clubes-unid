@@ -353,6 +353,7 @@ function token(claims) {
       institutional_id: 'F000',
       id_rol: 2,
       rol: 'presidente',
+      auth_otp: false,
       ...claims,
     },
     SECRET,
