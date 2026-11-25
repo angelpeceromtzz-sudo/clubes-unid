@@ -48,6 +48,7 @@ import expedienteRoutes from './routes/expediente.js';
 import clubFormularioRoutes from './routes/clubFormulario.js';
 import consentimientoLegalRoutes from './routes/consentimientoLegal.js';
 import reportesRoutes from './routes/reportes.js';
+import insigniasRoutes from './routes/insignias.js';
 import { noCacheExpediente } from './lib/cacheExpediente.js';
 const app = express();
 // Render termina TLS y reenvía con X-Forwarded-For (un solo proxy).
@@ -133,6 +134,7 @@ app.use('/api/me', preferenciasRoutes);
 app.use('/api/expediente', expedienteRoutes);
 app.use('/api/legal', consentimientoLegalRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/api/insignias', insigniasRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/api/health', (req, res) => {

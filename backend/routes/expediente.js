@@ -31,7 +31,7 @@ router.get('/mis-reconocimientos', authenticate, requireRole(ROL_ALUMNO), async 
     const result = await pool.query(`
       SELECT id_reconocimiento, id_edicion, tipo_actividad AS plantilla,
              nombre_actividad AS actividad, nombre_edicion AS edicion,
-             anio, insignia_key, otorgada_en
+             anio, insignia_key, otorgada_en, oculta
       FROM expediente_reconocimientos
       WHERE id_usuario = $1
       ORDER BY anio DESC, otorgada_en DESC`,
@@ -41,6 +41,82 @@ router.get('/mis-reconocimientos', authenticate, requireRole(ROL_ALUMNO), async 
   } catch (err) {
     console.error('Error al obtener mis insignias:', err);
     res.status(500).json({ error: 'No se pudieron cargar tus insignias' });
+  }
+});
+
+router.patch('/mis-reconocimientos/:id/visibilidad', authenticate, requireRole(ROL_ALUMNO), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Identificador inválido' });
+    const { oculta } = req.body || {};
+    if (typeof oculta !== 'boolean') return res.status(400).json({ error: 'Indica si la insignia se oculta.' });
+    const result = await pool.query(
+      `UPDATE expediente_reconocimientos
+          SET oculta = $1
+        WHERE id_reconocimiento = $2 AND id_usuario = $3
+        RETURNING id_reconocimiento, oculta`,
+      [oculta, id, req.user.id],
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Insignia no encontrada' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al cambiar visibilidad de insignia:', err);
+    res.status(500).json({ error: 'No se pudo actualizar la insignia' });
+  }
+});
+
+// Otorgar o revocar insignias (solo admin/coordinación). Debe ir antes del
+// middleware de solo lectura del expediente.
+router.post('/insignias', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
+  try {
+    const { id_usuario, nombre_actividad, insignia_key, anio } = req.body || {};
+    const idUsuario = parseInt(id_usuario, 10);
+    if (!Number.isInteger(idUsuario) || idUsuario <= 0) return res.status(400).json({ error: 'Usuario inválido' });
+    if (typeof nombre_actividad !== 'string' || !nombre_actividad.trim()) return res.status(400).json({ error: 'Nombre de la insignia requerido' });
+    const anioNum = parseInt(anio, 10);
+    if (!Number.isInteger(anioNum)) return res.status(400).json({ error: 'Año inválido' });
+    const clave = (insignia_key && String(insignia_key).trim()) || null;
+    const nombreLimpio = nombre_actividad.trim();
+
+    // Evita otorgar la misma insignia dos veces al mismo usuario.
+    const existente = await pool.query(
+      `SELECT id_reconocimiento FROM expediente_reconocimientos
+        WHERE id_usuario = $1
+          AND lower(nombre_actividad) = lower($2)
+          AND (insignia_key IS NOT DISTINCT FROM $3)`,
+      [idUsuario, nombreLimpio, clave],
+    );
+    if (existente.rows.length > 0) {
+      return res.status(409).json({ error: 'Este usuario ya tiene esta insignia.' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO expediente_reconocimientos
+         (id_usuario, tipo_actividad, nombre_actividad, nombre_edicion, anio, insignia_key, otorgada_en)
+       VALUES ($1, 'manual', $2, $2, $3, $4, NOW())
+       RETURNING id_reconocimiento, id_usuario, tipo_actividad, nombre_actividad, nombre_edicion, anio, insignia_key, otorgada_en, oculta`,
+      [idUsuario, nombreLimpio, anioNum, clave],
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al otorgar insignia:', err);
+    res.status(500).json({ error: 'No se pudo otorgar la insignia' });
+  }
+});
+
+router.delete('/insignias/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Identificador inválido' });
+    const result = await pool.query(
+      'DELETE FROM expediente_reconocimientos WHERE id_reconocimiento = $1 RETURNING id_reconocimiento',
+      [id],
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Insignia no encontrada' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error al revocar insignia:', err);
+    res.status(500).json({ error: 'No se pudo revocar la insignia' });
   }
 });
 
@@ -260,12 +336,15 @@ router.get('/:id', limitadorLecturasPesadas, async (req, res) => {
         [id]
       ),
       pool.query(`
-        SELECT id_reconocimiento, id_edicion, tipo_actividad AS plantilla,
-               nombre_actividad AS actividad, nombre_edicion AS edicion,
-               anio, insignia_key, otorgada_en
-        FROM expediente_reconocimientos
-        WHERE id_usuario = $1
-        ORDER BY anio DESC, otorgada_en DESC`,
+        SELECT er.id_reconocimiento, er.id_edicion, er.tipo_actividad AS plantilla,
+               COALESCE(i.nombre, er.nombre_actividad) AS actividad,
+               er.nombre_edicion AS edicion, er.anio,
+               COALESCE(i.imagen, er.insignia_key) AS insignia_key,
+               er.otorgada_en, er.oculta
+        FROM expediente_reconocimientos er
+        LEFT JOIN insignias i ON i.id_insignia = er.id_insignia
+        WHERE er.id_usuario = $1
+        ORDER BY er.anio DESC, er.otorgada_en DESC`,
         [id]
       ),
     ]);
