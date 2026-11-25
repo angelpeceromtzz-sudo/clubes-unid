@@ -49,7 +49,7 @@ export function SeccionUsuarios({ d }) {
         onRemoveFromClub={d.handleRemoveFromClub}
         onAsignarClub={d.handleAsignarClub}
         onAsignarAlumnoClub={d.handleAsignarAlumnoClub}
-        onEliminarUsuario={d.handleEliminarUsuario}
+        onDesactivarUsuario={d.handleDesactivarUsuario}
         onAdminAction={d.abrirModalAdmin}
       />
       <SeccionUsuariosDesactivados d={d} />

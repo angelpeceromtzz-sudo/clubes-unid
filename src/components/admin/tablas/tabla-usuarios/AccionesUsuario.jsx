@@ -1,6 +1,6 @@
 import { Icono } from '../../../ui/Icono';
 
-export function AccionesUsuario({ u, currentUser, onAdminAction, onEliminarUsuario }) {
+export function AccionesUsuario({ u, currentUser, onAdminAction, onDesactivarUsuario }) {
   const esSelf = u.id_usuario === currentUser.id;
   const esAdmin = u.id_rol === 3;
 
@@ -29,9 +29,9 @@ export function AccionesUsuario({ u, currentUser, onAdminAction, onEliminarUsuar
       >
         <Icono nombre="star" strokeWidth={2} className="h-3.5 w-3.5" />
       </button>
-      {onEliminarUsuario && (
+      {onDesactivarUsuario && (
         <button
-          onClick={() => onEliminarUsuario(u.id_usuario, u.nombre_completo)}
+          onClick={() => onDesactivarUsuario(u.id_usuario, u.nombre_completo)}
           className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors cursor-pointer active:scale-90"
           title="Desactivar usuario"
         >

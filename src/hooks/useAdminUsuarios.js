@@ -18,6 +18,8 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
   const [desactivados, setDesactivados] = useState([]);
   const [cargandoDesactivados, setCargandoDesactivados] = useState(true);
   const [reactivando, setReactivando] = useState({});
+  const [desactivandoUsuario, setDesactivandoUsuario] = useState(false);
+  const [errorDesactivacionUsuario, setErrorDesactivacionUsuario] = useState('');
 
   const { pendiente: pendienteConfirmacion, solicitar: solicitarConfirmacion, confirmar: confirmarPendienteBase, cancelar: cancelarPendiente } = useConfirmacionPendiente();
   const { modalAdmin, enviandoAdmin, errorAdmin, abrirModalAdmin, manejarAdminAction, cerrarModalAdmin } = useAdminActionModal();
@@ -104,8 +106,9 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     }
   }, [refetchClubes, setFeedback, setErrorFeedback]);
 
-  const handleEliminarUsuario = useCallback((userId, nombre) => {
-    solicitarConfirmacion({ tipo: 'eliminar', userId, nombre });
+  const handleDesactivarUsuario = useCallback((userId, nombre) => {
+    setErrorDesactivacionUsuario('');
+    solicitarConfirmacion({ tipo: 'desactivar', userId, nombre });
   }, [solicitarConfirmacion]);
 
   const handleReactivarUsuario = useCallback(async (userId) => {
@@ -168,14 +171,38 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     }
   }, [formularioUsuario, setFeedback]);
 
-  const confirmarPendiente = useCallback(async () => {
+  const confirmarPendiente = useCallback(async (password) => {
+    const pendiente = pendienteConfirmacion;
+    if (pendiente?.tipo === 'desactivar') {
+      setDesactivandoUsuario(true);
+      setErrorDesactivacionUsuario('');
+      try {
+        await api.desactivarUsuario(pendiente.userId, password);
+      } catch (err) {
+        setErrorDesactivacionUsuario(err.message || 'No se pudo desactivar el usuario.');
+        setDesactivandoUsuario(false);
+        return;
+      }
+      setDesactivandoUsuario(false);
+      cancelarPendiente();
+      try {
+        const [actualizados, desactivadosActualizados] = await Promise.all([
+          api.getUsuarios(),
+          api.getUsuariosDesactivados(),
+        ]);
+        setUsuarios(actualizados);
+        setDesactivados(desactivadosActualizados);
+      } catch (err) {
+        setErrorFeedback(err.message || 'El usuario se desactivó, pero no se pudo actualizar la lista.');
+      }
+      setFeedback(`Usuario "${pendiente.nombre}" desactivado correctamente`);
+      return;
+    }
+
     try {
       await confirmarPendienteBase(async (p) => {
         if (p.tipo === 'bajaAlumno') {
           await api.removeFromClub(p.userId);
-        } else if (p.tipo === 'eliminar') {
-          await api.deleteUser(p.userId);
-          setFeedback(`Usuario "${p.nombre}" eliminado correctamente`);
         }
         const actualizados = await api.getUsuarios();
         setUsuarios(actualizados);
@@ -183,7 +210,7 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     } catch (err) {
       setErrorFeedback(err.message);
     }
-  }, [confirmarPendienteBase, setFeedback, setErrorFeedback]);
+  }, [pendienteConfirmacion, cancelarPendiente, confirmarPendienteBase, setFeedback, setErrorFeedback]);
 
   const handleManejarAdminAction = useCallback(async (password) => {
     await manejarAdminAction(password, async (targetUser, accion) => {
@@ -213,11 +240,13 @@ export function useAdminUsuarios(refetchClubes, setFeedback, setErrorFeedback) {
     handleRemoveFromClub,
     handleAsignarClub,
     handleAsignarAlumnoClub,
-    handleEliminarUsuario,
+    handleDesactivarUsuario,
     handleReactivarUsuario,
     desactivados,
     cargandoDesactivados,
     reactivando,
+    desactivandoUsuario,
+    errorDesactivacionUsuario,
     showModalUsuario: mostrarModalUsuario,
     formUsuario: formularioUsuario,
     enviandoUsuario,
