@@ -4,6 +4,10 @@
 -- Archivo consolidado con la estructura actual del proyecto.
 -- Incluye clubes, actividades, registros y publicaciones compartidas.
 --
+-- AVISO: úsalo únicamente para crear una base vacía o desechable. No lo
+-- ejecutes sobre una base con datos para actualizarla: contiene compatibilidad
+-- histórica y backfills. Para una base existente, sigue migrations/README.md.
+--
 -- Uso:
 --   psql -U postgres -d clubs_bd -f schema.sql
 --   psql -U postgres -d clubs_bd -f seed.sql  (datos de prueba)
@@ -14,6 +18,42 @@
 -- ============================================================
 
 BEGIN;
+
+-- Registro usado por backend/apply-migrations.js. Las migraciones históricas
+-- anteriores al registro no se marcan automáticamente.
+CREATE TABLE IF NOT EXISTS public.schema_migrations (
+    nombre       TEXT PRIMARY KEY,
+    checksum     CHAR(64) NOT NULL,
+    orden        INTEGER NOT NULL,
+    aplicada_en  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    origen       TEXT NOT NULL DEFAULT 'ejecutor'
+        CHECK (origen IN ('ejecutor', 'adopcion_verificada'))
+);
+ALTER TABLE public.schema_migrations ADD COLUMN IF NOT EXISTS orden INTEGER;
+ALTER TABLE public.schema_migrations ADD COLUMN IF NOT EXISTS origen TEXT NOT NULL DEFAULT 'ejecutor';
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_schema_migrations_origen'
+          AND conrelid = 'public.schema_migrations'::regclass
+          AND pg_get_constraintdef(oid) ILIKE '%aplicacion_manual%'
+    ) THEN
+        ALTER TABLE public.schema_migrations
+            DROP CONSTRAINT IF EXISTS chk_schema_migrations_origen;
+        ALTER TABLE public.schema_migrations
+            ADD CONSTRAINT chk_schema_migrations_origen
+            CHECK (origen IN ('ejecutor', 'adopcion_verificada', 'aplicacion_manual'));
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.schema_migrations WHERE orden IS NULL) THEN
+        RAISE EXCEPTION 'El ledger de migraciones anterior no tiene orden; requiere revisión manual antes de continuar';
+    END IF;
+END $$;
+ALTER TABLE public.schema_migrations ALTER COLUMN orden SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_schema_migrations_checksum
+    ON public.schema_migrations (checksum);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_schema_migrations_orden
+    ON public.schema_migrations (orden);
 
 CREATE TABLE IF NOT EXISTS cat_roles (
     id_rol SERIAL PRIMARY KEY,
@@ -140,8 +180,30 @@ CREATE TABLE IF NOT EXISTS usuarios (
     last_login TIMESTAMPTZ,
     id_licenciatura INT REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE SET NULL,
     fecha_nacimiento DATE,
+    biografia VARCHAR(500),
+    fecha_nacimiento_publica BOOLEAN NOT NULL DEFAULT FALSE,
+    telefono_celular VARCHAR(20),
+    telefono_publico BOOLEAN NOT NULL DEFAULT FALSE,
+    facebook_url VARCHAR(2048),
+    x_url VARCHAR(2048),
+    instagram_url VARCHAR(2048),
+    sitio_web_url VARCHAR(2048),
+    CONSTRAINT chk_usuarios_biografia CHECK (biografia IS NULL OR char_length(biografia) <= 500),
+    CONSTRAINT chk_usuarios_telefono_perfil CHECK (telefono_celular IS NULL OR (char_length(telefono_celular) <= 20 AND telefono_celular ~ '^\+?[0-9[:space:]().-]+$' AND char_length(regexp_replace(telefono_celular, '[^0-9]', '', 'g')) BETWEEN 7 AND 15)),
+    CONSTRAINT chk_usuarios_perfil_visible CHECK ((NOT fecha_nacimiento_publica OR fecha_nacimiento IS NOT NULL) AND (NOT telefono_publico OR telefono_celular IS NOT NULL)),
+    CONSTRAINT chk_usuarios_enlaces_perfil CHECK (
+      (facebook_url IS NULL OR lower(facebook_url) ~ '^https?://[^[:space:]]+$') AND
+      (x_url IS NULL OR lower(x_url) ~ '^https?://[^[:space:]]+$') AND
+      (instagram_url IS NULL OR lower(instagram_url) ~ '^https?://[^[:space:]]+$') AND
+      (sitio_web_url IS NULL OR lower(sitio_web_url) ~ '^https?://[^[:space:]]+$')
+    ),
     CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES cat_roles(id_rol) ON DELETE RESTRICT
 );
+
+-- Correo institucional: la unicidad no debe depender de mayúsculas ni espacios
+-- accidentales en cuentas antiguas. La aplicación normaliza los correos nuevos.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_usuarios_correo_normalizado
+    ON usuarios (lower(btrim(correo_institucional)));
 
 CREATE INDEX IF NOT EXISTS idx_usuarios_institutional_id ON usuarios(institutional_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_deleted_at ON usuarios(deleted_at);
@@ -266,11 +328,6 @@ CREATE TABLE IF NOT EXISTS clubes (
     id_estatus_club INT NOT NULL DEFAULT 2,
     fecha_creacion TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     horario VARCHAR(100) DEFAULT '',
-    max_postulaciones INTEGER DEFAULT NULL,
-    postulaciones_actuales INTEGER DEFAULT 0,
-    cerrada_manualmente BOOLEAN DEFAULT FALSE,
-    fecha_apertura_programada TIMESTAMPTZ DEFAULT NULL,
-    fecha_limite_cierre TIMESTAMPTZ DEFAULT NULL,
     CONSTRAINT fk_club_presidente FOREIGN KEY (id_responsable_club) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_vicepresidente FOREIGN KEY (id_vicepresidente) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     CONSTRAINT fk_club_estatus FOREIGN KEY (id_estatus_club) REFERENCES cat_estatus_clubes(id_estatus_club) ON DELETE RESTRICT
@@ -300,6 +357,7 @@ CREATE TABLE IF NOT EXISTS inscripciones (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_un_club_activo_por_alumno
     ON inscripciones (id_usuario) WHERE id_estatus_inscripcion = 1;
+CREATE INDEX IF NOT EXISTS idx_inscripciones_club ON inscripciones (id_club);
 
 CREATE TABLE IF NOT EXISTS avisos_clubes (
     id_aviso SERIAL PRIMARY KEY,
@@ -370,21 +428,41 @@ CREATE TABLE IF NOT EXISTS formularios (
     fecha_respuesta TIMESTAMPTZ,
     motivo_rechazo VARCHAR(100),
     CONSTRAINT fk_formulario_alumno FOREIGN KEY (id_alumno) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-    CONSTRAINT fk_formulario_club FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE CASCADE,
+    -- Preserva postulaciones y sus respuestas configurables; para retirar un
+    -- club se usa su estado inactivo, no un borrado que pierda historial.
+    CONSTRAINT fk_formulario_club FOREIGN KEY (id_club) REFERENCES clubes(id_club) ON DELETE RESTRICT,
     CONSTRAINT fk_formulario_licenciatura FOREIGN KEY (id_licenciatura) REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE RESTRICT,
+    CONSTRAINT fk_formulario_estatus FOREIGN KEY (status) REFERENCES cat_estatus_postulacion(nombre) ON DELETE RESTRICT,
     CONSTRAINT chk_bloque CHECK (bloque_asignado IN ('A', 'B', 'E')),
-    CONSTRAINT chk_cuatrimestre CHECK (cuatrimestre > 0),
-    CONSTRAINT chk_status CHECK (status IN (
-        'En revisión', 'Preseleccionado', 'Convocado',
-        'Oferta enviada', 'Miembro oficial', 'Rechazado'
-    ))
+    CONSTRAINT chk_cuatrimestre CHECK (cuatrimestre > 0)
 );
+-- El catálogo es la fuente única de estados también en bases ya existentes.
+ALTER TABLE formularios DROP CONSTRAINT IF EXISTS chk_status;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'fk_formulario_estatus'
+          AND conrelid = 'formularios'::regclass
+    ) THEN
+        ALTER TABLE formularios
+            ADD CONSTRAINT fk_formulario_estatus
+            FOREIGN KEY (status) REFERENCES cat_estatus_postulacion(nombre)
+            ON DELETE RESTRICT;
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_formularios_alumno ON formularios (id_alumno);
+CREATE INDEX IF NOT EXISTS idx_formularios_club_fecha
+    ON formularios (id_club, fecha_envio DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_formularios_formulario_club
+    ON formularios (id_formulario, id_club);
 
 CREATE TABLE IF NOT EXISTS club_formulario_preguntas (
     id_pregunta SERIAL PRIMARY KEY,
     id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
     etiqueta VARCHAR(200) NOT NULL,
-    tipo VARCHAR(30) NOT NULL DEFAULT 'texto',
+    tipo VARCHAR(30) NOT NULL DEFAULT 'texto'
+        CONSTRAINT chk_club_formulario_tipo CHECK (tipo IN ('texto', 'textarea', 'numero', 'seleccion', 'fecha')),
     configuracion JSONB NOT NULL DEFAULT '{}'::jsonb,
     obligatorio BOOLEAN NOT NULL DEFAULT FALSE,
     orden INT NOT NULL DEFAULT 0,
@@ -392,8 +470,156 @@ CREATE TABLE IF NOT EXISTS club_formulario_preguntas (
     creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM club_formulario_preguntas
+        WHERE tipo IS NULL OR tipo NOT IN ('texto', 'textarea', 'numero', 'seleccion', 'fecha')
+    ) THEN
+        RAISE EXCEPTION 'Hay preguntas configurables con tipos desconocidos; revísalas antes de aplicar el catálogo';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_club_formulario_tipo' AND conrelid = 'club_formulario_preguntas'::regclass
+    ) THEN
+        ALTER TABLE club_formulario_preguntas
+            ADD CONSTRAINT chk_club_formulario_tipo
+            CHECK (tipo IN ('texto', 'textarea', 'numero', 'seleccion', 'fecha'));
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_club_formulario_preguntas_club
   ON club_formulario_preguntas(id_club, orden);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_club_preguntas_pregunta_club
+    ON club_formulario_preguntas(id_pregunta, id_club);
+
+-- Una respuesta configurable pertenece a un formulario y a una pregunta real.
+-- Las copias de etiqueta/configuración conservan el significado histórico si
+-- después se edita la pregunta; las preguntas respondidas se archivan, no se borran.
+CREATE TABLE IF NOT EXISTS formulario_respuestas_extra (
+    id_formulario INT NOT NULL,
+    id_pregunta INT NOT NULL,
+    id_club INT NOT NULL,
+    etiqueta_snapshot VARCHAR(200) NOT NULL,
+    tipo_snapshot VARCHAR(30) NOT NULL
+        CONSTRAINT chk_formulario_respuesta_tipo_snapshot CHECK (tipo_snapshot IN ('texto', 'textarea', 'numero', 'seleccion', 'fecha')),
+    configuracion_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    respuesta JSONB NOT NULL,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id_formulario, id_pregunta),
+    CONSTRAINT fk_respuesta_extra_formulario_club
+        FOREIGN KEY (id_formulario, id_club)
+        REFERENCES formularios(id_formulario, id_club) ON DELETE RESTRICT,
+    CONSTRAINT fk_respuesta_extra_pregunta_club
+        FOREIGN KEY (id_pregunta, id_club)
+        REFERENCES club_formulario_preguntas(id_pregunta, id_club) ON DELETE RESTRICT
+);
+-- Respuestas potencialmente sensibles; se sirven a través del backend.
+ALTER TABLE formulario_respuestas_extra ENABLE ROW LEVEL SECURITY;
+
+-- El contexto de pregunta queda fijo al responder; solo la respuesta puede
+-- corregirse sin cambiar la interpretación histórica.
+CREATE OR REPLACE FUNCTION fn_proteger_snapshot_respuesta_extra()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF ROW(NEW.id_formulario, NEW.id_pregunta, NEW.id_club, NEW.etiqueta_snapshot,
+           NEW.tipo_snapshot, NEW.configuracion_snapshot, NEW.creado_en)
+       IS DISTINCT FROM
+       ROW(OLD.id_formulario, OLD.id_pregunta, OLD.id_club, OLD.etiqueta_snapshot,
+           OLD.tipo_snapshot, OLD.configuracion_snapshot, OLD.creado_en) THEN
+        RAISE EXCEPTION 'El contexto histórico de la respuesta configurable no se puede cambiar';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_proteger_snapshot_respuesta_extra ON formulario_respuestas_extra;
+CREATE TRIGGER trg_proteger_snapshot_respuesta_extra
+    BEFORE UPDATE OF id_formulario, id_pregunta, id_club, etiqueta_snapshot,
+                     tipo_snapshot, configuracion_snapshot, creado_en
+    ON formulario_respuestas_extra
+    FOR EACH ROW EXECUTE FUNCTION fn_proteger_snapshot_respuesta_extra();
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM formulario_respuestas_extra
+        WHERE tipo_snapshot IS NULL OR tipo_snapshot NOT IN ('texto', 'textarea', 'numero', 'seleccion', 'fecha')
+    ) THEN
+        RAISE EXCEPTION 'Hay respuestas configurables con tipos desconocidos; revísalas antes de aplicar el catálogo';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_formulario_respuesta_tipo_snapshot'
+          AND conrelid = 'formulario_respuestas_extra'::regclass
+    ) THEN
+        ALTER TABLE formulario_respuestas_extra
+            ADD CONSTRAINT chk_formulario_respuesta_tipo_snapshot
+            CHECK (tipo_snapshot IN ('texto', 'textarea', 'numero', 'seleccion', 'fecha'));
+    END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION fn_bloquear_reasignacion_con_respuestas_extra()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.id_club IS DISTINCT FROM OLD.id_club THEN
+        IF TG_TABLE_NAME = 'formularios' THEN
+            IF OLD.respuestas_extra <> '{}'::jsonb THEN
+                RAISE EXCEPTION 'No se puede mover de club un formulario que ya tiene respuestas configurables';
+            END IF;
+        ELSIF TG_TABLE_NAME = 'club_formulario_preguntas' THEN
+            IF EXISTS (
+                   SELECT 1 FROM formularios f
+                   WHERE f.id_club = OLD.id_club AND f.respuestas_extra ? OLD.id_pregunta::text
+               ) THEN
+                RAISE EXCEPTION 'No se puede mover de club una pregunta que ya tiene respuestas';
+            END IF;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_formulario_club_respuestas_extra ON formularios;
+CREATE TRIGGER trg_formulario_club_respuestas_extra
+    BEFORE UPDATE OF id_club ON formularios
+    FOR EACH ROW EXECUTE FUNCTION fn_bloquear_reasignacion_con_respuestas_extra();
+DROP TRIGGER IF EXISTS trg_pregunta_club_respuestas_extra ON club_formulario_preguntas;
+CREATE TRIGGER trg_pregunta_club_respuestas_extra
+    BEFORE UPDATE OF id_club ON club_formulario_preguntas
+    FOR EACH ROW EXECUTE FUNCTION fn_bloquear_reasignacion_con_respuestas_extra();
+
+-- La columna JSON se conserva para historial/compatibilidad, pero ya no puede
+-- recibir claves nuevas sin una pregunta del mismo club.
+CREATE OR REPLACE FUNCTION fn_validar_json_respuestas_extra()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND NEW.respuestas_extra IS NOT DISTINCT FROM OLD.respuestas_extra THEN
+        RETURN NEW;
+    END IF;
+    IF jsonb_typeof(NEW.respuestas_extra) <> 'object' THEN
+        RAISE EXCEPTION 'respuestas_extra debe ser un objeto JSON';
+    END IF;
+    IF EXISTS (
+        SELECT 1
+        FROM jsonb_object_keys(NEW.respuestas_extra) AS dato(clave)
+        LEFT JOIN club_formulario_preguntas p
+          ON p.id_pregunta::text = dato.clave
+         AND p.id_club = NEW.id_club
+        WHERE dato.clave !~ '^[0-9]+$' OR p.id_pregunta IS NULL
+    ) THEN
+        RAISE EXCEPTION 'Cada clave de respuestas_extra debe identificar una pregunta del club del formulario';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_validar_json_respuestas_extra ON formularios;
+CREATE TRIGGER trg_validar_json_respuestas_extra
+    BEFORE INSERT OR UPDATE OF respuestas_extra ON formularios
+    FOR EACH ROW EXECUTE FUNCTION fn_validar_json_respuestas_extra();
+
+CREATE INDEX IF NOT EXISTS idx_formulario_respuestas_extra_pregunta
+    ON formulario_respuestas_extra(id_pregunta);
 
 -- Migración de 'carrera VARCHAR(100)' a 'id_licenciatura INT REFERENCES'.
 --
@@ -440,9 +666,9 @@ CREATE INDEX IF NOT EXISTS idx_conv_club ON convocatorias(id_club);
 -- El FK vive acá y no en el CREATE TABLE de formularios porque el orden del
 -- archivo lo crea después: declarar la constraint inline exigiría que
 -- 'convocatorias' ya existiera. Suele venir bien porque la base original se
--- armó con migrations_legacy/ en otro orden, pero schema.sql tiene que
--- ejecutarse de una sentada y en una base vacía (migrate() corre en cada
--- arranque, así que el bloque tiene que ser idempotente).
+-- armó con migrations_legacy/ en otro orden. schema.sql se usa manualmente
+-- para inicializar una base vacía; no se ejecuta al arrancar. Incluye bloques
+-- históricos de compatibilidad que requieren revisión antes de una reaplicación.
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -538,7 +764,6 @@ CREATE TABLE IF NOT EXISTS club_chat_presencia (
     escribiendo_hasta TIMESTAMPTZ,
     PRIMARY KEY (id_club, id_usuario)
 );
-CREATE INDEX IF NOT EXISTS idx_club_chat_presencia_actividad ON club_chat_presencia(id_club, ultima_actividad DESC);
 
 CREATE TABLE IF NOT EXISTS club_chat_lecturas (
     id_club INT NOT NULL REFERENCES clubes(id_club) ON DELETE CASCADE,
@@ -553,10 +778,12 @@ CREATE TABLE IF NOT EXISTS club_chat_notificaciones (
     id_mensaje BIGINT NOT NULL REFERENCES club_chat_mensajes(id_mensaje) ON DELETE CASCADE,
     id_destinatario INT NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_chat_notificaciones_mensaje_destinatario
+    ON club_chat_notificaciones (id_mensaje, id_destinatario);
 
 CREATE TABLE IF NOT EXISTS historial_admin (
     id_historial SERIAL PRIMARY KEY,
-    id_admin INT NOT NULL,
+    id_admin INT,
     admin_nombre VARCHAR(150) NOT NULL,
     accion VARCHAR(50) NOT NULL,
     descripcion TEXT NOT NULL,
@@ -564,7 +791,7 @@ CREATE TABLE IF NOT EXISTS historial_admin (
     entidad_id INT,
     detalles JSONB,
     fecha TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_historial_admin FOREIGN KEY (id_admin) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+    CONSTRAINT fk_historial_admin FOREIGN KEY (id_admin) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_historial_admin_fecha ON historial_admin(fecha DESC);
@@ -601,7 +828,7 @@ CREATE TABLE IF NOT EXISTS noticias (
     id_noticia SERIAL PRIMARY KEY,
     titulo VARCHAR(200) NOT NULL,
     subtitulo VARCHAR(300),
-    contenido TEXT NOT NULL,
+    contenido JSONB NOT NULL,
     url_imagen VARCHAR(500),
     destacada BOOLEAN NOT NULL DEFAULT FALSE,
     publicada BOOLEAN NOT NULL DEFAULT TRUE,
@@ -618,8 +845,24 @@ CREATE TABLE IF NOT EXISTS noticias (
         CONSTRAINT chk_noticia_categoria_evento CHECK (categoria_evento IN ('social', 'deportivo', 'cultural')),
     fecha_publicacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_noticia_autor FOREIGN KEY (id_autor) REFERENCES usuarios(id_usuario) ON DELETE SET NULL
+    CONSTRAINT fk_noticia_autor FOREIGN KEY (id_autor) REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT chk_noticia_contenido_documento CHECK (
+        jsonb_typeof(contenido) = 'object'
+        AND contenido->>'version' = '1'
+        AND jsonb_typeof(contenido->'blocks') = 'array'
+    )
 );
+
+CREATE OR REPLACE FUNCTION fn_noticia_texto_plano(documento JSONB)
+RETURNS TEXT
+LANGUAGE SQL
+IMMUTABLE
+PARALLEL SAFE
+AS $$
+    SELECT COALESCE(string_agg(bloque->>'text', E'\n' ORDER BY posicion), '')
+    FROM jsonb_array_elements(documento->'blocks') WITH ORDINALITY AS b(bloque, posicion)
+    WHERE bloque->>'type' IN ('paragraph', 'heading');
+$$;
 
 -- Migración idempotente: en bases ya existentes la columna no está.
 ALTER TABLE noticias ADD COLUMN IF NOT EXISTS categoria VARCHAR(20) NOT NULL DEFAULT 'informativo';
@@ -680,7 +923,8 @@ WITH trasladadas AS (
            CASE WHEN categoria_evento IN ('examen', 'pago', 'vacaciones', 'academico', 'calificaciones', 'inhabil', 'tramite')
                 THEN categoria_evento ELSE 'academico' END,
            fecha_evento, fecha_fin_evento,
-           NULLIF(CONCAT_WS(E'\n', CASE WHEN contenido <> titulo THEN contenido END,
+           NULLIF(CONCAT_WS(E'\n', CASE WHEN fn_noticia_texto_plano(noticias.contenido) <> titulo
+                                        THEN fn_noticia_texto_plano(noticias.contenido) END,
                            CASE WHEN hora_evento IS NOT NULL THEN 'Hora: ' || TO_CHAR(hora_evento, 'HH24:MI') END,
                            CASE WHEN lugar_evento IS NOT NULL THEN 'Lugar: ' || lugar_evento END), ''),
            url_imagen, publicada, id_autor, id_noticia, fecha_publicacion, fecha_actualizacion
@@ -832,7 +1076,7 @@ CREATE TABLE IF NOT EXISTS historial_postulacion (
     status_anterior VARCHAR(20),
     status_nuevo VARCHAR(20) NOT NULL,
     fecha_cambio TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_historial_formulario FOREIGN KEY (id_formulario) REFERENCES formularios(id_formulario) ON DELETE CASCADE
+    CONSTRAINT fk_historial_formulario FOREIGN KEY (id_formulario) REFERENCES formularios(id_formulario) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_historial_postulacion_formulario ON historial_postulacion(id_formulario);
@@ -969,10 +1213,10 @@ CREATE TRIGGER trg_actualizar_fecha_noticia
 -- MÓDULO DE ENCUESTAS (PBI-10)
 -- ============================================================
 -- Encuestas independientes para diagnosticar intereses de alumnos.
--- Acceso público solo por enlace directo /encuesta/:slug (sin login).
+-- Acceso por enlace /encuesta/:slug; cada encuesta define si es pública
+-- anónima o institucional autenticada.
 -- La URL usa 'slug' (aleatorio, no adivinable), nunca 'id_encuesta'.
--- Las respuestas NO guardan nombre ni matrícula: la tabla no tiene columnas
--- para eso. Ver el comentario de respuestas_encuesta.
+-- El slug no reemplaza la autenticación de encuestas institucionales.
 -- Reversión manual en migrations/migrate-encuestas-down.sql
 -- ============================================================
 
@@ -985,16 +1229,36 @@ CREATE TABLE IF NOT EXISTS encuestas (
     estado                 VARCHAR(12) NOT NULL DEFAULT 'borrador',
     fecha_inicio           TIMESTAMPTZ,
     fecha_fin              TIMESTAMPTZ,
+    -- publico_anonimo: acceso por enlace, sin identidad.
+    -- institucional: requiere sesión UNID y conserva id_usuario en la respuesta.
+    tipo_privacidad        VARCHAR(24) NOT NULL DEFAULT 'publico_anonimo',
     id_creador             INT NOT NULL,
     fecha_creacion         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- Longitud mínima de 16: impide slugs adivinables tipo 'encuesta-1'
     CONSTRAINT chk_encuesta_slug      CHECK (slug ~ '^[a-z0-9-]{16,64}$'),
     CONSTRAINT chk_encuesta_estado    CHECK (estado IN ('borrador', 'publicada', 'cerrada')),
+    CONSTRAINT chk_encuesta_privacidad CHECK (tipo_privacidad IN ('publico_anonimo', 'institucional')),
     -- Vigencia opcional; si se define ambos extremos, el fin va después del inicio
     CONSTRAINT chk_encuesta_vigencia  CHECK (fecha_fin IS NULL OR fecha_inicio IS NULL OR fecha_fin > fecha_inicio),
     CONSTRAINT fk_encuesta_creador    FOREIGN KEY (id_creador) REFERENCES usuarios(id_usuario) ON DELETE RESTRICT
 );
+
+-- Compatibilidad para bases instaladas antes de la opción de privacidad.
+-- Las encuestas existentes se mantienen públicas y anónimas.
+ALTER TABLE encuestas
+    ADD COLUMN IF NOT EXISTS tipo_privacidad VARCHAR(24) NOT NULL DEFAULT 'publico_anonimo';
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_encuesta_privacidad'
+          AND conrelid = 'encuestas'::regclass
+    ) THEN
+        ALTER TABLE encuestas ADD CONSTRAINT chk_encuesta_privacidad
+            CHECK (tipo_privacidad IN ('publico_anonimo', 'institucional'));
+    END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS preguntas (
     id_pregunta    SERIAL PRIMARY KEY,
@@ -1035,10 +1299,8 @@ ALTER TABLE preguntas ADD COLUMN IF NOT EXISTS escala_min_texto VARCHAR(80);
 ALTER TABLE preguntas ADD COLUMN IF NOT EXISTS escala_max_texto VARCHAR(80);
 
 -- es_visible se quitó del módulo: no hay forma de esconder una pregunta sin
--- borrarla. DROP y no sólo sacarlo del CREATE TABLE, porque migrate() corre este
--- archivo entero en cada arranque y el CREATE TABLE es un no-op en bases que ya
--- existen: sin esta línea la columna se quedaría ahí para siempre.
-ALTER TABLE preguntas DROP COLUMN IF EXISTS es_visible;
+-- borrarla. Si una base anterior conserva la columna, se deja intacta para no
+-- perder configuración histórica; las preguntas nuevas ya no la usan.
 
 ALTER TABLE preguntas DROP CONSTRAINT IF EXISTS chk_pregunta_escala;
 ALTER TABLE preguntas ADD CONSTRAINT chk_pregunta_escala CHECK (
@@ -1090,33 +1352,102 @@ CREATE TABLE IF NOT EXISTS opciones_pregunta (
 CREATE TABLE IF NOT EXISTS respuestas_encuesta (
     id_respuesta SERIAL PRIMARY KEY,
     id_encuesta  INT NOT NULL,
-    -- Encuesta anónima POR DISEÑO, no por convención: no existe columna para
-    -- nombre ni para matrícula, así que la identidad no se puede guardar ni
-    -- por accidente desde la API. La versión anterior de esta tabla traía
-    -- nombre/matricula/carrera opcionales; se quitaron porque una encuesta de
-    -- intereses no necesita saber quién respondió, sólo qué le gusta, y pedir
-    -- identidad bajaba la tasa de respuesta.
-    --
-    -- Lo único que se conserva del alumno es la licenciatura, para segmentar
-    -- resultados. Va como FK y no como texto: así no se puede escribir nada que
-    -- no sea un programa real del catálogo (ver cat_licenciaturas).
+    -- Solo se captura identidad en modo institucional. Las respuestas
+    -- históricas y las públicas anónimas mantienen NULL; no se inventa
+    -- identidad para registros antiguos.
     id_licenciatura INT,
+    -- NULL para encuestas públicas anónimas; obligatorio por API para
+    -- encuestas institucionales. No se backfillea identidad en respuestas viejas.
+    id_usuario INT REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     fecha_envio  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- RESTRICT: no se puede borrar una encuesta que ya tenga respuestas
     CONSTRAINT fk_respuesta_encuesta     FOREIGN KEY (id_encuesta) REFERENCES encuestas(id_encuesta) ON DELETE RESTRICT,
     CONSTRAINT fk_respuesta_licenciatura FOREIGN KEY (id_licenciatura) REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE RESTRICT
 );
+ALTER TABLE respuestas_encuesta
+    ADD COLUMN IF NOT EXISTS id_usuario INT
+    REFERENCES usuarios(id_usuario) ON DELETE SET NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_respuesta_encuesta_usuario
+    ON respuestas_encuesta (id_encuesta, id_usuario)
+    WHERE id_usuario IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_respuestas_encuesta_usuario
+    ON respuestas_encuesta (id_usuario)
+    WHERE id_usuario IS NOT NULL;
 
--- Misma razón que en formularios: estas columnas no se pueden migrar sin
--- adivinar (las filas viejas guardan abreviaturas, y una traía un programa que
--- ni siquiera está en el catálogo), así que se descartan en vez de migrarse.
--- Primero los constraints: dropear 'matricula' se lleva por delante cualquier
--- índice o CHECK que la use, y el orden explícito evita depender de eso.
-ALTER TABLE respuestas_encuesta DROP CONSTRAINT IF EXISTS chk_respuesta_matricula;
-ALTER TABLE respuestas_encuesta DROP CONSTRAINT IF EXISTS uq_respuesta_matricula;
-ALTER TABLE respuestas_encuesta DROP COLUMN IF EXISTS nombre;
-ALTER TABLE respuestas_encuesta DROP COLUMN IF EXISTS matricula;
-ALTER TABLE respuestas_encuesta DROP COLUMN IF EXISTS carrera;
+-- La API aplica estas reglas también en PostgreSQL para cualquier ruta de escritura.
+DO $$
+DECLARE
+    v_id_encuesta INTEGER;
+    v_id_respuesta INTEGER;
+BEGIN
+    SELECT e.id_encuesta, r.id_respuesta
+      INTO v_id_encuesta, v_id_respuesta
+    FROM encuestas e
+    JOIN respuestas_encuesta r ON r.id_encuesta = e.id_encuesta
+    WHERE e.tipo_privacidad = 'publico_anonimo'
+      AND r.id_usuario IS NOT NULL
+    ORDER BY e.id_encuesta, r.id_respuesta
+    LIMIT 1;
+
+    IF v_id_respuesta IS NOT NULL THEN
+        RAISE EXCEPTION
+          'Migración detenida: la respuesta % de la encuesta anónima % conserva identidad; revisa el caso sin cambiar respuestas',
+          v_id_respuesta, v_id_encuesta;
+    END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION fn_validar_privacidad_respuesta_encuesta()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_privacidad VARCHAR(24);
+BEGIN
+    SELECT tipo_privacidad INTO v_privacidad
+    FROM encuestas WHERE id_encuesta = NEW.id_encuesta FOR SHARE;
+    IF NOT FOUND THEN RETURN NEW; END IF;
+    IF TG_OP = 'UPDATE' AND NEW.id_encuesta IS DISTINCT FROM OLD.id_encuesta THEN
+        RAISE EXCEPTION 'La respuesta no puede cambiarse a otra encuesta' USING ERRCODE = '23514';
+    END IF;
+    IF v_privacidad = 'publico_anonimo' AND NEW.id_usuario IS NOT NULL THEN
+        RAISE EXCEPTION 'Una respuesta anónima no puede guardar identidad' USING ERRCODE = '23514';
+    END IF;
+    IF TG_OP = 'INSERT' AND v_privacidad = 'institucional' AND NEW.id_usuario IS NULL THEN
+        RAISE EXCEPTION 'Una respuesta institucional requiere identidad al enviarse' USING ERRCODE = '23514';
+    END IF;
+    IF TG_OP = 'UPDATE'
+       AND v_privacidad = 'institucional'
+       AND NEW.id_usuario IS DISTINCT FROM OLD.id_usuario THEN
+        -- La FK anida su trigger para ON DELETE SET NULL; un UPDATE directo tiene profundidad 1.
+        IF OLD.id_usuario IS NOT NULL AND NEW.id_usuario IS NULL AND pg_trigger_depth() > 1 THEN
+            RETURN NEW;
+        END IF;
+        RAISE EXCEPTION 'La identidad institucional no puede cambiarse después del envío' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_validar_privacidad_respuesta_encuesta ON respuestas_encuesta;
+CREATE TRIGGER trg_validar_privacidad_respuesta_encuesta
+    BEFORE INSERT OR UPDATE OF id_encuesta, id_usuario ON respuestas_encuesta
+    FOR EACH ROW EXECUTE FUNCTION fn_validar_privacidad_respuesta_encuesta();
+
+CREATE OR REPLACE FUNCTION fn_bloquear_cambio_privacidad_encuesta()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.tipo_privacidad IS DISTINCT FROM OLD.tipo_privacidad
+       AND EXISTS (SELECT 1 FROM respuestas_encuesta r WHERE r.id_encuesta = OLD.id_encuesta) THEN
+        RAISE EXCEPTION 'La privacidad no puede cambiar después de recibir respuestas' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_bloquear_cambio_privacidad_encuesta ON encuestas;
+CREATE TRIGGER trg_bloquear_cambio_privacidad_encuesta
+    BEFORE UPDATE OF tipo_privacidad ON encuestas
+    FOR EACH ROW EXECUTE FUNCTION fn_bloquear_cambio_privacidad_encuesta();
+
+-- Algunas instalaciones antiguas guardaban nombre, matrícula y carrera en
+-- respuestas_encuesta. Se conservan esas columnas y sus restricciones en bases
+-- existentes: no se puede atribuir ni convertir esos datos sin una revisión.
 ALTER TABLE respuestas_encuesta ADD COLUMN IF NOT EXISTS id_licenciatura INT
     REFERENCES cat_licenciaturas(id_licenciatura) ON DELETE RESTRICT;
 
@@ -1124,6 +1455,9 @@ CREATE TABLE IF NOT EXISTS detalle_respuestas (
     id_detalle   SERIAL PRIMARY KEY,
     id_respuesta INT NOT NULL,
     id_pregunta  INT NOT NULL,
+    -- Se deriva de la respuesta y permite que las FKs validen que pregunta y
+    -- respuesta pertenezcan a la misma encuesta.
+    id_encuesta  INT NOT NULL,
     -- Exactamente uno de estos tres por fila. Opción múltiple genera una fila
     -- por opción marcada; texto y escala generan una sola.
     id_opcion    INT,
@@ -1160,7 +1494,7 @@ ALTER TABLE detalle_respuestas
     DROP CONSTRAINT IF EXISTS chk_detalle_texto_otro;
 
 ALTER TABLE detalle_respuestas
-    ADD CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70);
+    ADD CONSTRAINT chk_detalle_texto_otro CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70) NOT VALID;
 
 -- Índices para las consultas de resultados
 CREATE INDEX IF NOT EXISTS idx_preguntas_encuesta        ON preguntas(id_encuesta);
@@ -1173,6 +1507,59 @@ CREATE INDEX IF NOT EXISTS idx_detalle_pregunta         ON detalle_respuestas(id
 CREATE INDEX IF NOT EXISTS idx_detalle_opcion           ON detalle_respuestas(id_opcion) WHERE id_opcion IS NOT NULL;
 -- Segmentación de resultados por programa (el único dato del alumno que se guarda)
 CREATE INDEX IF NOT EXISTS idx_respuestas_licenciatura  ON respuestas_encuesta(id_licenciatura) WHERE id_licenciatura IS NOT NULL;
+
+-- Claves destino para validar encuesta, respuesta y pregunta en una sola FK.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_respuestas_id_encuesta
+    ON respuestas_encuesta(id_respuesta, id_encuesta);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_preguntas_id_encuesta
+    ON preguntas(id_pregunta, id_encuesta);
+
+-- En instalaciones antiguas el campo se completa desde la respuesta existente.
+-- La migración administrada aborta antes si encuentra preguntas cruzadas.
+LOCK TABLE respuestas_encuesta, detalle_respuestas, preguntas
+    IN SHARE ROW EXCLUSIVE MODE;
+ALTER TABLE detalle_respuestas ADD COLUMN IF NOT EXISTS id_encuesta INT;
+DO $$
+DECLARE
+    v_detalle INTEGER;
+    v_encuesta_respuesta INTEGER;
+    v_encuesta_pregunta INTEGER;
+BEGIN
+    SELECT d.id_detalle, r.id_encuesta, p.id_encuesta
+      INTO v_detalle, v_encuesta_respuesta, v_encuesta_pregunta
+    FROM detalle_respuestas d
+    LEFT JOIN respuestas_encuesta r ON r.id_respuesta = d.id_respuesta
+    LEFT JOIN preguntas p ON p.id_pregunta = d.id_pregunta
+    WHERE r.id_respuesta IS NULL OR p.id_pregunta IS NULL
+       OR r.id_encuesta <> p.id_encuesta
+       OR (d.id_encuesta IS NOT NULL AND d.id_encuesta <> r.id_encuesta)
+       OR p.tipo = 'licenciatura'
+    ORDER BY d.id_detalle
+    LIMIT 1;
+    IF v_detalle IS NOT NULL THEN
+        RAISE EXCEPTION
+          'No se puede completar id_encuesta: detalle % tiene referencias huérfanas, cruzadas o usa una pregunta de licenciatura',
+          v_detalle;
+    END IF;
+END $$;
+UPDATE detalle_respuestas d
+SET id_encuesta = r.id_encuesta
+FROM respuestas_encuesta r
+WHERE r.id_respuesta = d.id_respuesta AND d.id_encuesta IS NULL;
+ALTER TABLE detalle_respuestas ALTER COLUMN id_encuesta SET NOT NULL;
+
+-- Sustituye las relaciones simples por compuestas; mantiene CASCADE para el
+-- detalle de una respuesta y RESTRICT para proteger preguntas con historial.
+ALTER TABLE detalle_respuestas DROP CONSTRAINT IF EXISTS fk_detalle_respuesta;
+ALTER TABLE detalle_respuestas DROP CONSTRAINT IF EXISTS fk_detalle_pregunta;
+ALTER TABLE detalle_respuestas
+    ADD CONSTRAINT fk_detalle_respuesta
+    FOREIGN KEY (id_respuesta, id_encuesta)
+    REFERENCES respuestas_encuesta(id_respuesta, id_encuesta) ON DELETE CASCADE;
+ALTER TABLE detalle_respuestas
+    ADD CONSTRAINT fk_detalle_pregunta
+    FOREIGN KEY (id_pregunta, id_encuesta)
+    REFERENCES preguntas(id_pregunta, id_encuesta) ON DELETE RESTRICT;
 
 -- Una misma opción no se marca dos veces en una respuesta
 CREATE UNIQUE INDEX IF NOT EXISTS uq_detalle_opcion ON detalle_respuestas(id_respuesta, id_pregunta, id_opcion) WHERE id_opcion IS NOT NULL;
@@ -1212,12 +1599,12 @@ ALTER TABLE respuestas_encuesta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE detalle_respuestas  ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- MODULO ASISTENCIA V1 (PBI-05) — integra al arranque
+-- MÓDULO ASISTENCIA V1 (PBI-05) — definición del esquema
 -- ============================================================
 -- Extraido de migrations/migrate-asistencia-v1.sql (idempotente y sin
--- operaciones destructivas): se aplica en cada arranque via schema.sql,
--- el sistema de esquema existente. La migracion original se conserva
--- como referencia/manual para bases que requieran el modulo sin reiniciar.
+-- operaciones destructivas): este bloque se ejecuta solo al aplicar
+-- manualmente schema.sql. La migración original se conserva para despliegues
+-- controlados que necesiten instalar el módulo sin reaplicar el esquema entero.
 -- Regla de negocio clave (PBI-05 §23, §24, §32): cada sesion conserva su
 -- integrantes_snapshot (JSONB); las sesiones iniciadas/completadas/
 -- canceladas son inmutables y las 'pendiente' refrescan el snapshot con
@@ -1234,8 +1621,30 @@ CREATE TABLE IF NOT EXISTS periodos_actividad (
     fecha_fin DATE NOT NULL,
     activo BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT uq_periodos_fechas UNIQUE (fecha_inicio, fecha_fin)
+    CONSTRAINT uq_periodos_fechas UNIQUE (fecha_inicio, fecha_fin),
+    CONSTRAINT chk_periodos_fechas CHECK (fecha_fin >= fecha_inicio),
+    CONSTRAINT ex_periodos_actividad_sin_traslape
+        EXCLUDE USING gist (daterange(fecha_inicio, fecha_fin, '[]') WITH &&)
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_periodos_fechas' AND conrelid = 'periodos_actividad'::regclass
+    ) THEN
+        ALTER TABLE periodos_actividad
+            ADD CONSTRAINT chk_periodos_fechas CHECK (fecha_fin >= fecha_inicio);
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'ex_periodos_actividad_sin_traslape' AND conrelid = 'periodos_actividad'::regclass
+    ) THEN
+        ALTER TABLE periodos_actividad
+            ADD CONSTRAINT ex_periodos_actividad_sin_traslape
+            EXCLUDE USING gist (daterange(fecha_inicio, fecha_fin, '[]') WITH &&);
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_periodos_actividad_fechas
     ON periodos_actividad (fecha_inicio, fecha_fin);
@@ -1341,6 +1750,8 @@ DECLARE
     v_fin DATE;
     v_snapshot JSONB;
     v_creadas INT := 0;
+    v_insertadas INT := 0;
+    v_limite_fin DATE;
 BEGIN
     SELECT fecha_inicio, fecha_fin
     INTO v_inicio, v_fin
@@ -1386,15 +1797,16 @@ BEGIN
 
     FOR v_horario IN SELECT * FROM horarios_club WHERE id_club = p_id_club LOOP
         v_dia_semana := v_horario.dia_semana;
+        v_limite_fin := LEAST(v_fin, COALESCE(v_horario.vigencia_fin, v_fin));
 
         -- Primera ocurrencia del día dentro del periodo
         -- EXTRACT(DOW): 0=Domingo … 6=Sábado (misma convención que dia_semana)
-        v_fecha := v_inicio;
+        v_fecha := GREATEST(v_inicio, COALESCE(v_horario.vigencia_inicio, v_inicio));
         WHILE EXTRACT(DOW FROM v_fecha)::INT != v_dia_semana LOOP
             v_fecha := v_fecha + INTERVAL '1 day';
         END LOOP;
 
-        WHILE v_fin >= v_fecha LOOP
+        WHILE v_limite_fin >= v_fecha LOOP
             INSERT INTO sesiones (
                 id_club, id_periodo, id_horario, fecha,
                 hora_inicio, hora_fin, lugar, integrantes_snapshot
@@ -1404,7 +1816,8 @@ BEGIN
                 v_horario.hora_inicio, v_horario.hora_fin, v_horario.lugar, v_snapshot
             )
             ON CONFLICT (id_horario, fecha) DO NOTHING;
-            GET DIAGNOSTICS v_creadas = ROW_COUNT;
+            GET DIAGNOSTICS v_insertadas = ROW_COUNT;
+            v_creadas := v_creadas + v_insertadas;
 
             v_fecha := v_fecha + INTERVAL '7 days';
         END LOOP;
@@ -1634,8 +2047,15 @@ CREATE TABLE IF NOT EXISTS convocatorias_inscripcion (
     fecha_apertura_programada TIMESTAMPTZ,
     fecha_limite_cierre TIMESTAMPTZ,
     max_postulaciones INT,
+    cerrada_manualmente BOOLEAN NOT NULL DEFAULT FALSE,
     fecha_publicacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE convocatorias_inscripcion
+    ADD COLUMN IF NOT EXISTS cerrada_manualmente BOOLEAN NOT NULL DEFAULT FALSE;
+-- La clave compuesta permite comprobar que el ciclo pertenece al mismo club
+-- que lo referencia (formularios y ciclo actual del club).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_convocatoria_inscripcion_id_club
+    ON convocatorias_inscripcion(id_convocatoria_inscripcion, id_club);
 CREATE INDEX IF NOT EXISTS idx_convocatoria_inscripcion_club
     ON convocatorias_inscripcion(id_club, fecha_publicacion DESC);
 ALTER TABLE convocatorias_inscripcion ENABLE ROW LEVEL SECURITY;
@@ -1644,56 +2064,70 @@ ALTER TABLE clubes ADD COLUMN IF NOT EXISTS id_convocatoria_inscripcion_actual I
 ALTER TABLE formularios ADD COLUMN IF NOT EXISTS id_convocatoria_inscripcion INT;
 CREATE INDEX IF NOT EXISTS idx_formularios_convocatoria_inscripcion
     ON formularios(id_convocatoria_inscripcion);
+-- Una sola postulación por alumno, club y ciclo. Filas históricas sin ciclo
+-- siguen conservándose y no se pueden deduplicar sin una asignación fiable.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_formulario_alumno_club_ciclo
+    ON formularios (id_alumno, id_club, id_convocatoria_inscripcion)
+    WHERE id_convocatoria_inscripcion IS NOT NULL;
 
 DO $$
 BEGIN
+    ALTER TABLE clubes DROP CONSTRAINT IF EXISTS fk_club_convocatoria_inscripcion_actual;
+    ALTER TABLE formularios DROP CONSTRAINT IF EXISTS fk_formulario_convocatoria_inscripcion;
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'fk_club_convocatoria_inscripcion_actual' AND conrelid='clubes'::regclass
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_club_ciclo_actual_mismo_club' AND conrelid='clubes'::regclass
     ) THEN
-        ALTER TABLE clubes
-            ADD CONSTRAINT fk_club_convocatoria_inscripcion_actual
-            FOREIGN KEY (id_convocatoria_inscripcion_actual)
-            REFERENCES convocatorias_inscripcion(id_convocatoria_inscripcion)
-            ON DELETE SET NULL;
+        ALTER TABLE clubes ADD CONSTRAINT fk_club_ciclo_actual_mismo_club
+            FOREIGN KEY (id_convocatoria_inscripcion_actual, id_club)
+            REFERENCES convocatorias_inscripcion(id_convocatoria_inscripcion, id_club)
+            ON DELETE SET NULL (id_convocatoria_inscripcion_actual);
     END IF;
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'fk_formulario_convocatoria_inscripcion' AND conrelid='formularios'::regclass
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_formulario_ciclo_mismo_club' AND conrelid='formularios'::regclass
     ) THEN
-        ALTER TABLE formularios
-            ADD CONSTRAINT fk_formulario_convocatoria_inscripcion
-            FOREIGN KEY (id_convocatoria_inscripcion)
-            REFERENCES convocatorias_inscripcion(id_convocatoria_inscripcion)
-            ON DELETE SET NULL;
+        ALTER TABLE formularios ADD CONSTRAINT fk_formulario_ciclo_mismo_club
+            FOREIGN KEY (id_convocatoria_inscripcion, id_club)
+            REFERENCES convocatorias_inscripcion(id_convocatoria_inscripcion, id_club)
+            ON DELETE RESTRICT;
     END IF;
 END $$;
 
 -- Backfill: representa la convocatoria publicada actual de cada club.
 -- La fecha de publicación es la última aprobación conocida (o la apertura).
-WITH aprobada AS (
-    SELECT DISTINCT ON (id_club) id_club, id_solicitud, fecha_revision
-    FROM solicitudes_convocatoria
-    WHERE estado = 'aprobado'
-    ORDER BY id_club, fecha_revision DESC NULLS LAST, id_solicitud DESC
-), nuevos AS (
-    INSERT INTO convocatorias_inscripcion
-        (id_club, id_solicitud, fecha_apertura_programada, fecha_limite_cierre,
-         max_postulaciones, fecha_publicacion)
-    SELECT cl.id_club, a.id_solicitud, cl.fecha_apertura_programada,
-           cl.fecha_limite_cierre, cl.max_postulaciones,
-           GREATEST(
-               COALESCE(a.fecha_revision, cl.fecha_apertura_programada),
-               cl.fecha_apertura_programada
-           )
-    FROM clubes cl
-    LEFT JOIN aprobada a ON a.id_club = cl.id_club
-    WHERE cl.id_convocatoria_inscripcion_actual IS NULL
-      AND cl.fecha_apertura_programada IS NOT NULL
-    RETURNING id_convocatoria_inscripcion, id_club
-)
-UPDATE clubes cl
-SET id_convocatoria_inscripcion_actual = n.id_convocatoria_inscripcion
-FROM nuevos n
-WHERE cl.id_club = n.id_club;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'clubes'
+          AND column_name = 'fecha_apertura_programada'
+    ) THEN
+        EXECUTE $sql$
+            WITH aprobada AS (
+                SELECT DISTINCT ON (id_club) id_club, id_solicitud, fecha_revision
+                FROM solicitudes_convocatoria
+                WHERE estado = 'aprobado'
+                ORDER BY id_club, fecha_revision DESC NULLS LAST, id_solicitud DESC
+            ), nuevos AS (
+                INSERT INTO convocatorias_inscripcion
+                    (id_club, id_solicitud, fecha_apertura_programada, fecha_limite_cierre,
+                     max_postulaciones, fecha_publicacion)
+                SELECT cl.id_club, a.id_solicitud, cl.fecha_apertura_programada,
+                       cl.fecha_limite_cierre, cl.max_postulaciones,
+                       GREATEST(COALESCE(a.fecha_revision, cl.fecha_apertura_programada),
+                                cl.fecha_apertura_programada)
+                FROM clubes cl
+                LEFT JOIN aprobada a ON a.id_club = cl.id_club
+                WHERE cl.id_convocatoria_inscripcion_actual IS NULL
+                  AND cl.fecha_apertura_programada IS NOT NULL
+                RETURNING id_convocatoria_inscripcion, id_club
+            )
+            UPDATE clubes cl
+               SET id_convocatoria_inscripcion_actual = n.id_convocatoria_inscripcion
+              FROM nuevos n
+             WHERE cl.id_club = n.id_club
+        $sql$;
+    END IF;
+END $$;
 
 -- Los formularios enviados desde la apertura del ciclo actual se enlazan a él,
 -- aunque hayan llegado antes de la última aprobación del mismo periodo. Los
@@ -1706,36 +2140,6 @@ JOIN convocatorias_inscripcion ci
 WHERE f.id_club = cl.id_club
   AND f.id_convocatoria_inscripcion IS NULL
   AND f.fecha_envio >= ci.fecha_apertura_programada;
-
-UPDATE clubes cl
-SET postulaciones_actuales = (
-    SELECT COUNT(*)::int
-    FROM formularios f
-    WHERE f.id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
-);
-
-DROP VIEW IF EXISTS clubes_con_estado;
-
-CREATE VIEW clubes_con_estado AS
-SELECT
-  cl.*,
-  COUNT(f.id_formulario)::int AS formularios_recibidos,
-  CASE
-    WHEN cl.cerrada_manualmente = TRUE                           THEN 'cerrado'
-    WHEN cl.fecha_apertura_programada IS NOT NULL
-     AND NOW() < cl.fecha_apertura_programada                    THEN 'proximo'
-    WHEN cl.max_postulaciones IS NOT NULL
-     AND COUNT(f.id_formulario) >= cl.max_postulaciones           THEN 'lleno'
-    WHEN cl.fecha_limite_cierre IS NOT NULL
-     AND NOW() > cl.fecha_limite_cierre                           THEN 'cerrado'
-    WHEN cl.fecha_apertura_programada IS NULL                     THEN 'cerrado'
-    ELSE 'abierto'
-  END AS estado_calculado
-FROM clubes cl
-LEFT JOIN formularios f
-  ON f.id_club = cl.id_club
- AND f.id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
-GROUP BY cl.id_club;
 
 -- CATALOGO UNIFICADO: clubes, actividades y publicaciones.
 
@@ -1792,6 +2196,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_catalogo_slug ON clubes(slug);
 CREATE INDEX IF NOT EXISTS idx_catalogo_tipo_publicacion ON clubes(tipo,estado_publicacion);
 DROP INDEX IF EXISTS uq_club_id_responsable_club;
 CREATE UNIQUE INDEX uq_club_id_responsable_club ON clubes(id_responsable_club) WHERE tipo='club' AND id_responsable_club IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_clubes_vicepresidente
+    ON clubes (id_vicepresidente)
+    WHERE id_vicepresidente IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_clubes_estatus_publicacion
+    ON clubes (id_estatus_club, estado_publicacion);
 ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_tipo;
 ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_tipo CHECK (tipo IN ('club','actividad'));
 ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_publicacion;
@@ -1801,7 +2210,10 @@ ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_plantilla CHECK (plantilla IN ('g
 ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_revision;
 ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_revision CHECK (estado_propuesta IN ('borrador','pendiente','rechazada'));
 ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_datos_club;
-ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_datos_club CHECK (tipo <> 'club' OR (cupo_maximo IS NOT NULL AND cupo_maximo IN (10,15,20,25,30,40,50) AND participacion IS NOT NULL));
+ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_datos_club CHECK (
+  (tipo = 'club' AND cupo_maximo IS NOT NULL AND cupo_maximo IN (10,15,20,25,30,40,50) AND participacion IS NOT NULL)
+  OR (tipo = 'actividad' AND cupo_maximo IS NULL AND participacion IS NULL)
+);
 
 CREATE TABLE IF NOT EXISTS migraciones_catalogo (
   id_migracion BIGSERIAL PRIMARY KEY,
@@ -1962,16 +2374,55 @@ CREATE TABLE IF NOT EXISTS actividades_responsables (
   PRIMARY KEY (id_actividad, id_usuario)
 );
 CREATE INDEX IF NOT EXISTS idx_actividades_responsables_usuario ON actividades_responsables(id_usuario);
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'clubes'
+          AND column_name = 'cerrada_manualmente'
+    ) THEN
+        EXECUTE $sql$
+            UPDATE convocatorias_inscripcion ci
+               SET cerrada_manualmente = cl.cerrada_manualmente
+              FROM clubes cl
+             WHERE ci.id_convocatoria_inscripcion = cl.id_convocatoria_inscripcion_actual
+               AND ci.id_club = cl.id_club
+        $sql$;
+    END IF;
+END $$;
+
+DROP VIEW IF EXISTS clubes_con_estado;
+DROP VIEW IF EXISTS clubes_operativos;
+ALTER TABLE clubes DROP COLUMN IF EXISTS postulaciones_actuales;
+ALTER TABLE clubes DROP COLUMN IF EXISTS max_postulaciones;
+ALTER TABLE clubes DROP COLUMN IF EXISTS cerrada_manualmente;
+ALTER TABLE clubes DROP COLUMN IF EXISTS fecha_apertura_programada;
+ALTER TABLE clubes DROP COLUMN IF EXISTS fecha_limite_cierre;
+
 CREATE OR REPLACE VIEW clubes_operativos AS SELECT * FROM clubes WHERE tipo='club' WITH LOCAL CHECK OPTION;
 CREATE VIEW clubes_con_estado AS
-SELECT cl.*,COUNT(f.id_formulario)::int AS formularios_recibidos,
- CASE WHEN cl.cerrada_manualmente THEN 'cerrado'
-      WHEN cl.fecha_apertura_programada IS NOT NULL AND NOW()<cl.fecha_apertura_programada THEN 'proximo'
-      WHEN cl.max_postulaciones IS NOT NULL AND COUNT(f.id_formulario)>=cl.max_postulaciones THEN 'lleno'
-      WHEN cl.fecha_limite_cierre IS NOT NULL AND NOW()>cl.fecha_limite_cierre THEN 'cerrado'
-      WHEN cl.fecha_apertura_programada IS NULL THEN 'cerrado' ELSE 'abierto' END AS estado_calculado
-FROM clubes cl LEFT JOIN formularios f ON f.id_club=cl.id_club AND f.id_convocatoria_inscripcion=cl.id_convocatoria_inscripcion_actual
-WHERE cl.tipo='club' GROUP BY cl.id_club;
+SELECT cl.id_club, cl.nombre_club, cl.descripcion, cl.categoria, cl.participacion,
+       cl.cupo_maximo, cl.lugar_actividades, cl.id_responsable_club,
+       cl.id_vicepresidente, cl.imagen_portada, cl.id_estatus_club,
+       cl.fecha_creacion, cl.horario, ci.max_postulaciones,
+       COUNT(f.id_formulario)::int AS postulaciones_actuales,
+       COALESCE(ci.cerrada_manualmente,FALSE) AS cerrada_manualmente,
+       ci.fecha_apertura_programada, ci.fecha_limite_cierre,
+       cl.version_horario, cl.id_convocatoria_inscripcion_actual, cl.tipo,
+       cl.slug, cl.plantilla, cl.estado_publicacion, cl.mostrar_en_oferta,
+       cl.id_autor, cl.propuesta, cl.estado_propuesta, cl.motivo_rechazo,
+       cl.actualizado_en, COUNT(f.id_formulario)::int AS formularios_recibidos,
+       CASE WHEN COALESCE(ci.cerrada_manualmente,FALSE) THEN 'cerrado'
+            WHEN ci.fecha_apertura_programada IS NOT NULL AND NOW()<ci.fecha_apertura_programada THEN 'proximo'
+            WHEN ci.max_postulaciones IS NOT NULL AND COUNT(f.id_formulario)>=ci.max_postulaciones THEN 'lleno'
+            WHEN ci.fecha_limite_cierre IS NOT NULL AND NOW()>ci.fecha_limite_cierre THEN 'cerrado'
+            WHEN ci.fecha_apertura_programada IS NULL THEN 'cerrado' ELSE 'abierto' END AS estado_calculado
+FROM clubes cl
+LEFT JOIN convocatorias_inscripcion ci
+  ON ci.id_convocatoria_inscripcion=cl.id_convocatoria_inscripcion_actual AND ci.id_club=cl.id_club
+LEFT JOIN formularios f ON f.id_convocatoria_inscripcion=ci.id_convocatoria_inscripcion AND f.id_club=cl.id_club
+WHERE cl.tipo='club' GROUP BY cl.id_club,ci.id_convocatoria_inscripcion;
 
 CREATE TABLE IF NOT EXISTS actividades_aportes_catalogo (
   id_opcion SERIAL PRIMARY KEY,
@@ -2357,6 +2808,7 @@ CREATE TABLE IF NOT EXISTS expediente_reconocimientos (
     nombre_edicion VARCHAR(160) NOT NULL,
     anio SMALLINT NOT NULL,
     insignia_key VARCHAR(120),
+    oculta BOOLEAN NOT NULL DEFAULT FALSE,
     otorgada_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_expediente_reconocimiento_usuario_edicion
@@ -2887,5 +3339,22 @@ CREATE TABLE IF NOT EXISTS reportes (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_reportes_folio ON reportes(folio);
 CREATE INDEX IF NOT EXISTS idx_reportes_estado ON reportes(estado);
 CREATE INDEX IF NOT EXISTS idx_reportes_creado_en ON reportes(creado_en DESC);
+
+-- Los comentarios persistentes se comparten con la migración administrada.
+COMMENT ON TABLE clubes IS 'Catálogo común. tipo distingue clubes y actividades; los campos exclusivos de club se validan según el tipo.';
+COMMENT ON COLUMN clubes.tipo IS 'club para membresía y convocatorias; actividad para ediciones y registros de actividades.';
+COMMENT ON TABLE convocatorias IS 'Invitaciones a alumnos preseleccionados para una postulación; no representa el ciclo general de inscripción.';
+COMMENT ON TABLE solicitudes_convocatoria IS 'Solicitud del responsable para abrir o cambiar una convocatoria de inscripción, sujeta a revisión.';
+COMMENT ON TABLE convocatorias_inscripcion IS 'Ciclo aprobado de inscripción de un club; los formularios se vinculan al ciclo al que pertenecen.';
+COMMENT ON TABLE formularios IS 'Postulación de un alumno a un club y ciclo; conserva la información y respuestas entregadas al solicitar ingreso.';
+COMMENT ON TABLE club_formulario_preguntas IS 'Preguntas configurables propias de cada club, por ejemplo talla o información de salud.';
+COMMENT ON TABLE formulario_respuestas_extra IS 'Respuestas configurables normalizadas con una copia inmutable del contexto de la pregunta al contestar.';
+COMMENT ON TABLE encuestas IS 'Encuestas independientes de las postulaciones; cada una define si es pública anónima o institucional.';
+COMMENT ON COLUMN encuestas.tipo_privacidad IS 'publico_anonimo no guarda identidad; institucional requiere sesión y asocia al respondiente.';
+COMMENT ON TABLE preguntas IS 'Preguntas de una encuesta específica; detalle_respuestas valida que la respuesta y la pregunta sean de la misma encuesta.';
+COMMENT ON TABLE respuestas_encuesta IS 'Un envío completo de una encuesta; id_usuario queda NULL en respuestas anónimas.';
+COMMENT ON COLUMN respuestas_encuesta.id_usuario IS 'Identidad solo para encuestas institucionales; las respuestas anónimas históricas no se atribuyen después.';
+COMMENT ON TABLE detalle_respuestas IS 'Valores individuales por pregunta; las claves foráneas preservan la pertenencia a la misma encuesta.';
+COMMENT ON TABLE noticias IS 'Contenido editorial institucional en documento JSON; url_imagen guarda la imagen de portada.';
 
 COMMIT;

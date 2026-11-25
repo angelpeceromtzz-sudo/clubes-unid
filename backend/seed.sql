@@ -223,15 +223,6 @@ WHERE NOT EXISTS (
   SELECT 1 FROM formularios f WHERE f.id_alumno = u.id_usuario AND f.id_club = cl.id_club
 );
 
--- Actualizar contador de postulaciones del club Voleibol
-UPDATE clubes
-SET postulaciones_actuales = (
-  SELECT COUNT(*) FROM formularios f
-  WHERE f.id_club = clubes.id_club
-    AND f.status NOT IN ('Rechazado', 'Miembro oficial')
-)
-WHERE tipo='club' AND nombre_club = 'Equipo de Voleibol';
-
 -- ============================================================
 -- 7. ENCUESTAS (PBI-10)
 -- ============================================================
