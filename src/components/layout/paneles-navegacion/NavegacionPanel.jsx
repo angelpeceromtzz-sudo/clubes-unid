@@ -1,11 +1,16 @@
 /* Panel de navegación con sidebar fijo en escritorio y tabs horizontales en móvil.
    Soporta elementos con `children` para submenús desplegables. */
 import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useAutenticacion } from '../../../contexts/AuthContext';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { Icono } from '../../ui/Icono';
 import { NAVBAR_HEIGHT_LOGO } from '../../../constants/limites';
 
 export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, children, fullHeight = false }) {
   const { modoOscuro } = useTheme();
+  const { usuario } = useAutenticacion();
+  const location = useLocation();
   const [abiertos, setAbiertos] = useState(() => new Set());
   const [cerrados, setCerrados] = useState(() => new Set());
   const [sidebarAbierto, setSidebarAbierto] = useState(true);
@@ -15,13 +20,18 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
   const itemExpediente = elementosNav.find((i) => i.key === 'expediente');
   const itemGestionClubes = elementosNav.find((i) => i.key === 'gestion-clubes');
   const itemResumen = elementosNav.find((i) => i.key === 'resumen');
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  const rutaPerfil = idUsuario ? `/usuarios/${idUsuario}/perfil` : '/perfil';
+  const perfilActivo = location.pathname === rutaPerfil || location.pathname === '/perfil';
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCerrados(new Set());
   }, [vistaActiva]);
 
-  const esActivo = (key) => vistaActiva === key;
+  const esActivo = (key) => key === 'panel'
+    ? vistaActiva === 'panel' || vistaActiva === 'mi-panel' || vistaActiva === 'mi-club'
+    : vistaActiva === key;
 
   const toggleGrupo = (item, autoAbierto) => {
     if (autoAbierto) {
@@ -116,51 +126,57 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
     item.children ? renderGrupo(item, compacto) : renderBoton(item, compacto);
 
   return (
-    <div className={`flex ${fullHeight ? 'navegacion-panel--altura-completa min-h-0 overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`relative flex ${fullHeight ? 'navegacion-panel--altura-completa min-h-0 overflow-hidden' : 'min-h-screen'}`}>
       <div
-        className={`hidden md:flex flex-col shrink-0 border-r sticky self-start overflow-y-auto transition-all duration-300 ${sidebarAbierto ? 'w-64' : 'w-12'} ${modoOscuro ? 'bg-[#0a1128] border-slate-800/60' : 'bg-white border-slate-200 shadow-sm'}`}
+        className={`hidden md:flex flex-col shrink-0 sticky self-start overflow-y-auto transition-[width] duration-300 ${sidebarAbierto ? `w-64 border-r ${modoOscuro ? 'border-slate-800/60' : 'border-slate-200'}` : `w-16 border-r ${modoOscuro ? 'border-slate-800/60' : 'border-slate-200'}`} ${modoOscuro ? 'bg-[#0a1128]' : 'bg-white shadow-sm'}`}
         style={{ top: `${NAVBAR_HEIGHT_LOGO}px`, height: `calc(100vh - ${NAVBAR_HEIGHT_LOGO}px)`, direction: 'rtl', scrollbarColor: '#fbbf24 transparent', scrollbarWidth: 'thin' }}
       >
         <div style={{ direction: 'ltr' }} className="flex flex-col">
-          <button
-            type="button"
-            onClick={() => setSidebarAbierto((prev) => !prev)}
-            className={`m-2 inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${modoOscuro ? 'text-amber-400 hover:text-amber-300 hover:bg-slate-700/80 hover:shadow-sm' : 'text-amber-500 hover:text-amber-600 hover:bg-slate-200 hover:shadow-sm'}`}
-            aria-label={sidebarAbierto ? 'Ocultar menú lateral' : 'Mostrar menú lateral'}
-          >
-            {sidebarAbierto ? 'Cerrar' : 'Abrir'}
-          </button>
-          {sidebarAbierto && (
+          {sidebarAbierto ? (
             <nav aria-label="Menú del panel" data-tutorial="menu-panel" className="pt-2 px-3 space-y-1">
+              <div className="flex items-center gap-1">
+                <div className="min-w-0 flex-1">
+                  <Link
+                    to={rutaPerfil}
+                    data-tutorial="perfil"
+                    aria-current={perfilActivo ? 'page' : undefined}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${
+                      perfilActivo
+                        ? 'bg-amber-400/20 text-amber-400 border border-amber-400/30'
+                        : modoOscuro
+                          ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'
+                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icono nombre="graduation-cap" className="h-5 w-5 shrink-0" />
+                    <span>Perfil</span>
+                  </Link>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSidebarAbierto(false)}
+                  className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5 transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:bg-slate-700/80 hover:text-amber-300' : 'text-slate-500 hover:bg-slate-100 hover:text-amber-600'}`}
+                  aria-label="Ocultar menú lateral"
+                  title="Ocultar menú lateral"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6} aria-hidden="true">
+                    <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+                    <path strokeLinecap="round" d="M9 5v14" />
+                  </svg>
+                </button>
+              </div>
               {tieneAdmin && (
                  <>
                    <div className={`px-4 py-2 text-xs font-black uppercase tracking-wider ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>
                      ADMINISTRAR
                    </div>
-                   <button
-                     onClick={() => onVistaChange('resumen')}
-                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
-                       vistaActiva === 'resumen'
-                         ? 'bg-amber-400/20 text-amber-400 border border-amber-400/30'
-                         : modoOscuro
-                           ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'
-                           : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                     }`}
-                   >
-                     {itemResumen && (
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                         <path strokeLinecap="round" strokeLinejoin="round" d={itemResumen.icon} />
-                       </svg>
-                     )}
-                     <span>Mi Panel</span>
-                   </button>
                    {itemUsuarios && renderBoton(itemUsuarios, false)}
                    {itemExpediente && renderBoton(itemExpediente, false)}
                    {itemGestionClubes && renderGrupo(itemGestionClubes, false)}
                  </>
                )}
                {elementosNav
-                 .filter((i) => !tieneAdmin || !['resumen', 'usuarios', 'expediente', 'gestion-clubes'].includes(i.key))
+                 .filter((i) => (!tieneAdmin || !['usuarios', 'expediente', 'gestion-clubes'].includes(i.key)))
                  .map((item) => (
                    <div key={item.key}>
                      {item.key === 'calendario' && (
@@ -170,6 +186,19 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
                    </div>
                  ))}
             </nav>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSidebarAbierto(true)}
+              className={`m-2 inline-flex h-8 w-8 self-center items-center justify-center rounded-lg p-1.5 transition-colors cursor-pointer ${modoOscuro ? 'text-slate-400 hover:bg-slate-700/80 hover:text-amber-300' : 'text-slate-500 hover:bg-slate-100 hover:text-amber-600'}`}
+              aria-label="Mostrar menú lateral"
+              title="Mostrar menú lateral"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6} aria-hidden="true">
+                <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+                <path strokeLinecap="round" d="M9 5v14" />
+              </svg>
+            </button>
           )}
         </div>
       </div>

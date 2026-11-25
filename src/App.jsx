@@ -1,6 +1,6 @@
 /* Punto de entrada principal. Renderiza la barra de navegación, las rutas (inicio, panel por rol) y el modal de inicio de sesión. */
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation, Navigate, matchPath } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, useParams, Navigate, matchPath } from 'react-router-dom';
 import { useAutenticacion } from './contexts/AuthContext';
 import { usePanelNav } from './contexts/PanelNavContext';
 import { useNoticias } from './contexts/NoticiasContext';
@@ -40,6 +40,9 @@ import { RutaClubActividad } from './components/actividades/RutaClubActividad';
 import { abrirPanelResponsable } from './services/panelResponsable';
 import PaginaPerfilPreferencias from './pages/PaginaPerfilPreferencias';
 import { PerfilAlumnoPanel } from './components/expediente/PerfilAlumnoPanel';
+import { NavegacionPanel } from './components/layout/paneles-navegacion/NavegacionPanel';
+import { usePanelAlumno } from './hooks/usePanelAlumno';
+import { ELEMENTOS_NAV_ALUMNO, ELEMENTOS_NAV_ADMIN, ELEMENTOS_NAV_RESPONSABLE_CLUB, ELEMENTOS_NAV_RECTORIA, ELEMENTOS_NAV_MURAL } from './constants/navegacion';
 import { FlujoOnboarding } from './components/onboarding/FlujoOnboarding';
 import { ModalConsentimientoLegal } from './components/legal/ModalConsentimientoLegal';
 import { api, request } from './services/api';
@@ -71,6 +74,76 @@ function RedireccionNoticias() {
   return null;
 }
 
+function PerfilPorIdentificador() {
+  const { id } = useParams();
+  const { usuario } = useAutenticacion();
+  const navigate = useNavigate();
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+  const d = usePanelAlumno();
+
+  if (!idUsuario) return <Navigate to="/campus/campeche/portal" replace />;
+  if (String(id) !== String(idUsuario)) {
+    return <Navigate to={`/usuarios/${idUsuario}/perfil`} replace />;
+  }
+
+  const esAlumno = usuario?.id_rol === 1;
+  const opciones = d.club ? ELEMENTOS_NAV_ALUMNO : [
+    { key: 'postulaciones', label: 'Mis postulaciones', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5h6M9 12h6M9 16h6' },
+    ...ELEMENTOS_NAV_ALUMNO.filter((item) => item.key === 'mis-actividades'),
+  ];
+  const rol = usuario?.id_rol;
+  let elementosNav = [];
+  let rutaPanel = null;
+  if (rol === 1) {
+    elementosNav = opciones;
+    rutaPanel = '/campus/campeche/alumno/panel';
+  } else if (rol === 3 || rol === 7) {
+    elementosNav = ELEMENTOS_NAV_ADMIN;
+    rutaPanel = '/admin/panel';
+  } else if (rol === 4) {
+    elementosNav = ELEMENTOS_NAV_RECTORIA;
+    rutaPanel = '/rectoria/panel';
+  } else if (rol === 6) {
+    elementosNav = ELEMENTOS_NAV_MURAL;
+    rutaPanel = '/mural/panel';
+  } else if (rol === 2 || rol === 5) {
+    elementosNav = ELEMENTOS_NAV_RESPONSABLE_CLUB;
+    rutaPanel = '/campus/campeche/portal/responsable-de-club/panel';
+  }
+
+  // Mantiene el sidebar de escritorio al ver el perfil.
+  if (elementosNav.length && rutaPanel) {
+    return (
+      <NavegacionPanel
+        elementosNav={elementosNav}
+        vistaActiva=""
+        onVistaChange={(key) => key === 'panel'
+          ? navigate(rutaPanel)
+          : navigate(`${rutaPanel}?seccion=${key}`)}
+        fullHeight={false}
+      >
+        <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-8 md:py-8">
+          <PerfilAlumnoPanel />
+        </div>
+      </NavegacionPanel>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-8 md:py-8">
+      <PerfilAlumnoPanel />
+    </div>
+  );
+}
+
+function RedireccionPerfilActual() {
+  const { usuario } = useAutenticacion();
+  const idUsuario = usuario?.id_usuario ?? usuario?.id;
+
+  if (!idUsuario) return <Navigate to="/campus/campeche/portal" replace />;
+  return <Navigate to={`/usuarios/${idUsuario}/perfil`} replace />;
+}
+
 // Las páginas públicas (landing y acerca) cambian entre sí como documentos
 // separados: al navegar se vuelve al inicio de la página de destino, igual
 // que un enlace tradicional. El sitio declara scroll-behavior: smooth en CSS,
@@ -94,6 +167,7 @@ const RUTAS_CONOCIDAS = [
   '/panel',
   '/perfil',
   '/perfil/preferencias',
+  '/usuarios/:id/perfil',
   '/campus/campeche/alumno/panel',
   '/campus/campeche/portal/club/:id',
   '/campus/campeche/portal/responsable-de-club/panel',
@@ -148,6 +222,9 @@ function App() {
 
   const idUsuario = usuario?.id_usuario ?? usuario?.id;
   const claveTutorialAlumno = idUsuario ? `tutorial_alumno_${idUsuario}_pending` : null;
+  const claveTutorialEnCurso = idUsuario ? `tutorial_alumno_${idUsuario}_en_curso` : null;
+  const tutorialEnCurso = !!claveTutorialEnCurso && (() => { try { return localStorage.getItem(claveTutorialEnCurso) === 'true'; } catch { return false; } })();
+  const tutorialPendiente = !!claveTutorialAlumno && (() => { try { return !!localStorage.getItem(claveTutorialAlumno); } catch { return false; } })();
 
   const dejarTutorialAlumnoPendiente = useCallback((repetir = false) => {
     if (!claveTutorialAlumno) return;
@@ -163,6 +240,15 @@ function App() {
     dejarTutorialAlumnoPendiente(repetir);
     navigate(rutaPanelAlumno);
   }, [location.pathname, navigate, dejarTutorialAlumnoPendiente]);
+
+  // Mientras el tutorial del alumno esté pendiente o en curso, no permitir otras rutas.
+  useEffect(() => {
+    if (!estaAutenticado || !(tutorialPendiente || tutorialEnCurso)) return;
+    const rutaPanelAlumno = '/campus/campeche/alumno/panel';
+    if (location.pathname !== rutaPanelAlumno) {
+      navigate(rutaPanelAlumno, { replace: true });
+    }
+  }, [estaAutenticado, tutorialPendiente, tutorialEnCurso, location.pathname, navigate]);
 
   const lanzarTutorialResponsable = useCallback((repetir = false) => {
     const rutaPanelResponsable = '/campus/campeche/portal/responsable-de-club/panel';
@@ -282,7 +368,7 @@ function App() {
   // Los cuatro paneles muestran el logotipo completo en la navbar; el detalle de
   // club conserva la variante compacta ("Volver al Portal"), y por eso su altura
   // coincide con NAVBAR_HEIGHT y no con la del logotipo de NAVBAR_HEIGHT_LOGO.
-  const esRutaPanel = ['/campus/campeche/alumno/panel', '/campus/campeche/portal/responsable-de-club/panel', '/admin/panel', '/rectoria/panel', '/mural/panel', '/perfil'].includes(location.pathname);
+  const esRutaPanel = ['/campus/campeche/alumno/panel', '/campus/campeche/portal/responsable-de-club/panel', '/admin/panel', '/rectoria/panel', '/mural/panel', '/perfil'].includes(location.pathname) || /^\/usuarios\/\d+\/perfil$/.test(location.pathname);
   const alturaNavbar = esRutaPanel ? NAVBAR_HEIGHT_LOGO : NAVBAR_HEIGHT;
   const chatClubAbierto = esRutaPanel && new URLSearchParams(location.search).get('seccion') === 'chat-club';
 
@@ -306,13 +392,18 @@ function App() {
   // una pantalla en blanco sin navbar.
   if (location.pathname.startsWith('/encuesta/')) {
     return (
-      <Routes>
-        <Route
-          path="/encuesta/:slug"
-          element={<PaginaEncuesta key={location.pathname} />}
-        />
-        <Route path="*" element={<PaginaNoEncontrada />} />
-      </Routes>
+      <>
+        <Routes>
+          <Route
+            path="/encuesta/:slug"
+            element={<PaginaEncuesta key={location.pathname} onLoginClick={() => setShowLogin(true)} />}
+          />
+          <Route path="*" element={<PaginaNoEncontrada />} />
+        </Routes>
+        {showLogin && (
+          <ModalInicioSesion onClose={handleLoginSuccess} onAceptarLegal={aceptarLegalDesdeLogin} />
+        )}
+      </>
     );
   }
 
@@ -417,7 +508,7 @@ return (
           onLogout={() => setConfirmarLogout(true)}
           onPanelClick={irAPanel}
           mostrarFiltros={mostrarFiltros}
-          mostrarNoticias={mostrarFiltros || esDetalleClubPortal || location.pathname === '/calendario' || location.pathname === '/admin/panel' || location.pathname === '/campus/campeche/alumno/panel' || location.pathname === '/campus/campeche/portal/responsable-de-club/panel'}
+          mostrarNoticias={mostrarFiltros || esDetalleClubPortal || location.pathname === '/calendario' || location.pathname === '/admin/panel' || location.pathname === '/campus/campeche/alumno/panel' || location.pathname === '/campus/campeche/portal/responsable-de-club/panel' || /^\/usuarios\/\d+\/perfil$/.test(location.pathname)}
           mostrarLogo={esRutaPanel}
           onVolverCatalogo={irACatalogo}
           contenidoMax={location.pathname.startsWith('/campus/campeche/portal/club/') ? '7xl' : null}
@@ -429,7 +520,7 @@ return (
         />
       )}
 
-      {!onboardingAbiertoEfectivo && estaAutenticado && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
+      {!onboardingAbiertoEfectivo && estaAutenticado && !tutorialPendiente && !tutorialEnCurso && !(location.pathname === '/calendario' && new URLSearchParams(location.search).get('vista') === 'mural') && <ModalNoticias />}
       {!onboardingAbiertoEfectivo && estaAutenticado && <ModalActualizaciones onLoginClick={() => setShowLogin(true)} />}
 
       <ModalConfirmacion
@@ -494,9 +585,12 @@ return (
         } />
         <Route path="/perfil" element={
           <RutaProtegida>
-            <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-8 md:py-8">
-              <PerfilAlumnoPanel />
-            </div>
+            <RedireccionPerfilActual />
+          </RutaProtegida>
+        } />
+        <Route path="/usuarios/:id/perfil" element={
+          <RutaProtegida>
+            <PerfilPorIdentificador />
           </RutaProtegida>
         } />
         <Route path="/campus/campeche/portal/club/:id" element={
