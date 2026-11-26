@@ -22,7 +22,8 @@ const COLOR_FONDO = '#ffffff';
 // Por debajo de ~160px un QR en pantalla de teléfono no escanea confiablemente,
 // que es justo cómo lo va a mirar el alumno.
 const TAMANO = 176;
-const NIVEL = 'M';
+const NIVEL = 'H';
+const LOGO = { src: '/branding/lobounid.png', width: 68, height: 58 };
 const ESCALA_DESCARGA = 4;
 
 export function QrEncuesta({ enlace, titulo, slug }) {
@@ -81,6 +82,7 @@ export function QrEncuesta({ enlace, titulo, slug }) {
             fgColor={COLOR_MODULO}
             marginSize={1}
             title={`Código QR de ${titulo}`}
+            imageSettings={LOGO}
           />
         </div>
 
@@ -118,6 +120,7 @@ export function QrEncuesta({ enlace, titulo, slug }) {
           bgColor={COLOR_FONDO}
           fgColor={COLOR_MODULO}
           marginSize={1}
+          imageSettings={LOGO}
         />
       </div>
     </div>

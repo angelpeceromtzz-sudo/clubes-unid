@@ -1,0 +1,62 @@
+.lobo-reaccion { display: block; width: 100%; height: 100%; overflow: visible; }
+.lobo-reaccion__cabeza { transform-origin: 48px 78px; }
+.lobo-reaccion__pata--izquierda { transform-origin: 26px 90px; }
+.lobo-reaccion__pata--derecha { transform-origin: 70px 90px; }
+.lobo-reaccion__abrazo, .lobo-reaccion__gracias { transform-origin: 48px 90px; }
+.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-alegre 550ms ease-out; }
+.lobo-reaccion--like.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-asiente 420ms ease-out; }
+.lobo-reaccion--love.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-carino 450ms ease-out; }
+.lobo-reaccion--love.lobo-reaccion--animado .lobo-reaccion__corazones { animation: lobo-corazones 500ms ease-out both; }
+.lobo-reaccion--clap.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-celebra 450ms ease-out; }
+.lobo-reaccion--clap.lobo-reaccion--animado .lobo-reaccion__pata--izquierda { animation: lobo-aplauso-izquierdo 450ms ease-out; }
+.lobo-reaccion--clap.lobo-reaccion--animado .lobo-reaccion__pata--derecha { animation: lobo-aplauso-derecho 450ms ease-out; }
+.lobo-reaccion--laugh.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-risa 600ms ease-out; }
+.lobo-reaccion--wink.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--cool.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--thinking.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--curious.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-inclina 600ms ease-out; }
+.lobo-reaccion--hug.lobo-reaccion--animado .lobo-reaccion__abrazo { animation: lobo-abrazo 600ms ease-out; }
+.lobo-reaccion--grateful.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--shy.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-asiente 650ms ease-in-out; }
+.lobo-reaccion--kiss.lobo-reaccion--animado .lobo-reaccion__beso { animation: lobo-besito 650ms ease-out; }
+.lobo-reaccion--relieved.lobo-reaccion--animado .lobo-reaccion__aire { animation: lobo-respiro 650ms ease-out; }
+.lobo-reaccion--wow.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-sorpresa 550ms ease-out; }
+.lobo-reaccion--confused.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--angry.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--worried.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-duda 600ms ease-out; }
+.lobo-reaccion--sad.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--sleepy.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-descansa 700ms ease-in-out; }
+.lobo-reaccion--cry.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-risa 650ms ease-in-out; }
+.lobo-reaccion__saludo { transform-origin: 78px 89px; }
+.lobo-reaccion__animo { transform-origin: 24px 91px; }
+.lobo-reaccion--wave.lobo-reaccion--animado .lobo-reaccion__saludo { animation: lobo-saluda 650ms ease-in-out; }
+.lobo-reaccion--cheer.lobo-reaccion--animado .lobo-reaccion__animo { animation: lobo-motiva 600ms ease-out; }
+.lobo-reaccion--sick.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-descansa 700ms ease-in-out; }
+.lobo-reaccion--sick.lobo-reaccion--animado .lobo-reaccion__termometro { animation: lobo-descansa 700ms ease-in-out; transform-origin: 48px 78px; }
+.lobo-reaccion--sick.lobo-reaccion--animado .lobo-reaccion__calor { animation: lobo-calor 700ms ease-out; }
+.lobo-reaccion--playful.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-inclina 600ms ease-out; }
+.lobo-reaccion--animado .lobo-reaccion__efecto { animation: lobo-destello 650ms ease-out; transform-origin: 48px 48px; }
+.lobo-reaccion--animado .lobo-reaccion__gota { animation: lobo-gota 650ms ease-out; }
+@keyframes lobo-asiente { 0%, 100% { transform: none; } 35% { transform: translateY(5px) rotate(5deg); } 70% { transform: translateY(-2px) rotate(-3deg); } }
+@keyframes lobo-carino { 0%, 100% { transform: none; } 40% { transform: rotate(-9deg) scale(1.08); } 75% { transform: rotate(5deg); } }
+@keyframes lobo-corazones { 0% { opacity: 0; transform: translateY(8px) scale(.85); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-12px) scale(1.1); } }
+@keyframes lobo-celebra { 0%, 100% { transform: none; } 30%, 70% { transform: translateY(-5px); } 50% { transform: translateY(1px); } }
+@keyframes lobo-aplauso-izquierdo { 0%, 100% { transform: none; } 30%, 70% { transform: translateX(9px) rotate(17deg); } 50% { transform: translateX(2px); } }
+@keyframes lobo-aplauso-derecho { 0%, 100% { transform: none; } 30%, 70% { transform: translateX(-9px) rotate(-17deg); } 50% { transform: translateX(-2px); } }
+@keyframes lobo-alegre { 0%, 100% { transform: none; } 35% { transform: translateY(-5px) scale(1.04); } 65% { transform: translateY(2px); } }
+@keyframes lobo-risa { 0%, 100% { transform: none; } 20%, 60% { transform: translateY(-2px) rotate(-3deg); } 40%, 80% { transform: translateY(2px) rotate(3deg); } }
+@keyframes lobo-inclina { 0%, 100% { transform: none; } 40% { transform: rotate(-8deg); } 70% { transform: rotate(3deg); } }
+@keyframes lobo-abrazo { 0%, 100% { transform: none; } 45% { transform: translateY(-3px) scale(.93, 1.06); } }
+@keyframes lobo-besito { 0%, 100% { transform: none; opacity: 1; } 65% { transform: translate(5px, -8px); opacity: .25; } }
+@keyframes lobo-respiro { 0%, 100% { transform: none; opacity: 1; } 65% { transform: translateX(3px); opacity: .2; } }
+@keyframes lobo-sorpresa { 0%, 100% { transform: none; } 35% { transform: translateY(-4px) scale(1.08); } 70% { transform: scale(.98); } }
+@keyframes lobo-duda { 0%, 100% { transform: none; } 25%, 75% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes lobo-descansa { 0%, 100% { transform: none; } 55% { transform: translateY(5px) rotate(4deg); } }
+@keyframes lobo-destello { 0%, 100% { opacity: 1; transform: none; } 45% { opacity: .35; transform: scale(1.08); } }
+@keyframes lobo-gota { 0%, 100% { transform: none; } 65% { transform: translateY(5px); opacity: .4; } }
+@keyframes lobo-saluda { 0%, 100% { transform: none; } 25%, 65% { transform: rotate(10deg); } 45%, 85% { transform: rotate(-9deg); } }
+@keyframes lobo-motiva { 0%, 100% { transform: none; } 40% { transform: translateY(-5px) rotate(-5deg); } 70% { transform: translateY(1px); } }
+@keyframes lobo-calor { 0%, 100% { opacity: 1; transform: none; } 60% { opacity: .3; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .lobo-reaccion, .lobo-reaccion * { animation: none !important; transition: none !important; }
+}

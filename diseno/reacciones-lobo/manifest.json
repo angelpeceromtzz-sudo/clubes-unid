@@ -1,0 +1,293 @@
+{
+  "nombre": "Reacciones del lobo de ClubsUNID",
+  "version": "1.1.0",
+  "fecha": "2026-11-25",
+  "finalidad": "Biblioteca de diseño para conservar. Las variantes nuevas no están habilitadas en la aplicación.",
+  "referencia": "src/components/actividades/LoboReaccion.jsx",
+  "viewBox": "0 0 96 100",
+  "fondo": "transparente",
+  "originales": 3,
+  "reserva": 25,
+  "reacciones": [
+    {
+      "numero": "01",
+      "id": "like",
+      "nombre": "Me gusta",
+      "grupo": "Originales",
+      "estado": "original",
+      "svg": "svg/me-gusta.svg",
+      "png": "png/me-gusta.png",
+      "gesto": "Asiente con la cabeza."
+    },
+    {
+      "numero": "02",
+      "id": "love",
+      "nombre": "Me encanta",
+      "grupo": "Originales",
+      "estado": "original",
+      "svg": "svg/me-encanta.svg",
+      "png": "png/me-encanta.png",
+      "gesto": "Inclina la cabeza y aparecen corazones."
+    },
+    {
+      "numero": "03",
+      "id": "clap",
+      "nombre": "Aplausos",
+      "grupo": "Originales",
+      "estado": "original",
+      "svg": "svg/aplausos.svg",
+      "png": "png/aplausos.png",
+      "gesto": "Celebra juntando las patitas."
+    },
+    {
+      "numero": "04",
+      "id": "happy",
+      "nombre": "Feliz",
+      "grupo": "Alegría",
+      "estado": "reserva",
+      "svg": "svg/feliz.svg",
+      "png": "png/feliz.png",
+      "gesto": "Da un pequeño salto de alegría."
+    },
+    {
+      "numero": "05",
+      "id": "laugh",
+      "nombre": "Me divierte",
+      "grupo": "Alegría",
+      "estado": "reserva",
+      "svg": "svg/me-divierte.svg",
+      "png": "png/me-divierte.png",
+      "gesto": "Se ríe con los ojos cerrados."
+    },
+    {
+      "numero": "06",
+      "id": "wink",
+      "nombre": "Guiño",
+      "grupo": "Alegría",
+      "estado": "reserva",
+      "svg": "svg/guino.svg",
+      "png": "png/guino.png",
+      "gesto": "Inclina la cabeza con complicidad."
+    },
+    {
+      "numero": "07",
+      "id": "cool",
+      "nombre": "Genial",
+      "grupo": "Alegría",
+      "estado": "reserva",
+      "svg": "svg/genial.svg",
+      "png": "png/genial.png",
+      "gesto": "Saluda con sus lentes puestos."
+    },
+    {
+      "numero": "08",
+      "id": "celebrate",
+      "nombre": "Celebración",
+      "grupo": "Alegría",
+      "estado": "reserva",
+      "svg": "svg/celebracion.svg",
+      "png": "png/celebracion.png",
+      "gesto": "Salta entre confeti."
+    },
+    {
+      "numero": "09",
+      "id": "proud",
+      "nombre": "Orgullo",
+      "grupo": "Alegría",
+      "estado": "reserva",
+      "svg": "svg/orgullo.svg",
+      "png": "png/orgullo.png",
+      "gesto": "Levanta la cabeza con satisfacción."
+    },
+    {
+      "numero": "10",
+      "id": "inspired",
+      "nombre": "Inspirado",
+      "grupo": "Alegría",
+      "estado": "reserva",
+      "svg": "svg/inspirado.svg",
+      "png": "png/inspirado.png",
+      "gesto": "Le brillan los ojos."
+    },
+    {
+      "numero": "11",
+      "id": "hug",
+      "nombre": "Abrazo",
+      "grupo": "Cariño",
+      "estado": "reserva",
+      "svg": "svg/abrazo.svg",
+      "png": "png/abrazo.png",
+      "gesto": "Acerca las patitas para abrazar."
+    },
+    {
+      "numero": "12",
+      "id": "grateful",
+      "nombre": "Gracias",
+      "grupo": "Cariño",
+      "estado": "reserva",
+      "svg": "svg/gracias.svg",
+      "png": "png/gracias.png",
+      "gesto": "Junta las patitas y hace una reverencia."
+    },
+    {
+      "numero": "13",
+      "id": "kiss",
+      "nombre": "Besito",
+      "grupo": "Cariño",
+      "estado": "reserva",
+      "svg": "svg/besito.svg",
+      "png": "png/besito.png",
+      "gesto": "Lanza un corazón al aire."
+    },
+    {
+      "numero": "14",
+      "id": "shy",
+      "nombre": "Timidez",
+      "grupo": "Cariño",
+      "estado": "reserva",
+      "svg": "svg/timidez.svg",
+      "png": "png/timidez.png",
+      "gesto": "Baja un poco la cabeza, sonrojado."
+    },
+    {
+      "numero": "15",
+      "id": "relieved",
+      "nombre": "Alivio",
+      "grupo": "Cariño",
+      "estado": "reserva",
+      "svg": "svg/alivio.svg",
+      "png": "png/alivio.png",
+      "gesto": "Suelta el aire con una sonrisa."
+    },
+    {
+      "numero": "16",
+      "id": "wow",
+      "nombre": "Sorpresa",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/sorpresa.svg",
+      "png": "png/sorpresa.png",
+      "gesto": "Se echa un poquito hacia atrás."
+    },
+    {
+      "numero": "17",
+      "id": "thinking",
+      "nombre": "Pensando",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/pensando.svg",
+      "png": "png/pensando.png",
+      "gesto": "Inclina la cabeza con una pata en el mentón."
+    },
+    {
+      "numero": "18",
+      "id": "curious",
+      "nombre": "Curiosidad",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/curiosidad.svg",
+      "png": "png/curiosidad.png",
+      "gesto": "Se asoma con una ceja levantada."
+    },
+    {
+      "numero": "19",
+      "id": "confused",
+      "nombre": "Confusión",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/confusion.svg",
+      "png": "png/confusion.png",
+      "gesto": "Mueve la cabeza de un lado al otro."
+    },
+    {
+      "numero": "20",
+      "id": "sad",
+      "nombre": "Tristeza",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/tristeza.svg",
+      "png": "png/tristeza.png",
+      "gesto": "Deja caer un poco la cabeza."
+    },
+    {
+      "numero": "21",
+      "id": "cry",
+      "nombre": "Llanto",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/llanto.svg",
+      "png": "png/llanto.png",
+      "gesto": "Tiembla suavemente mientras caen lágrimas."
+    },
+    {
+      "numero": "22",
+      "id": "angry",
+      "nombre": "Enojo",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/enojo.svg",
+      "png": "png/enojo.png",
+      "gesto": "Sacude la cabeza con el ceño fruncido."
+    },
+    {
+      "numero": "23",
+      "id": "worried",
+      "nombre": "Preocupación",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/preocupacion.svg",
+      "png": "png/preocupacion.png",
+      "gesto": "Se inquieta y aparece una gotita."
+    },
+    {
+      "numero": "24",
+      "id": "sleepy",
+      "nombre": "Sueño",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/sueno.svg",
+      "png": "png/sueno.png",
+      "gesto": "Cabecea mientras se queda dormido."
+    },
+    {
+      "numero": "25",
+      "id": "wave",
+      "nombre": "Saludo",
+      "grupo": "Cariño",
+      "estado": "reserva",
+      "svg": "svg/saludo.svg",
+      "png": "png/saludo.png",
+      "gesto": "Mueve una patita para saludar."
+    },
+    {
+      "numero": "26",
+      "id": "cheer",
+      "nombre": "¡Ánimo!",
+      "grupo": "Alegría",
+      "estado": "reserva",
+      "svg": "svg/animo.svg",
+      "png": "png/animo.png",
+      "gesto": "Levanta una patita con fuerza para darte ánimos."
+    },
+    {
+      "numero": "27",
+      "id": "sick",
+      "nombre": "Enfermito",
+      "grupo": "Matices",
+      "estado": "reserva",
+      "svg": "svg/enfermito.svg",
+      "png": "png/enfermito.png",
+      "gesto": "Cabecea con su termómetro y unas onditas de calor."
+    },
+    {
+      "numero": "28",
+      "id": "playful",
+      "nombre": "Travieso",
+      "grupo": "Alegría",
+      "estado": "reserva",
+      "svg": "svg/travieso.svg",
+      "png": "png/travieso.png",
+      "gesto": "Inclina la cabeza, guiña un ojo y saca la lengua."
+    }
+  ]
+}

@@ -1,0 +1,1314 @@
+<!doctype html>
+<html lang="es" data-tema="claro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/svg+xml" href="svg/me-gusta.svg">
+  <meta name="description" content="Biblioteca de diseño con 28 expresiones del lobo de ClubsUNID. 3 originales y 25 nuevas variantes en reserva.">
+  <title>Reacciones del lobo · ClubsUNID</title>
+  <style>@font-face { font-family: Coleccion; src: local('Avenir Next'), local('Segoe UI'), local('Arial'); font-display: swap; }
+:root { color-scheme: light; --fondo: #f7f5ef; --papel: #fffefb; --tinta: #291a36; --tenue: #756c7e; --linea: #e7e1e9; --lavanda: #eee5f4; --acento: #654281; --sombra: 0 14px 32px #291a3608; }
+:root[data-tema="oscuro"] { color-scheme: dark; --fondo: #17121e; --papel: #231c2c; --tinta: #f8f3fb; --tenue: #b6a8c1; --linea: #3d3049; --lavanda: #382843; --acento: #d3b4ed; --sombra: 0 14px 32px #00000020; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); color: var(--tinta); font-family: Coleccion, 'Avenir Next', 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+button, input, a { -webkit-tap-highlight-color: transparent; }
+button, input { font: inherit; }
+button, a { touch-action: manipulation; }
+button { color: inherit; cursor: pointer; }
+a { color: inherit; text-underline-offset: 4px; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--acento); outline-offset: 4px; }
+button:disabled { cursor: default; opacity: .5; }
+[hidden] { display: none !important; }
+.contenedor { max-width: 1440px; margin: 0 auto; padding: 0 56px; }
+.cabecera { min-height: 100px; display: flex; justify-content: space-between; align-items: center; gap: 24px; border-bottom: 1px solid var(--linea); }
+.marca { display: flex; align-items: center; gap: 12px; }
+.marca__icono { width: 37px; height: 39px; }
+.marca__nombre { font-size: 13px; font-weight: 800; letter-spacing: .11em; }
+.marca__subtitulo { display: block; margin-top: 4px; font-size: 10px; font-weight: 500; color: var(--tenue); letter-spacing: .16em; text-transform: uppercase; }
+.acciones { display: flex; gap: 10px; align-items: center; }
+.boton { min-height: 44px; border: 1px solid var(--linea); border-radius: 12px; padding: 10px 14px; background: var(--papel); display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: var(--tinta); font-size: 12px; font-weight: 650; text-decoration: none; }
+.boton:hover { border-color: var(--acento); }
+.boton svg, .descargar svg, .buscar svg, .cerrar svg { width: 17px; height: 17px; flex-shrink: 0; }
+.boton--principal { background: var(--tinta); color: var(--fondo); border-color: var(--tinta); }
+.hero { display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: 64px; padding: 58px 0 46px; }
+.sobretitulo { margin: 0 0 20px; font-size: 10px; letter-spacing: .16em; font-weight: 750; text-transform: uppercase; color: var(--acento); }
+.sobretitulo::before { content: ''; display: inline-block; width: 6px; height: 6px; background: #b08a32; border-radius: 50%; margin-right: 9px; vertical-align: 1px; }
+h1 { font-size: clamp(34px, 3.7vw, 56px); line-height: 1.1; letter-spacing: -.045em; margin: 0 0 20px; font-weight: 750; }
+.introduccion { font-size: 14px; line-height: 1.8; color: var(--tenue); max-width: 470px; margin: 0; }
+.cifras { display: flex; align-items: center; gap: 23px; margin-top: 28px; }
+.cifras span { font-size: 11px; color: var(--tenue); }
+.cifras strong { font-size: 18px; color: var(--tinta); margin-right: 5px; }
+.cifras span + span { padding-left: 23px; border-left: 1px solid var(--linea); }
+.muestrario { position: relative; isolation: isolate; height: 284px; border-radius: 26px; background: #2b193b; color: #f8f0ff; overflow: hidden; }
+.muestrario::before { content: ''; position: absolute; width: 310px; height: 310px; border: 1px solid #b18acc26; border-radius: 50%; top: -100px; right: -30px; box-shadow: 0 0 0 40px #b18acc08, 0 0 0 80px #b18acc06; z-index: -1; }
+.muestrario__etiqueta { position: absolute; top: 24px; left: 26px; margin: 0; font-size: 9px; color: #d6c3e6; letter-spacing: .16em; }
+.muestrario__lobo { position: absolute; width: 148px; height: 155px; top: 67px; left: calc(50% - 74px); transform: rotate(-5deg); }
+.muestrario__lobo--izquierdo { width: 88px; height: 92px; top: 101px; left: calc(50% - 179px); transform: rotate(-16deg); }
+.muestrario__lobo--derecho { width: 88px; height: 92px; top: 105px; left: calc(50% + 92px); transform: rotate(12deg); }
+.muestrario__nota { position: absolute; bottom: 23px; left: 26px; right: 26px; text-align: center; font-size: 11px; color: #d6c3e6; margin: 0; }
+.aviso { display: flex; align-items: flex-start; gap: 11px; border: 1px solid var(--linea); border-radius: 13px; padding: 14px 17px; font-size: 11px; line-height: 1.6; color: var(--tenue); }
+.aviso svg { flex-shrink: 0; width: 17px; height: 17px; margin-top: 1px; color: var(--acento); }
+.aviso p { margin: 0; }
+.aviso strong { color: var(--tinta); font-weight: 650; }
+.seccion { padding: 39px 0 54px; }
+.titulo-fila { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.titulo-fila h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+.conteo { margin-left: 10px; padding: 4px 8px; border: 1px solid var(--linea); border-radius: 7px; font-size: 10px; color: var(--tenue); vertical-align: 2px; font-weight: 600; }
+.herramientas { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.filtros { display: flex; gap: 5px; flex-wrap: wrap; }
+.filtro { padding: 10px 13px; min-height: 42px; border: 1px solid transparent; border-radius: 10px; background: transparent; font-size: 11px; font-weight: 650; color: var(--tenue); }
+.filtro[aria-pressed="true"] { background: var(--lavanda); color: var(--acento); }
+.filtro:hover { border-color: var(--linea); }
+.buscar { display: flex; gap: 9px; align-items: center; padding: 0 12px; border: 1px solid var(--linea); background: var(--papel); border-radius: 10px; color: var(--tenue); }
+.buscar input { width: 190px; min-width: 0; padding: 12px 0; background: transparent; border: 0; color: var(--tinta); font-size: 11px; }
+.buscar input::placeholder { color: var(--tenue); }
+.rejilla { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; }
+.tarjeta { border: 1px solid var(--linea); border-radius: 17px; background: var(--papel); padding: 13px 14px 14px; transition: border-color 150ms, box-shadow 150ms, transform 150ms; min-width: 0; }
+.tarjeta:hover { border-color: #b8a4c6; box-shadow: var(--sombra); transform: translateY(-2px); }
+.tarjeta__cabecera { display: flex; justify-content: space-between; align-items: center; font-size: 9px; letter-spacing: .02em; }
+.tarjeta__numero { font-variant-numeric: tabular-nums; color: var(--tenue); }
+.estado { display: inline-flex; align-items: center; gap: 5px; color: var(--tenue); }
+.estado::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #b9adbe; }
+.estado--original { color: var(--acento); }
+.estado--original::before { background: #9c7c2c; }
+.tarjeta__ver { width: 100%; padding: 12px 0 7px; border: 0; background: transparent; border-radius: 10px; display: grid; justify-items: center; }
+.tarjeta__imagen { width: 103px; height: 108px; display: block; }
+.tarjeta__inferior { display: flex; align-items: center; gap: 4px; justify-content: space-between; }
+.tarjeta h3 { font-size: 12px; letter-spacing: -.01em; font-weight: 650; margin: 0; }
+.tarjeta__grupo { margin: 2px 0 0; color: var(--tenue); font-size: 9px; }
+.descargar { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 9px; text-decoration: none; color: var(--tenue); }
+.descargar:hover { background: var(--lavanda); color: var(--acento); }
+.vacio { padding: 48px 12px; text-align: center; color: var(--tenue); font-size: 13px; }
+.vacio button { border: 0; border-radius: 8px; background: var(--lavanda); padding: 10px 16px; color: var(--acento); }
+.pie { border-top: 1px solid var(--linea); padding: 23px 0 30px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; font-size: 10px; line-height: 1.6; color: var(--tenue); }
+.pie p { margin: 0; }
+.pie strong { color: var(--tinta); font-weight: 650; }
+dialog { padding: 0; width: min(440px, calc(100% - 32px)); max-height: calc(100% - 32px); border: 1px solid var(--linea); border-radius: 24px; background: var(--papel); color: var(--tinta); box-shadow: 0 32px 96px #10082355; }
+dialog::backdrop { background: #120b20a8; backdrop-filter: blur(5px); }
+.detalle__interior { position: relative; padding: 30px; }
+.cerrar { position: absolute; right: 14px; top: 14px; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 12px; background: transparent; color: var(--tenue); }
+.cerrar:hover { background: var(--lavanda); }
+.detalle__lienzo { height: 218px; display: flex; align-items: center; justify-content: center; margin: 22px 0 24px; border-radius: 18px; border: 1px solid var(--linea); background-image: linear-gradient(45deg, var(--lavanda) 25%, transparent 25%), linear-gradient(-45deg, var(--lavanda) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--lavanda) 75%), linear-gradient(-45deg, transparent 75%, var(--lavanda) 75%); background-size: 18px 18px; background-position: 0 0, 0 9px, 9px -9px, -9px 0; }
+.detalle__imagen { width: 160px; height: 167px; }
+.detalle__titulo { margin: 8px 0 10px; font-size: 29px; letter-spacing: -.04em; }
+.detalle__gesto { font-size: 13px; color: var(--tenue); line-height: 1.7; min-height: 44px; margin: 0; }
+.detalle__opciones { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 17px 0 25px; }
+.tamanos { display: flex; gap: 3px; }
+.tamano { border: 1px solid var(--linea); background: transparent; border-radius: 7px; min-width: 40px; min-height: 36px; font-size: 10px; }
+.tamano[aria-pressed="true"] { border-color: var(--acento); background: var(--lavanda); color: var(--acento); }
+.detalle__nota { font-size: 10px; color: var(--tenue); line-height: 1.6; margin-top: 17px; }
+.solo-lector { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (min-width: 1500px) { .hero { gap: 100px; } }
+@media (max-width: 1120px) { .contenedor { padding: 0 32px; } .rejilla { grid-template-columns: repeat(4, minmax(0, 1fr)); } .hero { gap: 32px; } .muestrario__lobo--izquierdo { left: calc(50% - 143px); width: 72px; height: 75px; } .muestrario__lobo--derecho { left: calc(50% + 74px); width: 72px; height: 75px; } }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr; padding: 36px 0 26px; gap: 26px; } .muestrario { height: 250px; } .muestrario__lobo { top: 47px; } .muestrario__lobo--izquierdo, .muestrario__lobo--derecho { top: 86px; } .rejilla { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cabecera { min-height: 83px; } .cabecera .boton { font-size: 0; width: 42px; padding: 10px; } .buscar { width: 100%; } .buscar input { width: 100%; } .seccion { padding-top: 29px; } }
+@media (max-width: 520px) { .contenedor { padding: 0 20px; } .rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; } .titulo-fila { align-items: flex-start; } .titulo-fila h2 { font-size: 17px; padding-top: 11px; } .conteo { padding: 3px 6px; margin-left: 5px; } .titulo-fila > .boton { font-size: 0; width: 44px; padding: 10px; } .cifras { gap: 15px; } .cifras span + span { padding-left: 15px; } .cifras span { font-size: 10px; } .cifras strong { font-size: 16px; } .filtro { padding: 9px 10px; } .tarjeta__imagen { width: 100px; height: 104px; } .tarjeta { padding: 12px; } .tarjeta h3 { font-size: 12px; } .marca__nombre { font-size: 11px; } .marca__subtitulo { font-size: 8px; } .detalle__interior { padding: 25px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } .tarjeta:hover { transform: none; } }
+@media print { :root { color-scheme: light; --fondo: #fff; --papel: #fff; --tinta: #291a36; --tenue: #756c7e; --linea: #e7e1e9; } .contenedor { padding: 0; } .acciones, .herramientas, .aviso, .muestrario, .descargar, .titulo-fila > .boton, dialog { display: none !important; } .hero { display: block; padding: 25px 0; } .cifras { margin-top: 12px; } h1 { font-size: 30px; } .rejilla { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; } .tarjeta { break-inside: avoid; padding: 8px; } .tarjeta__imagen { width: 66px; height: 69px; } .tarjeta h3 { font-size: 9px; } .tarjeta__cabecera, .tarjeta__grupo { font-size: 7px; } .seccion { padding: 15px 0; } .pie { padding-top: 12px; } }
+
+
+.lobo-reaccion { display: block; width: 100%; height: 100%; overflow: visible; }
+.lobo-reaccion__cabeza { transform-origin: 48px 78px; }
+.lobo-reaccion__pata--izquierda { transform-origin: 26px 90px; }
+.lobo-reaccion__pata--derecha { transform-origin: 70px 90px; }
+.lobo-reaccion__abrazo, .lobo-reaccion__gracias { transform-origin: 48px 90px; }
+.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-alegre 550ms ease-out; }
+.lobo-reaccion--like.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-asiente 420ms ease-out; }
+.lobo-reaccion--love.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-carino 450ms ease-out; }
+.lobo-reaccion--love.lobo-reaccion--animado .lobo-reaccion__corazones { animation: lobo-corazones 500ms ease-out both; }
+.lobo-reaccion--clap.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-celebra 450ms ease-out; }
+.lobo-reaccion--clap.lobo-reaccion--animado .lobo-reaccion__pata--izquierda { animation: lobo-aplauso-izquierdo 450ms ease-out; }
+.lobo-reaccion--clap.lobo-reaccion--animado .lobo-reaccion__pata--derecha { animation: lobo-aplauso-derecho 450ms ease-out; }
+.lobo-reaccion--laugh.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-risa 600ms ease-out; }
+.lobo-reaccion--wink.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--cool.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--thinking.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--curious.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-inclina 600ms ease-out; }
+.lobo-reaccion--hug.lobo-reaccion--animado .lobo-reaccion__abrazo { animation: lobo-abrazo 600ms ease-out; }
+.lobo-reaccion--grateful.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--shy.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-asiente 650ms ease-in-out; }
+.lobo-reaccion--kiss.lobo-reaccion--animado .lobo-reaccion__beso { animation: lobo-besito 650ms ease-out; }
+.lobo-reaccion--relieved.lobo-reaccion--animado .lobo-reaccion__aire { animation: lobo-respiro 650ms ease-out; }
+.lobo-reaccion--wow.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-sorpresa 550ms ease-out; }
+.lobo-reaccion--confused.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--angry.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--worried.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-duda 600ms ease-out; }
+.lobo-reaccion--sad.lobo-reaccion--animado .lobo-reaccion__cabeza,
+.lobo-reaccion--sleepy.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-descansa 700ms ease-in-out; }
+.lobo-reaccion--cry.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-risa 650ms ease-in-out; }
+.lobo-reaccion__saludo { transform-origin: 78px 89px; }
+.lobo-reaccion__animo { transform-origin: 24px 91px; }
+.lobo-reaccion--wave.lobo-reaccion--animado .lobo-reaccion__saludo { animation: lobo-saluda 650ms ease-in-out; }
+.lobo-reaccion--cheer.lobo-reaccion--animado .lobo-reaccion__animo { animation: lobo-motiva 600ms ease-out; }
+.lobo-reaccion--sick.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-descansa 700ms ease-in-out; }
+.lobo-reaccion--sick.lobo-reaccion--animado .lobo-reaccion__termometro { animation: lobo-descansa 700ms ease-in-out; transform-origin: 48px 78px; }
+.lobo-reaccion--sick.lobo-reaccion--animado .lobo-reaccion__calor { animation: lobo-calor 700ms ease-out; }
+.lobo-reaccion--playful.lobo-reaccion--animado .lobo-reaccion__cabeza { animation: lobo-inclina 600ms ease-out; }
+.lobo-reaccion--animado .lobo-reaccion__efecto { animation: lobo-destello 650ms ease-out; transform-origin: 48px 48px; }
+.lobo-reaccion--animado .lobo-reaccion__gota { animation: lobo-gota 650ms ease-out; }
+@keyframes lobo-asiente { 0%, 100% { transform: none; } 35% { transform: translateY(5px) rotate(5deg); } 70% { transform: translateY(-2px) rotate(-3deg); } }
+@keyframes lobo-carino { 0%, 100% { transform: none; } 40% { transform: rotate(-9deg) scale(1.08); } 75% { transform: rotate(5deg); } }
+@keyframes lobo-corazones { 0% { opacity: 0; transform: translateY(8px) scale(.85); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-12px) scale(1.1); } }
+@keyframes lobo-celebra { 0%, 100% { transform: none; } 30%, 70% { transform: translateY(-5px); } 50% { transform: translateY(1px); } }
+@keyframes lobo-aplauso-izquierdo { 0%, 100% { transform: none; } 30%, 70% { transform: translateX(9px) rotate(17deg); } 50% { transform: translateX(2px); } }
+@keyframes lobo-aplauso-derecho { 0%, 100% { transform: none; } 30%, 70% { transform: translateX(-9px) rotate(-17deg); } 50% { transform: translateX(-2px); } }
+@keyframes lobo-alegre { 0%, 100% { transform: none; } 35% { transform: translateY(-5px) scale(1.04); } 65% { transform: translateY(2px); } }
+@keyframes lobo-risa { 0%, 100% { transform: none; } 20%, 60% { transform: translateY(-2px) rotate(-3deg); } 40%, 80% { transform: translateY(2px) rotate(3deg); } }
+@keyframes lobo-inclina { 0%, 100% { transform: none; } 40% { transform: rotate(-8deg); } 70% { transform: rotate(3deg); } }
+@keyframes lobo-abrazo { 0%, 100% { transform: none; } 45% { transform: translateY(-3px) scale(.93, 1.06); } }
+@keyframes lobo-besito { 0%, 100% { transform: none; opacity: 1; } 65% { transform: translate(5px, -8px); opacity: .25; } }
+@keyframes lobo-respiro { 0%, 100% { transform: none; opacity: 1; } 65% { transform: translateX(3px); opacity: .2; } }
+@keyframes lobo-sorpresa { 0%, 100% { transform: none; } 35% { transform: translateY(-4px) scale(1.08); } 70% { transform: scale(.98); } }
+@keyframes lobo-duda { 0%, 100% { transform: none; } 25%, 75% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes lobo-descansa { 0%, 100% { transform: none; } 55% { transform: translateY(5px) rotate(4deg); } }
+@keyframes lobo-destello { 0%, 100% { opacity: 1; transform: none; } 45% { opacity: .35; transform: scale(1.08); } }
+@keyframes lobo-gota { 0%, 100% { transform: none; } 65% { transform: translateY(5px); opacity: .4; } }
+@keyframes lobo-saluda { 0%, 100% { transform: none; } 25%, 65% { transform: rotate(10deg); } 45%, 85% { transform: rotate(-9deg); } }
+@keyframes lobo-motiva { 0%, 100% { transform: none; } 40% { transform: translateY(-5px) rotate(-5deg); } 70% { transform: translateY(1px); } }
+@keyframes lobo-calor { 0%, 100% { opacity: 1; transform: none; } 60% { opacity: .3; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .lobo-reaccion, .lobo-reaccion * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <header class="cabecera">
+    <div class="marca"><span class="marca__icono"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--like">
+  <title id="marca-titulo">Me gusta · Lobo ClubsUNID</title>
+  <desc id="marca-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Asiente con la cabeza.</desc>
+
+  <defs>
+    <linearGradient id="marca-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="marca-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#marca-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#marca-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#marca-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__ojos">
+    <path d="m24 46 16 4-3 10-11-4Z" fill="#fff8dc"/><path d="m72 46-16 4 3 10 11-4Z" fill="#fff8dc"/>
+    <path d="m24 46 16 4M72 46l-16 4" fill="none" stroke="#201033" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="33" cy="54" rx="3" ry="4.5" fill="#201033"/><ellipse cx="63" cy="54" rx="3" ry="4.5" fill="#201033"/>
+    <circle cx="34" cy="52.5" r="1" fill="white"/><circle cx="64" cy="52.5" r="1" fill="white"/>
+  </g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#marca-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+
+</svg></span><div class="marca__nombre">CLUBSUNID<span class="marca__subtitulo">Biblioteca de expresiones</span></div></div>
+    <div class="acciones"><button type="button" class="boton" id="tema" aria-pressed="false" aria-label="Ver con fondo oscuro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z"/></svg><span id="etiqueta-tema">Fondo oscuro</span></button><a class="boton" href="vista-general.png" target="_blank" rel="noopener" aria-label="Abrir lámina completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Ver lámina</span></a></div>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="titulo">
+      <div><p class="sobretitulo">Colección 01 · Reserva creativa</p><h1 id="titulo">El mismo lobo.<br>Todas sus emociones.</h1><p class="introduccion">Una familia de expresiones con la identidad de ClubsUNID. Guardadas, organizadas y listas para cuando llegue su momento.</p><div class="cifras"><span><strong>28</strong> expresiones</span><span><strong>3</strong> originales</span><span><strong>25</strong> en reserva</span></div></div>
+      <div class="muestrario" aria-hidden="true"><p class="muestrario__etiqueta">UNA MISMA IDENTIDAD</p><span class="muestrario__lobo muestrario__lobo--izquierdo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--cool">
+  <title id="hero-cool-titulo">Genial · Lobo ClubsUNID</title>
+  <desc id="hero-cool-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Saluda con sus lentes puestos.</desc>
+
+  <defs>
+    <linearGradient id="hero-cool-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="hero-cool-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#hero-cool-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#hero-cool-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#hero-cool-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__lentes"><path d="m19 46 23 2-3 14-14-2Zm58 0-23 2 3 14 14-2Z" fill="#231331" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/><path d="M42 50q6-4 12 0m-35-4-5-2m63 2 5-2" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="m25 49 9 2-8 6Zm34 2 11-2-9 8Z" fill="#bda7d3" opacity=".75"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#hero-cool-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="lobo-reaccion__efecto" fill="#a78bce"><path d="M8 27l2-6 2 6 5 2-5 2-2 6-2-6-5-2Zm77 9 2-5 2 5 5 2-5 2-2 5-2-5-5-2Z"/></g>
+</svg></span><span class="muestrario__lobo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--celebrate">
+  <title id="hero-celebrate-titulo">Celebración · Lobo ClubsUNID</title>
+  <desc id="hero-celebrate-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Salta entre confeti.</desc>
+
+  <defs>
+    <linearGradient id="hero-celebrate-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="hero-celebrate-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#hero-celebrate-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#hero-celebrate-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#hero-celebrate-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M25 53q6-10 13 0M58 53q7-10 13 0"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#hero-celebrate-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M37 73q11 16 22 0Z" fill="#29113f" stroke="#29113f" stroke-width="2" stroke-linejoin="round"/><path d="M43 79q5-4 10 0l-5 3Z" fill="#ed7990"/>
+  </g>
+
+  <g class="lobo-reaccion__efecto" fill="none" stroke-width="3" stroke-linecap="round"><path d="m7 18 2 5m-5 19 4-2m79-17 4-3m-3 21 4 2m-45-35 2-5" stroke="#ed5474"/><path d="m4 31 4 1m76-21 2-5m-49 4-2-6m56 49 3 2" stroke="#8c6bc6"/><path d="m12 7-3-3m81 31 4 1m-38-23 3-5" stroke="#fbbf24"/></g>
+</svg></span><span class="muestrario__lobo muestrario__lobo--derecho"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--hug">
+  <title id="hero-hug-titulo">Abrazo · Lobo ClubsUNID</title>
+  <desc id="hero-hug-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Acerca las patitas para abrazar.</desc>
+
+  <defs>
+    <linearGradient id="hero-hug-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="hero-hug-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#hero-hug-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#hero-hug-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#hero-hug-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M25 53q6-10 13 0M58 53q7-10 13 0"/></g>
+    <g fill="#f08570" opacity=".55"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#hero-hug-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g class="lobo-reaccion__abrazo" fill="url(#hero-hug-luz)" stroke="#281041" stroke-width="2.2" stroke-linejoin="round"><path d="M16 74q-7 0-6 9 3 13 24 13l9-7q4-6 0-9t-8 2l-6 5q-8-1-8-8Z"/><path d="M80 74q7 0 6 9-3 13-24 13l-9-7q-4-6 0-9t8 2l6 5q8-1 8-8Z"/><path d="m35 83 5 6m-8-3 5 6m24-9-5 6m8-3-5 6" fill="none" stroke="#b7832a" stroke-width="1.3" stroke-linecap="round"/></g>
+  <g class="lobo-reaccion__efecto"><path d="M0 3C-6-5-13 1-10 7L0 16 10 7C13 1 6-5 0 3Z" transform="translate(48 81) scale(.65)" fill="#ed5474" stroke="#8d2349" stroke-width="1.3"/></g>
+</svg></span><p class="muestrario__nota">Dorado, angular y con mucha personalidad.</p></div>
+    </section>
+    <aside class="aviso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v12h14V8m-10 4h6"/></svg><p><strong>Catálogo para conservar.</strong> Las 25 expresiones nuevas están en reserva. Las tres originales se incluyen como referencia de la familia.</p></aside>
+    <section class="seccion" aria-labelledby="coleccion-titulo">
+      <div class="titulo-fila"><h2 id="coleccion-titulo">Explora la colección <span class="conteo" id="cantidad">28</span></h2><button type="button" class="boton" id="animar-todas" aria-label="Animar las expresiones visibles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></svg><span>Probar los gestos</span></button></div>
+      <div class="herramientas"><div class="filtros" role="group" aria-label="Filtrar por familia"><button type="button" class="filtro" data-grupo="Todas" aria-pressed="true">Todas</button><button type="button" class="filtro" data-grupo="Originales" aria-pressed="false">Originales</button><button type="button" class="filtro" data-grupo="Alegría" aria-pressed="false">Alegría</button><button type="button" class="filtro" data-grupo="Cariño" aria-pressed="false">Cariño</button><button type="button" class="filtro" data-grupo="Matices" aria-pressed="false">Matices</button></div><label class="buscar" for="buscar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span class="solo-lector">Buscar una expresión</span><input type="search" id="buscar" placeholder="Busca una emoción…" autocomplete="off"></label></div>
+      <p class="solo-lector" role="status" id="resultados">28 expresiones disponibles.</p>
+      <div class="rejilla"><article class="tarjeta" data-id="like" data-nombre="Me gusta" data-grupo="Originales" data-original="true" data-gesto="Asiente con la cabeza." data-busqueda="Me gusta aprobación apoyo Originales like">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">01</span><span class="estado estado--original">Original</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Me gusta"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--like">
+  <title id="tarjeta-like-titulo">Me gusta · Lobo ClubsUNID</title>
+  <desc id="tarjeta-like-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Asiente con la cabeza.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-like-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-like-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-like-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-like-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-like-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__ojos">
+    <path d="m24 46 16 4-3 10-11-4Z" fill="#fff8dc"/><path d="m72 46-16 4 3 10 11-4Z" fill="#fff8dc"/>
+    <path d="m24 46 16 4M72 46l-16 4" fill="none" stroke="#201033" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="33" cy="54" rx="3" ry="4.5" fill="#201033"/><ellipse cx="63" cy="54" rx="3" ry="4.5" fill="#201033"/>
+    <circle cx="34" cy="52.5" r="1" fill="white"/><circle cx="64" cy="52.5" r="1" fill="white"/>
+  </g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-like-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Me gusta</h3><p class="tarjeta__grupo">Originales</p></div><a class="descargar" href="svg/me-gusta.svg" download="lobo-me-gusta.svg" aria-label="Descargar SVG de Me gusta" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="love" data-nombre="Me encanta" data-grupo="Originales" data-original="true" data-gesto="Inclina la cabeza y aparecen corazones." data-busqueda="Me encanta amor cariño corazón Originales love">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">02</span><span class="estado estado--original">Original</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Me encanta"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--love">
+  <title id="tarjeta-love-titulo">Me encanta · Lobo ClubsUNID</title>
+  <desc id="tarjeta-love-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Inclina la cabeza y aparecen corazones.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-love-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-love-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-love-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-love-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-love-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__ojos" fill="#ed5474" stroke="#8d2349" stroke-width="1.1"><path d="M0 3C-6-5-13 1-10 7L0 16 10 7C13 1 6-5 0 3Z" transform="translate(32 46) scale(.7)"/><path d="M0 3C-6-5-13 1-10 7L0 16 10 7C13 1 6-5 0 3Z" transform="translate(64 46) scale(.7)"/></g>
+    <g fill="#f08570" opacity=".55"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-love-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="lobo-reaccion__corazones" fill="#ed5474" opacity="0"><path d="M0 3C-6-5-13 1-10 7L0 16 10 7C13 1 6-5 0 3Z" transform="translate(15 24) scale(.5)"/><path d="M0 3C-6-5-13 1-10 7L0 16 10 7C13 1 6-5 0 3Z" transform="translate(81 17) scale(.4)"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Me encanta</h3><p class="tarjeta__grupo">Originales</p></div><a class="descargar" href="svg/me-encanta.svg" download="lobo-me-encanta.svg" aria-label="Descargar SVG de Me encanta" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="clap" data-nombre="Aplausos" data-grupo="Originales" data-original="true" data-gesto="Celebra juntando las patitas." data-busqueda="Aplausos felicidades reconocimiento Originales clap">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">03</span><span class="estado estado--original">Original</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Aplausos"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--clap">
+  <title id="tarjeta-clap-titulo">Aplausos · Lobo ClubsUNID</title>
+  <desc id="tarjeta-clap-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Celebra juntando las patitas.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-clap-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-clap-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity=".75"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-clap-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-clap-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-clap-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m25 53 6-5 7 5"/><path d="m58 53 7-5 6 5"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-clap-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M37 73q11 16 22 0Z" fill="#29113f" stroke="#29113f" stroke-width="2" stroke-linejoin="round"/><path d="M43 79q5-4 10 0l-5 3Z" fill="#ed7990"/>
+  </g>
+  <g fill="url(#tarjeta-clap-luz)" stroke="#281041" stroke-width="2.5" stroke-linejoin="round">
+    <g class="lobo-reaccion__pata lobo-reaccion__pata--izquierda"><path d="m17 76-2-7 5-3 4 4 1-6 5 1 1 6 4-3 4 4-4 6 1 9-11 5-8-6Z"/><g fill="#9c671c" stroke="none"><ellipse cx="27" cy="81" rx="4.5" ry="4"/><circle cx="21" cy="74" r="1.7"/><circle cx="28" cy="72" r="1.7"/><circle cx="34" cy="75" r="1.7"/></g></g>
+    <g class="lobo-reaccion__pata lobo-reaccion__pata--derecha"><path d="m79 76 2-7-5-3-4 4-1-6-5 1-1 6-4-3-4 4 4 6-1 9 11 5 8-6Z"/><g fill="#9c671c" stroke="none"><ellipse cx="69" cy="81" rx="4.5" ry="4"/><circle cx="75" cy="74" r="1.7"/><circle cx="68" cy="72" r="1.7"/><circle cx="62" cy="75" r="1.7"/></g></g>
+  </g>
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Aplausos</h3><p class="tarjeta__grupo">Originales</p></div><a class="descargar" href="svg/aplausos.svg" download="lobo-aplausos.svg" aria-label="Descargar SVG de Aplausos" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="happy" data-nombre="Feliz" data-grupo="Alegría" data-original="false" data-gesto="Da un pequeño salto de alegría." data-busqueda="Feliz sonrisa contento felicidad Alegría happy">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">04</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Feliz"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--happy">
+  <title id="tarjeta-happy-titulo">Feliz · Lobo ClubsUNID</title>
+  <desc id="tarjeta-happy-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Da un pequeño salto de alegría.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-happy-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-happy-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-happy-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-happy-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-happy-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M25 53q6-10 13 0M58 53q7-10 13 0"/></g>
+    <g fill="#f08570" opacity=".55"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-happy-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M37 73q11 16 22 0Z" fill="#29113f" stroke="#29113f" stroke-width="2" stroke-linejoin="round"/><path d="M43 79q5-4 10 0l-5 3Z" fill="#ed7990"/>
+  </g>
+
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Feliz</h3><p class="tarjeta__grupo">Alegría</p></div><a class="descargar" href="svg/feliz.svg" download="lobo-feliz.svg" aria-label="Descargar SVG de Feliz" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="laugh" data-nombre="Me divierte" data-grupo="Alegría" data-original="false" data-gesto="Se ríe con los ojos cerrados." data-busqueda="Me divierte risa divertido jajaja humor Alegría laugh">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">05</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Me divierte"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--laugh">
+  <title id="tarjeta-laugh-titulo">Me divierte · Lobo ClubsUNID</title>
+  <desc id="tarjeta-laugh-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Se ríe con los ojos cerrados.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-laugh-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-laugh-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-laugh-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-laugh-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-laugh-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m26 47 11 6-11 4m44-10-11 6 11 4"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-laugh-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M35 71q13 21 26 0Z" fill="#29113f" stroke="#29113f" stroke-width="2" stroke-linejoin="round"/><path d="M38 73h20l-3 4H41Z" fill="#fff8dc"/><path d="M43 81q5-4 10 0l-5 3Z" fill="#ed7990"/>
+  </g>
+
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Me divierte</h3><p class="tarjeta__grupo">Alegría</p></div><a class="descargar" href="svg/me-divierte.svg" download="lobo-me-divierte.svg" aria-label="Descargar SVG de Me divierte" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="wink" data-nombre="Guiño" data-grupo="Alegría" data-original="false" data-gesto="Inclina la cabeza con complicidad." data-busqueda="Guiño guiñar complicidad Alegría wink">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">06</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Guiño"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--wink">
+  <title id="tarjeta-wink-titulo">Guiño · Lobo ClubsUNID</title>
+  <desc id="tarjeta-wink-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Inclina la cabeza con complicidad.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-wink-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-wink-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-wink-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-wink-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-wink-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g><path d="m24 46 16 4-3 10-11-4Z" fill="#fff8dc"/><path d="m24 46 16 4m17 8 7-4 7 4" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="33" cy="54" rx="3" ry="4.5" fill="#201033"/><circle cx="34" cy="52.5" r="1" fill="white"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-wink-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Guiño</h3><p class="tarjeta__grupo">Alegría</p></div><a class="descargar" href="svg/guino.svg" download="lobo-guino.svg" aria-label="Descargar SVG de Guiño" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="cool" data-nombre="Genial" data-grupo="Alegría" data-original="false" data-gesto="Saluda con sus lentes puestos." data-busqueda="Genial cool lentes estilo Alegría cool">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">07</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Genial"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--cool">
+  <title id="tarjeta-cool-titulo">Genial · Lobo ClubsUNID</title>
+  <desc id="tarjeta-cool-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Saluda con sus lentes puestos.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-cool-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-cool-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-cool-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-cool-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-cool-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__lentes"><path d="m19 46 23 2-3 14-14-2Zm58 0-23 2 3 14 14-2Z" fill="#231331" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/><path d="M42 50q6-4 12 0m-35-4-5-2m63 2 5-2" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="m25 49 9 2-8 6Zm34 2 11-2-9 8Z" fill="#bda7d3" opacity=".75"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-cool-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="lobo-reaccion__efecto" fill="#a78bce"><path d="M8 27l2-6 2 6 5 2-5 2-2 6-2-6-5-2Zm77 9 2-5 2 5 5 2-5 2-2 5-2-5-5-2Z"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Genial</h3><p class="tarjeta__grupo">Alegría</p></div><a class="descargar" href="svg/genial.svg" download="lobo-genial.svg" aria-label="Descargar SVG de Genial" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="celebrate" data-nombre="Celebración" data-grupo="Alegría" data-original="false" data-gesto="Salta entre confeti." data-busqueda="Celebración fiesta logro festejo felicidades Alegría celebrate">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">08</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Celebración"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--celebrate">
+  <title id="tarjeta-celebrate-titulo">Celebración · Lobo ClubsUNID</title>
+  <desc id="tarjeta-celebrate-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Salta entre confeti.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-celebrate-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-celebrate-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-celebrate-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-celebrate-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-celebrate-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M25 53q6-10 13 0M58 53q7-10 13 0"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-celebrate-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M37 73q11 16 22 0Z" fill="#29113f" stroke="#29113f" stroke-width="2" stroke-linejoin="round"/><path d="M43 79q5-4 10 0l-5 3Z" fill="#ed7990"/>
+  </g>
+
+  <g class="lobo-reaccion__efecto" fill="none" stroke-width="3" stroke-linecap="round"><path d="m7 18 2 5m-5 19 4-2m79-17 4-3m-3 21 4 2m-45-35 2-5" stroke="#ed5474"/><path d="m4 31 4 1m76-21 2-5m-49 4-2-6m56 49 3 2" stroke="#8c6bc6"/><path d="m12 7-3-3m81 31 4 1m-38-23 3-5" stroke="#fbbf24"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Celebración</h3><p class="tarjeta__grupo">Alegría</p></div><a class="descargar" href="svg/celebracion.svg" download="lobo-celebracion.svg" aria-label="Descargar SVG de Celebración" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="proud" data-nombre="Orgullo" data-grupo="Alegría" data-original="false" data-gesto="Levanta la cabeza con satisfacción." data-busqueda="Orgullo logro satisfecho confianza Alegría proud">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">09</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Orgullo"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--proud">
+  <title id="tarjeta-proud-titulo">Orgullo · Lobo ClubsUNID</title>
+  <desc id="tarjeta-proud-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Levanta la cabeza con satisfacción.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-proud-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-proud-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-proud-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-proud-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-proud-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__ojos">
+    <path d="m24 46 16 4-3 10-11-4Z" fill="#fff8dc"/><path d="m72 46-16 4 3 10 11-4Z" fill="#fff8dc"/>
+    <path d="m24 46 16 4M72 46l-16 4" fill="none" stroke="#201033" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="33" cy="54" rx="3" ry="4.5" fill="#201033"/><ellipse cx="63" cy="54" rx="3" ry="4.5" fill="#201033"/>
+    <circle cx="34" cy="52.5" r="1" fill="white"/><circle cx="64" cy="52.5" r="1" fill="white"/>
+  </g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-proud-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M37 75q10 8 22-3" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="lobo-reaccion__efecto" fill="#e9ad12"><path d="M8 27l2-6 2 6 5 2-5 2-2 6-2-6-5-2Zm77 9 2-5 2 5 5 2-5 2-2 5-2-5-5-2Z"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Orgullo</h3><p class="tarjeta__grupo">Alegría</p></div><a class="descargar" href="svg/orgullo.svg" download="lobo-orgullo.svg" aria-label="Descargar SVG de Orgullo" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="inspired" data-nombre="Inspirado" data-grupo="Alegría" data-original="false" data-gesto="Le brillan los ojos." data-busqueda="Inspirado estrellas idea inspiración admiración Alegría inspired">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">10</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Inspirado"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--inspired">
+  <title id="tarjeta-inspired-titulo">Inspirado · Lobo ClubsUNID</title>
+  <desc id="tarjeta-inspired-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Le brillan los ojos.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-inspired-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-inspired-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-inspired-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-inspired-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-inspired-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="#fff8dc" stroke="#281041" stroke-width="1.5"><path d="m0-8 2.4 5.2 5.6.7-4.1 4 1 5.6L0 4.8l-4.9 2.7 1-5.6-4.1-4 5.6-.7Z" transform="translate(32 52) scale(1.12)"/><path d="m0-8 2.4 5.2 5.6.7-4.1 4 1 5.6L0 4.8l-4.9 2.7 1-5.6-4.1-4 5.6-.7Z" transform="translate(64 52) scale(1.12)"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-inspired-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="lobo-reaccion__efecto" fill="#e9ad12"><path d="M8 27l2-6 2 6 5 2-5 2-2 6-2-6-5-2Zm77 9 2-5 2 5 5 2-5 2-2 5-2-5-5-2Z"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Inspirado</h3><p class="tarjeta__grupo">Alegría</p></div><a class="descargar" href="svg/inspirado.svg" download="lobo-inspirado.svg" aria-label="Descargar SVG de Inspirado" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="hug" data-nombre="Abrazo" data-grupo="Cariño" data-original="false" data-gesto="Acerca las patitas para abrazar." data-busqueda="Abrazo te abrazo acompañamiento apoyo Cariño hug">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">11</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Abrazo"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--hug">
+  <title id="tarjeta-hug-titulo">Abrazo · Lobo ClubsUNID</title>
+  <desc id="tarjeta-hug-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Acerca las patitas para abrazar.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-hug-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-hug-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-hug-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-hug-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-hug-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M25 53q6-10 13 0M58 53q7-10 13 0"/></g>
+    <g fill="#f08570" opacity=".55"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-hug-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g class="lobo-reaccion__abrazo" fill="url(#tarjeta-hug-luz)" stroke="#281041" stroke-width="2.2" stroke-linejoin="round"><path d="M16 74q-7 0-6 9 3 13 24 13l9-7q4-6 0-9t-8 2l-6 5q-8-1-8-8Z"/><path d="M80 74q7 0 6 9-3 13-24 13l-9-7q-4-6 0-9t8 2l6 5q8-1 8-8Z"/><path d="m35 83 5 6m-8-3 5 6m24-9-5 6m8-3-5 6" fill="none" stroke="#b7832a" stroke-width="1.3" stroke-linecap="round"/></g>
+  <g class="lobo-reaccion__efecto"><path d="M0 3C-6-5-13 1-10 7L0 16 10 7C13 1 6-5 0 3Z" transform="translate(48 81) scale(.65)" fill="#ed5474" stroke="#8d2349" stroke-width="1.3"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Abrazo</h3><p class="tarjeta__grupo">Cariño</p></div><a class="descargar" href="svg/abrazo.svg" download="lobo-abrazo.svg" aria-label="Descargar SVG de Abrazo" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="grateful" data-nombre="Gracias" data-grupo="Cariño" data-original="false" data-gesto="Junta las patitas y hace una reverencia." data-busqueda="Gracias gratitud agradecimiento por favor Cariño grateful">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">12</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Gracias"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--grateful">
+  <title id="tarjeta-grateful-titulo">Gracias · Lobo ClubsUNID</title>
+  <desc id="tarjeta-grateful-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Junta las patitas y hace una reverencia.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-grateful-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-grateful-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-grateful-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-grateful-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-grateful-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M25 53q6-10 13 0M58 53q7-10 13 0"/></g>
+    <g fill="#f08570" opacity=".55"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-grateful-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g class="lobo-reaccion__gracias" fill="url(#tarjeta-grateful-luz)" stroke="#281041" stroke-width="2.2" stroke-linejoin="round"><path d="M48 94H35q-6-5-2-12l9-14q4-4 6 1Z"/><path d="M48 94h13q6-5 2-12l-9-14q-4-4-6 1Z"/><path d="M48 72v20m-9-14-3 7m21-7 3 7" fill="none" stroke="#b7832a" stroke-width="1.4" stroke-linecap="round"/></g>
+  <g class="lobo-reaccion__efecto" stroke="#e9ad12" stroke-width="2.3" stroke-linecap="round"><path d="m8 49-4-3m7 13-5 1m82-11 4-3m-7 13 5 1"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Gracias</h3><p class="tarjeta__grupo">Cariño</p></div><a class="descargar" href="svg/gracias.svg" download="lobo-gracias.svg" aria-label="Descargar SVG de Gracias" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="kiss" data-nombre="Besito" data-grupo="Cariño" data-original="false" data-gesto="Lanza un corazón al aire." data-busqueda="Besito beso amor cariño Cariño kiss">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">13</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Besito"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--kiss">
+  <title id="tarjeta-kiss-titulo">Besito · Lobo ClubsUNID</title>
+  <desc id="tarjeta-kiss-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Lanza un corazón al aire.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-kiss-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-kiss-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-kiss-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-kiss-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-kiss-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m26 51 6-4 7 4m18 0 7-4 6 4"/></g>
+    <g fill="#f08570" opacity=".55"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-kiss-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="m44 72 7 3-6 3 6 2-6 3" fill="none" stroke="#8d2349" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="lobo-reaccion__beso" fill="#ed5474" stroke="#8d2349" stroke-width=".7"><path d="M0 3C-6-5-13 1-10 7L0 16 10 7C13 1 6-5 0 3Z" transform="translate(79 64) rotate(-14) scale(.65)"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Besito</h3><p class="tarjeta__grupo">Cariño</p></div><a class="descargar" href="svg/besito.svg" download="lobo-besito.svg" aria-label="Descargar SVG de Besito" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="shy" data-nombre="Timidez" data-grupo="Cariño" data-original="false" data-gesto="Baja un poco la cabeza, sonrojado." data-busqueda="Timidez tímido pena rubor Cariño shy">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">14</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Timidez"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--shy">
+  <title id="tarjeta-shy-titulo">Timidez · Lobo ClubsUNID</title>
+  <desc id="tarjeta-shy-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Baja un poco la cabeza, sonrojado.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-shy-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-shy-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-shy-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-shy-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-shy-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m26 49 6 4 7-4m18 0 7 4 6-4"/></g>
+    <g fill="#f08570" opacity=".8"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g><path d="m22 60 2 3m3-3 2 3m38-3 2 3m3-3 2 3" fill="none" stroke="#c6575c" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-shy-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M42 77q6 5 12 0" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Timidez</h3><p class="tarjeta__grupo">Cariño</p></div><a class="descargar" href="svg/timidez.svg" download="lobo-timidez.svg" aria-label="Descargar SVG de Timidez" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="relieved" data-nombre="Alivio" data-grupo="Cariño" data-original="false" data-gesto="Suelta el aire con una sonrisa." data-busqueda="Alivio tranquilidad paz respiro Cariño relieved">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">15</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Alivio"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--relieved">
+  <title id="tarjeta-relieved-titulo">Alivio · Lobo ClubsUNID</title>
+  <desc id="tarjeta-relieved-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Suelta el aire con una sonrisa.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-relieved-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-relieved-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-relieved-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-relieved-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-relieved-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M25 49q6 8 13 0m20 0q7 8 13 0"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-relieved-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 73q10 9 20 0M48 71v5" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <path class="lobo-reaccion__aire" d="M77 65h7q7 0 7-5t-6-2m-8 14h9q7 0 7 5t-6 2" fill="none" stroke="#b2a2c5" stroke-width="2.3" stroke-linecap="round"/>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Alivio</h3><p class="tarjeta__grupo">Cariño</p></div><a class="descargar" href="svg/alivio.svg" download="lobo-alivio.svg" aria-label="Descargar SVG de Alivio" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="wow" data-nombre="Sorpresa" data-grupo="Matices" data-original="false" data-gesto="Se echa un poquito hacia atrás." data-busqueda="Sorpresa wow asombro increíble Matices wow">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">16</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Sorpresa"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--wow">
+  <title id="tarjeta-wow-titulo">Sorpresa · Lobo ClubsUNID</title>
+  <desc id="tarjeta-wow-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Se echa un poquito hacia atrás.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-wow-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-wow-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-wow-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-wow-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-wow-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g><path d="M24 38q7-5 14-1m20 0q7-4 14 1" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="32" cy="51" rx="7" ry="9" fill="#fff8dc"/><ellipse cx="64" cy="51" rx="7" ry="9" fill="#fff8dc"/><g fill="#201033"><ellipse cx="32" cy="52" rx="3" ry="4.5"/><ellipse cx="64" cy="52" rx="3" ry="4.5"/></g><g fill="white"><circle cx="33" cy="50" r="1.2"/><circle cx="65" cy="50" r="1.2"/></g></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-wow-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <ellipse cx="48" cy="78" rx="5" ry="6" fill="#29113f"/>
+  </g>
+
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Sorpresa</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/sorpresa.svg" download="lobo-sorpresa.svg" aria-label="Descargar SVG de Sorpresa" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="thinking" data-nombre="Pensando" data-grupo="Matices" data-original="false" data-gesto="Inclina la cabeza con una pata en el mentón." data-busqueda="Pensando pensar idea reflexión duda Matices thinking">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">17</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Pensando"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--thinking">
+  <title id="tarjeta-thinking-titulo">Pensando · Lobo ClubsUNID</title>
+  <desc id="tarjeta-thinking-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Inclina la cabeza con una pata en el mentón.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-thinking-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-thinking-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-thinking-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-thinking-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-thinking-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g><path d="M25 50q7-4 14 0M57 46q7-6 14-2" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="m25 51 14 1-2 7-10-2Zm32-2 14-2-2 10-10 2Z" fill="#fff8dc"/><g fill="#201033"><ellipse cx="35" cy="53" rx="2.8" ry="3.5"/><ellipse cx="67" cy="51" rx="2.8" ry="3.5"/></g></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-thinking-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M39 78q8-5 15-1" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g class="lobo-reaccion__pensando" fill="url(#tarjeta-thinking-luz)" stroke="#281041" stroke-width="2.2" stroke-linejoin="round"><path d="m59 91-3-12-6-2q-4-2-2-5t6-1l6 3-1-8q0-5 4-4t4 5l2 12-2 11Z"/><path d="m59 80 6-2m-5 7 6-2" stroke="#b7832a" stroke-width="1.2" stroke-linecap="round"/></g>
+  <g class="lobo-reaccion__efecto" fill="#f5ebff" stroke="#8c6bc6" stroke-width="1.4"><circle cx="10" cy="39" r="2"/><circle cx="9" cy="30" r="3"/><circle cx="8" cy="18" r="5"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Pensando</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/pensando.svg" download="lobo-pensando.svg" aria-label="Descargar SVG de Pensando" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="curious" data-nombre="Curiosidad" data-grupo="Matices" data-original="false" data-gesto="Se asoma con una ceja levantada." data-busqueda="Curiosidad curioso interés atención Matices curious">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">18</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Curiosidad"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--curious">
+  <title id="tarjeta-curious-titulo">Curiosidad · Lobo ClubsUNID</title>
+  <desc id="tarjeta-curious-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Se asoma con una ceja levantada.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-curious-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-curious-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-curious-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-curious-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-curious-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__ojos">
+    <path d="m24 46 16 4-3 10-11-4Z" fill="#fff8dc"/><path d="m72 46-16 4 3 10 11-4Z" fill="#fff8dc"/>
+    <path d="M24 44q8-6 16 0M56 44q8-6 16 0" fill="none" stroke="#201033" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="35" cy="54" rx="3" ry="4.5" fill="#201033"/><ellipse cx="65" cy="54" rx="3" ry="4.5" fill="#201033"/>
+    <circle cx="36" cy="52.5" r="1" fill="white"/><circle cx="66" cy="52.5" r="1" fill="white"/>
+  </g><path d="m23 39 16-3" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-curious-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M39 75q9 8 19-2" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="lobo-reaccion__efecto" fill="#e9ad12"><path d="M8 27l2-6 2 6 5 2-5 2-2 6-2-6-5-2Zm77 9 2-5 2 5 5 2-5 2-2 5-2-5-5-2Z"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Curiosidad</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/curiosidad.svg" download="lobo-curiosidad.svg" aria-label="Descargar SVG de Curiosidad" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="confused" data-nombre="Confusión" data-grupo="Matices" data-original="false" data-gesto="Mueve la cabeza de un lado al otro." data-busqueda="Confusión confundido duda pregunta no entiendo Matices confused">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">19</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Confusión"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--confused">
+  <title id="tarjeta-confused-titulo">Confusión · Lobo ClubsUNID</title>
+  <desc id="tarjeta-confused-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Mueve la cabeza de un lado al otro.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-confused-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-confused-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-confused-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-confused-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-confused-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g><path d="m24 44 15 3m18-6 14-3" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="32" cy="54" rx="7" ry="5.5" fill="#fff8dc"/><ellipse cx="64" cy="51" rx="6.5" ry="8" fill="#fff8dc"/><g fill="#201033"><circle cx="31" cy="54" r="3"/><circle cx="65" cy="51" r="3"/></g></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-confused-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="m38 78 5-3 5 3 5-3 5 3" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="lobo-reaccion__efecto" fill="none" stroke="#8c6bc6" stroke-width="3" stroke-linecap="round"><path d="M81 25q0-8 7-7t2 10l-4 4v2"/><circle cx="86" cy="40" r="1.6" fill="#8c6bc6" stroke="none"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Confusión</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/confusion.svg" download="lobo-confusion.svg" aria-label="Descargar SVG de Confusión" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="sad" data-nombre="Tristeza" data-grupo="Matices" data-original="false" data-gesto="Deja caer un poco la cabeza." data-busqueda="Tristeza triste desánimo lo siento Matices sad">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">20</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Tristeza"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--sad">
+  <title id="tarjeta-sad-titulo">Tristeza · Lobo ClubsUNID</title>
+  <desc id="tarjeta-sad-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Deja caer un poco la cabeza.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-sad-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-sad-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-sad-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-sad-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-sad-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__ojos">
+    <path d="m24 46 16 4-3 10-11-4Z" fill="#fff8dc"/><path d="m72 46-16 4 3 10 11-4Z" fill="#fff8dc"/>
+    <path d="m24 50 16-4M72 50l-16-4" fill="none" stroke="#201033" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="33" cy="54" rx="3" ry="4.5" fill="#201033"/><ellipse cx="63" cy="54" rx="3" ry="4.5" fill="#201033"/>
+    <circle cx="34" cy="52.5" r="1" fill="white"/><circle cx="64" cy="52.5" r="1" fill="white"/>
+  </g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-sad-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M39 80q9-10 18 0" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Tristeza</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/tristeza.svg" download="lobo-tristeza.svg" aria-label="Descargar SVG de Tristeza" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="cry" data-nombre="Llanto" data-grupo="Matices" data-original="false" data-gesto="Tiembla suavemente mientras caen lágrimas." data-busqueda="Llanto llorar lágrimas tristeza Matices cry">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">21</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Llanto"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--cry">
+  <title id="tarjeta-cry-titulo">Llanto · Lobo ClubsUNID</title>
+  <desc id="tarjeta-cry-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Tiembla suavemente mientras caen lágrimas.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-cry-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-cry-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-cry-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-cry-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-cry-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g><path d="m25 45 13-5m20 0 13 5M25 53q6-8 13 0m20 0q7-8 13 0" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><g class="lobo-reaccion__lagrimas" fill="#69c8ee" stroke="#3699c5" stroke-width="1"><path d="m26 55 10 1-1 16q-5 10-10 0Z"/><path d="m60 56 10-1 1 17q-5 10-10 0Z"/></g><path d="m29 59-1 11m36-11 1 11" fill="none" stroke="#d8f5ff" stroke-width="2" stroke-linecap="round"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-cry-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M39 80q9-12 18 0Z" fill="#29113f" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Llanto</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/llanto.svg" download="lobo-llanto.svg" aria-label="Descargar SVG de Llanto" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="angry" data-nombre="Enojo" data-grupo="Matices" data-original="false" data-gesto="Sacude la cabeza con el ceño fruncido." data-busqueda="Enojo enojado enfado molestia Matices angry">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">22</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Enojo"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--angry">
+  <title id="tarjeta-angry-titulo">Enojo · Lobo ClubsUNID</title>
+  <desc id="tarjeta-angry-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Sacude la cabeza con el ceño fruncido.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-angry-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-angry-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-angry-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-angry-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-angry-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g><path d="m24 48 16 5-3 8-11-5Zm48 0-16 5 3 8 11-5Z" fill="#fff8dc"/><path d="m23 44 17 9m33-9-17 9" fill="none" stroke="#201033" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="34" cy="56" rx="3" ry="3.8" fill="#201033"/><ellipse cx="62" cy="56" rx="3" ry="3.8" fill="#201033"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-angry-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M38 80q10-8 20 0" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <path class="lobo-reaccion__efecto" d="M81 22v6h-6m12-6v6h6m-12 12v-6h-6m12 6v-6h6" fill="none" stroke="#d35d64" stroke-width="2.4" stroke-linecap="round"/>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Enojo</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/enojo.svg" download="lobo-enojo.svg" aria-label="Descargar SVG de Enojo" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="worried" data-nombre="Preocupación" data-grupo="Matices" data-original="false" data-gesto="Se inquieta y aparece una gotita." data-busqueda="Preocupación nervioso preocupación miedo Matices worried">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">23</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Preocupación"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--worried">
+  <title id="tarjeta-worried-titulo">Preocupación · Lobo ClubsUNID</title>
+  <desc id="tarjeta-worried-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Se inquieta y aparece una gotita.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-worried-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-worried-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-worried-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-worried-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-worried-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__ojos">
+    <path d="m24 46 16 4-3 10-11-4Z" fill="#fff8dc"/><path d="m72 46-16 4 3 10 11-4Z" fill="#fff8dc"/>
+    <path d="m24 50 16-4M72 50l-16-4" fill="none" stroke="#201033" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="33" cy="54" rx="3" ry="4.5" fill="#201033"/><ellipse cx="63" cy="54" rx="3" ry="4.5" fill="#201033"/>
+    <circle cx="34" cy="52.5" r="1" fill="white"/><circle cx="64" cy="52.5" r="1" fill="white"/>
+  </g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-worried-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M40 79q8-8 16 0" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="lobo-reaccion__gota"><path d="M82 30q-10 13-7 18t9 0q3-5-2-18Z" fill="#69c8ee" stroke="#3699c5" stroke-width="1.2"/><path d="m80 39-2 6" stroke="#d8f5ff" stroke-width="1.8" stroke-linecap="round"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Preocupación</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/preocupacion.svg" download="lobo-preocupacion.svg" aria-label="Descargar SVG de Preocupación" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="sleepy" data-nombre="Sueño" data-grupo="Matices" data-original="false" data-gesto="Cabecea mientras se queda dormido." data-busqueda="Sueño dormir cansancio descanso zzz Matices sleepy">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">24</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Sueño"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--sleepy">
+  <title id="tarjeta-sleepy-titulo">Sueño · Lobo ClubsUNID</title>
+  <desc id="tarjeta-sleepy-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Cabecea mientras se queda dormido.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-sleepy-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-sleepy-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-sleepy-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-sleepy-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-sleepy-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M25 51q6 5 13 0m20 0q7 5 13 0"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-sleepy-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <ellipse cx="48" cy="78" rx="3.5" ry="4.5" fill="#29113f"/>
+  </g>
+
+  <g class="lobo-reaccion__efecto" fill="none" stroke="#8c6bc6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M77 33h9l-9 10h9m-6-28h11l-11 12h11M65 5h8l-8 9h8"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Sueño</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/sueno.svg" download="lobo-sueno.svg" aria-label="Descargar SVG de Sueño" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="wave" data-nombre="Saludo" data-grupo="Cariño" data-original="false" data-gesto="Mueve una patita para saludar." data-busqueda="Saludo hola adiós bienvenida saludar Cariño wave">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">25</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Saludo"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--wave">
+  <title id="tarjeta-wave-titulo">Saludo · Lobo ClubsUNID</title>
+  <desc id="tarjeta-wave-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Mueve una patita para saludar.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-wave-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-wave-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-wave-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-wave-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-wave-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g class="lobo-reaccion__ojos">
+    <path d="m24 46 16 4-3 10-11-4Z" fill="#fff8dc"/><path d="m72 46-16 4 3 10 11-4Z" fill="#fff8dc"/>
+    <path d="M24 44q8-6 16 0M56 44q8-6 16 0" fill="none" stroke="#201033" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="33" cy="54" rx="3" ry="4.5" fill="#201033"/><ellipse cx="63" cy="54" rx="3" ry="4.5" fill="#201033"/>
+    <circle cx="34" cy="52.5" r="1" fill="white"/><circle cx="64" cy="52.5" r="1" fill="white"/>
+  </g>
+    <g fill="#f08570" opacity=".55"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-wave-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M37 73q11 16 22 0Z" fill="#29113f" stroke="#29113f" stroke-width="2" stroke-linejoin="round"/><path d="M43 79q5-4 10 0l-5 3Z" fill="#ed7990"/>
+  </g>
+  <g class="lobo-reaccion__saludo" fill="url(#tarjeta-wave-luz)" stroke="#281041" stroke-width="2.2" stroke-linejoin="round"><path d="m73 92-4-8V74l-3-7q-1-3 2-5t5 4l1 2-1-14q0-4 3-4t3 4l1 11 2-14q1-3 4-2t2 5l-2 14 4-7q1-2 3 0t-1 5l-5 13-1 10Z"/><g fill="#9c671c" stroke="none"><ellipse cx="79" cy="79" rx="5" ry="5.5"/><circle cx="75.5" cy="66" r="1.7"/><circle cx="83.5" cy="64" r="1.7"/><circle cx="88.5" cy="71" r="1.6"/></g></g>
+  <g class="lobo-reaccion__efecto" fill="none" stroke="#8c6bc6" stroke-width="2.2" stroke-linecap="round"><path d="M84 40q6 2 7 7m-6-15q8 3 9 10"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Saludo</h3><p class="tarjeta__grupo">Cariño</p></div><a class="descargar" href="svg/saludo.svg" download="lobo-saludo.svg" aria-label="Descargar SVG de Saludo" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="cheer" data-nombre="¡Ánimo!" data-grupo="Alegría" data-original="false" data-gesto="Levanta una patita con fuerza para darte ánimos." data-busqueda="¡Ánimo! motivación vamos fuerza apoyo puedes Alegría cheer">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">26</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar ¡Ánimo!"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--cheer">
+  <title id="tarjeta-cheer-titulo">¡Ánimo! · Lobo ClubsUNID</title>
+  <desc id="tarjeta-cheer-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Levanta una patita con fuerza para darte ánimos.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-cheer-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-cheer-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-cheer-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-cheer-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-cheer-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g><path d="m24 46 16 4-3 10-11-4Zm48 0-16 4 3 10 11-4Z" fill="#fff8dc"/><path d="m24 43 16 6m32-6-16 6" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="34" cy="54" rx="3" ry="4.5" fill="#201033"/><ellipse cx="62" cy="54" rx="3" ry="4.5" fill="#201033"/><circle cx="35" cy="52.5" r="1" fill="white"/><circle cx="63" cy="52.5" r="1" fill="white"/></g>
+
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-cheer-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M37 73q11 16 22 0Z" fill="#29113f" stroke="#29113f" stroke-width="2" stroke-linejoin="round"/><path d="M43 79q5-4 10 0l-5 3Z" fill="#ed7990"/>
+  </g>
+  <g class="lobo-reaccion__animo" fill="url(#tarjeta-cheer-luz)" stroke="#281041" stroke-width="2.2" stroke-linejoin="round"><path d="m13 94-3-11-1-10q0-4 4-5h15q5 1 6 5v6l4-2q4 0 4 4l-7 11-10 4Z"/><path d="M16 70v8m7-8v7m6-6v6m-16 5h16l5 4" fill="none" stroke="#b7832a" stroke-width="1.4" stroke-linecap="round"/></g>
+  <g class="lobo-reaccion__efecto"><path d="m12 26-9 12 7-1-3 12 13-17-8 2 6-8Z" fill="#ffc400" stroke="#654281" stroke-width="1.2" stroke-linejoin="round"/><path d="m82 29 5-4m-3 12 7-1" fill="none" stroke="#e9ad12" stroke-width="2.4" stroke-linecap="round"/></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>¡Ánimo!</h3><p class="tarjeta__grupo">Alegría</p></div><a class="descargar" href="svg/animo.svg" download="lobo-animo.svg" aria-label="Descargar SVG de ¡Ánimo!" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="sick" data-nombre="Enfermito" data-grupo="Matices" data-original="false" data-gesto="Cabecea con su termómetro y unas onditas de calor." data-busqueda="Enfermito enfermo fiebre salud malestar recuperación Matices sick">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">27</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Enfermito"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--sick">
+  <title id="tarjeta-sick-titulo">Enfermito · Lobo ClubsUNID</title>
+  <desc id="tarjeta-sick-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Cabecea con su termómetro y unas onditas de calor.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-sick-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-sick-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-sick-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-sick-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-sick-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m25 42 13-3m20 0 13 3M25 50q6 4 13 0m20 0q7 4 13 0"/></g>
+    <g fill="#f08570" opacity=".55"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-sick-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M41 77h13" fill="none" stroke="#29113f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g><g class="lobo-reaccion__calor" fill="none" stroke="#b2a2c5" stroke-width="2.1" stroke-linecap="round"><path d="M8 32q-5 4 0 8t0 8m80-30q-5 4 0 8t0 8"/></g><g class="lobo-reaccion__termometro"><path d="M52 76 80 65q4-2 6 1t-3 6L55 82Z" fill="#e3f5ff" stroke="#3e7293" stroke-width="1.8" stroke-linejoin="round"/><path d="m56 79 24-10" stroke="#e66b7c" stroke-width="2.3" stroke-linecap="round"/><ellipse cx="56" cy="79" rx="2.3" ry="1.6" fill="#e66b7c"/><path d="m70 71 1 2m4-4 1 2m3-4 1 2" stroke="#3e7293" stroke-width="1.1"/></g></g>
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Enfermito</h3><p class="tarjeta__grupo">Matices</p></div><a class="descargar" href="svg/enfermito.svg" download="lobo-enfermito.svg" aria-label="Descargar SVG de Enfermito" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article>
+<article class="tarjeta" data-id="playful" data-nombre="Travieso" data-grupo="Alegría" data-original="false" data-gesto="Inclina la cabeza, guiña un ojo y saca la lengua." data-busqueda="Travieso broma bromista juguetón lengua travesura Alegría playful">
+    <div class="tarjeta__cabecera"><span class="tarjeta__numero">28</span><span class="estado ">En reserva</span></div>
+    <button type="button" class="tarjeta__ver" aria-label="Ampliar Travieso"><span class="tarjeta__imagen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 100" width="96" height="100" aria-hidden="true" focusable="false" class="lobo-reaccion lobo-reaccion--playful">
+  <title id="tarjeta-playful-titulo">Travieso · Lobo ClubsUNID</title>
+  <desc id="tarjeta-playful-descripcion">Lobo dorado de silueta angular, orejas puntiagudas y contorno morado. Inclina la cabeza, guiña un ojo y saca la lengua.</desc>
+
+  <defs>
+    <linearGradient id="tarjeta-playful-oro" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe151"/><stop offset="0.55" stop-color="#ffc400"/><stop offset="1" stop-color="#dd9400"/></linearGradient>
+    <linearGradient id="tarjeta-playful-luz" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff3b0"/><stop offset="1" stop-color="#ffd64c"/></linearGradient>
+  </defs>
+  <g class="lobo-reaccion__rayos" fill="#fbbf24" opacity="0"><path d="m6 30 4-9 5 9Z"/><path d="m81 23 7-7 1 11Z"/><path d="m44 8 4-8 4 8Z"/></g>
+  <g class="lobo-reaccion__cabeza">
+    <path d="M15 7 37 22H59L81 7 79 40 92 55 81 67 74 82 57 91H39L22 82 15 67 4 55 17 40Z" fill="#281041" stroke="#100823" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="m20 15 18 13-17 13Z" fill="url(#tarjeta-playful-oro)"/><path d="m76 15-18 13 17 13Z" fill="url(#tarjeta-playful-oro)"/>
+    <path d="m20 16 2 21 5-5Z" fill="#fff8dc"/><path d="m76 16-2 21-5-5Z" fill="#e9a400"/>
+    <path d="M38 26H58L75 42 85 55 74 65 68 79 56 86H40L28 79 22 65 11 55 21 43Z" fill="url(#tarjeta-playful-oro)"/>
+    <path d="m38 26-7 17-13 11 9 5-5 6 10 12-11-7-4-12-6-3 10-12Z" fill="#fff8e6"/>
+    <path d="m58 26 7 18 12 12-8 4 4 7-10 13 11-8 2-9 9-8-10-13Z" fill="#d58f00" opacity="0.65"/>
+    <path d="m38 26 10 8 7-4-6 12 10 2-12 13-3-15-9-3Z" fill="#e4a000" opacity="0.7"/>
+    <g><path d="m24 46 16 4-3 10-11-4Z" fill="#fff8dc"/><path d="m24 46 16 4m17 8 7-4 7 4" fill="none" stroke="#201033" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="33" cy="54" rx="3" ry="4.5" fill="#201033"/><circle cx="34" cy="52.5" r="1" fill="white"/></g>
+    <g fill="#f08570" opacity=".55"><ellipse cx="26" cy="61" rx="6" ry="2.8"/><ellipse cx="70" cy="61" rx="6" ry="2.8"/></g>
+    <path d="m35 61 13 3 13-3 3 14-16 11-16-11Z" fill="url(#tarjeta-playful-luz)"/>
+    <path d="M40 63h16l-7 8h-2Z" fill="#160b2c"/>
+    <path d="M37 73q11 14 22 0Z" fill="#29113f" stroke="#29113f" stroke-width="2" stroke-linejoin="round"/><g class="lobo-reaccion__lengua"><path d="M48 77h9v6q-4.5 9-9 0Z" fill="#ed7990" stroke="#8d2349" stroke-width="1.2"/><path d="M52.5 79v5" fill="none" stroke="#bd4d70" stroke-width="1.2" stroke-linecap="round"/></g>
+  </g>
+
+
+</svg></span></button>
+    <div class="tarjeta__inferior"><div><h3>Travieso</h3><p class="tarjeta__grupo">Alegría</p></div><a class="descargar" href="svg/travieso.svg" download="lobo-travieso.svg" aria-label="Descargar SVG de Travieso" title="Descargar SVG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></a></div>
+  </article></div>
+      <div class="vacio" id="vacio" hidden><p>No encontramos esa expresión. Prueba con otra palabra.</p><button type="button" id="limpiar">Ver toda la colección</button></div>
+    </section>
+  </main>
+  <footer class="pie"><p><strong>ClubsUNID</strong> · Colección de reacciones · v1.1</p><p id="nota-movimiento">Pasa el cursor o enfoca un lobo para ver su gesto. Tócalo para ampliarlo.</p><p>SVG + PNG · Fondo transparente</p></footer>
+</div>
+<dialog id="detalle" aria-labelledby="detalle-titulo" aria-describedby="detalle-gesto"><div class="detalle__interior">
+  <button type="button" class="cerrar" id="cerrar" aria-label="Cerrar vista ampliada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button>
+  <p class="sobretitulo" id="detalle-estado"></p><h2 class="detalle__titulo" id="detalle-titulo"></h2><p class="detalle__gesto" id="detalle-gesto"></p>
+  <div class="detalle__lienzo"><div class="detalle__imagen" id="detalle-imagen"></div></div>
+  <div class="detalle__opciones"><div class="tamanos" role="group" aria-label="Tamaño de vista previa"><button type="button" class="tamano" data-tamano="48" aria-pressed="false" aria-label="Ver a 48 píxeles de ancho">48</button><button type="button" class="tamano" data-tamano="96" aria-pressed="false" aria-label="Ver a 96 píxeles de ancho">96</button><button type="button" class="tamano" data-tamano="160" aria-pressed="true" aria-label="Ver a 160 píxeles de ancho">160</button></div><button type="button" class="boton" id="repetir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></svg>Repetir gesto</button></div>
+  <div class="acciones"><a class="boton boton--principal" id="detalle-descargar" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg>Descargar SVG</a><a class="boton" id="detalle-png" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg>PNG</a></div><p class="detalle__nota" id="detalle-nota"></p>
+</div></dialog>
+<script>const tarjetas = [...document.querySelectorAll('.tarjeta')];
+const filtros = [...document.querySelectorAll('.filtro')];
+const buscador = document.querySelector('#buscar');
+const dialogo = document.querySelector('#detalle');
+const temporizadores = new WeakMap();
+const movimientoReducido = window.matchMedia('(prefers-reduced-motion: reduce)');
+let grupo = 'Todas';
+let tarjetaActual = null;
+
+function normalizar(texto) {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function animar(svg) {
+  if (!svg || movimientoReducido.matches) return;
+  clearTimeout(temporizadores.get(svg));
+  svg.classList.remove('lobo-reaccion--animado');
+  // Reinicia el gesto incluso si se pulsa de nuevo antes de que termine.
+  void svg.getBoundingClientRect();
+  svg.classList.add('lobo-reaccion--animado');
+  temporizadores.set(svg, setTimeout(() => svg.classList.remove('lobo-reaccion--animado'), 760));
+}
+
+function filtrar() {
+  const busqueda = normalizar(buscador.value);
+  const palabras = busqueda.split(/\s+/).filter(Boolean);
+  let visibles = 0;
+  for (const tarjeta of tarjetas) {
+    const coincide = (grupo === 'Todas' || tarjeta.dataset.grupo === grupo)
+      && palabras.every((palabra) => normalizar(tarjeta.dataset.busqueda).includes(palabra));
+    tarjeta.hidden = !coincide;
+    if (coincide) visibles += 1;
+  }
+  document.querySelector('#cantidad').textContent = visibles;
+  document.querySelector('#resultados').textContent = `${visibles} ${visibles === 1 ? 'expresión disponible' : 'expresiones disponibles'}.`;
+  document.querySelector('#vacio').hidden = visibles !== 0;
+  document.querySelector('#animar-todas').disabled = visibles === 0 || movimientoReducido.matches;
+}
+
+for (const filtro of filtros) {
+  filtro.addEventListener('click', () => {
+    grupo = filtro.dataset.grupo;
+    for (const boton of filtros) boton.setAttribute('aria-pressed', String(boton === filtro));
+    filtrar();
+  });
+}
+buscador.addEventListener('input', filtrar);
+document.querySelector('#limpiar').addEventListener('click', () => {
+  grupo = 'Todas';
+  buscador.value = '';
+  for (const filtro of filtros) filtro.setAttribute('aria-pressed', String(filtro.dataset.grupo === grupo));
+  filtrar();
+  buscador.focus();
+});
+
+document.querySelector('#tema').addEventListener('click', (evento) => {
+  const oscuro = document.documentElement.dataset.tema !== 'oscuro';
+  document.documentElement.dataset.tema = oscuro ? 'oscuro' : 'claro';
+  evento.currentTarget.setAttribute('aria-pressed', String(oscuro));
+  evento.currentTarget.setAttribute('aria-label', oscuro ? 'Ver con fondo claro' : 'Ver con fondo oscuro');
+  document.querySelector('#etiqueta-tema').textContent = oscuro ? 'Fondo claro' : 'Fondo oscuro';
+});
+
+function abrirDetalle(tarjeta) {
+  tarjetaActual = tarjeta;
+  const destino = document.querySelector('#detalle-imagen');
+  // Recrea el SVG con IDs propios para no repetir los gradientes de la tarjeta.
+  const copia = tarjeta.querySelector('svg.lobo-reaccion').cloneNode(true);
+  copia.classList.remove('lobo-reaccion--animado');
+  for (const elemento of [copia, ...copia.querySelectorAll('*')]) {
+    for (const atributo of [...elemento.attributes]) {
+      if (atributo.name === 'id' || atributo.name === 'aria-labelledby' || atributo.value.includes('url(#')) {
+        elemento.setAttribute(atributo.name, atributo.value.replaceAll('tarjeta-', 'detalle-'));
+      }
+    }
+  }
+  destino.replaceChildren(copia);
+  document.querySelector('#detalle-titulo').textContent = tarjeta.dataset.nombre;
+  document.querySelector('#detalle-gesto').textContent = tarjeta.dataset.gesto;
+  document.querySelector('#detalle-estado').textContent = `${tarjeta.dataset.grupo} · ${tarjeta.dataset.original === 'true' ? 'Variante original' : 'En reserva'}`;
+  document.querySelector('#detalle-nota').textContent = tarjeta.dataset.original === 'true'
+    ? 'Copia de diseño de una de las tres reacciones originales.'
+    : 'Expresión guardada para uso futuro. Aún no está habilitada en la aplicación.';
+  const descarga = document.querySelector('#detalle-descargar');
+  descarga.href = tarjeta.querySelector('.descargar').getAttribute('href');
+  descarga.download = tarjeta.querySelector('.descargar').download;
+  const png = document.querySelector('#detalle-png');
+  png.href = descarga.getAttribute('href').replace(/^svg\//, 'png/').replace(/\.svg$/, '.png');
+  png.download = descarga.download.replace(/\.svg$/, '.png');
+  seleccionarTamano(160);
+  dialogo.showModal();
+  animar(copia);
+}
+
+for (const tarjeta of tarjetas) {
+  const boton = tarjeta.querySelector('.tarjeta__ver');
+  boton.addEventListener('pointerenter', () => animar(tarjeta.querySelector('svg')));
+  boton.addEventListener('focus', () => animar(tarjeta.querySelector('svg')));
+  boton.addEventListener('click', () => abrirDetalle(tarjeta));
+}
+
+document.querySelector('#cerrar').addEventListener('click', () => dialogo.close());
+dialogo.addEventListener('click', (evento) => {
+  if (evento.target === dialogo) {
+    const rectangulo = dialogo.getBoundingClientRect();
+    if (evento.clientX < rectangulo.left || evento.clientX > rectangulo.right || evento.clientY < rectangulo.top || evento.clientY > rectangulo.bottom) dialogo.close();
+  }
+});
+dialogo.addEventListener('close', () => tarjetaActual?.querySelector('.tarjeta__ver').focus());
+document.querySelector('#repetir').addEventListener('click', () => animar(document.querySelector('#detalle-imagen svg')));
+
+function seleccionarTamano(tamano) {
+  const imagen = document.querySelector('#detalle-imagen');
+  imagen.style.width = `${tamano}px`;
+  imagen.style.height = `${tamano * 100 / 96}px`;
+  for (const boton of document.querySelectorAll('.tamano')) boton.setAttribute('aria-pressed', String(Number(boton.dataset.tamano) === tamano));
+}
+for (const boton of document.querySelectorAll('.tamano')) boton.addEventListener('click', () => seleccionarTamano(Number(boton.dataset.tamano)));
+
+document.querySelector('#animar-todas').addEventListener('click', () => {
+  for (const tarjeta of tarjetas.filter((elemento) => !elemento.hidden)) animar(tarjeta.querySelector('svg'));
+});
+
+function actualizarMovimiento() {
+  document.querySelector('#repetir').disabled = movimientoReducido.matches;
+  document.querySelector('#nota-movimiento').textContent = movimientoReducido.matches
+    ? 'Tu dispositivo tiene activado el movimiento reducido; las expresiones se muestran quietas.'
+    : 'Pasa el cursor o enfoca un lobo para ver su gesto. Tócalo para ampliarlo.';
+  filtrar();
+}
+movimientoReducido.addEventListener('change', actualizarMovimiento);
+actualizarMovimiento();
+</script>
+</body>
+</html>
