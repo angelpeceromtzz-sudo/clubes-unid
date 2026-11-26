@@ -18,7 +18,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
   const limpiadas = [];
   const datosEdicion = (plantilla) => ({ nombre: 'Edición QA', descripcion: 'Edición ficticia de pruebas', lugar: 'Campus QA', fecha_inicio: '2026-12-05', fecha_fin: '2026-12-06', hora_inicio: '10:00', requiere_registro: true, requiere_aportacion: plantilla === 'trineo', ...(plantilla === 'misiones' ? { configuracion_misiones: configuracionMisionesInicial(null) } : {}), campos_registro: camposPlantillaActividad(plantilla, plantilla === 'misiones' ? configuracionMisionesInicial(null) : null).map((campo) => campo.clave === 'talla' ? { ...campo, opciones: ['CH', 'M', 'G'] } : campo), inscripcion_desde: '2026-11-01', inscripcion_hasta: '2026-12-04', destacable: true, destacada_desde: '2026-11-10', destacada_hasta: '2026-12-06' });
   const cartasQa = {};
-  const inscripcion = (aportes = true, usuario = 1) => ({ matricula: '99999999', respuestas: { edad: 20, talla: 'M', licenciatura: 1 }, solicita_camisa: false, total_centavos: 0, ...(aportes ? { id_carta: cartasQa[usuario] } : {}), aportaciones: aportes ? [{ id_opcion: opcion1, cantidad: 1 }, { id_opcion: opcion2, cantidad: 2 }] : [] });
+  const inscripcion = (aportes = true, usuario = 1) => ({ matricula: '99999999', respuestas: { edad: 20, talla: 'M', licenciatura: 1, telefono: '5551234567' }, solicita_camisa: false, total_centavos: 0, ...(aportes ? { id_carta: cartasQa[usuario] } : {}), aportaciones: aportes ? [{ id_opcion: opcion1, cantidad: 1 }, { id_opcion: opcion2, cantidad: 2 }] : [] });
 
   async function enviar(usuario, metodo, ruta, datos, esperado = 200) {
     const respuesta = await fetch(base + ruta, { method: metodo, headers: { 'Content-Type': 'application/json', ...(usuario ? { 'x-usuario-qa': String(usuario) } : {}) }, ...(datos === undefined ? {} : { body: JSON.stringify(datos) }) });
@@ -37,7 +37,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     await bootstrap.query('CREATE SCHEMA ' + esquema);
     await bootstrap.query('SET search_path TO ' + esquema);
     await bootstrap.query(await readFile(new URL('../schema.sql', import.meta.url), 'utf8'));
-    await bootstrap.query("INSERT INTO usuarios(id_usuario,nombre_completo,institutional_id,id_rol,correo_institucional) SELECT id,nombre,lpad(id::text,8,'0'),rol,'qa'||id||'@example.test' FROM (VALUES (1,'Alumno QA',1),(2,'Encargado QA',2),(3,'Admin QA',3),(4,'Rectoría QA',4),(7,'Coordinación QA',7),(11,'Alumno Once QA',1),(12,'Alumno Doce QA',1),(22,'Encargado asignado QA',1),(31,'Alumno legado QA',1),(32,'Rechazado legado QA',1)) AS actores(id,nombre,rol); INSERT INTO clubes (id_club,nombre_club,cupo_maximo,id_estatus_club,estado_publicacion) VALUES (101,'Club real QA',10,1,'publicada'),(8,'Trineo legado QA',10,1,'publicada'); INSERT INTO clubes_niveles(id_club,id_nivel) VALUES(101,1),(8,1); INSERT INTO inscripciones (id_usuario,id_club) VALUES (1,101),(31,8); INSERT INTO formularios (id_alumno,id_club,nombre_completo,matricula,id_licenciatura,cuatrimestre,telefono_contacto,motivo_ingreso,status) SELECT alumno,club,nombre,matricula,1,1,'0000000000','Prueba',estado FROM (VALUES (1,101,'Alumno QA','00000001','En revisión'),(1,101,'Alumno QA','00000001','Convocado'),(1,101,'Alumno QA','00000001','Preseleccionado'),(31,8,'Alumno legado QA','00000031','En revisión'),(32,8,'Rechazado legado QA','00000032','Rechazado')) AS f(alumno,club,nombre,matricula,estado);");
+    await bootstrap.query("INSERT INTO usuarios(id_usuario,nombre_completo,institutional_id,id_rol,correo_institucional) SELECT id,nombre,lpad(id::text,8,'0'),rol,'qa'||id||'@example.test' FROM (VALUES (1,'Alumno QA',1),(2,'Encargado QA',2),(3,'Admin QA',3),(4,'Rectoría QA',4),(7,'Coordinación QA',7),(11,'Alumno Once QA',1),(12,'Alumno Doce QA',1),(22,'Encargado asignado QA',1),(31,'Alumno legado QA',1),(32,'Rechazado legado QA',1)) AS actores(id,nombre,rol); INSERT INTO clubes (id_club,nombre_club,cupo_maximo,participacion,id_estatus_club,estado_publicacion) VALUES (101,'Club real QA',10,'mixta',1,'publicada'),(8,'Trineo legado QA',10,'mixta',1,'publicada'); INSERT INTO clubes_niveles(id_club,id_nivel) VALUES(101,1),(8,1); INSERT INTO inscripciones (id_usuario,id_club) VALUES (1,101),(31,8); INSERT INTO formularios (id_alumno,id_club,nombre_completo,matricula,id_licenciatura,cuatrimestre,telefono_contacto,motivo_ingreso,status) SELECT alumno,club,nombre,matricula,1,1,'0000000000','Prueba',estado FROM (VALUES (1,101,'Alumno QA','00000001','En revisión'),(1,101,'Alumno QA','00000001','Convocado'),(1,101,'Alumno QA','00000001','Preseleccionado'),(31,8,'Alumno legado QA','00000031','En revisión'),(32,8,'Rechazado legado QA','00000032','Rechazado')) AS f(alumno,club,nombre,matricula,estado);");
     await bootstrap.query("INSERT INTO usuarios(id_usuario,nombre_completo,institutional_id,id_rol,correo_institucional) VALUES(5,'Vicepresidencia QA','00000005',5,'qa5@example.test'),(6,'Periódico Mural QA','00000006',6,'qa6@example.test')");
     await bootstrap.query("SELECT setval(pg_get_serial_sequence('clubes','id_club'),(SELECT MAX(id_club) FROM clubes))");
     await bootstrap.query(await readFile(new URL('../schema.sql', import.meta.url), 'utf8'));
@@ -99,6 +99,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
       assert.equal(actividad.tipo, 'actividad');
       assert.equal(actividad.estado, 'borrador');
       assert.equal(actividad.id_autor, usuario);
+      assert.equal(actividad.id_estatus_club, null);
     }
   });
 
@@ -228,7 +229,7 @@ describe('actividades: registro, publicación, permisos y transición con Postgr
     assert.equal((await db.query('SELECT COUNT(*)::int AS n FROM clubes_con_estado WHERE id_club=$1',[trineo])).rows[0].n,0);
     await assert.rejects(db.query('INSERT INTO inscripciones(id_usuario,id_club) VALUES(12,$1)',[trineo]),{code:'23514'});
     await assert.rejects(db.query("INSERT INTO formularios(id_alumno,id_club,nombre_completo,matricula,id_licenciatura,cuatrimestre,telefono_contacto,motivo_ingreso) VALUES(12,$1,'QA','00000012',1,1,'000','QA')",[trineo]),{code:'23514'});
-    await assert.rejects(db.query("INSERT INTO clubes_operativos(nombre_club,cupo_maximo,tipo) VALUES('Inválido',10,'actividad')"),{code:'44000'});
+    await assert.rejects(db.query("INSERT INTO clubes_operativos(nombre_club,cupo_maximo,tipo) VALUES('Inválido',10,'actividad')"),{code:'23514'});
     await assert.rejects(db.query("UPDATE clubes SET tipo='actividad' WHERE id_club=101"),{code:'23514'});
   });
 

@@ -188,6 +188,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     x_url VARCHAR(2048),
     instagram_url VARCHAR(2048),
     sitio_web_url VARCHAR(2048),
+    intereses_publicos BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT chk_usuarios_biografia CHECK (biografia IS NULL OR char_length(biografia) <= 500),
     CONSTRAINT chk_usuarios_telefono_perfil CHECK (telefono_celular IS NULL OR (char_length(telefono_celular) <= 20 AND telefono_celular ~ '^\+?[0-9[:space:]().-]+$' AND char_length(regexp_replace(telefono_celular, '[^0-9]', '', 'g')) BETWEEN 7 AND 15)),
     CONSTRAINT chk_usuarios_perfil_visible CHECK ((NOT fecha_nacimiento_publica OR fecha_nacimiento IS NOT NULL) AND (NOT telefono_publico OR telefono_celular IS NOT NULL)),
@@ -454,6 +455,9 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_formularios_alumno ON formularios (id_alumno);
 CREATE INDEX IF NOT EXISTS idx_formularios_club_fecha
     ON formularios (id_club, fecha_envio DESC);
+CREATE INDEX IF NOT EXISTS idx_formularios_convocatoria
+    ON formularios (id_convocatoria)
+    WHERE id_convocatoria IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_formularios_formulario_club
     ON formularios (id_formulario, id_club);
 
@@ -662,6 +666,8 @@ CREATE TABLE IF NOT EXISTS convocatorias (
 );
 
 CREATE INDEX IF NOT EXISTS idx_conv_club ON convocatorias(id_club);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_convocatoria_id_club
+    ON convocatorias (id_convocatoria, id_club);
 
 -- El FK vive acá y no en el CREATE TABLE de formularios porque el orden del
 -- archivo lo crea después: declarar la constraint inline exigiría que
@@ -671,13 +677,27 @@ CREATE INDEX IF NOT EXISTS idx_conv_club ON convocatorias(id_club);
 -- históricos de compatibilidad que requieren revisión antes de una reaplicación.
 DO $$
 BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM formularios f
+        LEFT JOIN convocatorias c ON c.id_convocatoria = f.id_convocatoria
+        WHERE f.id_convocatoria IS NOT NULL
+          AND (c.id_convocatoria IS NULL OR c.id_club IS DISTINCT FROM f.id_club)
+    ) THEN
+        RAISE EXCEPTION 'Schema detenido: hay postulaciones vinculadas a un bloque inexistente o de otro club; revisa esas relaciones';
+    END IF;
+
+    ALTER TABLE formularios DROP CONSTRAINT IF EXISTS fk_formulario_convocatoria;
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'fk_formulario_convocatoria' AND conrelid='formularios'::regclass
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'fk_formulario_convocatoria_club'
+          AND conrelid = 'formularios'::regclass
     ) THEN
         ALTER TABLE formularios
-            ADD CONSTRAINT fk_formulario_convocatoria
-            FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria)
-            ON DELETE SET NULL;
+            ADD CONSTRAINT fk_formulario_convocatoria_club
+            FOREIGN KEY (id_convocatoria, id_club)
+            REFERENCES convocatorias(id_convocatoria, id_club)
+            ON DELETE SET NULL (id_convocatoria);
     END IF;
 END $$;
 
@@ -2212,10 +2232,31 @@ ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_plantilla CHECK (plantilla IN ('g
 ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_revision;
 ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_revision CHECK (estado_propuesta IN ('borrador','pendiente','rechazada'));
 ALTER TABLE clubes DROP CONSTRAINT IF EXISTS chk_catalogo_datos_club;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+      FROM clubes c
+      LEFT JOIN cat_estatus_clubes e ON e.id_estatus_club = c.id_estatus_club
+     WHERE c.tipo = 'actividad'
+       AND c.id_estatus_club IS NOT NULL
+       AND e.nombre_estatus IS DISTINCT FROM 'proximamente'
+  ) THEN
+    RAISE EXCEPTION 'Schema detenido: hay actividades con un estatus distinto de proximamente; revisa esas filas antes de continuar';
+  END IF;
+END $$;
+ALTER TABLE clubes ALTER COLUMN id_estatus_club DROP NOT NULL;
+UPDATE clubes c
+   SET id_estatus_club = NULL
+  FROM cat_estatus_clubes e
+ WHERE c.tipo = 'actividad'
+   AND c.id_estatus_club = e.id_estatus_club
+   AND e.nombre_estatus = 'proximamente';
 ALTER TABLE clubes ADD CONSTRAINT chk_catalogo_datos_club CHECK (
-  (tipo = 'club' AND cupo_maximo IS NOT NULL AND cupo_maximo IN (10,15,20,25,30,40,50) AND participacion IS NOT NULL)
-  OR (tipo = 'actividad' AND cupo_maximo IS NULL AND participacion IS NULL)
+  (tipo = 'club' AND id_estatus_club IS NOT NULL AND cupo_maximo IS NOT NULL AND cupo_maximo IN (10,15,20,25,30,40,50) AND participacion IS NOT NULL)
+  OR (tipo = 'actividad' AND id_estatus_club IS NULL AND cupo_maximo IS NULL AND participacion IS NULL)
 );
+ALTER TABLE clubes ALTER COLUMN id_estatus_club DROP DEFAULT;
 
 CREATE TABLE IF NOT EXISTS migraciones_catalogo (
   id_migracion BIGSERIAL PRIMARY KEY,
@@ -2274,6 +2315,17 @@ BEGIN
  PERFORM setval(secuencia,GREATEST(ultimo,maximo),usado OR maximo>=ultimo);
 END $$;
 
+-- Catálogo global de insignias (plantillas reutilizables).
+CREATE TABLE IF NOT EXISTS insignias (
+  id_insignia    BIGSERIAL PRIMARY KEY,
+  nombre         VARCHAR(60)  NOT NULL,
+  descripcion    VARCHAR(500),
+  imagen         VARCHAR(255),
+  activa         BOOLEAN      NOT NULL DEFAULT TRUE,
+  creada_en      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  actualizada_en TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS actividades_ediciones (
   id_edicion SERIAL PRIMARY KEY,
   id_actividad INT NOT NULL CONSTRAINT fk_edicion_catalogo REFERENCES clubes(id_club) ON DELETE RESTRICT,
@@ -2301,6 +2353,8 @@ CREATE TABLE IF NOT EXISTS actividades_ediciones (
   estado_propuesta VARCHAR(20) CHECK (estado_propuesta IN ('borrador','pendiente','rechazada')),
   motivo_rechazo TEXT,
   actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  id_insignia BIGINT REFERENCES insignias(id_insignia) ON DELETE SET NULL,
+  otorgar_automaticamente BOOLEAN NOT NULL DEFAULT FALSE,
   CHECK (fecha_fin IS NULL OR fecha_inicio IS NULL OR fecha_fin >= fecha_inicio),
   CHECK (inscripcion_hasta IS NULL OR inscripcion_desde IS NULL OR inscripcion_hasta >= inscripcion_desde),
   CHECK (destacada_hasta IS NULL OR destacada_desde IS NULL OR destacada_hasta >= destacada_desde)
@@ -2319,8 +2373,8 @@ BEGIN
           contador:=contador+1;
           nueva_slug := left(fila.slug,65) || '-actividad-' || fila.id_actividad || CASE WHEN contador=1 THEN '' ELSE '-' || contador END;
         END LOOP;
-        INSERT INTO clubes (nombre_club,descripcion,categoria,imagen_portada,tipo,slug,plantilla,estado_publicacion,mostrar_en_oferta,id_autor,id_responsable_club,propuesta,estado_propuesta,motivo_rechazo,actualizado_en,cupo_maximo,participacion)
-        VALUES (fila.nombre,fila.descripcion,fila.categoria,fila.url_imagen,'actividad',nueva_slug,fila.plantilla,fila.estado,fila.mostrar_en_oferta,fila.id_autor,fila.id_responsable,fila.propuesta,fila.estado_propuesta,fila.motivo_rechazo,fila.actualizado_en,NULL,NULL)
+        INSERT INTO clubes (nombre_club,descripcion,categoria,imagen_portada,tipo,slug,plantilla,estado_publicacion,mostrar_en_oferta,id_autor,id_responsable_club,propuesta,estado_propuesta,motivo_rechazo,actualizado_en,cupo_maximo,participacion,id_estatus_club)
+        VALUES (fila.nombre,fila.descripcion,fila.categoria,fila.url_imagen,'actividad',nueva_slug,fila.plantilla,fila.estado,fila.mostrar_en_oferta,fila.id_autor,fila.id_responsable,fila.propuesta,fila.estado_propuesta,fila.motivo_rechazo,fila.actualizado_en,NULL,NULL,NULL)
         RETURNING id_club INTO nuevo_id;
         INSERT INTO migraciones_catalogo(tipo,id_actividad_anterior,id_club_destino,datos_originales) VALUES ('equivalencia_actividad',fila.id_actividad,nuevo_id,to_jsonb(fila));
       END IF;
@@ -2759,8 +2813,8 @@ BEGIN
    WHILE EXISTS(SELECT 1 FROM clubes WHERE slug=direccion) LOOP
     contador:=contador+1; direccion:=actividad.slug || '-actividad-' || contador;
    END LOOP;
-   INSERT INTO clubes(tipo,slug,nombre_club,descripcion,categoria,imagen_portada,plantilla,estado_publicacion,cupo_maximo,participacion)
-   VALUES('actividad',direccion,actividad.nombre,actividad.descripcion,'Servicio',actividad.imagen,actividad.plantilla,'publicada',NULL,NULL);
+   INSERT INTO clubes(tipo,slug,nombre_club,descripcion,categoria,imagen_portada,plantilla,estado_publicacion,cupo_maximo,participacion,id_estatus_club)
+   VALUES('actividad',direccion,actividad.nombre,actividad.descripcion,'Servicio',actividad.imagen,actividad.plantilla,'publicada',NULL,NULL,NULL);
   END IF;
  END LOOP;
 END $$;
@@ -2810,12 +2864,16 @@ CREATE TABLE IF NOT EXISTS expediente_reconocimientos (
     nombre_edicion VARCHAR(160) NOT NULL,
     anio SMALLINT NOT NULL,
     insignia_key VARCHAR(120),
+    id_insignia BIGINT REFERENCES insignias(id_insignia) ON DELETE SET NULL,
     oculta BOOLEAN NOT NULL DEFAULT FALSE,
     otorgada_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_expediente_reconocimiento_usuario_edicion
     ON expediente_reconocimientos (id_usuario, id_edicion)
     WHERE id_edicion IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_expediente_reconocimiento_insignia_usuario
+    ON expediente_reconocimientos (id_usuario, id_insignia)
+    WHERE id_insignia IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_expediente_reconocimientos_usuario
     ON expediente_reconocimientos (id_usuario, anio DESC, otorgada_en DESC);
 

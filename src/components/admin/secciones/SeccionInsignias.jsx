@@ -156,7 +156,7 @@ export function SeccionInsignias() {
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button type="submit" disabled={guardando} className="rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-amber-300 disabled:cursor-wait disabled:opacity-60">
+          <button type="submit" disabled={guardando} className="cursor-pointer rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-amber-300 disabled:cursor-wait disabled:opacity-60">
             {guardando ? 'Guardando…' : (editandoId ? 'Guardar cambios' : 'Crear insignia')}
           </button>
           {editandoId && (
@@ -179,10 +179,10 @@ export function SeccionInsignias() {
               <p className={`mt-1 text-xs ${ins.activa ? 'text-emerald-500' : 'text-red-500'}`}>{ins.activa ? 'Activa' : 'Inactiva'}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => editar(ins)} className="text-sm font-bold text-amber-600 underline underline-offset-4 dark:text-amber-400">Editar</button>
-              <button type="button" onClick={() => { setAsignarId(ins.id_insignia); setIdUsuarioAsignar(''); setIdEdicionAsignar(''); }} className="text-sm font-bold text-amber-600 underline underline-offset-4 dark:text-amber-400">Otorgar</button>
-              <button type="button" onClick={() => otorgarPorEdicion(ins.id_insignia)} className="text-sm font-bold text-amber-600 underline underline-offset-4 dark:text-amber-400">Por edición</button>
-              <button type="button" onClick={() => eliminar(ins.id_insignia)} className="text-sm font-bold text-red-500 underline underline-offset-4">Desactivar</button>
+              <button type="button" onClick={() => editar(ins)} className="cursor-pointer rounded-lg bg-amber-400/15 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-400/25 dark:text-amber-300">Editar</button>
+              <button type="button" onClick={() => { setAsignarId(ins.id_insignia); setIdUsuarioAsignar(''); setIdEdicionAsignar(''); }} className="cursor-pointer rounded-lg bg-amber-400/15 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-400/25 dark:text-amber-300">Otorgar</button>
+              <button type="button" onClick={() => otorgarPorEdicion(ins.id_insignia)} className="cursor-pointer rounded-lg bg-amber-400/15 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-400/25 dark:text-amber-300">Por edición</button>
+              <button type="button" onClick={() => eliminar(ins.id_insignia)} className="cursor-pointer rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-500/25 dark:text-red-400">Desactivar</button>
             </div>
           </div>
         ))}

@@ -34,6 +34,14 @@ const migrationCatalogoDefaults = await readFile(
   new URL('../migrations/migrate-catalogo-tipo-datos-sin-defaults.sql', import.meta.url),
   'utf8',
 );
+const migrationEstatusCatalogo = await readFile(
+  new URL('../migrations/migrate-catalogo-estatus-solo-clubes.sql', import.meta.url),
+  'utf8',
+);
+const migrationEstatusSinDefault = await readFile(
+  new URL('../migrations/migrate-estatus-club-sin-default.sql', import.meta.url),
+  'utf8',
+);
 const migrationCicloMismoClub = await readFile(
   new URL('../migrations/migrate-ciclo-inscripcion-mismo-club.sql', import.meta.url),
   'utf8',
@@ -60,6 +68,10 @@ const migrationTiposPreguntaFormulario = await readFile(
 );
 const migrationLimiteTextoOtro = await readFile(
   new URL('../migrations/migrate-encuestas-otro-reglas.sql', import.meta.url),
+  'utf8',
+);
+const migrationValidarTextoOtro = await readFile(
+  new URL('../migrations/migrate-validar-limite-respuesta-otro.sql', import.meta.url),
   'utf8',
 );
 const migrationPerfil = await readFile(
@@ -100,6 +112,14 @@ const migrationIndicesConsultasFrecuentes = await readFile(
 );
 const migrationRetirarIndicePresenciaChat = await readFile(
   new URL('../migrations/migrate-retirar-indice-presencia-chat.sql', import.meta.url),
+  'utf8',
+);
+const migrationIndiceFormulariosConvocatoria = await readFile(
+  new URL('../migrations/migrate-indice-formularios-convocatoria.sql', import.meta.url),
+  'utf8',
+);
+const migrationFormularioConvocatoriaMismoClub = await readFile(
+  new URL('../migrations/migrate-formulario-convocatoria-mismo-club.sql', import.meta.url),
   'utf8',
 );
 const migrationContenidoNoticia = await readFile(
@@ -163,11 +183,17 @@ async function conEsquemaTemporal(t) {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       CONSTRAINT uq_periodos_fechas UNIQUE (fecha_inicio, fecha_fin)
     );
+    CREATE TABLE cat_estatus_clubes (
+      id_estatus_club SERIAL PRIMARY KEY,
+      nombre_estatus TEXT UNIQUE NOT NULL
+    );
+    INSERT INTO cat_estatus_clubes(nombre_estatus) VALUES ('activo'),('proximamente'),('inactivo');
     CREATE TABLE clubes (
       id_club SERIAL PRIMARY KEY,
       tipo VARCHAR(12) NOT NULL CHECK (tipo IN ('club','actividad')),
       cupo_maximo INT,
       participacion VARCHAR(20),
+      id_estatus_club INT NOT NULL DEFAULT 2 REFERENCES cat_estatus_clubes(id_estatus_club),
       CONSTRAINT chk_catalogo_datos_club CHECK (
         tipo <> 'club' OR (cupo_maximo IS NOT NULL AND cupo_maximo IN (10,15,20,25,30,40,50) AND participacion IS NOT NULL)
       )
@@ -892,6 +918,109 @@ test('PostgreSQL aplica índices únicos y conserva el comportamiento histórico
   await client.query('INSERT INTO formularios(id_alumno,id_club,id_convocatoria_inscripcion) VALUES (1,7,4)');
 });
 
+test('PostgreSQL agrega índice parcial por convocatoria sin alterar formularios y lo repite', {
+  skip: !connectionString,
+}, async (t) => {
+  const client = await conEsquemaTemporal(t);
+  await client.query('ALTER TABLE formularios ADD COLUMN id_convocatoria INT');
+  await client.query('INSERT INTO formularios(id_alumno,id_club,id_convocatoria) VALUES (1,7,42),(2,7,NULL)');
+
+  await ejecutarEnTransaccion(client, migrationIndiceFormulariosConvocatoria);
+  await ejecutarEnTransaccion(client, migrationIndiceFormulariosConvocatoria);
+
+  const indice = (await client.query(`
+    SELECT pg_get_indexdef(i.indexrelid) AS definicion,
+           pg_get_expr(i.indpred, i.indrelid) AS predicado,
+           i.indisvalid
+    FROM pg_index i
+    JOIN pg_class c ON c.oid=i.indexrelid
+    WHERE c.relname='idx_formularios_convocatoria'
+  `)).rows[0];
+  assert.match(indice.definicion, /ON .*formularios USING btree \(id_convocatoria\)/i);
+  assert.match(indice.predicado, /id_convocatoria IS NOT NULL/i);
+  assert.equal(indice.indisvalid, true);
+  assert.deepEqual(
+    (await client.query('SELECT id_alumno,id_convocatoria FROM formularios ORDER BY id_alumno')).rows,
+    [{ id_alumno: 1, id_convocatoria: 42 }, { id_alumno: 2, id_convocatoria: null }],
+  );
+});
+
+test('PostgreSQL limita el bloque de entrevista al mismo club y conserva SET NULL al borrarlo', {
+  skip: !connectionString,
+}, async (t) => {
+  const client = await conEsquemaTemporal(t);
+  await client.query(`
+    CREATE TABLE convocatorias (
+      id_convocatoria INT PRIMARY KEY,
+      id_club INT NOT NULL
+    );
+    ALTER TABLE formularios ADD COLUMN id_convocatoria INT;
+    ALTER TABLE formularios ADD CONSTRAINT fk_formulario_convocatoria
+      FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria)
+      ON DELETE SET NULL;
+    INSERT INTO convocatorias(id_convocatoria,id_club) VALUES (41,7),(42,8);
+    INSERT INTO formularios(id_alumno,id_club,id_convocatoria) VALUES (1,7,41),(2,7,NULL);
+  `);
+
+  await ejecutarEnTransaccion(client, migrationFormularioConvocatoriaMismoClub);
+  await ejecutarEnTransaccion(client, migrationFormularioConvocatoriaMismoClub);
+
+  const constraint = (await client.query(`
+    SELECT pg_get_constraintdef(oid) AS definicion, convalidated, confdeltype
+    FROM pg_constraint
+    WHERE conrelid='formularios'::regclass
+      AND conname='fk_formulario_convocatoria_club'
+  `)).rows[0];
+  assert.match(constraint.definicion, /FOREIGN KEY \(id_convocatoria, id_club\).*REFERENCES convocatorias\(id_convocatoria, id_club\).*ON DELETE SET NULL \(id_convocatoria\)/i);
+  assert.equal(constraint.convalidated, true);
+  assert.equal(constraint.confdeltype, 'n');
+  assert.equal((await client.query("SELECT to_regclass('uq_convocatoria_id_club') AS nombre")).rows[0].nombre, 'uq_convocatoria_id_club');
+  assert.equal((await client.query("SELECT count(*)::int AS n FROM pg_constraint WHERE conrelid='formularios'::regclass AND conname='fk_formulario_convocatoria'")).rows[0].n, 0);
+  await assert.rejects(
+    client.query('INSERT INTO formularios(id_alumno,id_club,id_convocatoria) VALUES (3,7,42)'),
+    (error) => error.code === '23503' && error.constraint === 'fk_formulario_convocatoria_club',
+  );
+
+  await client.query('DELETE FROM convocatorias WHERE id_convocatoria=41');
+  assert.deepEqual(
+    (await client.query('SELECT id_alumno,id_club,id_convocatoria FROM formularios ORDER BY id_formulario')).rows,
+    [
+      { id_alumno: 1, id_club: 7, id_convocatoria: null },
+      { id_alumno: 2, id_club: 7, id_convocatoria: null },
+    ],
+  );
+});
+
+test('PostgreSQL detiene la FK compuesta ante un bloque histórico de otro club sin cambiar filas', {
+  skip: !connectionString,
+}, async (t) => {
+  const client = await conEsquemaTemporal(t);
+  await client.query(`
+    CREATE TABLE convocatorias (
+      id_convocatoria INT PRIMARY KEY,
+      id_club INT NOT NULL
+    );
+    ALTER TABLE formularios ADD COLUMN id_convocatoria INT;
+    ALTER TABLE formularios ADD CONSTRAINT fk_formulario_convocatoria
+      FOREIGN KEY (id_convocatoria) REFERENCES convocatorias(id_convocatoria)
+      ON DELETE SET NULL;
+    INSERT INTO convocatorias(id_convocatoria,id_club) VALUES (41,8);
+    INSERT INTO formularios(id_alumno,id_club,id_convocatoria) VALUES (1,7,41);
+  `);
+
+  await assert.rejects(
+    ejecutarEnTransaccion(client, migrationFormularioConvocatoriaMismoClub),
+    /postulaciones vinculadas a un bloque inexistente o de otro club/i,
+  );
+
+  assert.deepEqual(
+    (await client.query('SELECT id_alumno,id_club,id_convocatoria FROM formularios')).rows,
+    [{ id_alumno: 1, id_club: 7, id_convocatoria: 41 }],
+  );
+  assert.equal((await client.query("SELECT to_regclass('uq_convocatoria_id_club') AS nombre")).rows[0].nombre, null);
+  assert.equal((await client.query("SELECT count(*)::int AS n FROM pg_constraint WHERE conrelid='formularios'::regclass AND conname='fk_formulario_convocatoria'")).rows[0].n, 1);
+});
+
 test('PostgreSQL revierte toda la migración si encuentra correos heredados duplicados', {
   skip: !connectionString,
 }, async (t) => {
@@ -1065,6 +1194,60 @@ test('PostgreSQL no aplica los valores por defecto de club al crear actividades'
     (error) => error.code === '23514' && error.constraint === 'chk_catalogo_datos_club',
   );
   assert.equal((await client.query("SELECT cupo_maximo,participacion FROM clubes WHERE tipo='club'")).rows[0].participacion, 'mixta');
+});
+
+test('PostgreSQL separa el estatus de clubes y actividades y repite la migración sin cambios', {
+  skip: !connectionString,
+}, async (t) => {
+  const client = await conEsquemaTemporal(t);
+  await client.query("INSERT INTO clubes(tipo,cupo_maximo,participacion,id_estatus_club) VALUES ('club',20,'mixta',1),('actividad',NULL,NULL,2),('actividad',NULL,NULL,2)");
+
+  await ejecutarEnTransaccion(client, migrationEstatusCatalogo);
+  assert.deepEqual((await client.query('SELECT tipo,id_estatus_club FROM clubes ORDER BY id_club')).rows, [
+    { tipo: 'club', id_estatus_club: 1 },
+    { tipo: 'actividad', id_estatus_club: null },
+    { tipo: 'actividad', id_estatus_club: null },
+  ]);
+  await client.query("INSERT INTO clubes(tipo,id_estatus_club) VALUES ('actividad',NULL)");
+  await assert.rejects(client.query("INSERT INTO clubes(tipo,cupo_maximo,participacion,id_estatus_club) VALUES ('club',20,'mixta',NULL)"), { code: '23514' });
+  await assert.rejects(client.query("INSERT INTO clubes(tipo,id_estatus_club) VALUES ('actividad',1)"), { code: '23514' });
+
+  await ejecutarEnTransaccion(client, migrationEstatusCatalogo);
+  assert.equal((await client.query('SELECT COUNT(*)::int AS n FROM clubes')).rows[0].n, 4);
+});
+
+test('PostgreSQL aborta antes de tocar estados de actividad distintos del placeholder', {
+  skip: !connectionString,
+}, async (t) => {
+  const client = await conEsquemaTemporal(t);
+  await client.query("INSERT INTO clubes(tipo,id_estatus_club) VALUES ('actividad',1)");
+
+  await assert.rejects(ejecutarEnTransaccion(client, migrationEstatusCatalogo), /estatus distinto de proximamente/i);
+  assert.deepEqual((await client.query('SELECT tipo,id_estatus_club FROM clubes')).rows[0], { tipo: 'actividad', id_estatus_club: 1 });
+});
+
+test('PostgreSQL quita el estatus predeterminado sin alterar filas y permite omitirlo solo en actividades', {
+  skip: !connectionString,
+}, async (t) => {
+  const client = await conEsquemaTemporal(t);
+  await client.query("INSERT INTO clubes(tipo,cupo_maximo,participacion,id_estatus_club) VALUES ('club',20,'mixta',1),('actividad',NULL,NULL,2)");
+  await ejecutarEnTransaccion(client, migrationEstatusCatalogo);
+  await client.query('ALTER TABLE clubes ALTER COLUMN id_estatus_club SET DEFAULT 2');
+
+  await ejecutarEnTransaccion(client, migrationEstatusSinDefault);
+  assert.equal((await client.query("SELECT column_default FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='clubes' AND column_name='id_estatus_club'")).rows[0].column_default, null);
+  assert.deepEqual((await client.query('SELECT tipo,id_estatus_club FROM clubes ORDER BY id_club')).rows, [
+    { tipo: 'club', id_estatus_club: 1 },
+    { tipo: 'actividad', id_estatus_club: null },
+  ]);
+
+  assert.equal((await client.query("INSERT INTO clubes(tipo,cupo_maximo,participacion) VALUES ('actividad',NULL,NULL) RETURNING id_estatus_club")).rows[0].id_estatus_club, null);
+  await assert.rejects(
+    client.query("INSERT INTO clubes(tipo,cupo_maximo,participacion) VALUES ('club',20,'mixta')"),
+    (error) => error.code === '23514' && error.constraint === 'chk_catalogo_datos_club',
+  );
+  await ejecutarEnTransaccion(client, migrationEstatusSinDefault);
+  assert.equal((await client.query('SELECT COUNT(*)::int AS n FROM clubes')).rows[0].n, 3);
 });
 
 test('PostgreSQL no crea el ledger si existe cualquier tabla pública, incluso solo respuestas', {
@@ -1396,6 +1579,32 @@ test('PostgreSQL conserva respuestas largas de «Otro» y limita nuevas respuest
     client.query('UPDATE opciones_pregunta SET es_otro=true WHERE id_opcion=71'),
     (error) => error.code === '23505' && error.constraint === 'uq_opcion_otro',
   );
+});
+
+test('PostgreSQL valida el límite histórico de «Otro» sin modificar respuestas y aborta si hay una larga', {
+  skip: !connectionString,
+}, async (t) => {
+  const valido = await conEsquemaTemporal(t);
+  await valido.query(`
+    CREATE TABLE detalle_respuestas(id INT PRIMARY KEY, texto_otro TEXT);
+    INSERT INTO detalle_respuestas VALUES (1, repeat('v',70));
+    ALTER TABLE detalle_respuestas ADD CONSTRAINT chk_detalle_texto_otro
+      CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70) NOT VALID;
+  `);
+  await ejecutarEnTransaccion(valido, migrationValidarTextoOtro);
+  assert.equal((await valido.query("SELECT convalidated FROM pg_constraint WHERE conname='chk_detalle_texto_otro' AND conrelid='detalle_respuestas'::regclass")).rows[0].convalidated, true);
+  assert.equal((await valido.query('SELECT char_length(texto_otro)::int AS n FROM detalle_respuestas WHERE id=1')).rows[0].n, 70);
+
+  const largo = await conEsquemaTemporal(t);
+  await largo.query(`
+    CREATE TABLE detalle_respuestas(id INT PRIMARY KEY, texto_otro TEXT);
+    INSERT INTO detalle_respuestas VALUES (1, repeat('x',71));
+    ALTER TABLE detalle_respuestas ADD CONSTRAINT chk_detalle_texto_otro
+      CHECK (texto_otro IS NULL OR char_length(texto_otro) <= 70) NOT VALID;
+  `);
+  await assert.rejects(ejecutarEnTransaccion(largo, migrationValidarTextoOtro), (error) => error.code === '23514');
+  assert.equal((await largo.query("SELECT convalidated FROM pg_constraint WHERE conname='chk_detalle_texto_otro' AND conrelid='detalle_respuestas'::regclass")).rows[0].convalidated, false);
+  assert.equal((await largo.query('SELECT char_length(texto_otro)::int AS n FROM detalle_respuestas WHERE id=1')).rows[0].n, 71);
 });
 
 test('PostgreSQL cancela la migración de ciclos si ya existe un vínculo entre clubes', {

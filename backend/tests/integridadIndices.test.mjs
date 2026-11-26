@@ -30,6 +30,9 @@ test('el preflight de develop detecta conflictos antes de normalizar ciclos', ()
     'formularios_sin_ciclo',
     'solicitudes_convocatoria_pendientes',
     '24_configuracion_ciclo_unica',
+    '29_indice_formularios_convocatoria',
+    '30_formulario_convocatoria_mismo_club',
+    'formularios_bloque_huerfano_o_de_otro_club',
   ]) {
     assert.ok(preflightDevelop.includes(indicador), `debe revisar ${indicador}`);
   }
@@ -46,6 +49,26 @@ test('el índice de postulaciones sigue el filtro y orden habitual por club', as
   for (const sql of [schema, migration]) {
     assert.match(sql, /CREATE INDEX IF NOT EXISTS idx_formularios_club_fecha\s+ON formularios \(id_club, fecha_envio DESC\)/i);
   }
+});
+
+test('el índice parcial cubre búsquedas de postulaciones por convocatoria', async () => {
+  const schema = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
+  const migration = await readFile(new URL('../migrations/migrate-indice-formularios-convocatoria.sql', import.meta.url), 'utf8');
+  const patron = /CREATE INDEX IF NOT EXISTS idx_formularios_convocatoria\s+ON formularios \(id_convocatoria\)\s+WHERE id_convocatoria IS NOT NULL/i;
+  assert.match(schema, patron);
+  assert.match(migration, patron);
+});
+
+test('el esquema y la migración exigen que el bloque de entrevista pertenezca al club de la postulación', async () => {
+  const schema = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
+  const migration = await readFile(new URL('../migrations/migrate-formulario-convocatoria-mismo-club.sql', import.meta.url), 'utf8');
+
+  for (const sql of [schema, migration]) {
+    assert.match(sql, /uq_convocatoria_id_club\s+ON convocatorias \(id_convocatoria, id_club\)/i);
+    assert.match(sql, /FOREIGN KEY \(id_convocatoria, id_club\)\s+REFERENCES convocatorias\s*\(id_convocatoria, id_club\)\s+ON DELETE SET NULL \(id_convocatoria\)/i);
+    assert.match(sql, /c\.id_club IS DISTINCT FROM f\.id_club/i);
+  }
+  assert.doesNotMatch(migration, /^\s*(?:UPDATE|DELETE|TRUNCATE)\b/im);
 });
 
 test('el esquema cubre búsquedas frecuentes de clubes y notificaciones de chat', async () => {
@@ -150,7 +173,7 @@ test('el esquema reserva cupo y participación para clubes y la migración abort
   const schema = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
   const migration = await readFile(new URL('../migrations/migrate-catalogo-tipo-datos.sql', import.meta.url), 'utf8');
   const migrationDefaults = await readFile(new URL('../migrations/migrate-catalogo-tipo-datos-sin-defaults.sql', import.meta.url), 'utf8');
-  assert.match(schema, /tipo = 'actividad' AND cupo_maximo IS NULL AND participacion IS NULL/i);
+  assert.match(schema, /tipo = 'actividad' AND id_estatus_club IS NULL AND cupo_maximo IS NULL AND participacion IS NULL/i);
   assert.match(schema, /ALTER TABLE clubes ALTER COLUMN cupo_maximo DROP DEFAULT/i);
   assert.match(schema, /ALTER TABLE clubes ALTER COLUMN participacion DROP DEFAULT/i);
   assert.match(migration, /tipo = 'actividad'\s+AND \(cupo_maximo IS NOT NULL OR participacion IS NOT NULL\)/i);
@@ -158,6 +181,27 @@ test('el esquema reserva cupo y participación para clubes y la migración abort
   assert.doesNotMatch(migration, /\b(?:DELETE|UPDATE|TRUNCATE)\b/i);
   assert.match(migrationDefaults, /ALTER TABLE clubes ALTER COLUMN cupo_maximo DROP DEFAULT/i);
   assert.match(migrationDefaults, /ALTER TABLE clubes ALTER COLUMN participacion DROP DEFAULT/i);
+});
+
+test('el estado del catálogo pertenece a clubes y la migración conserva los clubes', async () => {
+  const schema = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
+  const migration = await readFile(new URL('../migrations/migrate-catalogo-estatus-solo-clubes.sql', import.meta.url), 'utf8');
+  assert.match(schema, /ALTER TABLE clubes ALTER COLUMN id_estatus_club DROP NOT NULL/i);
+  assert.match(schema, /tipo = 'club' AND id_estatus_club IS NOT NULL/i);
+  assert.match(schema, /tipo = 'actividad' AND id_estatus_club IS NULL/i);
+  assert.match(migration, /nombre_estatus IS DISTINCT FROM 'proximamente'/i);
+  assert.match(migration, /SET id_estatus_club = NULL[\s\S]*?nombre_estatus = 'proximamente'/i);
+  assert.doesNotMatch(migration, /\b(?:DELETE|TRUNCATE)\b/i);
+});
+
+test('el estado del club no usa un default compartido con actividades', async () => {
+  const schema = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
+  const migration = await readFile(new URL('../migrations/migrate-estatus-club-sin-default.sql', import.meta.url), 'utf8');
+  const dominio = await readFile(new URL('../lib/actividadesDominio.js', import.meta.url), 'utf8');
+  assert.match(schema, /ALTER TABLE clubes ALTER COLUMN id_estatus_club DROP DEFAULT/i);
+  assert.match(migration, /ALTER TABLE clubes ALTER COLUMN id_estatus_club DROP DEFAULT/i);
+  assert.doesNotMatch(migration, /\b(?:DELETE|UPDATE|TRUNCATE)\b/i);
+  assert.match(dominio, /tipo, id_estatus_club: 2, cupo_maximo/i);
 });
 
 test('las respuestas configurables validan pertenencia con FKs compuestas y no se borran en cascada', async () => {
@@ -211,6 +255,12 @@ test('la opción «Otro» conserva respuestas heredadas y limita nuevas respuest
   assert.match(correccion, /uq_opcion_otro[\s\S]*WHERE es_otro/i);
 });
 
+test('la migración final valida el límite histórico de «Otro» sin reescribir respuestas', async () => {
+  const migration = await readFile(new URL('../migrations/migrate-validar-limite-respuesta-otro.sql', import.meta.url), 'utf8');
+  assert.match(migration, /VALIDATE CONSTRAINT chk_detalle_texto_otro/i);
+  assert.doesNotMatch(migration, /\b(?:DELETE|UPDATE|TRUNCATE)\b/i);
+});
+
 test('los snapshots de formularios conservan el contexto sin impedir corregir la respuesta', async () => {
   const schema = await readFile(new URL('../schema.sql', import.meta.url), 'utf8');
   const migration = await readFile(new URL('../migrations/migrate-inmutable-snapshot-respuestas-extra.sql', import.meta.url), 'utf8');
@@ -259,7 +309,13 @@ test('la migración impide borrar respuestas por cascada y conserva el orden fin
   assert.match(migration, /ON DELETE RESTRICT/i);
   assert.match(migration, /convalidated/i);
   assert.doesNotMatch(migration, /\b(?:DELETE FROM|UPDATE respuestas_encuesta|TRUNCATE)\b/i);
-  assert.equal(manifest.migrations.at(-2), 'migrate-encuestas-respuestas-restrict.sql');
-  assert.equal(manifest.migrations.at(-1), 'migrate-ciclo-inscripcion-configuracion-unica.sql');
+  assert.equal(manifest.migrations.at(-8), 'migrate-encuestas-respuestas-restrict.sql');
+  assert.equal(manifest.migrations.at(-7), 'migrate-ciclo-inscripcion-configuracion-unica.sql');
+  assert.equal(manifest.migrations.at(-6), 'migrate-catalogo-tipo-datos-sin-defaults.sql');
+  assert.equal(manifest.migrations.at(-5), 'migrate-catalogo-estatus-solo-clubes.sql');
+  assert.equal(manifest.migrations.at(-4), 'migrate-estatus-club-sin-default.sql');
+  assert.equal(manifest.migrations.at(-3), 'migrate-validar-limite-respuesta-otro.sql');
+  assert.equal(manifest.migrations.at(-2), 'migrate-indice-formularios-convocatoria.sql');
+  assert.equal(manifest.migrations.at(-1), 'migrate-formulario-convocatoria-mismo-club.sql');
   assert.match(route, /DELETE FROM respuestas_encuesta WHERE id_encuesta = \$1/i);
 });

@@ -106,6 +106,37 @@ WITH tablas_respuesta AS (
       'cierre_manual_en_ciclo', EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='convocatorias_inscripcion' AND column_name='cerrada_manualmente'),
       'vista_estado', to_regclass('public.clubes_con_estado') IS NOT NULL,
       'vista_operativa', to_regclass('public.clubes_operativos') IS NOT NULL
+    ),
+    '25_catalogo_sin_defaults', jsonb_build_object(
+      'cupo_sin_default', EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='clubes' AND column_name='cupo_maximo' AND column_default IS NULL),
+      'participacion_sin_default', EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='clubes' AND column_name='participacion' AND column_default IS NULL)
+    ),
+    '26_estatus_solo_clubes', EXISTS (
+      SELECT 1 FROM pg_constraint
+      WHERE conrelid=to_regclass('public.clubes') AND conname='chk_catalogo_datos_club'
+        AND pg_get_constraintdef(oid) ILIKE '%id_estatus_club IS NULL%'
+    ),
+    '27_estatus_sin_default', EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='clubes'
+        AND column_name='id_estatus_club' AND column_default IS NULL
+    ),
+    '28_otro_validado', EXISTS (
+      SELECT 1 FROM pg_constraint
+      WHERE conrelid=to_regclass('public.detalle_respuestas')
+        AND conname='chk_detalle_texto_otro' AND convalidated
+    ),
+    '29_indice_formularios_convocatoria', to_regclass('public.idx_formularios_convocatoria') IS NOT NULL,
+    '30_formulario_convocatoria_mismo_club', jsonb_build_object(
+      'indice_compuesto', to_regclass('public.uq_convocatoria_id_club') IS NOT NULL,
+      'fk_validada', EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid=to_regclass('public.formularios')
+          AND conname='fk_formulario_convocatoria_club'
+          AND convalidated
+          AND pg_get_constraintdef(oid) ILIKE '%FOREIGN KEY (id_convocatoria, id_club)%'
+          AND pg_get_constraintdef(oid) ILIKE '%ON DELETE SET NULL (id_convocatoria)%'
+      )
     )
   ) AS estado
 ), precondiciones AS (
@@ -178,7 +209,13 @@ WITH tablas_respuesta AS (
     'respuestas_encuesta_sin_encuesta', CASE WHEN to_regclass('public.respuestas_encuesta') IS NOT NULL AND to_regclass('public.encuestas') IS NOT NULL THEN
       (xpath('/table/row/n/text()', query_to_xml($q$SELECT count(*) AS n FROM respuestas_encuesta r LEFT JOIN encuestas e USING(id_encuesta) WHERE e.id_encuesta IS NULL$q$, true, false, '')))[1]::text::bigint ELSE NULL END,
     'opciones_otro_duplicadas', CASE WHEN to_regclass('public.opciones_pregunta') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='opciones_pregunta' AND column_name='es_otro') THEN
-      (xpath('/table/row/n/text()', query_to_xml($q$SELECT count(*) AS n FROM (SELECT 1 FROM opciones_pregunta WHERE es_otro GROUP BY id_pregunta HAVING count(*)>1) d$q$, true, false, '')))[1]::text::bigint ELSE NULL END
+      (xpath('/table/row/n/text()', query_to_xml($q$SELECT count(*) AS n FROM (SELECT 1 FROM opciones_pregunta WHERE es_otro GROUP BY id_pregunta HAVING count(*)>1) d$q$, true, false, '')))[1]::text::bigint ELSE NULL END,
+    'actividades_con_estatus_inesperado', CASE WHEN to_regclass('public.clubes') IS NOT NULL AND to_regclass('public.cat_estatus_clubes') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='clubes' AND column_name='tipo') THEN
+      (xpath('/table/row/n/text()', query_to_xml($q$SELECT count(*) AS n FROM clubes c LEFT JOIN cat_estatus_clubes e USING(id_estatus_club) WHERE c.tipo='actividad' AND c.id_estatus_club IS NOT NULL AND e.nombre_estatus IS DISTINCT FROM 'proximamente'$q$, true, false, '')))[1]::text::bigint ELSE NULL END,
+    'respuestas_otro_mayores_70', CASE WHEN to_regclass('public.detalle_respuestas') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='detalle_respuestas' AND column_name='texto_otro') THEN
+      (xpath('/table/row/n/text()', query_to_xml($q$SELECT count(*) AS n FROM detalle_respuestas WHERE texto_otro IS NOT NULL AND char_length(texto_otro)>70$q$, true, false, '')))[1]::text::bigint ELSE NULL END,
+    'formularios_bloque_huerfano_o_de_otro_club', CASE WHEN to_regclass('public.formularios') IS NOT NULL AND to_regclass('public.convocatorias') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='formularios' AND column_name='id_convocatoria') THEN
+      (xpath('/table/row/n/text()', query_to_xml($q$SELECT count(*) AS n FROM formularios f LEFT JOIN convocatorias c ON c.id_convocatoria=f.id_convocatoria WHERE f.id_convocatoria IS NOT NULL AND (c.id_convocatoria IS NULL OR c.id_club IS DISTINCT FROM f.id_club)$q$, true, false, '')))[1]::text::bigint ELSE NULL END
   ) AS conteos
 )
 SELECT jsonb_build_object(

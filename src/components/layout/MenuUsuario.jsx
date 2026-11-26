@@ -36,8 +36,10 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
           onClick={() => setMenuAbierto((prev) => !prev)}
           className="hidden md:flex items-center gap-2 cursor-pointer"
         >
-          <div className="w-8 h-8 rounded-full bg-amber-500 md:ring-2 md:ring-[#0b111e]/60 flex items-center justify-center text-white font-bold text-sm">
-            {user.nombre_completo?.charAt(0) || '?'}
+          <div className="w-8 h-8 rounded-full bg-black md:ring-2 md:ring-[#0b111e]/60 flex items-center justify-center text-white">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+            </svg>
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${menuAbierto ? 'rotate-180' : ''} ${modoOscuro ? 'text-white' : tema.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -81,8 +83,10 @@ export function MenuUsuario({ user, menuAbierto, setMenuAbierto, onPanelClick, o
                   onClick={() => { navigate('/perfil'); setMenuAbierto(false); }}
                   className={`mb-2 flex w-full cursor-pointer items-center gap-4 rounded-lg px-4 py-3 text-left transition-colors ${tema.dropdownItem}`}
                 >
-                  <div className="w-10 h-10 shrink-0 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-base">
-                    {user.nombre_completo?.charAt(0) || '?'}
+                  <div className="w-10 h-10 shrink-0 rounded-full bg-black flex items-center justify-center text-white">
+                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
                   </div>
                   <div className="min-w-0 text-left">
                     <p className={`text-sm font-semibold truncate ${tema.text}`}>

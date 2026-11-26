@@ -4,46 +4,16 @@ on:
   push:
     branches: ["**"]
     paths:
-      - "backend/schema.sql"
-      - "backend/migrations/**"
-      - "backend/lib/migraciones.js"
-      - "backend/lib/dbTls.js"
-      - "backend/config/timezone.js"
-      - "backend/apply-migrations.js"
-      - "backend/migrate.js"
-      - "backend/db.js"
-      - "backend/package.json"
-      - "backend/pnpm-lock.yaml"
+      - "backend/**"
+      - "shared/**"
       - "pnpm-lock.yaml"
-      - "backend/routes/auth.js"
-      - "backend/routes/formularios.js"
-      - "backend/routes/encuestas.js"
-      - "backend/tests/encuestas-otro.test.mjs"
-      - "backend/tests/integridadIndices.test.mjs"
-      - "backend/tests/postgresIntegridad.integration.test.mjs"
-      - "backend/tests/migraciones.test.mjs"
       - ".github/workflows/database-integrity.yml"
   pull_request:
     branches: ["**"]
     paths:
-      - "backend/schema.sql"
-      - "backend/migrations/**"
-      - "backend/lib/migraciones.js"
-      - "backend/lib/dbTls.js"
-      - "backend/config/timezone.js"
-      - "backend/apply-migrations.js"
-      - "backend/migrate.js"
-      - "backend/db.js"
-      - "backend/package.json"
-      - "backend/pnpm-lock.yaml"
+      - "backend/**"
+      - "shared/**"
       - "pnpm-lock.yaml"
-      - "backend/routes/auth.js"
-      - "backend/routes/formularios.js"
-      - "backend/routes/encuestas.js"
-      - "backend/tests/encuestas-otro.test.mjs"
-      - "backend/tests/integridadIndices.test.mjs"
-      - "backend/tests/postgresIntegridad.integration.test.mjs"
-      - "backend/tests/migraciones.test.mjs"
       - ".github/workflows/database-integrity.yml"
   workflow_dispatch:
 
@@ -53,7 +23,7 @@ permissions:
 jobs:
   migration-integrity:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17
@@ -82,16 +52,23 @@ jobs:
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
-          DB_NAME: clubs_schema_smoke
+          DB_NAME: clubs_schema_smoke_pruebas
           DB_USER: postgres
           DB_PASSWORD: postgres
           PGPASSWORD: postgres
         run: |
-          createdb -h 127.0.0.1 -p 5432 -U postgres clubs_schema_smoke
+          createdb -h 127.0.0.1 -p 5432 -U postgres clubs_schema_smoke_pruebas
           node backend/migrate.js
           pnpm --dir backend migrate:managed
           pnpm --dir backend migrate:managed
-      - name: Test migration against PostgreSQL
+      - name: Run full backend suite against PostgreSQL
         env:
           INTEGRIDAD_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/clubs_test
-        run: node --test backend/tests/integridadIndices.test.mjs backend/tests/migraciones.test.mjs backend/tests/postgresIntegridad.integration.test.mjs
+          ACTIVIDADES_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/clubs_test
+          PREFERENCIAS_TEST_DB: clubs_schema_smoke_pruebas
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_NAME: clubs_bd
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: pnpm --dir backend test

@@ -141,8 +141,9 @@ test('la verificación OTP emite auth_otp=true y ese token pierde acceso al prom
     'correo_institucional', 'id_rol', 'id_usuario', 'institutional_id', 'nombre_completo', 'rol',
   ]);
 
-  usuarioActual.id_rol = 3;
-  usuarioActual.rol = 'admin';
+  // Rectoría (4) es un rol restringido al flujo OTP. Admin (3) sí está permitido.
+  usuarioActual.id_rol = 4;
+  usuarioActual.rol = 'rectoria';
   const { req, res, siguiente } = await autenticar(datos.token);
   assert.equal(siguiente, false);
   assert.equal(res.statusCode, 401);

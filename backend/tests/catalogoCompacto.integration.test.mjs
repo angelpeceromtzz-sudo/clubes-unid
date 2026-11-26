@@ -36,7 +36,7 @@ test('catálogo compacto: diez tablas, destinos protegidos y reacciones independ
   await db.query(sql);
   await comprobarModelo(db);
   await db.query("INSERT INTO usuarios(id_usuario,nombre_completo,correo_institucional) VALUES(1,'Alumno ficticio','uno@example.test'),(2,'Actor temporal','dos@example.test')");
-  const club = (await db.query("INSERT INTO clubes(nombre_club,cupo_maximo,participacion) VALUES('Club QA',20,'mixta') RETURNING id_club")).rows[0].id_club;
+  const club = (await db.query("INSERT INTO clubes(nombre_club,cupo_maximo,participacion,id_estatus_club) VALUES('Club QA',20,'mixta',2) RETURNING id_club")).rows[0].id_club;
   const actividad = (await db.query("SELECT id_club FROM clubes WHERE plantilla='trineo'")).rows[0].id_club;
   const otra = (await db.query("SELECT id_club FROM clubes WHERE plantilla='misiones'")).rows[0].id_club;
   const edicion = (await db.query("INSERT INTO actividades_ediciones(id_actividad,nombre) VALUES($1,'Edición QA') RETURNING id_edicion", [actividad])).rows[0].id_edicion;
@@ -67,6 +67,9 @@ for (const origen of ['schema', 'migracion']) test('catálogo compacto desde onc
   assert.ok(corte > 0);
   await db.query(sql.slice(0, corte) + '\nCOMMIT;');
   await db.query("INSERT INTO usuarios(id_usuario,nombre_completo,correo_institucional) VALUES(1,'Actor QA','actor@example.test'); INSERT INTO clubes(id_club,nombre_club,cupo_maximo) VALUES(1,'Club original',20),(8,'Evento anterior',10); SELECT setval(pg_get_serial_sequence('clubes','id_club'),100); INSERT INTO actividad_clubes(id_evento,tipo_evento,id_club,id_actor,descripcion,fecha_creacion) VALUES(50,'anuncio_club',1,1,'Historia original del club','2025-01-01T12:00:00Z'); SELECT setval(pg_get_serial_sequence('actividad_clubes','id_evento'),50);");
+  // Representa el esquema previo a la migración 24, que aún almacenaba
+  // este indicador directamente en clubes.
+  await db.query('ALTER TABLE clubes ADD COLUMN cerrada_manualmente BOOLEAN NOT NULL DEFAULT FALSE, ADD COLUMN fecha_apertura_programada TIMESTAMPTZ, ADD COLUMN fecha_limite_cierre TIMESTAMPTZ, ADD COLUMN max_postulaciones INTEGER');
   await db.query(await leer('../migrations/migrate-actividades.sql'));
   await db.query("INSERT INTO actividades_ediciones(id_edicion,id_actividad,nombre) VALUES(41,1,'Edición histórica Trineo'),(42,2,'Edición histórica Misiones'); INSERT INTO actividades_registros(id_registro,id_edicion,id_usuario,nombre_completo,matricula,respuestas,formulario_snapshot) VALUES(51,41,1,'Actor QA','00000001','{\"edad\":20,\"talla\":\"M\"}','[{\"clave\":\"talla\"}]'); INSERT INTO actividades_aportes_catalogo(id_opcion,id_edicion,nombre,unidad,cantidad_minima) VALUES(61,41,'Aporte histórico','piezas',2); INSERT INTO actividades_aportaciones(id_aportacion,id_registro,id_opcion,nombre,unidad,cantidad,cantidad_minima,estado) VALUES(71,51,61,'Aporte histórico','piezas',2,2,'recibida'); INSERT INTO actividades_reacciones VALUES(41,1,'love'); INSERT INTO actividades_fotos(id_foto,id_edicion,url_imagen,pie,estado,id_autor,creado_en) VALUES(81,41,'https://example.test/foto.jpg','Momento histórico','publicada',1,'2025-01-02T12:00:00Z'); INSERT INTO actividades_historial(id,id_usuario,accion,detalle,creado_en) VALUES(50,1,'actividad_creada','{\"id_actividad\":1}','2025-01-02T12:00:00Z'),(51,1,'edicion_publicada','{\"id_edicion\":41,\"motivo\":\"Aprobada\"}','2025-01-03T12:00:00Z');");
   await db.query(await leer('./fixtures/catalogo-unificado-v1.sql'));
@@ -89,7 +92,8 @@ for (const origen of ['schema', 'migracion']) test('catálogo compacto desde onc
   if (origen === 'schema') assert.ok(registrosActualizados.every((fila) => fila.tipo_participante === 'unid' && fila.misiones_snapshot === null && fila.pedido === null && fila.codigo_firmado_id === null));
   assert.deepEqual((await db.query('SELECT * FROM actividades_aportaciones')).rows, aportaciones);
   assert.deepEqual((await db.query('SELECT * FROM publicaciones_imagenes')).rows, fotos);
-  assert.deepEqual((await db.query('SELECT * FROM publicaciones_oferta')).rows, publicaciones);
+  const publicacionesActualizadas = (await db.query('SELECT * FROM publicaciones_oferta')).rows;
+  assert.deepEqual(publicacionesActualizadas.map((fila) => Object.fromEntries(Object.keys(publicaciones[0]).map((clave) => [clave, fila[clave]]))), publicaciones);
   assert.deepEqual((await db.query('SELECT * FROM catalogo_equivalencias_actividades ORDER BY id_actividad_anterior')).rows, equivalencias);
   assert.deepEqual((await db.query('SELECT * FROM actividades_legado_clubes')).rows, traslados);
   const importados = (await db.query("SELECT id_historial_actividad_anterior AS id,id_actor AS id_usuario,tipo_evento AS accion,detalles AS detalle,fecha_creacion AS creado_en,id_club,id_evento FROM actividad_clubes WHERE origen='catalogo' ORDER BY id_historial_actividad_anterior")).rows;

@@ -131,13 +131,26 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
       : null;
 
     const ADMIN_CORREO = process.env.ADMIN_CORREO;
+    // Permite varios correos separados por coma: "a@x.com,b@x.com"
+    const correosCoordinacion = (process.env.COORDINACION_CORREO || '')
+      .split(',')
+      .map((c) => c.trim().toLowerCase())
+      .filter(Boolean);
     let idRol = 1;
 
-    if (correo === ADMIN_CORREO) {
+    const esAdmin = correo === ADMIN_CORREO;
+    const esCoordinacion = correosCoordinacion.includes(correo);
+
+    if (esAdmin) {
       const adminResult = await pool.query(
         `SELECT id_rol FROM cat_roles WHERE nombre_rol = 'admin'`,
       );
       idRol = adminResult.rows.length > 0 ? adminResult.rows[0].id_rol : 3;
+    } else if (esCoordinacion) {
+      const coordResult = await pool.query(
+        `SELECT id_rol FROM cat_roles WHERE nombre_rol = 'coordinacion'`,
+      );
+      idRol = coordResult.rows.length > 0 ? coordResult.rows[0].id_rol : 7;
     }
 
     // Busco primero por microsoft_id (el GUID de Entra no cambia nunca).
@@ -213,14 +226,19 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
         [nombre, microsoftId, institutionalId, row.id_usuario],
       );
 
-      if (correo === ADMIN_CORREO && row.id_rol !== idRol) {
+      const esCorreoEspecial = esAdmin || esCoordinacion;
+      if (esCorreoEspecial && row.id_rol !== idRol) {
         await pool.query(
           `UPDATE usuarios SET id_rol = $1 WHERE id_usuario = $2`,
           [idRol, row.id_usuario],
         );
 
         row.id_rol = idRol;
-        row.rol = 'admin';
+        const rolResult = await pool.query(
+          `SELECT nombre_rol FROM cat_roles WHERE id_rol = $1`,
+          [idRol],
+        );
+        row.rol = rolResult.rows[0]?.nombre_rol || row.rol;
       } else if (!row.rol) {
         const rolResult = await pool.query(
           `SELECT nombre_rol FROM cat_roles WHERE id_rol = $1`,

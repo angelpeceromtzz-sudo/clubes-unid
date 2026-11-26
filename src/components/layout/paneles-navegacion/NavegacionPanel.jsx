@@ -99,7 +99,7 @@ export function NavegacionPanel({ elementosNav, vistaActiva, onVistaChange, chil
           aria-expanded={estaAbierto}
           aria-controls={`grupo-${item.key}`}
           onClick={() => toggleGrupo(item, autoAbierto)}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
+          className={`w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${
             modoOscuro ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
