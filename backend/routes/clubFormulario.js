@@ -167,7 +167,16 @@ router.post('/:id/preguntas/plantilla', authenticate, async (req, res) => {
   try {
     const idClub = Number(req.params.id);
     const { categoria } = req.body || {};
-    const plantilla = PLANTILLAS[categoria];
+    // Normaliza la categoría del club a la clave de plantilla.
+    const categoriaNormalizada = String(categoria || '').trim().toLowerCase();
+    const mapaCategoria = {
+      deportes: 'Deportivos', deporte: 'Deportivos', deportivo: 'Deportivos',
+      cultura: 'Culturales', culturales: 'Culturales', cultural: 'Culturales',
+      tecnologia: 'Tecnologicos', tecnologías: 'Tecnologicos', tecnológico: 'Tecnologicos', tecnologico: 'Tecnologicos',
+      sociales: 'Sociales', social: 'Sociales', comunidad: 'Sociales',
+    };
+    const clavePlantilla = mapaCategoria[categoriaNormalizada] || categoria;
+    const plantilla = PLANTILLAS[clavePlantilla];
     if (!plantilla) return res.status(400).json({ error: 'Categoría sin plantilla' });
 
     const client = await pool.connect();
