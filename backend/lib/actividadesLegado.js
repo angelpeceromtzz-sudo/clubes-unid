@@ -44,7 +44,14 @@ export async function migrarLegadoActividades(db, { idClub, idEdicion, aplicar =
     await cliente.query("INSERT INTO migraciones_catalogo(tipo,id_club_origen,id_club_destino,id_edicion_destino,resumen) VALUES('traslado_club',$1,$2,$3,$4)", [idClub, edicion.id_club_destino, idEdicion, JSON.stringify({ club, formularios, inscripciones, resultado })]);
     await cliente.query("UPDATE formularios SET status = 'Rechazado', motivo_rechazo = 'Registro trasladado al apartado de actividades' WHERE id_club = $1 AND status NOT IN ('Miembro oficial','Rechazado')", [idClub]);
     await cliente.query('UPDATE inscripciones SET id_estatus_inscripcion = 2, fecha_baja = NOW() WHERE id_club = $1 AND id_estatus_inscripcion = 1', [idClub]);
-    await cliente.query("UPDATE clubes SET id_estatus_club=3,estado_publicacion='archivada',cerrada_manualmente=TRUE,id_convocatoria_inscripcion_actual=NULL WHERE id_club=$1",[idClub]);
+    await cliente.query(
+      `UPDATE convocatorias_inscripcion SET cerrada_manualmente = TRUE
+       WHERE id_convocatoria_inscripcion = (
+         SELECT id_convocatoria_inscripcion_actual FROM clubes WHERE id_club = $1
+       ) AND id_club = $1`,
+      [idClub],
+    );
+    await cliente.query("UPDATE clubes SET id_estatus_club=3,estado_publicacion='archivada',id_convocatoria_inscripcion_actual=NULL WHERE id_club=$1",[idClub]);
     await registrarActividadCatalogo(cliente, {idActor,accion:'legado_migrado',detalle:resultado,idRecurso:edicion.id_club_destino,idEdicion});
     await cliente.query('COMMIT');
     return resultado;

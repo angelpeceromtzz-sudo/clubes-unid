@@ -74,16 +74,34 @@ router.post('/:id/preguntas', authenticate, async (req, res) => {
     if (!TIPOS_PERMITIDOS.has(tipo)) {
       return res.status(400).json({ error: 'Tipo de pregunta no válido' });
     }
-    const ordenFinal = Number.isInteger(orden) ? orden : (await pool.query(
-      'SELECT COALESCE(MAX(orden),0)+1 AS o FROM club_formulario_preguntas WHERE id_club = $1',
-      [idClub],
-    )).rows[0].o;
-    const result = await pool.query(
-      `INSERT INTO club_formulario_preguntas (id_club, etiqueta, tipo, configuracion, obligatorio, orden)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [idClub, etiqueta.trim(), tipo, JSON.stringify(configuracion), !!obligatorio, ordenFinal],
-    );
-    res.status(201).json(result.rows[0]);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const club = await client.query(
+        "SELECT id_club FROM clubes WHERE id_club = $1 AND tipo = 'club' FOR UPDATE",
+        [idClub],
+      );
+      if (club.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Club no encontrado' });
+      }
+      const ordenFinal = Number.isInteger(orden) ? orden : (await client.query(
+        'SELECT COALESCE(MAX(orden),0)+1 AS o FROM club_formulario_preguntas WHERE id_club = $1 AND activo = TRUE',
+        [idClub],
+      )).rows[0].o;
+      const result = await client.query(
+        `INSERT INTO club_formulario_preguntas (id_club, etiqueta, tipo, configuracion, obligatorio, orden)
+         VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+        [idClub, etiqueta.trim(), tipo, JSON.stringify(configuracion), !!obligatorio, ordenFinal],
+      );
+      await client.query('COMMIT');
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error('Error al crear pregunta:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -130,10 +148,12 @@ router.delete('/:id/preguntas/:idPregunta', authenticate, async (req, res) => {
   try {
     const idClub = Number(req.params.id);
     const idPregunta = Number(req.params.idPregunta);
-    await pool.query(
-      'DELETE FROM club_formulario_preguntas WHERE id_club = $1 AND id_pregunta = $2',
+    const result = await pool.query(
+      `UPDATE club_formulario_preguntas SET activo = FALSE
+       WHERE id_club = $1 AND id_pregunta = $2 RETURNING id_pregunta`,
       [idClub, idPregunta],
     );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Pregunta no encontrada' });
     res.json({ ok: true });
   } catch (err) {
     console.error('Error al eliminar pregunta:', err);
@@ -150,22 +170,45 @@ router.post('/:id/preguntas/plantilla', authenticate, async (req, res) => {
     const plantilla = PLANTILLAS[categoria];
     if (!plantilla) return res.status(400).json({ error: 'Categoría sin plantilla' });
 
-    // Eliminar preguntas previas y crear las de la plantilla.
-    await pool.query('DELETE FROM club_formulario_preguntas WHERE id_club = $1', [idClub]);
-    let orden = 1;
-    for (const p of plantilla) {
-      await pool.query(
-        `INSERT INTO club_formulario_preguntas (id_club, etiqueta, tipo, configuracion, obligatorio, orden)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
-        [idClub, p.etiqueta, p.tipo, JSON.stringify(p.configuracion), p.obligatorio, orden++],
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const club = await client.query(
+        "SELECT id_club FROM clubes WHERE id_club = $1 AND tipo = 'club' FOR UPDATE",
+        [idClub],
       );
+      if (club.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Club no encontrado' });
+      }
+
+      // La sustitución es atómica: un fallo conserva el formulario anterior.
+      // Las preguntas anteriores se archivan para mantener su historial.
+      await client.query(
+        'UPDATE club_formulario_preguntas SET activo = FALSE WHERE id_club = $1 AND activo = TRUE',
+        [idClub],
+      );
+      let orden = 1;
+      for (const p of plantilla) {
+        await client.query(
+          `INSERT INTO club_formulario_preguntas (id_club, etiqueta, tipo, configuracion, obligatorio, orden)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [idClub, p.etiqueta, p.tipo, JSON.stringify(p.configuracion), p.obligatorio, orden++],
+        );
+      }
+      const result = await client.query(
+        `SELECT id_pregunta, id_club, etiqueta, tipo, configuracion, obligatorio, orden, activo
+         FROM club_formulario_preguntas WHERE id_club = $1 AND activo = TRUE ORDER BY orden ASC`,
+        [idClub],
+      );
+      await client.query('COMMIT');
+      res.json(result.rows);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
-    const result = await pool.query(
-      `SELECT id_pregunta, id_club, etiqueta, tipo, configuracion, obligatorio, orden, activo
-       FROM club_formulario_preguntas WHERE id_club = $1 ORDER BY orden ASC`,
-      [idClub],
-    );
-    res.json(result.rows);
   } catch (err) {
     console.error('Error al aplicar plantilla:', err);
     res.status(500).json({ error: 'Error interno del servidor' });

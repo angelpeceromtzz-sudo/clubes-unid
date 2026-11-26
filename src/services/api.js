@@ -20,7 +20,7 @@ import { encuestaService, catalogoService } from './encuesta.service';
 import { asistenciaService } from './asistencia.service';
 import { preferenciasService } from './preferencias.service';
 
-export { API_BASE, getToken, setSession, clearSession, getSession, request } from './api-core';
+export { API_BASE, getToken, setSession, clearSession, getSession, request, actualizarUsuarioSesion } from './api-core';
 export { guardarCuentaConfiable, limpiarCuentaConfiable, obtenerCuentaConfiable, renovarSesionConfiable, revocarCuentaConfiableEnServidor } from './api-core';
 
 export { autenticacionService } from './autenticacion.service';
@@ -53,6 +53,7 @@ export const api = {
   solicitarOtp: autenticacionService.solicitarOtp,
   verificarOtp: autenticacionService.verificarOtp,
   getMe: autenticacionService.getMe,
+  actualizarMiPerfil: autenticacionService.actualizarMiPerfil,
 
   getClubes: clubService.getClubes,
   getClubesAdmin: clubService.getClubesAdmin,
@@ -68,7 +69,7 @@ export const api = {
 
   getUsuarios: usuarioService.getUsuarios,
   createUser: usuarioService.createUser,
-  deleteUser: usuarioService.deleteUser,
+  desactivarUsuario: usuarioService.desactivarUsuario,
   updateUserRol: usuarioService.updateUserRol,
   adminAction: usuarioService.adminAction,
   asignarAlumnoClub: usuarioService.asignarAlumnoClub,

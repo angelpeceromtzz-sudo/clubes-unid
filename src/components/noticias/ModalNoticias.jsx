@@ -8,6 +8,7 @@ import { useNoticias } from '../../contexts/NoticiasContext';
 import { obtenerUrlImagen } from '../../utils/imagen';
 import { fechaCorta, fechaRelativa } from '../../utils/formato';
 import { estiloPublicacion } from '../../constants/publicaciones';
+import { ContenidoNoticia } from './ContenidoNoticia';
 
 export function ModalNoticias() {
   const { tema, modoOscuro } = useTheme();
@@ -60,9 +61,7 @@ export function ModalNoticias() {
         />
       </ImagenAmpliable>
 
-      <p className={`mt-4 text-sm leading-relaxed whitespace-pre-line break-words ${tema.subtitle}`}>
-        {destacada.contenido}
-      </p>
+      <ContenidoNoticia contenido={destacada.contenido_json ?? destacada.contenido} className={`mt-4 text-sm ${tema.subtitle}`} />
 
       <p className={`mt-4 text-[10px] uppercase tracking-wider ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>
         Publicado el {fechaCorta(destacada.fecha_publicacion)}

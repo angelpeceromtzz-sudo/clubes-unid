@@ -22,10 +22,12 @@ import { TablaHistorial } from '../components/admin/tablas/TablaHistorial';
 import { SeccionExpediente } from '../components/expediente/SeccionExpediente';
 import { TablaActividad } from '../components/admin/tabla-actividad/TablaActividad';
 import { ModalPasswordAdmin } from '../components/admin/modales/ModalPasswordAdmin';
+import { ModalDesactivarUsuario } from '../components/admin/modales/ModalDesactivarUsuario';
 import { SeccionDiapositivas } from '../components/admin/seccion-diapositivas/SeccionDiapositivas';
 import { SeccionEncuestas } from '../components/admin/seccion-encuestas/SeccionEncuestas';
 import { SeccionNoticias } from '../components/admin/seccion-noticias/SeccionNoticias';
 import { SeccionReportesAdmin } from '../components/admin/secciones/SeccionReportesAdmin';
+import { SeccionInsignias } from '../components/admin/secciones/SeccionInsignias';
 import { Spinner } from '../components/ui/Spinner';
 import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
@@ -102,6 +104,7 @@ export function PanelAdmin() {
           )}
 
           {d.vistaActiva === 'reportes' && <SeccionReportesAdmin />}
+          {d.vistaActiva === 'insignias' && <SeccionInsignias />}
 
           {d.vistaActiva === 'expediente' && <SeccionExpediente />}
           {d.vistaActiva === 'historial' && (
@@ -206,12 +209,12 @@ export function PanelAdmin() {
             onCancelar={d.cancelarPendienteUsuario}
           />
 
-          <ModalConfirmacion
-            show={!!d.pendienteConfirmacionUsuario && d.pendienteConfirmacionUsuario?.tipo === 'eliminar'}
-            titulo="Eliminar usuario"
-            mensaje={`¿Estás seguro de eliminar permanentemente al usuario "${d.pendienteConfirmacionUsuario?.nombre || ''}"? Esta acción no se puede deshacer.`}
-            textoConfirmar="Eliminar"
-            varianteDanger
+          <ModalDesactivarUsuario
+            key={`${d.pendienteConfirmacionUsuario?.tipo === 'desactivar'}-${d.pendienteConfirmacionUsuario?.userId || ''}`}
+            show={!!d.pendienteConfirmacionUsuario && d.pendienteConfirmacionUsuario?.tipo === 'desactivar'}
+            nombre={d.pendienteConfirmacionUsuario?.nombre || ''}
+            enviando={d.desactivandoUsuario}
+            error={d.errorDesactivacionUsuario}
             onConfirmar={d.confirmarPendienteUsuario}
             onCancelar={d.cancelarPendienteUsuario}
           />

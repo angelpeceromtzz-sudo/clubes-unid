@@ -1,5 +1,4 @@
-/* Página pública del perfil de preferencias del estudiante.
-   Reutiliza los componentes de la fase C y el PUT de la fase B. */
+/* Editor compacto de categorías y actividades del perfil. */
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -8,20 +7,11 @@ import { useCatalogoIntereses } from '../hooks/useCatalogoIntereses';
 import { Alerta } from '../components/ui/Alerta';
 import { BotonAccion } from '../components/ui/BotonAccion';
 import { Icono } from '../components/ui/Icono';
-import { ContenedorOnboarding } from '../components/onboarding/ContenedorOnboarding';
-import { PasoCategorias } from '../components/onboarding/PasoCategorias';
-import { PasoActividades } from '../components/onboarding/PasoActividades';
-import { PasoMotivaciones } from '../components/onboarding/PasoMotivaciones';
-import { PasoGenero } from '../components/onboarding/PasoGenero';
-import { PasoCorreo } from '../components/onboarding/PasoCorreo';
-import { alternarCategoria, alternarElemento, construirPayload, errorPropuesta, respuestasIniciales } from '../utils/onboardingReglas';
+import { TarjetaSeleccion } from '../components/onboarding/TarjetaSeleccion';
+import { alternarCategoria, alternarElemento, construirPayload, respuestasIniciales } from '../utils/onboardingReglas';
 import { adaptarPreferenciasServidor } from '../utils/preferenciasPerfil';
 
-const MENSAJE_GUARDADO = 'No se pudieron guardar tus preferencias. Tus respuestas se conservan; puedes intentarlo de nuevo.';
-
-// Los datos del backend (preferencias_usuario) se adaptan al formato de respuestas
-// del flujo. El correo se reconstruye tal cual viene del servidor.
-// aRespuestas se reemplazó por adaptarPreferenciasServidor en src/utils/preferenciasPerfil.js
+const MENSAJE_GUARDADO = 'No se pudieron guardar tus intereses. Tus cambios siguen aquí; inténtalo de nuevo.';
 
 export default function PaginaPerfilPreferencias() {
   const { modoOscuro } = useTheme();
@@ -32,7 +22,6 @@ export default function PaginaPerfilPreferencias() {
   const [ocupado, setOcupado] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [tipoMensaje, setTipoMensaje] = useState('success');
-  const [errorPropuestaTexto, setErrorPropuestaTexto] = useState('');
   const [aviso, setAviso] = useState('');
   const [intentoPreferencias, setIntentoPreferencias] = useState(0);
 
@@ -40,11 +29,10 @@ export default function PaginaPerfilPreferencias() {
     let vigente = true;
     api.getPreferenciasOnboarding()
       .then((datos) => {
-        if (!vigente) return;
-        setRespuestas(adaptarPreferenciasServidor(datos));
+        if (vigente) setRespuestas(adaptarPreferenciasServidor(datos));
       })
       .catch((err) => {
-        if (vigente) setErrorCarga(err.message || 'No se pudieron cargar tus preferencias.');
+        if (vigente) setErrorCarga(err.message || 'No se pudieron cargar tus intereses.');
       })
       .finally(() => {
         if (vigente) setCargando(false);
@@ -60,34 +48,34 @@ export default function PaginaPerfilPreferencias() {
 
   const categorias = catalogo?.categorias ?? [];
   const actividades = catalogo?.actividades ?? [];
-  const motivaciones = catalogo?.motivaciones ?? [];
   const categoriasSeleccionadas = categorias.filter((categoria) => respuestas.categorias.includes(categoria.id));
+  const superficie = modoOscuro ? 'border-slate-800 bg-[#0e1627]' : 'border-slate-200 bg-white';
+  const textoPrincipal = modoOscuro ? 'text-white' : 'text-slate-900';
+  const textoSecundario = modoOscuro ? 'text-slate-400' : 'text-slate-600';
 
   function alternarCategoriaUI(id) {
-    const nombre = categorias.find((categoria) => categoria.id === id)?.nombre ?? 'la categoría';
     const siguiente = alternarCategoria(respuestas, id, actividades);
     setRespuestas((actual) => ({ ...actual, categorias: siguiente.categorias, actividades: siguiente.actividades }));
-    setAviso(
-      siguiente.quitadas > 0
-        ? `Se quitaron ${siguiente.quitadas} ${siguiente.quitadas === 1 ? 'actividad' : 'actividades'} de ${nombre}.`
-        : '',
-    );
+    setAviso(siguiente.quitadas > 0
+      ? `También se quitaron ${siguiente.quitadas} ${siguiente.quitadas === 1 ? 'actividad relacionada' : 'actividades relacionadas'}.`
+      : '');
+    setMensaje('');
+  }
+
+  function alternarActividad(id) {
+    setRespuestas((actual) => ({ ...actual, actividades: alternarElemento(actual.actividades, id) }));
+    setMensaje('');
   }
 
   async function guardar() {
     if (ocupado) return;
-    const mensajePropuesta = errorPropuesta(respuestas.propuesta);
-    if (mensajePropuesta) {
-      setErrorPropuestaTexto(mensajePropuesta);
-      return;
-    }
     setOcupado(true);
     setMensaje('');
     try {
       const datos = await api.guardarPreferenciasOnboarding(construirPayload(respuestas, 'perfil'));
       setRespuestas(adaptarPreferenciasServidor(datos, actividades));
       setTipoMensaje('success');
-      setMensaje('Tus preferencias se guardaron correctamente.');
+      setMensaje('Tus intereses se guardaron correctamente.');
     } catch (err) {
       setTipoMensaje('error');
       setMensaje(err.message || MENSAJE_GUARDADO);
@@ -96,112 +84,106 @@ export default function PaginaPerfilPreferencias() {
     }
   }
 
+  const regresar = (
+    <Link to="/perfil" className={`inline-flex items-center gap-2 text-sm font-bold ${modoOscuro ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}>
+      <Icono nombre="arrow-left" className="h-4 w-4" />
+      Volver al perfil
+    </Link>
+  );
+
   if (cargando || estado === 'cargando') {
     return (
-      <ContenedorOnboarding>
-        <div role="status" className="flex justify-center py-8">
-          <Icono nombre="loader" className="h-8 w-8 text-amber-500 motion-safe:animate-spin" />
-          <p className="sr-only">Cargando opciones…</p>
-        </div>
-      </ContenedorOnboarding>
+      <main className={`min-h-[60vh] px-4 py-8 ${modoOscuro ? 'bg-[#0b111e] text-white' : 'bg-slate-50 text-slate-900'}`}>
+        <div className="mx-auto max-w-3xl">{regresar}<div role="status" className="flex justify-center py-16"><Icono nombre="loader" className="h-7 w-7 animate-spin text-amber-500" /><span className="sr-only">Cargando tus intereses…</span></div></div>
+      </main>
     );
   }
 
-  if (errorCarga) {
+  if (errorCarga || estado === 'error') {
     return (
-      <ContenedorOnboarding>
-        <div role="alert" className="space-y-4">
-          <Alerta tipo="error" mensaje={errorCarga} />
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <BotonAccion variant="outline" onClick={reintentarPreferencias} className="w-full sm:w-auto">
-              <Icono nombre="refresh-cw" className="h-4 w-4" />
-              Reintentar
-            </BotonAccion>
-          </div>
-        </div>
-      </ContenedorOnboarding>
-    );
-  }
-
-  if (estado === 'error') {
-    return (
-      <ContenedorOnboarding>
-        <div role="alert" className="space-y-4">
-          <Alerta tipo="error" mensaje="No se pudieron cargar las opciones del perfil." />
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <BotonAccion variant="outline" onClick={reintentar} className="w-full sm:w-auto">
-              <Icono nombre="refresh-cw" className="h-4 w-4" />
-              Reintentar
-            </BotonAccion>
-          </div>
-        </div>
-      </ContenedorOnboarding>
+      <main className={`min-h-[60vh] px-4 py-8 ${modoOscuro ? 'bg-[#0b111e] text-white' : 'bg-slate-50 text-slate-900'}`}>
+        <div className="mx-auto max-w-3xl space-y-5">{regresar}<Alerta tipo="error" mensaje={errorCarga || 'No se pudieron cargar las opciones de intereses.'} /><BotonAccion variant="outline" onClick={errorCarga ? reintentarPreferencias : reintentar}><Icono nombre="refresh-cw" className="h-4 w-4" />Reintentar</BotonAccion></div>
+      </main>
     );
   }
 
   return (
-    <main className={modoOscuro ? 'bg-[#0b111e] text-white overflow-x-hidden' : 'bg-slate-50 text-slate-900 overflow-x-hidden'}>
-      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.3em] text-amber-400">Perfil</p>
-            <h1 className="text-2xl font-black sm:text-3xl">Mis intereses y preferencias</h1>
-          </div>
-          <Link to="/campus/campeche/portal" className={`text-sm font-bold underline-offset-4 hover:underline ${modoOscuro ? 'text-slate-300' : 'text-slate-700'}`}>
-            Volver
-          </Link>
-        </div>
+    <main className={`min-h-[60vh] overflow-x-hidden px-4 py-6 sm:px-6 sm:py-10 ${modoOscuro ? 'bg-[#0b111e] text-white' : 'bg-slate-50 text-slate-900'}`}>
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-6">{regresar}</div>
+        <header className="mb-6">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-500">Perfil</p>
+          <h1 className={`mt-1 text-2xl font-black sm:text-3xl ${textoPrincipal}`}>Editar mis intereses</h1>
+          <p className={`mt-2 text-sm ${textoSecundario}`}>Elige las categorías y actividades que te gustan. Puedes cambiarlas cuando quieras.</p>
+        </header>
 
-        {mensaje && (
-          <div role="status" className="mb-4">
-            <Alerta tipo={tipoMensaje === 'success' ? 'success' : 'error'} mensaje={mensaje} />
-          </div>
-        )}
+        {mensaje && <div role="status" className="mb-5"><Alerta tipo={tipoMensaje} mensaje={mensaje} /></div>}
 
-        <ContenedorOnboarding>
-          <section className="space-y-8">
-            <PasoCategorias categorias={categorias} seleccion={respuestas.categorias} onAlternar={alternarCategoriaUI} aviso={aviso} />
-            <PasoActividades
-              categoriasSeleccionadas={categoriasSeleccionadas}
-              actividades={actividades}
-              seleccion={respuestas.actividades}
-              onAlternar={(id) => setRespuestas((actual) => ({ ...actual, actividades: alternarElemento(actual.actividades, id) }))}
-              propuesta={respuestas.propuesta}
-              onCambiarPropuesta={(texto) => {
-                setRespuestas((actual) => ({ ...actual, propuesta: texto }));
-                setErrorPropuestaTexto('');
-              }}
-              errorPropuesta={errorPropuestaTexto}
-            />
-            <PasoMotivaciones motivaciones={motivaciones} seleccion={respuestas.motivaciones} onAlternar={(id) => setRespuestas((actual) => ({ ...actual, motivaciones: alternarElemento(actual.motivaciones, id) }))} />
-            <PasoGenero valor={respuestas.genero} onCambiar={(valor) => setRespuestas((actual) => ({ ...actual, genero: valor }))} />
-            <PasoCorreo
-              correo={respuestas.correo}
-              onCambiarDecision={(decision) => setRespuestas((actual) => ({ ...actual, correo: { ...actual.correo, decision, activo: decision === 'aceptar' } }))}
-              onAlternarTipo={(tipo) => setRespuestas((actual) => ({ ...actual, correo: { ...actual.correo, tipos: { ...actual.correo.tipos, [tipo]: !actual.correo.tipos[tipo] } } }))}
-              onCambiarFrecuencia={(frecuencia) => setRespuestas((actual) => ({ ...actual, correo: { ...actual.correo, frecuencia } }))}
-            />
-          </section>
-
-          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Link to="/campus/campeche/portal" className={`inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${modoOscuro ? 'border border-slate-700 text-slate-300 hover:bg-slate-800' : 'border border-slate-300 text-slate-700 hover:bg-slate-100'}`}>
-              Volver al portal
-            </Link>
-            <BotonAccion onClick={guardar} disabled={ocupado} aria-busy={ocupado} className="w-full sm:w-auto">
-              {ocupado ? (
-                <>
-                  <Icono nombre="loader" className="h-4 w-4 motion-safe:animate-spin" />
-                  Guardando…
-                </>
-              ) : (
-                <>
-                  <Icono nombre="save" className="h-4 w-4" />
-                  Guardar cambios
-                </>
-              )}
-            </BotonAccion>
+        <section className={`rounded-2xl border p-4 sm:p-6 ${superficie}`} aria-labelledby="categorias-intereses">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 id="categorias-intereses" className={`font-extrabold ${textoPrincipal}`}>Categorías</h2>
+              <p className={`mt-1 text-sm ${textoSecundario}`}>Selecciona una o varias.</p>
+            </div>
+            <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${modoOscuro ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+              {respuestas.categorias.length} seleccionadas
+            </span>
           </div>
-        </ContenedorOnboarding>
+          <div className="flex flex-wrap gap-2">
+            {categorias.map((categoria) => (
+              <TarjetaSeleccion
+                key={categoria.id}
+                id={`categoria-${categoria.id}`}
+                variante="chip"
+                seleccionada={respuestas.categorias.includes(categoria.id)}
+                onAlternar={() => alternarCategoriaUI(categoria.id)}
+                titulo={categoria.nombre}
+              />
+            ))}
+          </div>
+          {aviso && <p role="status" className="mt-3 text-sm text-amber-500">{aviso}</p>}
+        </section>
+
+        <section className={`mt-4 rounded-2xl border p-4 sm:p-6 ${superficie}`} aria-labelledby="actividades-intereses">
+          <div className="mb-4">
+            <h2 id="actividades-intereses" className={`font-extrabold ${textoPrincipal}`}>Actividades</h2>
+            <p className={`mt-1 text-sm ${textoSecundario}`}>Marca las que te gustaría realizar.</p>
+          </div>
+          {categoriasSeleccionadas.length === 0 ? (
+            <p className={`rounded-xl px-4 py-3 text-sm ${modoOscuro ? 'bg-slate-900/70 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>Primero selecciona una categoría para ver sus actividades.</p>
+          ) : (
+            <div className="space-y-5">
+              {categoriasSeleccionadas.map((categoria) => {
+                const deCategoria = actividades.filter((actividad) => actividad.id_categoria === categoria.id);
+                if (!deCategoria.length) return null;
+                return (
+                  <fieldset key={categoria.id}>
+                    <legend className={`mb-2 text-sm font-bold ${textoSecundario}`}>{categoria.nombre}</legend>
+                    <div className="flex flex-wrap gap-2">
+                      {deCategoria.map((actividad) => (
+                        <TarjetaSeleccion
+                          key={actividad.id}
+                          id={`actividad-${actividad.id}`}
+                          variante="chip"
+                          seleccionada={respuestas.actividades.includes(actividad.id)}
+                          onAlternar={() => alternarActividad(actividad.id)}
+                          titulo={actividad.nombre}
+                        />
+                      ))}
+                    </div>
+                  </fieldset>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <footer className={`mt-6 flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
+          {regresar}
+          <BotonAccion onClick={guardar} disabled={ocupado} aria-busy={ocupado} className="w-full sm:w-auto">
+            {ocupado ? <><Icono nombre="loader" className="h-4 w-4 animate-spin" />Guardando…</> : <><Icono nombre="save" className="h-4 w-4" />Guardar intereses</>}
+          </BotonAccion>
+        </footer>
       </div>
     </main>
   );

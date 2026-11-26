@@ -34,4 +34,8 @@ export const autenticacionService = {
     }),
 
   getMe: () => request('/auth/me'),
+  actualizarMiPerfil: (datos) => request('/auth/me/perfil', {
+    method: 'PATCH',
+    body: JSON.stringify(datos),
+  }),
 };

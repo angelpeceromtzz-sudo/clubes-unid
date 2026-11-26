@@ -159,7 +159,7 @@ export function EditorPreguntas({ hook }) {
           <p className="text-xs mt-1">
             {esAdmin
               ? 'Para no descuadrar lo que ya respondieron no se pueden agregar, reordenar ni quitar preguntas, ni cambiar sus opciones. Los títulos, la descripción y las fechas de la encuesta sí se siguen pudiendo editar.'
-              : 'Las respuestas son anónimas, así que no se puede ver quién las mandó.'}
+              : 'La identidad de quien respondió depende del modo de privacidad configurado para esta encuesta.'}
           </p>
         </Alerta>
       )}

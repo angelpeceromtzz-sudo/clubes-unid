@@ -50,7 +50,9 @@ export function SeccionNoticias({ gestion }) {
     eliminar,
     guardar,
     handleFormChange,
+    handleContenidoChange,
     subirImagen,
+    subirImagenContenido,
   } = gestion;
 
   const publicaciones = noticias.filter((n) => (n.categoria === 'evento') === esEvento);
@@ -223,7 +225,9 @@ export function SeccionNoticias({ gestion }) {
         onClose={cerrarModal}
         onGuardar={guardar}
         onFormChange={handleFormChange}
+        onContenidoChange={handleContenidoChange}
         onSubirImagen={subirImagen}
+        onSubirImagenContenido={subirImagenContenido}
         tipoSeccion={tipoSeccion}
       />
 

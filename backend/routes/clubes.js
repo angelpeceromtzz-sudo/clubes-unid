@@ -277,19 +277,24 @@ router.put('/:id',authenticate,requireRole(ROL_ADMIN,ROL_COORDINACION),guardarCl
 
 // Admin puede cerrar una convocatoria publicada.
 router.post('/:id/cerrar-convocatoria', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
-
-    const club = await pool.query(
-      'SELECT nombre_club FROM clubes_operativos WHERE id_club = $1',
+    await client.query('BEGIN');
+    const club = await client.query(
+      'SELECT nombre_club, id_convocatoria_inscripcion_actual FROM clubes_operativos WHERE id_club = $1 FOR UPDATE',
       [id],
     );
-    if (club.rows.length === 0) return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
-
-    await pool.query(
-      'UPDATE clubes_operativos SET cerrada_manualmente = TRUE WHERE id_club = $1',
-      [id],
+    if (club.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'No eres presidente ni vicepresidente de este club' });
+    }
+    await client.query(
+      `UPDATE convocatorias_inscripcion SET cerrada_manualmente = TRUE
+       WHERE id_convocatoria_inscripcion = $1 AND id_club = $2`,
+      [club.rows[0].id_convocatoria_inscripcion_actual, id],
     );
+    await client.query('COMMIT');
 
     const nombreClub = club.rows[0].nombre_club;
     registrarActividadClub({
@@ -311,9 +316,10 @@ router.post('/:id/cerrar-convocatoria', authenticate, requireRole(ROL_ADMIN, ROL
 
     res.json(result.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('Error al cerrar convocatoria:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  } finally { client.release(); }
 });
 
 // Asigna o remueve vicepresidente del club (solo presidente)

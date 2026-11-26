@@ -68,7 +68,8 @@ describe('Misiones v2: invitados, PDF, pedidos y QR con PostgreSQL', { skip: !co
       async eliminar(documento) { eliminados.push(documento.public_id); archivos.delete(documento.public_id); },
     };
     const app = express(); app.use(express.json());
-    app.use('/actividades', crearRouterActividades({ db, autenticar, hoy: () => fecha, almacenPdf, correoMisiones: { async enviarEnlace(datos) { if (fallarCorreo) throw new Error('Fallo simulado'); correos.push(datos); } } }));
+    const subirImagen = { single: () => (_req, _res, next) => next(), array: () => (_req, _res, next) => next() };
+    app.use('/actividades', crearRouterActividades({ db, autenticar, hoy: () => fecha, subirImagen, almacenPdf, correoMisiones: { async enviarEnlace(datos) { if (fallarCorreo) throw new Error('Fallo simulado'); correos.push(datos); return true; } } }));
     servidor = app.listen(0, '127.0.0.1'); await new Promise((resolve) => servidor.once('listening', resolve));
     base = 'http://127.0.0.1:' + servidor.address().port + '/actividades';
   });

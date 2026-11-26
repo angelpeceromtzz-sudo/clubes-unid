@@ -67,14 +67,14 @@ export function TablaHistorial({
       </div>
 
       <div className="flex flex-col md:flex-row gap-3 mb-4">
-        <select value={filtros?.actor || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, actor: e.target.value })} className={`px-3 py-2 rounded-xl border text-sm ${modoOscuro ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}>
+        <select value={filtros?.actor || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, actor: e.target.value })} className={`cursor-pointer px-3 py-2 rounded-xl border text-sm ${modoOscuro ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}>
           <option value="">Autor (todos)</option>
           {opciones.actores.map((a) => (
             <option key={a} value={a}>{a}</option>
           ))}
         </select>
 
-        <select value={filtros?.accion || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, accion: e.target.value })} className={`px-3 py-2 rounded-xl border text-sm ${modoOscuro ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}>
+        <select value={filtros?.accion || ''} onChange={(e) => onFiltrosChange?.({ ...filtros, accion: e.target.value })} className={`cursor-pointer px-3 py-2 rounded-xl border text-sm ${modoOscuro ? 'bg-[#0e162c] border-slate-700 text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`}>
           <option value="">Acción (todas)</option>
           {opciones.acciones.map((a) => (
             <option key={a} value={a}>{ETIQUETAS_ACCION[a] || a}</option>

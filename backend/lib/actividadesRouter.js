@@ -692,6 +692,8 @@ export function crearRouterActividades({ db, autenticar, hoy, subirImagen, secre
     };
     router.post('/gestion/ediciones/:idEdicion/fotos', autorizarSubida, limitarSubida, subirImagen.single('imagen'), guardarFotos);
     router.post('/gestion/ediciones/:idEdicion/fotos/lote', autorizarSubida, limitarSubida, subirImagen.array('imagenes', 10), guardarFotos);
+    router.post('/gestion/actividades/:idActividad/fotos', autorizarSubida, limitarSubida, subirImagen.single('imagen'), guardarFotos);
+    router.post('/gestion/actividades/:idActividad/fotos/lote', autorizarSubida, limitarSubida, subirImagen.array('imagenes', 10), guardarFotos);
   }
 
 

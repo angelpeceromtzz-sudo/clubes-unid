@@ -9,8 +9,11 @@ export const usuarioService = {
       body: JSON.stringify(data),
     }),
 
-  deleteUser: (id) =>
-    request(`/usuarios/${id}`, { method: 'DELETE' }),
+  desactivarUsuario: (id, password) =>
+    request(`/usuarios/${id}/desactivar`, {
+      method: 'PATCH',
+      body: JSON.stringify({ password }),
+    }),
 
   updateUserRol: (id, id_rol, password) =>
     request(`/usuarios/${id}/rol`, {

@@ -33,6 +33,32 @@ export function ConfiguracionEncuesta({ hook }) {
   return (
     <div className="space-y-6">
       <section className="space-y-3">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+          Privacidad y acceso
+        </h3>
+        <label className="block space-y-1.5 text-sm font-semibold">
+          <span>Tipo de encuesta</span>
+          <select
+            value={formEncuesta.tipo_privacidad}
+            disabled={soloLectura || enviando || hook.tieneRespuestas}
+            onChange={(e) => actualizarFormulario({ tipo_privacidad: e.target.value })}
+            className="w-full rounded-xl border border-slate-400/30 bg-transparent px-3 py-2"
+          >
+            <option value="publico_anonimo">Pública y anónima</option>
+            <option value="institucional">Institucional (requiere iniciar sesión)</option>
+          </select>
+          <span className={`block text-[11px] font-normal ${tema.subtitle}`}>
+            {formEncuesta.tipo_privacidad === 'institucional'
+              ? 'Solo cuentas UNID autenticadas. El panel administrativo podrá ver quién respondió.'
+              : 'Accesible por enlace sin iniciar sesión; la base no conserva la identidad.'}
+          </span>
+        </label>
+        {hook.tieneRespuestas && (
+          <Alerta tipo="warning" mensaje="La privacidad queda fija al recibir la primera respuesta, para evitar mezclar registros identificados y anónimos." />
+        )}
+      </section>
+
+      <section className="space-y-3">
         <CampoTexto
           label="Mensaje de agradecimiento"
           name="agradecimiento"

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { ContenidoNoticia } from '../../noticias/ContenidoNoticia';
 import { useAutenticacion } from '../../../contexts/AuthContext';
 import { useMural } from '../../../hooks/useMural';
 import { muralService } from '../../../services/mural.service';
@@ -222,7 +223,7 @@ export function SeccionMuralAdmin() {
                 )}
                 <div>
                   <p className={`text-xs font-bold uppercase ${tema.subtitle}`}>Contenido</p>
-                  <p className={`whitespace-pre-wrap text-sm leading-relaxed ${tema.title}`}>{revisando.contenido}</p>
+                  <ContenidoNoticia contenido={revisando.contenido_json ?? revisando.contenido} className={`text-sm ${tema.title}`} />
                 </div>
                 {revisando.enlace_url && (
                   <div>

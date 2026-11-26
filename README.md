@@ -14,7 +14,7 @@ Solo Coordinación y Rectoría ven el acceso **Gestión de Clubs → Clubs y act
 
 La extensión añade **trece tablas físicas**: cuatro para ediciones, registros y aportaciones, dos para publicaciones e imágenes, dos para accesos y asistencias, `reacciones_catalogo`, `migraciones_catalogo`, `misiones_documentos` y las dos de cartas y reservas del Trineo (`actividades_cartas` y `actividades_cartas_reservas`). Reutiliza `actividad_clubes` como bitácora de clubes y actividades, consultable por Coordinación y Rectoría. La actualización incorpora las once tablas de la versión anterior conservando sus datos; los cinco nombres retirados quedan como vistas de consulta.
 
-Toda esta extensión está consolidada en `backend/schema.sql`, junto con el resto de la estructura del proyecto. Una instalación nueva requiere únicamente ese archivo para habilitar clubes, actividades, ediciones, registros, aportaciones, fotos y reacciones; también incorpora las versiones anteriores del módulo conservando IDs e historial. El comando manual `node backend/migrate.js` aplica el esquema completo en una transacción. No se ejecuta al arrancar el servicio ni inventa fechas, encargados, tallas, mínimos o inscripciones. Consultar la preparación y las alternativas para bases existentes en [docs/ACTIVIDADES.md](docs/ACTIVIDADES.md).
+Toda esta extensión está consolidada en `backend/schema.sql`, junto con el resto de la estructura del proyecto. Una base nueva y vacía puede inicializarse con ese archivo para habilitar clubes, actividades, ediciones, registros, aportaciones, fotos y reacciones. El comando manual `node backend/migrate.js` aplica el esquema completo en una transacción y **solo debe usarse con una base vacía o desechable**: el archivo incluye compatibilidad histórica y backfills que no son una actualización segura para una base poblada. No se ejecuta al arrancar el servicio ni inventa fechas, encargados, tallas, mínimos o inscripciones. Para bases existentes, consulta [docs/ACTIVIDADES.md](docs/ACTIVIDADES.md) y [la guía de migraciones](backend/migrations/README.md).
 
 El **formulario ampliado anterior de Misiones** conserva los apartados de salud, contacto de emergencia, procedencia, religión, grupo juvenil, experiencia y rol. El encargado configura sus campos obligatorios; la talla de camisa siempre se exige. Los invitados se registran sin cuenta, reciben un enlace privado para consultar y editar su inscripción y usan el mismo QR de asistencia. Pueden pedir artículos con cantidades, precios en MXN y talla de sudadera al comprarla; el pago se acuerda por fuera. El código de conducta se descarga y se adjunta como PDF firmado, con acceso privado. Las ediciones anteriores conservan su formulario. Antes de desplegar sobre una base existente, aplicar manualmente `backend/migrations/migrate-misiones-registro-v2.sql`. Véase [configuración de Misiones](docs/ACTIVIDADES.md#misiones-formulario-ampliado).
 
@@ -148,17 +148,18 @@ DB_SSL_CA_FILE=
 # En producción (Render) debe existir NODE_ENV=production (H8).
 ```
 
-Preparación manual de la estructura consolidada (el backend **no** la ejecuta al arrancar). Incluye clubes y actividades; no requiere aplicar aparte sus migraciones. Para una base existente, revisar y ensayar sobre una copia antes de aplicar:
+Inicialización manual de una base vacía (el backend **no** la ejecuta al arrancar). Incluye clubes y actividades; no requiere aplicar aparte sus migraciones. No la uses para actualizar una base con datos:
 
 ```bash
 cd backend
-# Revisar antes de aplicar. No usar schema.sql completo contra una BD
-# compartida sin autorización: contiene DDL legacy.
+# Solo para una base vacía o desechable. schema.sql contiene DDL histórico.
 node migrate.js
 
 # Migración aditiva de OTP (fuente de verdad de otp_codigos):
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/migrate-otp-codigos.sql
 ```
+
+Para una base existente, aplica únicamente migraciones revisadas para su estado. `migrate:managed` se detiene si encuentra tablas de la aplicación sin `schema_migrations`; todavía no hay un baseline validado para marcar migraciones anteriores. No crees ese historial ni ejecutes el manifiesto completo por suposición.
 
 `otp_codigos` no se crea desde `schema.sql`; se aplica solo con la migración
 manual, con respaldo previo. No se ejecuta automáticamente al desplegar.

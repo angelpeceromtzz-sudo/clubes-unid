@@ -1,0 +1,74 @@
+name: Database integrity
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "backend/**"
+      - "shared/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/database-integrity.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "backend/**"
+      - "shared/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/database-integrity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migration-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: clubs_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d clubs_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install backend dependencies
+        run: pnpm --dir backend install --frozen-lockfile --ignore-scripts
+      - name: Initialize a fresh schema and apply managed migrations twice
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_NAME: clubs_schema_smoke_pruebas
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          PGPASSWORD: postgres
+        run: |
+          createdb -h 127.0.0.1 -p 5432 -U postgres clubs_schema_smoke_pruebas
+          node backend/migrate.js
+          pnpm --dir backend migrate:managed
+          pnpm --dir backend migrate:managed
+      - name: Run full backend suite against PostgreSQL
+        env:
+          INTEGRIDAD_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/clubs_test
+          ACTIVIDADES_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/clubs_test
+          PREFERENCIAS_TEST_DB: clubs_schema_smoke_pruebas
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_NAME: clubs_bd
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: pnpm --dir backend test

@@ -45,7 +45,7 @@ router.post('/login-local', limitadorLoginLocalIp, limitadorLoginLocalCuenta, as
               u.id_licenciatura, r.nombre_rol as rol
        FROM usuarios u
        JOIN cat_roles r ON r.id_rol = u.id_rol
-       WHERE u.correo_institucional = $1`,
+       WHERE lower(btrim(u.correo_institucional)) = $1`,
       [correoLimpio],
     );
 
@@ -131,13 +131,26 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
       : null;
 
     const ADMIN_CORREO = process.env.ADMIN_CORREO;
+    // Permite varios correos separados por coma: "a@x.com,b@x.com"
+    const correosCoordinacion = (process.env.COORDINACION_CORREO || '')
+      .split(',')
+      .map((c) => c.trim().toLowerCase())
+      .filter(Boolean);
     let idRol = 1;
 
-    if (correo === ADMIN_CORREO) {
+    const esAdmin = correo === ADMIN_CORREO;
+    const esCoordinacion = correosCoordinacion.includes(correo);
+
+    if (esAdmin) {
       const adminResult = await pool.query(
         `SELECT id_rol FROM cat_roles WHERE nombre_rol = 'admin'`,
       );
       idRol = adminResult.rows.length > 0 ? adminResult.rows[0].id_rol : 3;
+    } else if (esCoordinacion) {
+      const coordResult = await pool.query(
+        `SELECT id_rol FROM cat_roles WHERE nombre_rol = 'coordinacion'`,
+      );
+      idRol = coordResult.rows.length > 0 ? coordResult.rows[0].id_rol : 7;
     }
 
     // Busco primero por microsoft_id (el GUID de Entra no cambia nunca).
@@ -159,7 +172,7 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
                 u.id_rol, r.nombre_rol as rol, u.institutional_id, u.deleted_at, u.id_licenciatura
          FROM usuarios u
          JOIN cat_roles r ON r.id_rol = u.id_rol
-         WHERE u.correo_institucional = $1`,
+         WHERE lower(btrim(u.correo_institucional)) = $1`,
         [correo],
       );
     }
@@ -213,14 +226,19 @@ router.post('/login-microsoft', limitadorLoginMicrosoft, async (req, res) => {
         [nombre, microsoftId, institutionalId, row.id_usuario],
       );
 
-      if (correo === ADMIN_CORREO && row.id_rol !== idRol) {
+      const esCorreoEspecial = esAdmin || esCoordinacion;
+      if (esCorreoEspecial && row.id_rol !== idRol) {
         await pool.query(
           `UPDATE usuarios SET id_rol = $1 WHERE id_usuario = $2`,
           [idRol, row.id_usuario],
         );
 
         row.id_rol = idRol;
-        row.rol = 'admin';
+        const rolResult = await pool.query(
+          `SELECT nombre_rol FROM cat_roles WHERE id_rol = $1`,
+          [idRol],
+        );
+        row.rol = rolResult.rows[0]?.nombre_rol || row.rol;
       } else if (!row.rol) {
         const rolResult = await pool.query(
           `SELECT nombre_rol FROM cat_roles WHERE id_rol = $1`,
@@ -307,7 +325,10 @@ router.post('/register', limitadorRegistro, authenticate, requireRole(ROL_ADMIN,
       return res.status(400).json({ error: 'Rol inválido' });
     }
 
-    const existe = await pool.query('SELECT id_usuario FROM usuarios WHERE correo_institucional = $1', [correoLimpio]);
+    const existe = await pool.query(
+      'SELECT id_usuario FROM usuarios WHERE lower(btrim(correo_institucional)) = $1',
+      [correoLimpio],
+    );
     if (existe.rows.length > 0) {
       return res.status(409).json({ error: 'El correo ya está registrado' });
     }
@@ -325,6 +346,9 @@ router.post('/register', limitadorRegistro, authenticate, requireRole(ROL_ADMIN,
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    if (err.code === '23505' && err.constraint === 'uq_usuarios_correo_normalizado') {
+      return res.status(409).json({ error: 'El correo ya está registrado' });
+    }
     console.error('Error al registrar usuario:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -336,7 +360,9 @@ router.get('/me', authenticate, async (req, res) => {
     const result = await pool.query(
       `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
               u.institutional_id, u.id_rol, r.nombre_rol as rol,
-              u.id_licenciatura, u.fecha_nacimiento,
+              u.id_licenciatura, u.fecha_nacimiento, u.biografia,
+              u.fecha_nacimiento_publica, u.telefono_celular, u.telefono_publico,
+              u.facebook_url, u.x_url, u.instagram_url, u.sitio_web_url, u.intereses_publicos,
               (SELECT l.nombre FROM cat_licenciaturas l WHERE l.id_licenciatura = u.id_licenciatura) AS licenciatura,
               COALESCE(cp.id_club, cv.id_club, i.id_club) AS id_club,
               COALESCE(cp.nombre_club, cv.nombre_club, c.nombre_club) AS nombre_club,
@@ -394,7 +420,7 @@ router.patch('/me/perfil-academico', authenticate, async (req, res) => {
 
     if (fecha_nacimiento !== undefined) {
       if (fecha_nacimiento === null) {
-        campos.push(`fecha_nacimiento = NULL`);
+        campos.push('fecha_nacimiento = NULL', 'fecha_nacimiento_publica = FALSE');
       } else {
         // Validación básica de formato YYYY-MM-DD
         if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fecha_nacimiento))) {
@@ -419,6 +445,118 @@ router.patch('/me/perfil-academico', authenticate, async (req, res) => {
   } catch (err) {
     console.error('Error al actualizar perfil académico:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+const CAMPOS_PERFIL = new Set([
+  'biografia', 'fecha_nacimiento_publica', 'telefono_celular', 'telefono_publico',
+  'facebook_url', 'x_url', 'instagram_url', 'sitio_web_url', 'intereses_publicos',
+]);
+
+function normalizarTextoPerfil(valor, maximo) {
+  if (valor == null) return { ok: true, valor: null };
+  if (typeof valor !== 'string') return { ok: false };
+  const limpio = valor.trim();
+  if (limpio.length > maximo) return { ok: false };
+  return { ok: true, valor: limpio || null };
+}
+
+function normalizarEnlacePerfil(valor) {
+  const texto = normalizarTextoPerfil(valor, 2048);
+  if (!texto.ok || !texto.valor) return texto;
+  try {
+    const url = new URL(texto.valor);
+    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) {
+      return { ok: false };
+    }
+    return { ok: true, valor: url.toString() };
+  } catch {
+    return { ok: false };
+  }
+}
+
+// Edita únicamente los campos permitidos del perfil del usuario autenticado.
+// Nombre, correo y fecha de nacimiento quedan fuera de este contrato.
+router.patch('/me/perfil', authenticate, async (req, res) => {
+  try {
+    const cuerpo = req.body;
+    if (!cuerpo || typeof cuerpo !== 'object' || Array.isArray(cuerpo)) {
+      return res.status(400).json({ error: 'Revisa los datos del perfil e intenta de nuevo.' });
+    }
+    const claves = Object.keys(cuerpo);
+    if (!claves.length || claves.some((clave) => !CAMPOS_PERFIL.has(clave))) {
+      return res.status(400).json({ error: 'El perfil contiene un campo no permitido.' });
+    }
+
+    const actual = (await pool.query(
+      `SELECT fecha_nacimiento, fecha_nacimiento_publica, biografia,
+              telefono_celular, telefono_publico, facebook_url, x_url, instagram_url, sitio_web_url,
+              intereses_publicos
+       FROM usuarios WHERE id_usuario = $1`,
+      [req.user.id],
+    )).rows[0];
+    if (!actual) return res.status(404).json({ error: 'No encontramos tu cuenta.' });
+
+    const nuevos = { ...actual };
+    if (Object.hasOwn(cuerpo, 'biografia')) {
+      const campo = normalizarTextoPerfil(cuerpo.biografia, 500);
+      if (!campo.ok) return res.status(400).json({ error: 'La biografía debe tener máximo 500 caracteres.' });
+      nuevos.biografia = campo.valor;
+    }
+    for (const campo of ['fecha_nacimiento_publica', 'telefono_publico', 'intereses_publicos']) {
+      if (Object.hasOwn(cuerpo, campo)) {
+        if (typeof cuerpo[campo] !== 'boolean') {
+          return res.status(400).json({ error: 'Selecciona si quieres mostrar u ocultar esos datos.' });
+        }
+        nuevos[campo] = cuerpo[campo];
+      }
+    }
+    if (Object.hasOwn(cuerpo, 'fecha_nacimiento_publica') && nuevos.fecha_nacimiento_publica && !actual.fecha_nacimiento) {
+      return res.status(400).json({ error: 'No hay una fecha de nacimiento registrada para mostrar.' });
+    }
+    if (Object.hasOwn(cuerpo, 'telefono_celular')) {
+      const campo = normalizarTextoPerfil(cuerpo.telefono_celular, 20);
+      if (!campo.ok || (campo.valor && (!/^\+?[0-9\s().-]+$/.test(campo.valor) || (campo.valor.match(/[0-9]/g) || []).length < 7 || (campo.valor.match(/[0-9]/g) || []).length > 15))) {
+        return res.status(400).json({ error: 'Escribe un teléfono válido, con entre 7 y 15 dígitos.' });
+      }
+      nuevos.telefono_celular = campo.valor;
+    }
+    if (Object.hasOwn(cuerpo, 'telefono_publico') && nuevos.telefono_publico && !nuevos.telefono_celular) {
+      return res.status(400).json({ error: 'Agrega un teléfono antes de hacerlo público.' });
+    }
+
+    for (const campo of ['facebook_url', 'x_url', 'instagram_url', 'sitio_web_url']) {
+      if (!Object.hasOwn(cuerpo, campo)) continue;
+      const enlace = normalizarEnlacePerfil(cuerpo[campo]);
+      if (!enlace.ok) return res.status(400).json({ error: 'Revisa que cada enlace sea una dirección web válida.' });
+      nuevos[campo] = enlace.valor;
+    }
+
+    const actualizado = await pool.query(
+      `UPDATE usuarios SET
+         biografia = $2,
+         fecha_nacimiento_publica = $3,
+         telefono_celular = $4,
+         telefono_publico = $5,
+         facebook_url = $6,
+         x_url = $7,
+         instagram_url = $8,
+         sitio_web_url = $9,
+         intereses_publicos = $10
+       WHERE id_usuario = $1
+       RETURNING biografia, fecha_nacimiento_publica, telefono_celular, telefono_publico,
+                 facebook_url, x_url, instagram_url, sitio_web_url, intereses_publicos`,
+      [
+        req.user.id, nuevos.biografia ?? null, nuevos.fecha_nacimiento_publica ?? false,
+        nuevos.telefono_celular ?? null, nuevos.telefono_publico ?? false,
+        nuevos.facebook_url ?? null, nuevos.x_url ?? null, nuevos.instagram_url ?? null,
+        nuevos.sitio_web_url ?? null, nuevos.intereses_publicos ?? false,
+      ],
+    );
+    return res.json(actualizado.rows[0]);
+  } catch (err) {
+    console.error('Error al actualizar el perfil:', err);
+    return res.status(500).json({ error: 'No se pudo guardar tu perfil. Intenta de nuevo.' });
   }
 });
 

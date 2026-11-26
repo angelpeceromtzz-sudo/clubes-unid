@@ -3,7 +3,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { Spinner } from '../../ui/Spinner';
 
 export function SeccionUsuariosDesactivados({ d }) {
-  const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls } = useTheme();
+  const { modoOscuro, tableBg, thCls, tdCls, tdTitle } = useTheme();
 
   if (d.cargandoDesactivados) {
     return <Spinner className="py-10" />;
@@ -40,7 +40,7 @@ export function SeccionUsuariosDesactivados({ d }) {
                   <button
                     onClick={() => d.handleReactivarUsuario(u.id_usuario)}
                     disabled={d.reactivando[u.id_usuario]}
-                    className={`px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-500 text-[#0e162c] text-xs font-bold transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${selectCls}`}
+                    className="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-500 text-black text-xs font-bold transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {d.reactivando[u.id_usuario] ? 'Reactivando...' : 'Reactivar'}
                   </button>

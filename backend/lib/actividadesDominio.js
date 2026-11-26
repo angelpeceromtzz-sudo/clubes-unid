@@ -118,13 +118,13 @@ export function normalizarRecursoCatalogo(datos) {
   const comun = normalizarActividad(datos);
   const tipo = datos.tipo || 'actividad';
   if (!['club', 'actividad'].includes(tipo)) throw errorActividad('Selecciona Club o Actividad');
-  if (tipo === 'actividad') return { ...comun, tipo };
+  if (tipo === 'actividad') return { ...comun, tipo, id_estatus_club: null };
   const cupo = Number(datos.cupo_maximo);
   if (![10, 15, 20, 25, 30, 40, 50].includes(cupo)) throw errorActividad('Selecciona un cupo válido para el club');
   const participacion = datos.participacion || 'mixta';
   if (!['masculina', 'femenina', 'mixta'].includes(participacion)) throw errorActividad('Selecciona la participación del club');
   if (!Array.isArray(datos.niveles) || !datos.niveles.length || !datos.niveles.every((nivel) => [1, 2, 3].includes(Number(nivel)))) throw errorActividad('Selecciona al menos un nivel de participación para el club');
-  return { ...comun, tipo, cupo_maximo: cupo, participacion, niveles: [...new Set(datos.niveles.map(Number))], lugar_actividades: textoActividad(datos.lugar_actividades, 255, 'Lugar del club') };
+  return { ...comun, tipo, id_estatus_club: 2, cupo_maximo: cupo, participacion, niveles: [...new Set(datos.niveles.map(Number))], lugar_actividades: textoActividad(datos.lugar_actividades, 255, 'Lugar del club') };
 }
 
 export function camposPlantillaActividad(plantilla = 'general', configuracion = null) {

@@ -532,10 +532,11 @@ export function PanelResultados({ hook, cargando, resultados }) {
         })}
       </div>
 
-      {/* Nota de anonimato */}
+      {/* Privacidad elegida para esta encuesta */}
       <p className={`text-[11px] ${tema.subtitle} text-center`}>
-        Las respuestas son anónimas: la encuesta no guarda nombre ni matrícula, sólo el
-        programa que el alumno eligió. Por eso no se puede identificar a quién respondió.
+        {hook.seleccion?.tipo_privacidad === 'institucional'
+          ? 'La identidad se vincula a la cuenta UNID y aparece solo en el panel autorizado.'
+          : 'Las respuestas son anónimas: no se guarda nombre ni matrícula, solo el programa que eligió el alumno.'}
       </p>
 
       {/* Modal de cerrar encuesta */}

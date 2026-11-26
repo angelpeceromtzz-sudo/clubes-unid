@@ -22,7 +22,10 @@ describe('Trineo: cartas, reserva exclusiva y recepción del regalo', { skip: !c
     return { status: res.status, resultado };
   }
   async function enviar(usuario, method, ruta, datos, esperado = 200) {
-    const respuesta = await solicitar(usuario, method, ruta, datos);
+    const entrada = method === 'PUT' && ruta.endsWith('/registro') && datos && typeof datos === 'object'
+      ? { solicita_camisa: false, total_centavos: 0, ...datos, respuestas: { telefono: '5551234567', ...(datos.respuestas || {}) } }
+      : datos;
+    const respuesta = await solicitar(usuario, method, ruta, entrada);
     assert.equal(respuesta.status, esperado, method + ' ' + ruta + ': ' + JSON.stringify(respuesta.resultado));
     return respuesta.resultado;
   }
@@ -34,7 +37,7 @@ describe('Trineo: cartas, reserva exclusiva y recepción del regalo', { skip: !c
     return { id, opcion, ruta: '/ediciones/' + id + '/registro', gestion: '/gestion/ediciones/' + id + '/cartas' };
   }
   const datosCarta = (nombre = 'Niño QA') => ({ nombre, edad: 7, deseo: 'Un trompo de madera' });
-  const registro = (e, idCarta) => ({ respuestas: {}, aportaciones: [{ id_opcion: e.opcion, cantidad: 1 }], solicita_camisa: false, total_centavos: 0, ...(idCarta === undefined ? {} : { id_carta: idCarta }) });
+  const registro = (e, idCarta) => ({ respuestas: { telefono: '5551234567' }, aportaciones: [{ id_opcion: e.opcion, cantidad: 1 }], solicita_camisa: false, total_centavos: 0, ...(idCarta === undefined ? {} : { id_carta: idCarta }) });
   const nuevaCarta = (e, nombre) => enviar(2, 'POST', e.gestion, datosCarta(nombre), 201);
   const recibirCarta = (carta) => '/gestion/cartas-reservas/' + carta.id_reserva + '/recibir';
   async function inscripcionAnterior(e) {
@@ -60,7 +63,8 @@ describe('Trineo: cartas, reserva exclusiva y recepción del regalo', { skip: !c
       req.user = usuario; next();
     };
     const app = express(); app.use(express.json());
-    app.use('/actividades', crearRouterActividades({ db, autenticar, hoy: () => fecha }));
+    const subirImagen = { single: () => (_req, _res, next) => next(), array: () => (_req, _res, next) => next() };
+    app.use('/actividades', crearRouterActividades({ db, autenticar, hoy: () => fecha, subirImagen }));
     servidor = app.listen(0, '127.0.0.1'); await new Promise((resolve) => servidor.once('listening', resolve));
     base = 'http://127.0.0.1:' + servidor.address().port + '/actividades';
   });
@@ -101,7 +105,7 @@ describe('Trineo: cartas, reserva exclusiva y recepción del regalo', { skip: !c
     await db.query('UPDATE actividades_registros SET formulario_snapshot=$1 WHERE id_registro=$2', [JSON.stringify([campo]), anterior.id_registro]);
     const sinCamisa = await enviar(1, 'PUT', e.ruta, { ...registro(e), respuestas: {}, solicita_camisa: false, total_centavos: 0 });
     assert.equal(sinCamisa.pedido.total_centavos, 0);
-    assert.equal(sinCamisa.formulario_snapshot[0].obligatorio, false);
+    assert.equal(sinCamisa.formulario_snapshot.find((campo) => campo.clave === 'talla').obligatorio, false);
     const carta = await nuevaCarta(e);
     const pedir = { ...registro(e, carta.id_carta), respuestas: { talla: 'L' }, solicita_camisa: true, total_centavos: 16000 };
     await enviar(9, 'PUT', e.ruta, { ...pedir, total_centavos: 1 }, 409);
@@ -120,9 +124,11 @@ describe('Trineo: cartas, reserva exclusiva y recepción del regalo', { skip: !c
     assert.equal((await db.query('SELECT COUNT(*)::int AS total FROM actividades_registros WHERE id_edicion=$1', [e.id])).rows[0].total, 2);
   });
 
-  test('los datos de niños requieren sesión y no aparecen en el detalle público', async () => {
+  test('las cartas disponibles se muestran para permitir el registro de invitados y no aparecen en el catálogo público', async () => {
     const e = await edicion(); await nuevaCarta(e, 'Nombre privado QA');
-    await enviar(null, 'GET', '/ediciones/' + e.id + '/cartas', undefined, 401);
+    const disponiblesInvitado = await enviar(null, 'GET', '/ediciones/' + e.id + '/cartas');
+    assert.equal(disponiblesInvitado.cartas.length, 1);
+    assert.equal(disponiblesInvitado.cartas[0].nombre, 'Nombre privado QA');
     await enviar(9, 'GET', e.gestion, undefined, 403);
     const publico = await enviar(null, 'GET', '/detalle/trineo-de-los-suenos');
     assert.equal(JSON.stringify(publico).includes('Nombre privado QA'), false);

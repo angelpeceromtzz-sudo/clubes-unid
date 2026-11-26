@@ -25,12 +25,10 @@ before(async () => {
   await testPool.query(`
     CREATE TABLE usuarios (id_usuario INT PRIMARY KEY, id_rol INT NOT NULL, nombre_completo TEXT NOT NULL, deleted_at TIMESTAMPTZ, institutional_id TEXT);
     CREATE TABLE clubes (id_club INT PRIMARY KEY, nombre_club TEXT NOT NULL, id_responsable_club INT, id_vicepresidente INT,
-      fecha_apertura_programada TIMESTAMPTZ, fecha_limite_cierre TIMESTAMPTZ, max_postulaciones INT,
-      cerrada_manualmente BOOLEAN DEFAULT FALSE, postulaciones_actuales INT DEFAULT 0, id_estatus_club INT NOT NULL DEFAULT 1,
+      id_estatus_club INT NOT NULL DEFAULT 1,
       tipo TEXT NOT NULL DEFAULT 'club',estado_publicacion TEXT NOT NULL DEFAULT 'publicada');
     CREATE TABLE cat_licenciaturas (id_licenciatura INT PRIMARY KEY, nombre TEXT NOT NULL);
     CREATE TABLE inscripciones (id_inscripcion SERIAL PRIMARY KEY, id_usuario INT NOT NULL, id_club INT NOT NULL, id_estatus_inscripcion INT DEFAULT 1);
-    CREATE VIEW clubes_con_estado AS SELECT c.*, 'cerrado'::text AS estado_calculado, 0 AS formularios_recibidos FROM clubes c;
     CREATE TABLE horarios_club (id_horario SERIAL PRIMARY KEY, id_club INT NOT NULL, dia_semana INT NOT NULL,
       hora_inicio TIME NOT NULL, hora_fin TIME NOT NULL, lugar VARCHAR(255) NOT NULL,
       descripcion TEXT DEFAULT '', ubicacion_maps TEXT DEFAULT '', fecha_creacion TIMESTAMPTZ DEFAULT NOW());
@@ -41,6 +39,23 @@ before(async () => {
       experiencia_previa TEXT, status TEXT, fecha_envio TIMESTAMPTZ DEFAULT NOW(), id_convocatoria INT,
       bloque_asignado CHAR(1) DEFAULT 'E', fecha_oferta TIMESTAMPTZ, fecha_expiracion TIMESTAMPTZ,
       fecha_respuesta TIMESTAMPTZ, motivo_rechazo TEXT, respuestas_extra JSONB NOT NULL DEFAULT '{}'::jsonb);
+    CREATE UNIQUE INDEX uq_test_formulario_club ON formularios(id_formulario,id_club);
+    CREATE TABLE club_formulario_preguntas (
+      id_pregunta SERIAL PRIMARY KEY, id_club INT NOT NULL, etiqueta VARCHAR(200) NOT NULL,
+      tipo VARCHAR(30) NOT NULL, configuracion JSONB NOT NULL DEFAULT '{}'::jsonb,
+      obligatorio BOOLEAN NOT NULL DEFAULT FALSE, activo BOOLEAN NOT NULL DEFAULT TRUE
+    );
+    CREATE UNIQUE INDEX uq_test_pregunta_club ON club_formulario_preguntas(id_pregunta,id_club);
+    CREATE TABLE formulario_respuestas_extra (
+      id_formulario INT NOT NULL, id_pregunta INT NOT NULL, id_club INT NOT NULL,
+      etiqueta_snapshot VARCHAR(200) NOT NULL, tipo_snapshot VARCHAR(30) NOT NULL,
+      configuracion_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb, respuesta JSONB NOT NULL,
+      PRIMARY KEY (id_formulario,id_pregunta),
+      CONSTRAINT fk_respuesta_extra_formulario_club
+        FOREIGN KEY (id_formulario,id_club) REFERENCES formularios(id_formulario,id_club) ON DELETE RESTRICT,
+      CONSTRAINT fk_respuesta_extra_pregunta_club
+        FOREIGN KEY (id_pregunta,id_club) REFERENCES club_formulario_preguntas(id_pregunta,id_club) ON DELETE RESTRICT
+    );
     CREATE TABLE notificaciones (id_notificacion SERIAL PRIMARY KEY, id_emisor INT, titulo TEXT, mensaje TEXT, audiencia TEXT, id_club INT, id_destinatario INT, CHECK (audiencia IN ('global','presidentes','alumnos','club')));
     CREATE TABLE actividad_clubes (id SERIAL PRIMARY KEY, tipo_evento TEXT, id_club INT, id_actor INT, descripcion TEXT, detalles JSONB);
     CREATE TABLE historial_admin (id SERIAL PRIMARY KEY, id_admin INT, admin_nombre TEXT, accion TEXT, descripcion TEXT, entidad_tipo TEXT, entidad_id INT, detalles JSONB);
@@ -55,6 +70,22 @@ before(async () => {
   await testPool.query(migracion);
   await testPool.query(migracion); // Debe poder reiniciarse el backend sin duplicar ni borrar datos.
   await testPool.query("CREATE VIEW clubes_operativos AS SELECT * FROM clubes WHERE tipo='club' WITH LOCAL CHECK OPTION");
+  await testPool.query(`CREATE VIEW clubes_con_estado AS
+    SELECT c.id_club,c.id_estatus_club,c.estado_publicacion,c.id_responsable_club,c.id_vicepresidente,
+      c.nombre_club,c.tipo,c.version_horario,c.id_convocatoria_inscripcion_actual,
+      ci.max_postulaciones,COUNT(f.id_formulario)::int AS postulaciones_actuales,
+      COALESCE(ci.cerrada_manualmente,FALSE) AS cerrada_manualmente,
+      ci.fecha_apertura_programada,ci.fecha_limite_cierre,
+      COUNT(f.id_formulario)::int AS formularios_recibidos,
+      CASE WHEN COALESCE(ci.cerrada_manualmente,FALSE) THEN 'cerrado'
+        WHEN ci.fecha_apertura_programada IS NOT NULL AND NOW() < ci.fecha_apertura_programada THEN 'proximo'
+        WHEN ci.max_postulaciones IS NOT NULL AND COUNT(f.id_formulario) >= ci.max_postulaciones THEN 'lleno'
+        WHEN ci.fecha_limite_cierre IS NOT NULL AND NOW() > ci.fecha_limite_cierre THEN 'cerrado'
+        WHEN ci.fecha_apertura_programada IS NULL THEN 'cerrado' ELSE 'abierto' END AS estado_calculado
+    FROM clubes c
+    LEFT JOIN convocatorias_inscripcion ci ON ci.id_convocatoria_inscripcion=c.id_convocatoria_inscripcion_actual AND ci.id_club=c.id_club
+    LEFT JOIN formularios f ON f.id_convocatoria_inscripcion=ci.id_convocatoria_inscripcion AND f.id_club=c.id_club
+    GROUP BY c.id_club,ci.id_convocatoria_inscripcion`);
   await testPool.query("INSERT INTO espacios_club(id_espacio,nombre) VALUES (1,'Cancha principal'),(2,'Salón cultural'); SELECT setval(pg_get_serial_sequence('espacios_club','id_espacio'),3,false)");
   pool.query = (...args) => testPool.query(...args);
   pool.connect = (...args) => testPool.connect(...args);
@@ -74,10 +105,10 @@ after(async () => {
   await pool.end();
 });
 beforeEach(async () => {
-  await testPool.query(`TRUNCATE horarios_club, solicitudes_horario, historial_solicitudes_horario, notificaciones,
+  await testPool.query(`TRUNCATE formulario_respuestas_extra, club_formulario_preguntas,
+    horarios_club, solicitudes_horario, historial_solicitudes_horario, notificaciones,
     formularios, convocatorias, inscripciones, actividad_clubes, historial_admin RESTART IDENTITY CASCADE;
-    UPDATE clubes_operativos SET version_horario = 0, fecha_apertura_programada = NULL, fecha_limite_cierre = NULL, cerrada_manualmente = FALSE,
-      max_postulaciones = NULL, postulaciones_actuales = 0, id_convocatoria_inscripcion_actual = NULL, id_estatus_club = 1;
+    UPDATE clubes_operativos SET version_horario = 0, id_convocatoria_inscripcion_actual = NULL, id_estatus_club = 1;
     DELETE FROM convocatorias_inscripcion;
     DELETE FROM solicitudes_convocatoria`);
 });
@@ -135,6 +166,10 @@ test('PBI-12: la propuesta de inscripción no cambia lo publicado; admin aprueba
   assert.equal(aprobada.fecha_apertura_programada,'2099-01-01T10:00:00.000Z');
   assert.equal(aprobada.solicitud.estado,'aprobado');
   assert.equal((await enviar('POST','/clubes/1/cerrar-convocatoria',{})).status,200);
+  assert.equal((await testPool.query(`SELECT ci.cerrada_manualmente FROM convocatorias_inscripcion ci
+    JOIN clubes_operativos c ON c.id_convocatoria_inscripcion_actual=ci.id_convocatoria_inscripcion
+    WHERE c.id_club=1`)).rows[0].cerrada_manualmente, true);
+  assert.equal((await enviar('GET','/clubes/1/convocatoria')).datos.estado_calculado, 'cerrado');
 });
 
 test('PBI-12: admin devuelve con motivo; el presidente corrige y solicita otra revisión', async () => {
@@ -196,7 +231,7 @@ async function proponerYAprobar(config, club = 1) {
   return aprobada.datos;
 }
 
-async function postular(alumno = 4, club = 1) {
+async function postular(alumno = 4, club = 1, respuestas_extra = {}) {
   return enviar('POST', '/formularios', {
     id_club: club,
     nombre_completo: `Alumno ${alumno}`,
@@ -205,6 +240,7 @@ async function postular(alumno = 4, club = 1) {
     cuatrimestre: 1,
     telefono_contacto: '5555555555',
     motivo_ingreso: 'Prueba BUG-01',
+    respuestas_extra,
   }, 1, alumno);
 }
 
@@ -400,7 +436,9 @@ test('BUG-03: admin no aprueba una solicitud de un club inactivo, pero sí puede
   assert.match(aprobacion.datos.error, /no está activo/);
   const pendiente = (await testPool.query('SELECT estado FROM solicitudes_convocatoria WHERE id_solicitud=$1', [s.id_solicitud])).rows[0];
   assert.equal(pendiente.estado, 'pendiente');
-  assert.equal((await testPool.query('SELECT max_postulaciones FROM clubes_operativos WHERE id_club=1')).rows[0].max_postulaciones, null);
+  assert.equal((await testPool.query(`SELECT ci.max_postulaciones FROM clubes_operativos c
+    LEFT JOIN convocatorias_inscripcion ci ON ci.id_convocatoria_inscripcion=c.id_convocatoria_inscripcion_actual
+    WHERE c.id_club=1`)).rows[0].max_postulaciones, null);
   assert.equal(Number((await testPool.query("SELECT COUNT(*) FROM notificaciones WHERE titulo='Convocatoria aprobada'")).rows[0].count), 0);
 
   const rechazo = await enviar('POST', '/clubes/1/convocatoria/revision', { accion: 'rechazar', id_solicitud: s.id_solicitud, observaciones: 'Corregir' });
@@ -508,6 +546,52 @@ test('BUG-01: cambiar solo el límite dentro del mismo periodo no reinicia el co
   assert.equal(Number((await testPool.query(
     'SELECT COUNT(*)::int AS total FROM convocatorias_inscripcion WHERE id_club = 1',
   )).rows[0].total), 1);
+});
+
+test('las respuestas configurables validan preguntas/opciones y guardan snapshots históricos', async () => {
+  await proponerYAprobar({
+    fecha_apertura_programada: new Date(Date.now() - 3600000).toISOString(),
+    fecha_limite_cierre: new Date(Date.now() + 3600000).toISOString(),
+    max_postulaciones: 3,
+  });
+  const propia = (await testPool.query(`
+    INSERT INTO club_formulario_preguntas(id_club,etiqueta,tipo,configuracion,obligatorio)
+    VALUES (1,'Talla de camisa','seleccion','{"opciones":["S","M"]}',TRUE)
+    RETURNING id_pregunta
+  `)).rows[0].id_pregunta;
+  const ajena = (await testPool.query(`
+    INSERT INTO club_formulario_preguntas(id_club,etiqueta,tipo,configuracion)
+    VALUES (2,'Pregunta del otro club','texto','{}') RETURNING id_pregunta
+  `)).rows[0].id_pregunta;
+
+  assert.equal((await postular(4, 1, {})).status, 400, 'rechaza una respuesta obligatoria ausente');
+  assert.equal((await postular(4, 1, { [ajena]: 'respuesta' })).status, 400, 'rechaza una pregunta de otro club');
+  assert.equal((await postular(4, 1, { [propia]: 'XL' })).status, 400, 'rechaza una opción que no existe');
+
+  const envio = await postular(4, 1, { [propia]: 'M' });
+  assert.equal(envio.status, 201, JSON.stringify(envio.datos));
+  const respuesta = (await testPool.query(`
+    SELECT etiqueta_snapshot,tipo_snapshot,configuracion_snapshot,respuesta
+    FROM formulario_respuestas_extra WHERE id_formulario=$1 AND id_pregunta=$2
+  `, [envio.datos.formulario.id_formulario, propia])).rows[0];
+  assert.deepEqual(respuesta, {
+    etiqueta_snapshot: 'Talla de camisa',
+    tipo_snapshot: 'seleccion',
+    configuracion_snapshot: { opciones: ['S', 'M'] },
+    respuesta: 'M',
+  });
+  assert.deepEqual(
+    (await testPool.query('SELECT respuestas_extra FROM formularios WHERE id_formulario=$1', [envio.datos.formulario.id_formulario])).rows[0].respuestas_extra,
+    {},
+    'las nuevas respuestas quedan en la tabla normalizada',
+  );
+
+  await testPool.query('UPDATE club_formulario_preguntas SET activo=FALSE, etiqueta=$1 WHERE id_pregunta=$2', ['Talla actualizada', propia]);
+  assert.equal((await testPool.query('SELECT etiqueta_snapshot FROM formulario_respuestas_extra WHERE id_pregunta=$1', [propia])).rows[0].etiqueta_snapshot, 'Talla de camisa');
+  await assert.rejects(
+    testPool.query('DELETE FROM formularios WHERE id_formulario=$1', [envio.datos.formulario.id_formulario]),
+    /fk_respuesta_extra_formulario_club/,
+  );
 });
 
 test('PBI-13: la propuesta solo puede crearla el presidente de su club y solo admin puede revisar', async () => {

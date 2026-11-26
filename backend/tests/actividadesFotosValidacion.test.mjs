@@ -9,7 +9,7 @@ test('la carga de fotos valida arreglos y conserva las respuestas individual y p
   const limpiezas = [];
   const recurso = { id_actividad: 1, id_edicion: 2, tipo: 'club', id_responsable: 4 };
   const query = async (sql, params) => {
-    if (/^SELECT (?:e\.\*|\* FROM catalogo_recursos)/.test(sql)) return { rows: [{ ...recurso }] };
+    if (/^SELECT (?:e\.\*|a\.\*|\* FROM catalogo_recursos)/.test(sql)) return { rows: [{ ...recurso }] };
     if (/^SELECT id_nivel/.test(sql)) return { rows: [] };
     if (sql === 'BEGIN') { fotos.length = 0; return { rows: [] }; }
     if (sql === 'COMMIT' || sql === 'ROLLBACK') return { rows: [] };

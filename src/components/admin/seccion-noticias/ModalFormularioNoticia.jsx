@@ -9,13 +9,14 @@ import { OpcionMural } from '../../noticias/OpcionMural';
 import { fechaHoyCampus } from '../../../utils/fechas';
 import { fechaLegible } from '../../../utils/calendario';
 import { fechaMaximaCalendario, limitesFechasCalendario, validarFechasEvento } from '../../../utils/validacionCalendario';
+import { EditorContenidoNoticia } from '../../noticias/EditorContenidoNoticia';
 
 const CATEGORIAS_NOTICIA = [
   { value: 'promocion', label: 'Promoción' },
   { value: 'informativo', label: 'Informativo' },
 ];
 
-export function ModalFormularioNoticia({ show, editando, form, enviando, subiendoImagen, errorModal, modoOscuro, tema, labelCls, esAprobador = false, onClose, onGuardar, onFormChange, onSubirImagen, tipoSeccion = 'noticia' }) {
+export function ModalFormularioNoticia({ show, editando, form, enviando, subiendoImagen, errorModal, modoOscuro, tema, labelCls, esAprobador = false, onClose, onGuardar, onFormChange, onContenidoChange, onSubirImagen, onSubirImagenContenido, tipoSeccion = 'noticia' }) {
   const hoy = fechaHoyCampus();
   const fechaAnterior = editando?.fecha_evento ? String(editando.fecha_evento).slice(0, 10) : '';
   const finAnterior = editando?.fecha_fin_evento ? String(editando.fecha_fin_evento).slice(0, 10) : '';
@@ -43,7 +44,8 @@ export function ModalFormularioNoticia({ show, editando, form, enviando, subiend
       <form onSubmit={onGuardar} noValidate={tipoSeccion === 'evento'} className="space-y-4">
         <CampoTexto label="Título" name="titulo" value={form.titulo} onChange={onFormChange} placeholder="Ej: Convocatoria a integración" required maxLength={200} />
         <CampoTexto label="Subtítulo" name="subtitulo" value={form.subtitulo} onChange={onFormChange} placeholder="Frase breve que resume la noticia (opcional)" maxLength={300} />
-        <CampoTexto label="Contenido" name="contenido" type="textarea" value={form.contenido} onChange={onFormChange} placeholder="Escribe aquí el detalle de la novedad..." required maxLength={500} />
+        <EditorContenidoNoticia value={form.contenido} onChange={onContenidoChange} modoOscuro={modoOscuro}
+          onSubirImagen={onSubirImagenContenido} subiendoImagen={subiendoImagen} />
 
         <SubirImagen label="Imagen" urlImagen={form.url_imagen} onUpload={onSubirImagen} modoOscuro={modoOscuro} labelCls={labelCls} inputId="noticia-image-upload" editando={editando} />
 

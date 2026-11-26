@@ -16,11 +16,12 @@ import { useAutenticacion } from '../contexts/AuthContext';
 import { validarFechasEvento } from '../utils/validacionCalendario';
 import { normalizarCategoriaEvento } from '../constants/categoriasEvento';
 import { esAprobadorNoticias, esRolResponsableMural } from '../constants/noticias';
+import { normalizarDocumentoNoticia, textoPlanoNoticia, tieneContenidoNoticia } from '../utils/contenidoNoticia';
 
 const FORMULARIO_VACIO = {
   titulo: '',
   subtitulo: '',
-  contenido: '',
+  contenido: { version: 1, blocks: [] },
   url_imagen: '',
   destacada: false,
   // Sólo tiene efecto para rectoría al CREAR: "publicar directamente". Para
@@ -74,7 +75,11 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
   );
 
   const noticiasFiltradas = useMemo(
-    () => filtrarPorTexto(porEstado(filtroEstado), busqueda, ['titulo', 'subtitulo', 'contenido']),
+    () => filtrarPorTexto(
+      porEstado(filtroEstado).map((noticia) => ({ ...noticia, contenido_busqueda: textoPlanoNoticia(noticia.contenido_json ?? noticia.contenido) })),
+      busqueda,
+      ['titulo', 'subtitulo', 'contenido_busqueda'],
+    ),
     [porEstado, filtroEstado, busqueda]
   );
 
@@ -102,7 +107,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
   }, [refetchPublicaciones]);
 
   const abrirModalCrear = useCallback((categoria = 'informativo') => {
-    setForm({ ...FORMULARIO_VACIO, categoria, publicada: false });
+    setForm({ ...FORMULARIO_VACIO, contenido: normalizarDocumentoNoticia(''), categoria, publicada: false });
     setEditando(null);
     setErrorModal('');
     setShowModal(true);
@@ -112,7 +117,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
     setForm({
       titulo: noticia.titulo || '',
       subtitulo: noticia.subtitulo || '',
-      contenido: noticia.contenido || '',
+      contenido: normalizarDocumentoNoticia(noticia.contenido_json ?? noticia.contenido),
       url_imagen: noticia.url_imagen || '',
       destacada: noticia.destacada === true,
       // El estado de una noticia ya existente no se toca desde el formulario:
@@ -219,6 +224,19 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
     }
   }, []);
 
+  const subirImagenContenido = useCallback(async (file) => {
+    setSubiendoImagen(true);
+    try {
+      const result = await api.uploadImagen(file);
+      return result.url;
+    } catch (err) {
+      setErrorModal(err.message);
+      return null;
+    } finally {
+      setSubiendoImagen(false);
+    }
+  }, []);
+
   const guardar = useCallback(async (e) => {
     e.preventDefault();
     if (enviando || subiendoImagen) return;
@@ -227,7 +245,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       setErrorModal('El título es obligatorio');
       return;
     }
-    if (!form.contenido.trim()) {
+    if (!tieneContenidoNoticia(form.contenido)) {
       setErrorModal('El contenido es obligatorio');
       return;
     }
@@ -243,7 +261,7 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
       const payload = {
         titulo: form.titulo,
         subtitulo: form.subtitulo?.trim() || null,
-        contenido: form.contenido,
+        contenido_json: form.contenido,
         url_imagen: form.url_imagen || null,
         destacada: form.destacada,
         categoria: form.categoria,
@@ -283,6 +301,10 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
   const handleFormChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  }, []);
+
+  const handleContenidoChange = useCallback((contenido) => {
+    setForm((prev) => ({ ...prev, contenido }));
   }, []);
 
   const eliminar = useCallback((noticia) => {
@@ -333,7 +355,9 @@ export function useAdminNoticias(setFeedback, setErrorFeedback) {
     eliminar,
     guardar,
     handleFormChange,
+    handleContenidoChange,
     subirImagen,
+    subirImagenContenido,
     refetch,
     incorporarPublicacion,
     pendienteConfirmacion,

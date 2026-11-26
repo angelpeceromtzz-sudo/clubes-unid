@@ -64,7 +64,7 @@ export function SeccionReportesAdmin() {
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
-            className="rounded-xl border border-slate-700 bg-[#0e162c] text-white px-3 py-2 text-sm"
+            className="cursor-pointer rounded-xl border border-slate-700 bg-[#0e162c] text-white px-3 py-2 text-sm"
           >
             <option value="">Todos</option>
             {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}

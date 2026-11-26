@@ -3,6 +3,7 @@ import pool from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION } from '../constants/roles.js';
 import { registrarHistorial } from '../lib/audit.js';
+import { normalizarContenidoNoticia } from '../lib/contenidoNoticia.js';
 import { validarCreacionNotificacion } from '../lib/notificacionPermisos.js';
 import { limitadorNotificaciones } from '../lib/rateLimits.js';
 import { validarParamsEnteros } from '../lib/validarId.js';
@@ -191,8 +192,8 @@ router.post('/', authenticate, limitadorNotificaciones, async (req, res) => {
       const publicacion = await conexion.query(
         `INSERT INTO noticias (titulo, contenido, categoria, publicada, mostrar_en_mural, url_imagen,
        id_autor, status)
-         VALUES ($1, $2, 'informativo', $5 = 'published', TRUE, $3, $4, $5) RETURNING *`,
-        [titulo.trim(), mensaje.trim(), url_imagen || null, userId, roleId === 4 ? 'published' : 'draft']
+         VALUES ($1, $2::jsonb, 'informativo', $5 = 'published', TRUE, $3, $4, $5) RETURNING *`,
+        [titulo.trim(), JSON.stringify(normalizarContenidoNoticia(mensaje).documento), url_imagen || null, userId, roleId === 4 ? 'published' : 'draft']
       );
       publicacionMural = publicacion.rows[0];
       await conexion.query('COMMIT');

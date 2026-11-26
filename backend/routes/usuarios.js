@@ -10,6 +10,82 @@ const router = Router();
 
 validarParamsEnteros(router);
 
+// Perfil público de un usuario (cualquier usuario autenticado puede verlo).
+// Respeta las preferencias de visibilidad de fecha de nacimiento y teléfono.
+router.get('/:id/perfil', authenticate, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const result = await pool.query(
+      `SELECT u.id_usuario, u.nombre_completo, u.correo_institucional,
+              u.institutional_id, u.id_rol, r.nombre_rol as rol,
+              u.id_licenciatura, u.fecha_nacimiento, u.biografia,
+              u.fecha_nacimiento_publica, u.telefono_celular, u.telefono_publico,
+              u.facebook_url, u.x_url, u.instagram_url, u.sitio_web_url, u.intereses_publicos
+       FROM usuarios u
+       JOIN cat_roles r ON r.id_rol = u.id_rol
+       WHERE u.id_usuario = $1 AND u.deleted_at IS NULL`,
+      [id],
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    const row = result.rows[0];
+    const esPropio = Number(req.user.id) === id;
+
+    const [interesesRes, reconocimientosRes] = await Promise.all([
+      pool.query(
+        `SELECT ci.nombre FROM usuario_categorias_interes uci
+           JOIN cat_categorias_interes ci ON ci.id_categoria_interes = uci.id_categoria_interes
+          WHERE uci.id_usuario = $1
+         UNION ALL
+         SELECT cai.nombre FROM usuario_actividades_interes uai
+           JOIN cat_actividades_interes cai ON cai.id_actividad = uai.id_actividad
+          WHERE uai.id_usuario = $1
+         ORDER BY 1`,
+        [id],
+      ),
+      pool.query(
+        `SELECT er.id_reconocimiento, er.id_edicion, er.tipo_actividad AS plantilla,
+                COALESCE(i.nombre, er.nombre_actividad) AS actividad,
+                er.nombre_edicion AS edicion, er.anio,
+                COALESCE(i.imagen, er.insignia_key) AS insignia_key,
+                er.otorgada_en, er.oculta, er.id_insignia
+           FROM expediente_reconocimientos er
+           LEFT JOIN insignias i ON i.id_insignia = er.id_insignia
+          WHERE er.id_usuario = $1
+          ORDER BY er.anio DESC, er.otorgada_en DESC`,
+        [id],
+      ),
+    ]);
+
+    // Visitantes: solo lo que el usuario marcó como público o lo que siempre es
+    // público (correo, matrícula, biografía, enlaces y reconocimientos). Se filtra
+    // en servidor. El dueño ve además sus intereses, sea cual sea su visibilidad.
+    const reconocimientos = esPropio
+      ? reconocimientosRes.rows
+      : reconocimientosRes.rows.filter((r) => !r.oculta);
+    res.json({
+      id_usuario: row.id_usuario,
+      nombre_completo: row.nombre_completo,
+      correo_institucional: row.correo_institucional,
+      institutional_id: row.institutional_id,
+      biografia: row.biografia,
+      fecha_nacimiento: row.fecha_nacimiento_publica ? row.fecha_nacimiento : null,
+      telefono_celular: row.telefono_publico ? row.telefono_celular : null,
+      facebook_url: row.facebook_url,
+      x_url: row.x_url,
+      instagram_url: row.instagram_url,
+      sitio_web_url: row.sitio_web_url,
+      reconocimientos,
+      intereses: interesesRes.rows.map((r) => r.nombre),
+      es_alumno: row.id_rol === ROL_ALUMNO,
+    });
+  } catch (err) {
+    console.error('Error al obtener perfil público:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // Lista los usuarios activos (admin y rectoría). Los desactivados se ocultan;
 // se consultan por separado en GET /desactivados para su reactivación.
 router.get('/', authenticate, requireRole(ROL_ADMIN, ROL_RECTORIA, ROL_COORDINACION), async (req, res) => {
@@ -360,10 +436,14 @@ router.post('/admin-action', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACI
   }
 });
 
-// Soft delete — no borro físicamente porque hay clubes, inscripciones y
-// formularios que referencian al usuario. Si lo borrara de verdad, esas
-// FKs se romperían o habría que cascadear borrados no deseados.
-router.delete('/:id', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
+// Desactivación reversible: conserva el registro y el historial del usuario.
+// La clave administrativa se valida aquí, no solo en la interfaz.
+router.patch('/:id/desactivar', authenticate, requireRole(ROL_ADMIN, ROL_COORDINACION), async (req, res) => {
+  const ADMIN_SECRET = process.env.ADMIN_SECRET;
+  if (!ADMIN_SECRET || req.body?.password !== ADMIN_SECRET) {
+    return res.status(403).json({ error: 'Contraseña de administrador incorrecta' });
+  }
+
   const client = await pool.connect();
   let enTransaccion = false;
   try {

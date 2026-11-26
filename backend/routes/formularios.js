@@ -131,8 +131,12 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       telefono_contacto,
       motivo_ingreso,
       experiencia_previa,
-      respuestas_extra,
+      respuestas_extra = {},
     } = req.body;
+
+    if (!respuestas_extra || typeof respuestas_extra !== 'object' || Array.isArray(respuestas_extra)) {
+      return res.status(400).json({ error: 'Las respuestas adicionales deben tener formato de objeto' });
+    }
 
     // No confío en la matrícula que viene del frontend. Si el usuario
     // tiene institutional_id en la base de datos, uso ese valor, sin
@@ -189,16 +193,22 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
 
       // Lock atómico: evitar race conditions en el límite
       const clubRow = await client.query(
-        `SELECT fecha_apertura_programada, fecha_limite_cierre,
-                max_postulaciones, postulaciones_actuales,
-                cerrada_manualmente, id_convocatoria_inscripcion_actual
+        `SELECT id_convocatoria_inscripcion_actual
          FROM clubes_operativos WHERE id_club = $1 FOR UPDATE`,
         [id_club],
       );
-      const club = clubRow.rows[0];
-
-      const cicloActual = club.id_convocatoria_inscripcion_actual;
-      const maxPost = club.max_postulaciones;
+      const cicloActual = clubRow.rows[0]?.id_convocatoria_inscripcion_actual;
+      const cicloRow = cicloActual
+        ? await client.query(
+          `SELECT fecha_apertura_programada, fecha_limite_cierre, max_postulaciones, cerrada_manualmente
+           FROM convocatorias_inscripcion
+           WHERE id_convocatoria_inscripcion = $1 AND id_club = $2
+           FOR UPDATE`,
+          [cicloActual, id_club],
+        )
+        : { rows: [] };
+      const ciclo = cicloRow.rows[0] || {};
+      const maxPost = ciclo.max_postulaciones;
       const conteoActual = await client.query(
         `SELECT COUNT(*)::int AS total FROM formularios
          WHERE id_club = $1 AND id_convocatoria_inscripcion = $2`,
@@ -207,9 +217,9 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       const actuales = conteoActual.rows[0].total;
 
       const estadoCalculado = calcularEstadoClub({
-        cerradaManualmente: club.cerrada_manualmente,
-        fechaAperturaProgramada: club.fecha_apertura_programada,
-        fechaLimiteCierre: club.fecha_limite_cierre,
+        cerradaManualmente: ciclo.cerrada_manualmente === true,
+        fechaAperturaProgramada: ciclo.fecha_apertura_programada,
+        fechaLimiteCierre: ciclo.fecha_limite_cierre,
         maxPostulaciones: maxPost,
         postulacionesActuales: actuales,
       });
@@ -217,6 +227,60 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       if (estadoCalculado !== 'abierto' || !cicloActual) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'La convocatoria de este club no está abierta. No se aceptan nuevas postulaciones.' });
+      }
+
+      // La lista se consulta dentro de la transacción y se bloquea mientras se
+      // guarda la postulación: no aceptamos IDs inexistentes, de otro club o
+      // preguntas que dejaron de estar activas.
+      const preguntasActivas = await client.query(
+        `SELECT id_pregunta, etiqueta, tipo, configuracion, obligatorio
+         FROM club_formulario_preguntas
+         WHERE id_club = $1 AND activo = TRUE
+         ORDER BY id_pregunta
+         FOR SHARE`,
+        [id_club],
+      );
+      const preguntasPorId = new Map(preguntasActivas.rows.map((pregunta) => [String(pregunta.id_pregunta), pregunta]));
+      for (const [clave, valor] of Object.entries(respuestas_extra)) {
+        const pregunta = preguntasPorId.get(clave);
+        if (!/^\d+$/.test(clave) || !pregunta) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: `La pregunta ${clave} no existe, no pertenece al club o ya no está activa` });
+        }
+        if (valor !== null && typeof valor !== 'string' && typeof valor !== 'number') {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: `La respuesta para "${pregunta.etiqueta}" no es válida` });
+        }
+        const texto = valor == null ? '' : String(valor).trim();
+        if (pregunta.obligatorio && !texto) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: `Responde la pregunta obligatoria: ${pregunta.etiqueta}` });
+        }
+        if (!texto) continue;
+        if (pregunta.tipo === 'seleccion' && !(pregunta.configuracion?.opciones || []).includes(texto)) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: `La respuesta para "${pregunta.etiqueta}" no está entre las opciones permitidas` });
+        }
+        if (pregunta.tipo === 'numero') {
+          const numero = Number(texto);
+          if (!Number.isFinite(numero)
+              || (pregunta.configuracion?.min != null && numero < Number(pregunta.configuracion.min))
+              || (pregunta.configuracion?.max != null && numero > Number(pregunta.configuracion.max))) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: `La respuesta numérica para "${pregunta.etiqueta}" está fuera del rango permitido` });
+          }
+        }
+        if (pregunta.tipo === 'fecha' && !/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: `La fecha para "${pregunta.etiqueta}" no es válida` });
+        }
+      }
+      for (const pregunta of preguntasActivas.rows) {
+        const respuesta = respuestas_extra[pregunta.id_pregunta];
+        if (pregunta.obligatorio && (respuesta == null || String(respuesta).trim() === '')) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: `Responde la pregunta obligatoria: ${pregunta.etiqueta}` });
+        }
       }
 
       const activa = await client.query(
@@ -264,8 +328,8 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       const result = await client.query(
         `INSERT INTO formularios (id_alumno, id_club, id_convocatoria_inscripcion, bloque_asignado,
           nombre_completo, matricula, id_licenciatura, cuatrimestre,
-          telefono_contacto, motivo_ingreso, experiencia_previa, respuestas_extra)
-         VALUES ($1, $2, $3, DEFAULT, $4, $5, $6, $7, $8, $9, $10, $11)
+          telefono_contacto, motivo_ingreso, experiencia_previa)
+         VALUES ($1, $2, $3, DEFAULT, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
           req.user.id,
@@ -278,14 +342,21 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
           telefono_contacto,
           motivo_ingreso,
           experiencia_previa || '',
-          JSON.stringify(respuestas_extra || {}),
         ],
       );
 
-      await client.query(
-        `UPDATE clubes_operativos SET postulaciones_actuales = postulaciones_actuales + 1 WHERE id_club = $1`,
-        [id_club],
-      );
+      for (const pregunta of preguntasActivas.rows) {
+        const respuesta = respuestas_extra[pregunta.id_pregunta];
+        if (respuesta == null || String(respuesta).trim() === '') continue;
+        const valor = pregunta.tipo === 'numero' ? Number(respuesta) : String(respuesta);
+        await client.query(
+          `INSERT INTO formulario_respuestas_extra
+             (id_formulario, id_pregunta, id_club, etiqueta_snapshot, tipo_snapshot, configuracion_snapshot, respuesta)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+          [result.rows[0].id_formulario, pregunta.id_pregunta, Number(id_club), pregunta.etiqueta,
+            pregunta.tipo, JSON.stringify(pregunta.configuracion), JSON.stringify(valor)],
+        );
+      }
 
       await client.query('COMMIT');
 
@@ -300,6 +371,9 @@ router.post('/', authenticate, requireRole(1), limitadorFormularios, async (req,
       client.release();
     }
   } catch (err) {
+    if (err.code === '23505' && err.constraint === 'uq_formulario_alumno_club_ciclo') {
+      return res.status(409).json({ error: 'Ya enviaste un formulario para este club en este ciclo' });
+    }
     console.error('Error al crear formulario:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -322,7 +396,12 @@ router.get('/pendientes/:id_club', authenticate, requireClubLeader, async (req, 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
 f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
-               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.respuestas_extra, f.status,
+               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa,
+               (f.respuestas_extra || COALESCE((SELECT jsonb_object_agg(r.id_pregunta::text, r.respuesta)
+                 FROM formulario_respuestas_extra r WHERE r.id_formulario = f.id_formulario), '{}'::jsonb)) AS respuestas_extra,
+               (SELECT jsonb_object_agg(r.id_pregunta::text, r.etiqueta_snapshot)
+                 FROM formulario_respuestas_extra r WHERE r.id_formulario = f.id_formulario) AS respuestas_extra_preguntas,
+               f.status,
                f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
                (SELECT json_agg(json_build_object(
                  'status_anterior', hp.status_anterior,
@@ -364,7 +443,12 @@ router.get('/todos/:id_club', authenticate, requireClubLeader, async (req, res) 
     const result = await pool.query(
       `SELECT f.id_formulario, f.id_alumno, f.id_club, f.fecha_envio, f.bloque_asignado,
                f.nombre_completo, f.matricula, l.nombre AS carrera, f.cuatrimestre,
-               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa, f.respuestas_extra, f.status,
+               f.telefono_contacto, f.motivo_ingreso, f.experiencia_previa,
+               (f.respuestas_extra || COALESCE((SELECT jsonb_object_agg(r.id_pregunta::text, r.respuesta)
+                 FROM formulario_respuestas_extra r WHERE r.id_formulario = f.id_formulario), '{}'::jsonb)) AS respuestas_extra,
+               (SELECT jsonb_object_agg(r.id_pregunta::text, r.etiqueta_snapshot)
+                 FROM formulario_respuestas_extra r WHERE r.id_formulario = f.id_formulario) AS respuestas_extra_preguntas,
+               f.status,
                f.fecha_oferta, f.fecha_expiracion, f.fecha_respuesta, f.motivo_rechazo,
                (SELECT json_agg(json_build_object(
                  'status_anterior', hp.status_anterior,

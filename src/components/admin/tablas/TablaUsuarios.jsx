@@ -17,7 +17,7 @@ export function TablaUsuarios({
   onRemoveFromClub,
   onAsignarClub,
   onAsignarAlumnoClub,
-  onEliminarUsuario,
+  onDesactivarUsuario,
   onAdminAction,
 }) {
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls } = useTheme();
@@ -106,7 +106,7 @@ export function TablaUsuarios({
                           <option value={4} style={{ color: '#fbbf24' }}>Rectoría</option>
                         </select>
                       )}
-                      <AccionesUsuario u={u} currentUser={currentUser} onAdminAction={onAdminAction} onEliminarUsuario={onEliminarUsuario} />
+                      <AccionesUsuario u={u} currentUser={currentUser} onAdminAction={onAdminAction} onDesactivarUsuario={onDesactivarUsuario} />
                     </div>
                   </td>
                   <td className="px-5 py-4 ">
@@ -137,7 +137,7 @@ export function TablaUsuarios({
                   }[u.id_rol] || (u.rol === 'presidente' ? 'Responsable del club' : u.rol)} color={u.id_rol === 3 ? 'red' : u.id_rol === 4 ? 'amber' : u.id_rol === 2 ? 'emerald' : u.id_rol === 7 ? 'purple' : 'blue'} size="sm" />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <AccionesUsuario u={u} currentUser={currentUser} onAdminAction={onAdminAction} onEliminarUsuario={onEliminarUsuario} />
+                  <AccionesUsuario u={u} currentUser={currentUser} onAdminAction={onAdminAction} onDesactivarUsuario={onDesactivarUsuario} />
                 </div>
               </div>
             <p className={`text-sm font-semibold mb-0.5 ${tdTitle}`}>{u.nombre_completo}</p>
