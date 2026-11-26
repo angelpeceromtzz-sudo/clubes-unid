@@ -8,6 +8,7 @@ import { VistaEjecutiva } from '../components/ejecutivo/VistaEjecutiva';
 import { SeccionExpediente } from '../components/expediente/SeccionExpediente';
 import { NavegacionPanel } from '../components/layout/paneles-navegacion/NavegacionPanel';
 import { ELEMENTOS_NAV_COORDINACION } from '../constants/navegacion';
+import { GestionActividades } from './GestionActividades';
 
 export function PanelCoordinacion() {
   const { tema } = useTheme();
@@ -36,6 +37,8 @@ export function PanelCoordinacion() {
 
       {vistaActiva === 'resumen' && <VistaEjecutiva d={ejecutivo} />}
       {vistaActiva === 'expediente' && <SeccionExpediente />}
+      {vistaActiva === 'clubes' && <GestionActividades integrada tipoFijo="club" />}
+      {vistaActiva === 'gestion-actividades' && <GestionActividades integrada tipoFijo="actividad" />}
     </NavegacionPanel>
   );
 }

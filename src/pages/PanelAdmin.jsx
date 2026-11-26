@@ -33,6 +33,7 @@ import { ModalConfirmacion } from '../components/ui/ModalConfirmacion';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { formatearNombre } from '../utils/formato';
 import { SeccionGestionClubs } from '../components/actividades/SeccionGestionClubs';
+import { GestionActividades } from './GestionActividades';
 import { useActividadesAsignadas } from '../hooks/useActividadesAsignadas';
 import { TarjetasMiActividad } from '../components/actividades/TarjetasMiActividad';
 
@@ -72,8 +73,9 @@ export function PanelAdmin() {
 
           <AlertaRetroalimentacion feedback={d.feedback} errorFeedback={d.errorFeedback} />
           {d.vistaActiva === 'clubes' && <SeccionGestionClubs onVolver={d.refetchClubes}>
-            {(props) => <SeccionClubesAdmin d={d} onPublicacion={props.onPublicacion} tipo={props.tipo} onCambiarTipo={props.onCambiarTipo} />}
+            {(props) => <SeccionClubesAdmin d={d} onPublicacion={props.onPublicacion} />}
           </SeccionGestionClubs>}
+          {d.vistaActiva === 'gestion-actividades' && <GestionActividades integrada tipoFijo="actividad" />}
 
 
 

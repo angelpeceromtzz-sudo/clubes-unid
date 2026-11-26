@@ -1,6 +1,8 @@
 const MIS_ACTIVIDADES = { key: 'mis-actividades', label: 'Mis actividades', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' };
 
 const ENTRADA_CATALOGO = { key: 'clubes', label: 'Clubs y actividades', icon: MIS_ACTIVIDADES.icon };
+const ENTRADA_CLUBES = { key: 'clubes', label: 'Clubes', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' };
+const ENTRADA_ACTIVIDADES = { key: 'gestion-actividades', label: 'Actividades', icon: MIS_ACTIVIDADES.icon };
 
 export const GRUPO_GESTION_ACTIVIDADES = {
   key: 'gestion-clubes',
@@ -18,7 +20,8 @@ export const ELEMENTOS_NAV_ADMIN = [
     label: 'Gestión de Clubs',
     icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
     children: [
-      ENTRADA_CATALOGO,
+      ENTRADA_CLUBES,
+      ENTRADA_ACTIVIDADES,
       { key: 'convocatorias', label: 'Convocatorias VIVE', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
       { key: 'horarios', label: 'Aprobación de horarios', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
 { key: 'actividad', label: 'Bitácora de clubs y actividades', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
@@ -88,6 +91,15 @@ export const ELEMENTOS_NAV_RESPONSABLE_CLUB = [
 
 export const ELEMENTOS_NAV_COORDINACION = [
   { key: 'resumen', label: 'Panel', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { ...GRUPO_GESTION_ACTIVIDADES, children: ELEMENTOS_NAV_ADMIN.find((item) => item.key === 'gestion-clubes').children },
+  {
+    ...GRUPO_GESTION_ACTIVIDADES,
+    children: [
+      { key: 'clubes', label: 'Clubes', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+      { key: 'gestion-actividades', label: 'Actividades', icon: MIS_ACTIVIDADES.icon },
+      { key: 'convocatorias', label: 'Convocatorias VIVE', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+      { key: 'horarios', label: 'Aprobación de horarios', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+      { key: 'actividad', label: 'Bitácora de clubs y actividades', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+    ],
+  },
   { key: 'expediente', label: 'Expediente Estudiantil', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
 ];
