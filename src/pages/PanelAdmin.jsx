@@ -1,3 +1,4 @@
+import { AsistenteFlotante } from '../components/AsistenteFlotante';
 /* Panel de administración: gestiona usuarios, clubes, anuncios e historial mediante NavegacionPanel. */
 import { useEffect } from 'react';
 import { useAutenticacion } from '../contexts/AuthContext';
@@ -59,6 +60,7 @@ export function PanelAdmin() {
 
   return (
     <RutaProtegida requiereAdmin>
+      <AsistenteFlotante />
       <NavegacionPanel
         elementosNav={ELEMENTOS_NAV_ADMIN}
         vistaActiva={d.vistaActiva}

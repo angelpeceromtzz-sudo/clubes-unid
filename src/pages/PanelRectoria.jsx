@@ -1,3 +1,4 @@
+import { AsistenteFlotante } from '../components/AsistenteFlotante';
 /* Panel de rectoría: resumen estadístico, detalle de clubes, padrón y control de asistencia. */
 import { useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -38,6 +39,7 @@ export function PanelRectoria() {
 
   return (
     <>
+      <AsistenteFlotante />
       <NavegacionPanel
         elementosNav={ELEMENTOS_NAV_RECTORIA}
         vistaActiva={d.vistaActiva}

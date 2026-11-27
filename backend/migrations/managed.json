@@ -32,6 +32,7 @@
     "migrate-intereses-publicos.sql",
     "migrate-reconocimientos-ocultar.sql",
     "migrate-insignias-catalogo.sql",
-    "migrate-insignias-unicas.sql"
+    "migrate-insignias-unicas.sql",
+    "migrate-chat-club-reacciones.sql"
   ]
 }

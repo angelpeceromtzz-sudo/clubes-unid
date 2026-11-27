@@ -113,6 +113,7 @@ export const api = {
   enviarMensajeChat: chatClubService.enviarMensajeChat,
   editarMensajeChat: chatClubService.editarMensajeChat,
   eliminarMensajeChat: chatClubService.eliminarMensajeChat,
+  alternarReaccionChat: chatClubService.alternarReaccionChat,
   fijarMensajeChat: chatClubService.fijarMensajeChat,
   silenciarMiembroChat: chatClubService.silenciarMiembroChat,
 

@@ -1,5 +1,6 @@
 /* Expediente estudiantil: búsqueda de alumnos y consulta de su historial completo de participación en clubes. */
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useExpediente } from '../../hooks/useExpediente';
 import { api } from '../../services/api';
@@ -241,6 +242,8 @@ function VistaDetalle({ expediente, onVolver }) {
 }
 
 export function SeccionExpediente() {
+  const [parametros] = useSearchParams();
+  const usuarioEnlace = parametros.get('usuario');
   const { modoOscuro, tableBg, thCls, tdCls, tdTitle, selectCls } = useTheme();
   const d = useExpediente();
   const [entrada, setEntrada] = useState('');
@@ -251,6 +254,10 @@ export function SeccionExpediente() {
     d.buscar('', d.filtros);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (usuarioEnlace && /^\d+$/.test(usuarioEnlace)) void d.seleccionar(Number(usuarioEnlace));
+  }, [usuarioEnlace, d.seleccionar]);
 
   useEffect(() => {
     let cancelado = false;

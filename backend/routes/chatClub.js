@@ -9,6 +9,7 @@ const MAX_CARACTERES = 400;
 const ESPERA_ENVIO_SEGUNDOS = 4;
 const INTERVALO_CONECTADO_SEGUNDOS = 45;
 const FILTRO_CONTENIDO = /\b(?:porno\w*|pornograf[ií]a\w*|desnud[oa]s?|nudes?|xxx)\b/giu;
+const EMOJIS_REACCION = new Set(['👍', '❤️', '😂', '🎉', '👏', '😮', '😢', '🔥', '🐺', '✨', '💙', '🙌']);
 
 validarParamsEnteros(router);
 for (const parametro of ['idMensaje', 'idUsuario']) {
@@ -79,13 +80,16 @@ async function cargarChat(db, idClub, idUsuario, antes = null) {
       (m.id_autor=c.id_responsable_club) AS es_responsable,
       (m.id_autor=c.id_vicepresidente) AS es_vicepresidente,
       EXISTS (SELECT 1 FROM club_chat_fijados f WHERE f.id_mensaje=m.id_mensaje) AS fijado,
+      COALESCE((SELECT json_agg(json_build_object('emoji', resumen.emoji, 'total', resumen.total, 'mia', resumen.mia) ORDER BY resumen.total DESC, resumen.emoji)
+        FROM (SELECT r.emoji, COUNT(*)::int AS total, BOOL_OR(r.id_usuario=$3) AS mia
+          FROM club_chat_reacciones r WHERE r.id_mensaje=m.id_mensaje GROUP BY r.emoji) resumen), '[]'::json) AS reacciones,
       COALESCE((SELECT json_agg(json_build_object('id_usuario',x.id_usuario,'nombre',ux.nombre_completo))
         FROM club_chat_menciones x JOIN usuarios ux ON ux.id_usuario=x.id_usuario
         WHERE x.id_mensaje=m.id_mensaje), '[]'::json) AS menciones
     FROM club_chat_mensajes m JOIN usuarios u ON u.id_usuario=m.id_autor
       JOIN clubes_operativos c ON c.id_club=m.id_club
     WHERE m.id_club=$1 AND ($2::bigint IS NULL OR m.id_mensaje<$2)
-    ORDER BY m.id_mensaje DESC LIMIT 61`, [idClub, antes])).rows;
+    ORDER BY m.id_mensaje DESC LIMIT 61`, [idClub, antes, idUsuario])).rows;
   const masAnteriores = mensajes.length > 60;
   mensajes.splice(60);
   mensajes.reverse();
@@ -227,7 +231,7 @@ router.post('/clubes/:idClub/mensajes', async (req, res) => {
     await client.query('COMMIT');
     res.status(201).json({ ...mensaje, autor: req.user.nombre_completo, id_rol: req.user.id_rol,
       es_responsable: clubActual.es_responsable, es_vicepresidente: clubActual.es_vicepresidente,
-      fijado: false, menciones: menciones.ids.map((id) => ({ id_usuario: id })) });
+      fijado: false, reacciones: [], menciones: menciones.ids.map((id) => ({ id_usuario: id })) });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     if (!error.status) console.error('Error al enviar mensaje del chat:', error);
@@ -287,6 +291,7 @@ router.delete('/clubes/:idClub/mensajes/:idMensaje', async (req, res) => {
     await client.query(`UPDATE notificaciones n SET mensaje='Mensaje eliminado'
       FROM club_chat_notificaciones cn WHERE n.id_notificacion=cn.id_notificacion AND cn.id_mensaje=$1`, [req.params.idMensaje]);
     await client.query('DELETE FROM club_chat_menciones WHERE id_mensaje=$1', [req.params.idMensaje]);
+    await client.query('DELETE FROM club_chat_reacciones WHERE id_mensaje=$1', [req.params.idMensaje]);
     await client.query('DELETE FROM club_chat_fijados WHERE id_mensaje=$1', [req.params.idMensaje]);
     await client.query('COMMIT');
     res.json({ ok: true });
@@ -296,6 +301,30 @@ router.delete('/clubes/:idClub/mensajes/:idMensaje', async (req, res) => {
     res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo eliminar el mensaje' });
   }
   finally { client.release(); }
+});
+
+router.put('/clubes/:idClub/mensajes/:idMensaje/reacciones', async (req, res) => {
+  const emoji = req.body?.emoji;
+  if (!EMOJIS_REACCION.has(emoji)) return res.status(400).json({ error: 'Emoji no disponible' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const club = await consultarClub(client, req.params.idClub, req.user.id);
+    if (club.error) throw Object.assign(new Error(club.error), { status: club.status });
+    const silenciado = (await client.query(`SELECT 1 FROM club_chat_silencios WHERE id_club=$1 AND id_usuario=$2
+      AND (silenciado_hasta IS NULL OR silenciado_hasta>NOW())`, [req.params.idClub, req.user.id])).rows.length > 0;
+    if (silenciado) throw Object.assign(new Error('Tu participación en el chat está pausada'), { status: 403 });
+    const mensaje = (await client.query('SELECT eliminado FROM club_chat_mensajes WHERE id_club=$1 AND id_mensaje=$2 FOR UPDATE', [req.params.idClub, req.params.idMensaje])).rows[0];
+    if (!mensaje || mensaje.eliminado) throw Object.assign(new Error('Mensaje no disponible'), { status: 404 });
+    const eliminada = await client.query('DELETE FROM club_chat_reacciones WHERE id_mensaje=$1 AND id_usuario=$2 AND emoji=$3 RETURNING id_mensaje', [req.params.idMensaje, req.user.id, emoji]);
+    if (!eliminada.rowCount) await client.query('INSERT INTO club_chat_reacciones (id_mensaje,id_usuario,emoji) VALUES ($1,$2,$3)', [req.params.idMensaje, req.user.id, emoji]);
+    await client.query('COMMIT');
+    res.json({ activa: !eliminada.rowCount });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (!error.status) console.error('Error al reaccionar en el chat:', error);
+    res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo guardar la reacción' });
+  } finally { client.release(); }
 });
 
 router.put('/clubes/:idClub/mensajes/:idMensaje/fijado', async (req, res) => {

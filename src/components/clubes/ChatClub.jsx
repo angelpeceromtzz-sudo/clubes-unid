@@ -8,6 +8,7 @@ import { crearCoordinadorPresencia, crearEjecutorConCadenciaCompartida } from '.
 import './ChatClub.css';
 
 const MAX_CARACTERES = 400;
+const EMOJIS = ['👍', '❤️', '😂', '🎉', '👏', '😮', '😢', '🔥', '🐺', '✨', '💙', '🙌'];
 const INTERVALO_SINCRONIZACION = 3500;
 const INTERVALO_PRESENCIA = 15000;
 // Un único tick de presencia activa cada 3 s por usuario/club entre pestañas.
@@ -67,6 +68,9 @@ export function ChatClub({ club, ocuparPantalla = false }) {
   const [miembrosAbiertos, setMiembrosAbiertos] = useState(false);
   const [fijadosAbiertos, setFijadosAbiertos] = useState(true);
   const [menuMensaje, setMenuMensaje] = useState(null);
+  const [selectorEmoji, setSelectorEmoji] = useState(false);
+  const [selectorReaccion, setSelectorReaccion] = useState(null);
+  const [reaccionPendiente, setReaccionPendiente] = useState(null);
   const [menuSilencioId, setMenuSilencioId] = useState(null);
   const [mensajesNuevos, setMensajesNuevos] = useState(0);
   const [cargandoAnteriores, setCargandoAnteriores] = useState(false);
@@ -372,6 +376,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
 
   const miembros = useMemo(() => chat?.miembros || [], [chat?.miembros]);
   const fijados = chat?.fijados || [];
+  const silenciado = Boolean(miembros.find((miembro) => Number(miembro.id_usuario) === miId)?.silenciado);
   const conectados = useMemo(() => miembros.filter((m) => m.conectado), [miembros]);
   const escribiendo = useMemo(() => miembros.filter((m) => m.escribiendo && Number(m.id_usuario) !== miId), [miembros, miId]);
   const candidatosMencion = useMemo(() => {
@@ -421,6 +426,34 @@ export function ChatClub({ club, ocuparPantalla = false }) {
       const nuevaPosicion = indiceArroba + token.length + 1;
       inputRef.current?.setSelectionRange(nuevaPosicion, nuevaPosicion);
     }, 0);
+  }
+
+  function insertarEmoji(emoji) {
+    const campoTexto = inputRef.current;
+    const inicio = campoTexto?.selectionStart ?? texto.length;
+    const fin = campoTexto?.selectionEnd ?? inicio;
+    const nuevo = `${texto.slice(0, inicio)}${emoji}${texto.slice(fin)}`;
+    if (Array.from(nuevo).length > MAX_CARACTERES) return;
+    manejarTexto(nuevo);
+    setSelectorEmoji(false);
+    window.requestAnimationFrame(() => {
+      campoTexto?.focus();
+      campoTexto?.setSelectionRange(inicio + emoji.length, inicio + emoji.length);
+    });
+  }
+
+  async function alternarReaccion(idMensaje, emoji) {
+    if (reaccionPendiente) return;
+    setReaccionPendiente(`${idMensaje}:${emoji}`);
+    setSelectorReaccion(null);
+    try {
+      await api.alternarReaccionChat(club.id_club, idMensaje, emoji);
+      const pagina = await api.obtenerChatClub(club.id_club, Number(idMensaje) + 1);
+      const vigente = chatDatosRef.current;
+      if (vigente?.club?.id_club === club.id_club) actualizarChat({ ...vigente, mensajes: fusionarMensajes(vigente.mensajes, pagina.mensajes || []) });
+      await sincronizar();
+    } catch (err) { setError(err.message || 'No se pudo guardar la reacción.'); }
+    finally { setReaccionPendiente(null); }
   }
 
   async function enviar(evento) {
@@ -637,6 +670,11 @@ export function ChatClub({ club, ocuparPantalla = false }) {
                 <time dateTime={mensaje.creado_en}>{new Date(mensaje.creado_en).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</time>
               </span>
             </div>
+            {!mensaje.eliminado && <div className="mt-2 flex flex-wrap items-center gap-1">
+              {(mensaje.reacciones || []).map((reaccion) => <button key={reaccion.emoji} type="button" disabled={Boolean(reaccionPendiente) || silenciado} onClick={() => void alternarReaccion(mensaje.id_mensaje, reaccion.emoji)} aria-label={`${reaccion.emoji}: ${reaccion.total} reacciones${reaccion.mia ? ', quitar mi reacción' : ', reaccionar'}`} aria-pressed={reaccion.mia} className={`rounded-full border px-2 py-0.5 text-xs transition disabled:opacity-50 ${reaccion.mia ? 'border-amber-400 bg-amber-400/20' : 'border-slate-400/30 hover:border-amber-400'}`}>{reaccion.emoji} <span className="tabular-nums">{reaccion.total}</span></button>)}
+              <button type="button" disabled={silenciado} onClick={() => setSelectorReaccion(selectorReaccion === mensaje.id_mensaje ? null : mensaje.id_mensaje)} aria-label={`Reaccionar al mensaje de ${mensaje.autor}`} aria-expanded={selectorReaccion === mensaje.id_mensaje} className="rounded-full border border-slate-400/30 px-2 py-0.5 text-xs hover:border-amber-400 disabled:opacity-50">＋ 😊</button>
+              {selectorReaccion === mensaje.id_mensaje && <div className="flex max-w-64 flex-wrap gap-1 rounded-xl border border-amber-400/30 bg-white p-1.5 shadow-lg dark:bg-[#182440]">{EMOJIS.map((emoji) => <button key={emoji} type="button" onClick={() => void alternarReaccion(mensaje.id_mensaje, emoji)} className="rounded-lg p-1 text-lg hover:bg-amber-400/20" aria-label={`Reaccionar con ${emoji}`}>{emoji}</button>)}</div>}
+            </div>}
           </article>;
         })}
         {!!escribiendo.length && <p className={`px-2 text-xs ${secundaria}`} aria-live="polite"><span className="chat-club__puntos" />{escribiendo.length === 1 ? `${escribiendo[0].nombre_completo} está escribiendo…` : `${escribiendo.length} personas están escribiendo…`}</p>}
@@ -683,9 +721,11 @@ export function ChatClub({ club, ocuparPantalla = false }) {
         {candidatosMencion.map((m) => <button type="button" key={m.id_usuario} onMouseDown={(e) => e.preventDefault()} onClick={() => insertarMencion(m)} className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-amber-400/10 ${nombreClase(m, chat.club)}`}><span className="grid h-7 w-7 place-content-center rounded-full bg-amber-500 text-xs text-white">{m.nombre_completo.charAt(0)}</span>{m.nombre_completo}</button>)}
       </div>}
       <div className={`chat-club__composer-bar flex items-end gap-2 rounded-full border px-2 py-1.5 ${campo}`}>
+        <button type="button" onClick={() => setSelectorEmoji((abierto) => !abierto)} aria-label="Elegir emoji" aria-expanded={selectorEmoji} disabled={Boolean(chat.miembros.find((m) => Number(m.id_usuario) === miId)?.silenciado)} className="grid h-10 w-10 shrink-0 place-content-center rounded-full text-xl hover:bg-amber-400/15 disabled:opacity-40">😊</button>
         <textarea ref={inputRef} rows={1} value={texto} onChange={(e) => manejarTexto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); enviar(e); } }} placeholder={chat.miembros.find((m) => Number(m.id_usuario) === miId)?.silenciado ? 'No puedes escribir en este chat' : `Mensaje para ${club.nombre_club}`} disabled={Boolean(chat.miembros.find((m) => Number(m.id_usuario) === miId)?.silenciado)} className="max-h-32 min-h-10 flex-1 resize-none overflow-y-hidden bg-transparent px-2 py-2 text-sm outline-none" aria-label="Escribe un mensaje" />
         <button type="submit" disabled={enviando || espera > 0 || !texto.trim() || Boolean(chat.miembros.find((m) => Number(m.id_usuario) === miId)?.silenciado)} className="grid h-10 w-10 shrink-0 place-content-center rounded-xl bg-amber-400 text-[#0b111e] transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50" aria-label="Enviar mensaje" title={espera ? `Espera ${espera} segundos` : 'Enviar mensaje'}><Icono nombre="send" className="h-5 w-5" /></button>
       </div>
+      {selectorEmoji && <div className={`absolute bottom-full left-3 z-20 mb-2 flex w-64 flex-wrap gap-1 rounded-xl border p-2 shadow-xl ${superficie}`} aria-label="Emojis para el mensaje">{EMOJIS.map((emoji) => <button key={emoji} type="button" onMouseDown={(evento) => evento.preventDefault()} onClick={() => insertarEmoji(emoji)} aria-label={`Insertar ${emoji}`} className="rounded-lg p-1 text-xl hover:bg-amber-400/20">{emoji}</button>)}</div>}
       {(editarId || espera > 0 || Array.from(texto).length >= 350) && <div className="mt-1 flex items-center justify-between gap-2 px-2">
         {(editarId || espera > 0) && <p className={`text-[10px] ${secundaria}`}>{editarId ? 'Editando mensaje' : `Puedes enviar otro mensaje en ${espera} s`}</p>}
         {Array.from(texto).length >= 350 && <p className={`text-[11px] font-bold ${Array.from(texto).length >= 390 ? 'text-amber-500' : secundaria}`}>{Array.from(texto).length} / {MAX_CARACTERES}</p>}

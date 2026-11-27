@@ -13,6 +13,9 @@ export const chatClubService = {
     method: 'PUT', body: JSON.stringify({ contenido, menciones }),
   }),
   eliminarMensajeChat: (idClub, idMensaje) => request(`/chat-clubes/clubes/${idClub}/mensajes/${idMensaje}`, { method: 'DELETE' }),
+  alternarReaccionChat: (idClub, idMensaje, emoji) => request(`/chat-clubes/clubes/${idClub}/mensajes/${idMensaje}/reacciones`, {
+    method: 'PUT', body: JSON.stringify({ emoji }),
+  }),
   fijarMensajeChat: (idClub, idMensaje, fijado) => request(`/chat-clubes/clubes/${idClub}/mensajes/${idMensaje}/fijado`, {
     method: 'PUT', body: JSON.stringify({ fijado }),
   }),

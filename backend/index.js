@@ -49,6 +49,7 @@ import clubFormularioRoutes from './routes/clubFormulario.js';
 import consentimientoLegalRoutes from './routes/consentimientoLegal.js';
 import reportesRoutes from './routes/reportes.js';
 import insigniasRoutes from './routes/insignias.js';
+import asistenteRoutes from './routes/asistente.js';
 import { noCacheExpediente } from './lib/cacheExpediente.js';
 const app = express();
 // Render termina TLS y reenvía con X-Forwarded-For (un solo proxy).
@@ -132,6 +133,7 @@ app.use('/api/mural', muralRoutes);
 app.use('/api/actividades', actividadesRoutes);
 app.use('/api/me', preferenciasRoutes);
 app.use('/api/expediente', expedienteRoutes);
+app.use('/api/asistente', asistenteRoutes);
 app.use('/api/legal', consentimientoLegalRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/insignias', insigniasRoutes);
