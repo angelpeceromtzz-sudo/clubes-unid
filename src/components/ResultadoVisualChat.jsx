@@ -7,6 +7,11 @@ function Ruta({ url, children, className = '' }) {
 
 export function ResultadoVisualChat({ visualizacion }) {
   if (!visualizacion) return null;
+  if (visualizacion.tipo === 'personas') return <div className="mt-3 rounded-xl border border-amber-400/30 bg-white p-3 dark:bg-[#0e162c]">
+    <h3 className="text-xs font-black capitalize text-[#0e162c] dark:text-white">{visualizacion.titulo} · {visualizacion.total}</h3>
+    {visualizacion.elementos.length > 0 && <ul className="mt-2 space-y-1 text-xs text-slate-700 dark:text-slate-200">{visualizacion.elementos.map(item => <li key={item.nombre}><Ruta url={item.url} className="hover:underline">{item.nombre}</Ruta></li>)}</ul>}
+    {visualizacion.total > visualizacion.elementos.length && <p className="mt-2 text-[11px] text-slate-500">Mostrando los primeros {visualizacion.elementos.length}</p>}
+  </div>;
   if (visualizacion.tipo === 'metrica') return <div className="mt-3 overflow-hidden rounded-xl border border-amber-400/30 bg-white p-3 dark:bg-[#0e162c]">
     <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">Dato del sistema</p>
     <div className="mt-1 flex items-baseline gap-2"><strong className="text-3xl font-black tabular-nums text-[#0e162c] dark:text-amber-300">{visualizacion.valor}</strong><span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{visualizacion.titulo}</span></div>

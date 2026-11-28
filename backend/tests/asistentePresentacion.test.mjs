@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { crearPresentacion } from '../lib/asistentePresentacion.js';
 import { respuestaComparacion, usarContextoPrevio } from '../lib/asistenteSeguimiento.js';
+import { detectarConsultaPersonasPorRol } from '../lib/asistenteRoles.js';
 
 test('liga el club concreto y conserva su identificador para seguimiento', () => {
   const club = { id_club: 7, nombre_club: 'Club de Ajedrez', estado_publicacion: 'publicada', estatus: 'activo' };
@@ -58,4 +59,21 @@ test('el ranking de actividades respeta la pregunta de menor asistencia', () => 
   const presentacion = crearPresentacion({ tipo: 'actividades_estadisticas', rows, pregunta, rol: 3 });
   assert.equal(presentacion.visualizacion.elementos[0].nombre, 'Taller B');
   assert.match(respuestaComparacion('actividades_estadisticas', rows, pregunta), /Taller B \(3 asistencias\)/);
+});
+
+test('reconoce preguntas por personas con rol sin confundirlas con conteos ni nombres propios', () => {
+  assert.equal(detectarConsultaPersonasPorRol('¿Quién es alumno?')?.id, 1);
+  assert.equal(detectarConsultaPersonasPorRol('¿Quién es mural?')?.id, 6);
+  assert.equal(detectarConsultaPersonasPorRol('¿Quién es responsable del mural?')?.id, 6);
+  assert.equal(detectarConsultaPersonasPorRol('¿Quiénes son los vicepresidentes?')?.id, 5);
+  assert.equal(detectarConsultaPersonasPorRol('¿Cuántos alumnos hay?'), null);
+  assert.equal(detectarConsultaPersonasPorRol('Carlos Alberto Méndez Rivas'), null);
+});
+
+test('muestra un listado por rol sin expediente privado y conserva contexto si hay una persona', () => {
+  const rows = [{ id_usuario: 18, nombre_completo: 'Ana López', id_rol: 6, rol: 'responsable_mural', total_personas: 1 }];
+  const resultado = crearPresentacion({ tipo: 'roles_personas', rows, pregunta: '¿Quién es mural?', rol: 3 });
+  assert.equal(resultado.visualizacion.elementos[0].nombre, 'Ana López');
+  assert.equal(resultado.contexto.id, 18);
+  assert.equal(resultado.fuentes[0].url, '/admin/panel?seccion=usuarios');
 });

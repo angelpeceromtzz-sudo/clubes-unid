@@ -44,6 +44,12 @@ export function crearPresentacion({ tipo, rows, datos, pregunta, rol }) {
   } else if (tipo === 'roles_totales') {
     resultado.fuentes = [fuente('Usuarios por rol', rol === 7 ? null : `${panel}?seccion=${seccionUsuarios}`)];
     resultado.visualizacion = { tipo: 'ranking', titulo: 'Cuentas activas por rol', unidad: 'usuarios', elementos: rows.filter(row => row.total > 0).sort((a, b) => b.total - a.total).map(row => ({ nombre: row.rol.replaceAll('_', ' '), valor: row.total })) };
+  } else if (tipo === 'roles_personas') {
+    const total = rows[0]?.total_personas || 0;
+    const urlPersona = row => row.id_rol === 1 ? `${panel}?seccion=expediente&usuario=${row.id_usuario}` : rol === 7 ? null : `${panel}?seccion=${seccionUsuarios}`;
+    resultado.fuentes = rows.slice(0, 3).map(row => fuente(row.nombre_completo, urlPersona(row)));
+    if (total === 1) resultado.contexto = { tipo: 'usuarios', id: rows[0].id_usuario, nombre: rows[0].nombre_completo };
+    resultado.visualizacion = { tipo: 'personas', titulo: rows[0]?.rol?.replaceAll('_', ' ') || 'Personas', total, elementos: rows.map(row => ({ nombre: row.nombre_completo, url: urlPersona(row) })) };
   } else if (tipo === 'clubes' || tipo === 'actividades') {
     resultado.fuentes = rows.slice(0, 3).map(row => fuente(row.nombre_club, tipo === 'clubes' ? urlClub(row, panel) : urlActividad(row, panel)));
     if (tipo === 'clubes' && !datos?.club && !pregunta.match(/\b(?:m[aá]s|menos|promedio)\b/i) && rows.length < 100 && /(?:cu[aá]ntos?|total|n[uú]mero)/i.test(pregunta)) {
