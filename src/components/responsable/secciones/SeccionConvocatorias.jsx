@@ -9,7 +9,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { EncabezadoPagina } from '../../ui/EncabezadoPagina';
 import { Alerta } from '../../ui/Alerta';
 
-export function SeccionConvocatorias({ club }) {
+export function SeccionConvocatorias({ club, onRevisada }) {
   const { esAdmin } = useAutenticacion();
   const clubActivo = Number(club?.id_estatus_club) === 1;
   const [convocatorias, setConvocatorias] = useState([]);
@@ -49,11 +49,13 @@ export function SeccionConvocatorias({ club }) {
       throw err;
     }
     setConvocatorias(await api.getConvocatorias(club.id_club));
+    if (esAdmin) onRevisada?.();
   }
 
   async function manejarRechazar(id, observaciones) {
     const actualizada = await convocatoriaService.rechazarConvocatoria(id, observaciones);
     setConvocatorias((prev) => prev.map((c) => c.id_convocatoria === id ? { ...c, ...actualizada } : c));
+    onRevisada?.();
   }
 
   async function manejarImprimir(id) {

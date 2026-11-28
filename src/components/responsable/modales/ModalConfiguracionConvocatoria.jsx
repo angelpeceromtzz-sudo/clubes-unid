@@ -11,7 +11,7 @@ import { ConvocatoriaConfirmCerrarBox } from '../convocatoria/ConvocatoriaAccion
 import { useFechaVencida } from '../../../hooks/useFechaVencida';
 
 const ESTADOS = { pendiente: 'Pendiente de revisión', aprobado: 'Aprobada y publicada', rechazado: 'Requiere correcciones', vencido: 'Vencida · requiere nuevas fechas' };
-export function ModalConfiguracionConvocatoria({ club }) {
+export function ModalConfiguracionConvocatoria({ club, onRevisada }) {
   const { esAdmin, usuario } = useAutenticacion();
   const { tema, cardCls, inputCls } = useTheme();
   const presidente = usuario?.id_rol === 2;
@@ -34,9 +34,12 @@ export function ModalConfiguracionConvocatoria({ club }) {
       .catch((err) => { if (activo) setError(err.message); });
     return () => { activo = false; };
   }, [club.id_club]);
-  async function ejecutar(operacion, texto, recargarEnError = false) {
+  async function ejecutar(operacion, texto, recargarEnError = false, notificarRevision = false) {
     setOcupado(true); setError(''); setMensaje('');
-    try { incorporar(await operacion()); setObservaciones(''); setMensaje(texto); }
+    try {
+      incorporar(await operacion()); setObservaciones(''); setMensaje(texto);
+      if (notificarRevision) onRevisada?.();
+    }
     catch (err) {
       setError(err.message);
       if (recargarEnError) {
@@ -59,7 +62,7 @@ export function ModalConfiguracionConvocatoria({ club }) {
   }
   function revisar(accion) {
     ejecutar(() => convocatoriaService.revisarInscripcion(club.id_club, config.solicitud.id_solicitud, accion, observaciones),
-      accion === 'aprobar' ? 'Convocatoria aprobada. Las inscripciones ya usan la configuración autorizada.' : 'Se enviaron las observaciones al presidente.', true);
+      accion === 'aprobar' ? 'Convocatoria aprobada. Las inscripciones ya usan la configuración autorizada.' : 'Se enviaron las observaciones al presidente.', true, true);
   }
   if (!config) return error ? <p role="alert" className="text-sm text-red-500">{error}</p> : <Spinner />;
   const s = config.solicitud;
