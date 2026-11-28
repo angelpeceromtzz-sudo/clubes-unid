@@ -2,7 +2,11 @@
 
 Colección de diseño v1.1, creada el 25 de noviembre de 2026. Contiene **28 expresiones** con la silueta angular, los colores dorados y el contorno morado del lobo de ClubsUNID.
 
-Las tres originales —Me gusta, Me encanta y Aplausos— se conservan como referencia. Las **25 variantes nuevas están en reserva**: este directorio no está conectado con las rutas, los botones ni la base de datos de la aplicación.
+Las tres originales —Me gusta, Me encanta y Aplausos— se conservan como referencia. La biblioteca contiene 25 variantes adicionales. Una selección de 12 expresiones se usa ahora como stickers en el chat de clubes; las ilustraciones originales permanecen en este directorio.
+
+## Stickers del chat de clubes
+
+El botón del lobo junto al campo de mensaje abre una selección de Saludo, Feliz, Genial, Celebración, Aplausos, Abrazo, Gracias, ¡Ánimo!, Pensando, Sorpresa, Tristeza y Travieso. Cada sticker combina el SVG transparente con una frase corta y se envía como un mensaje individual. El catálogo de nombres y claves vive en `shared/stickersUriel.js`; los demás gestos siguen disponibles en esta biblioteca para futuras ampliaciones.
 
 ## Consultar y descargar
 
@@ -23,7 +27,7 @@ Las tres originales —Me gusta, Me encanta y Aplausos— se conservan como refe
 | `animaciones.css` | Gestos breves; respeta la preferencia de movimiento reducido. |
 | `fuente/` | Trazos, datos, estilos y generador para ampliar la colección. |
 
-Los SVG y PNG individuales son estáticos. Los gestos se prueban en la galería. Para reutilizar en el futuro los SVG animados, la clase `lobo-reaccion--animado` y `animaciones.css` activan un gesto sobre el SVG insertado en línea. Los tres tipos originales conservan `like`, `love` y `clap`; los otros identificadores son exclusivos de esta biblioteca.
+Los SVG y PNG individuales son estáticos. Los gestos se prueban en la galería. Para reutilizar en el futuro los SVG animados, la clase `lobo-reaccion--animado` y `animaciones.css` activan un gesto sobre el SVG insertado en línea. Los tres tipos originales conservan `like`, `love` y `clap`; el chat usa sus propios identificadores en el catálogo de stickers.
 
 ## Colección
 
@@ -48,4 +52,4 @@ node fuente/generar.mjs
 
 Esto regenera los SVG, la galería, la lámina vectorial, el manifiesto y los estilos de animación. Si `sharp` está disponible, `node fuente/generar.mjs --png` regenera también los PNG. Abrir o utilizar los archivos ya exportados no requiere Node ni dependencias.
 
-Antes de habilitar nuevas reacciones en el producto, habrá que decidir cuáles se usarán y adaptar expresamente la interfaz y los valores admitidos por el servidor.
+Al añadir más stickers al chat, actualiza el catálogo compartido y el mapa de imágenes del componente de stickers. El servidor acepta únicamente las claves del catálogo.

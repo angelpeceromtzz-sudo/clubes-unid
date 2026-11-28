@@ -5,6 +5,8 @@ import { useAutenticacion } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Icono } from '../ui/Icono';
 import { crearCoordinadorPresencia, crearEjecutorConCadenciaCompartida } from '../../utils/chatClubCadencia';
+import { STICKERS_URIEL, leerStickerUriel } from '../../../shared/stickersUriel.js';
+import { UrielSticker } from './UrielSticker';
 import './ChatClub.css';
 
 const MAX_CARACTERES = 400;
@@ -69,6 +71,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
   const [fijadosAbiertos, setFijadosAbiertos] = useState(true);
   const [menuMensaje, setMenuMensaje] = useState(null);
   const [selectorEmoji, setSelectorEmoji] = useState(false);
+  const [selectorSticker, setSelectorSticker] = useState(false);
   const [selectorReaccion, setSelectorReaccion] = useState(null);
   const [reaccionPendiente, setReaccionPendiente] = useState(null);
   const [menuSilencioId, setMenuSilencioId] = useState(null);
@@ -478,6 +481,24 @@ export function ChatClub({ club, ocuparPantalla = false }) {
     } finally { setEnviando(false); }
   }
 
+  async function enviarSticker(id) {
+    if (enviando || espera > 0 || silenciado || editarId) return;
+    setEnviando(true);
+    setError('');
+    try {
+      await api.enviarStickerChat(club.id_club, id);
+      const contexto = contextoChatRef.current;
+      if (!contexto || contexto.idClub !== club.id_club || !contexto.montado) return;
+      setSelectorSticker(false);
+      setEspera(4);
+      pegadoAlFinal.current = true;
+      await sincronizar({ marcarLeido: true });
+    } catch (err) {
+      setError(err.message || 'No se pudo enviar el sticker.');
+      if (err.status === 429) setEspera(err.reintentarEnSegundos || 4);
+    } finally { setEnviando(false); }
+  }
+
   async function cargarAnteriores() {
     const contexto = contextoChatRef.current;
     const actual = chatDatosRef.current;
@@ -623,7 +644,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
         <span className="flex items-center gap-2 text-sm font-bold text-amber-500"><Icono nombre="star" className="h-4 w-4" /> Mensajes fijados ({fijados.length})</span>
         <Icono nombre={fijadosAbiertos ? 'chevron-up' : 'chevron-down'} className="h-4 w-4" />
       </button>
-      {fijadosAbiertos && <div className="space-y-2 px-4 pb-3">{fijados.map((f) => <div key={f.id_mensaje} className="text-sm"><span className="font-bold text-amber-500">{f.autor}: </span><span>{f.contenido}</span></div>)}</div>}
+      {fijadosAbiertos && <div className="space-y-2 px-4 pb-3">{fijados.map((f) => <div key={f.id_mensaje} className="text-sm"><span className="font-bold text-amber-500">{f.autor}: </span><span>{leerStickerUriel(f.contenido) ? `Sticker de Uriel · ${leerStickerUriel(f.contenido).frase}` : f.contenido}</span></div>)}</div>}
     </div>}
 
     <div className="relative flex min-h-0 flex-1">
@@ -632,6 +653,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
         {chat.mensajes.length === 0 && <div className={`grid min-h-64 place-content-center text-center ${secundaria}`}><p className="font-semibold">Este es el inicio del chat</p><p className="mt-1 text-sm">Envía un mensaje para comenzar la conversación.</p></div>}
         {chat.mensajes.map((mensaje) => {
           const mio = Number(mensaje.id_autor) === miId;
+          const stickerMensaje = mensaje.eliminado ? null : leerStickerUriel(mensaje.contenido);
           return <article key={mensaje.id_mensaje}
             data-chat-mensaje
             onPointerDown={(evento) => iniciarMantenerMensaje(evento, mensaje.id_mensaje, mio)}
@@ -643,7 +665,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
               if (menuMensaje?.id === mensaje.id_mensaje) setMenuMensaje(null);
             }}
             onContextMenu={(evento) => { evento.preventDefault(); abrirMenuMensaje(evento.currentTarget, mensaje.id_mensaje, mio); }}
-            className={`chat-club__mensaje group relative w-fit max-w-[92%] rounded-2xl px-3 py-2 ${menuMensaje?.id === mensaje.id_mensaje ? 'chat-club__mensaje--seleccionado' : ''} ${mio ? `ml-auto ${temaClaro ? 'bg-amber-50' : 'bg-[#182440]'}` : (temaClaro ? 'bg-slate-50' : 'bg-[#111a2f]')}`}>
+            className={`chat-club__mensaje group relative w-fit max-w-[92%] rounded-2xl ${stickerMensaje ? 'px-1 py-1' : 'px-3 py-2'} ${menuMensaje?.id === mensaje.id_mensaje ? 'chat-club__mensaje--seleccionado' : ''} ${stickerMensaje ? 'bg-transparent' : mio ? (temaClaro ? 'bg-amber-50' : 'bg-[#182440]') : (temaClaro ? 'bg-slate-50' : 'bg-[#111a2f]')} ${mio ? 'ml-auto' : ''}`}>
             <button
               type="button"
               className={`chat-club__menu-toggle hidden md:grid ${temaClaro ? 'chat-club__menu-toggle--claro' : 'chat-club__menu-toggle--oscuro'}`}
@@ -664,7 +686,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
               {!mio && mensaje.es_vicepresidente && <span className="chat-club__rol chat-club__rol--vicepresidente">Vicepresidente</span>}
             </div>
             <div className="chat-club__mensaje-contenido flex min-w-0 items-end gap-x-2">
-              <p className={`min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-snug ${mensaje.eliminado ? `italic ${secundaria}` : ''}`}>{renderContenido(mensaje.contenido, mensaje.menciones)}</p>
+              {stickerMensaje ? <UrielSticker id={stickerMensaje.id} /> : <p className={`min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-snug ${mensaje.eliminado ? `italic ${secundaria}` : ''}`}>{renderContenido(mensaje.contenido, mensaje.menciones)}</p>}
               <span className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[10px] leading-tight ${secundaria}`}>
                 {mensaje.editado_en && <span className="text-[9px]">(editado)</span>}
                 <time dateTime={mensaje.creado_en}>{new Date(mensaje.creado_en).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</time>
@@ -721,11 +743,16 @@ export function ChatClub({ club, ocuparPantalla = false }) {
         {candidatosMencion.map((m) => <button type="button" key={m.id_usuario} onMouseDown={(e) => e.preventDefault()} onClick={() => insertarMencion(m)} className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-amber-400/10 ${nombreClase(m, chat.club)}`}><span className="grid h-7 w-7 place-content-center rounded-full bg-amber-500 text-xs text-white">{m.nombre_completo.charAt(0)}</span>{m.nombre_completo}</button>)}
       </div>}
       <div className={`chat-club__composer-bar flex items-end gap-2 rounded-full border px-2 py-1.5 ${campo}`}>
-        <button type="button" onClick={() => setSelectorEmoji((abierto) => !abierto)} aria-label="Elegir emoji" aria-expanded={selectorEmoji} disabled={Boolean(chat.miembros.find((m) => Number(m.id_usuario) === miId)?.silenciado)} className="grid h-10 w-10 shrink-0 place-content-center rounded-full text-xl hover:bg-amber-400/15 disabled:opacity-40">😊</button>
+        <button type="button" onClick={() => { setSelectorSticker(false); setSelectorEmoji((abierto) => !abierto); }} aria-label="Elegir emoji" aria-expanded={selectorEmoji} disabled={silenciado} className="grid h-10 w-10 shrink-0 place-content-center rounded-full text-xl hover:bg-amber-400/15 disabled:opacity-40">😊</button>
+        <button type="button" onClick={() => { setSelectorEmoji(false); setSelectorSticker((abierto) => !abierto); }} aria-label="Stickers de Uriel" aria-expanded={selectorSticker} disabled={silenciado || Boolean(editarId)} className="grid h-10 w-10 shrink-0 place-content-center rounded-full text-xl hover:bg-amber-400/15 disabled:opacity-40">🐺</button>
         <textarea ref={inputRef} rows={1} value={texto} onChange={(e) => manejarTexto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); enviar(e); } }} placeholder={chat.miembros.find((m) => Number(m.id_usuario) === miId)?.silenciado ? 'No puedes escribir en este chat' : `Mensaje para ${club.nombre_club}`} disabled={Boolean(chat.miembros.find((m) => Number(m.id_usuario) === miId)?.silenciado)} className="max-h-32 min-h-10 flex-1 resize-none overflow-y-hidden bg-transparent px-2 py-2 text-sm outline-none" aria-label="Escribe un mensaje" />
         <button type="submit" disabled={enviando || espera > 0 || !texto.trim() || Boolean(chat.miembros.find((m) => Number(m.id_usuario) === miId)?.silenciado)} className="grid h-10 w-10 shrink-0 place-content-center rounded-xl bg-amber-400 text-[#0b111e] transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50" aria-label="Enviar mensaje" title={espera ? `Espera ${espera} segundos` : 'Enviar mensaje'}><Icono nombre="send" className="h-5 w-5" /></button>
       </div>
       {selectorEmoji && <div className={`absolute bottom-full left-3 z-20 mb-2 flex w-64 flex-wrap gap-1 rounded-xl border p-2 shadow-xl ${superficie}`} aria-label="Emojis para el mensaje">{EMOJIS.map((emoji) => <button key={emoji} type="button" onMouseDown={(evento) => evento.preventDefault()} onClick={() => insertarEmoji(emoji)} aria-label={`Insertar ${emoji}`} className="rounded-lg p-1 text-xl hover:bg-amber-400/20">{emoji}</button>)}</div>}
+      {selectorSticker && <div className={`chat-club__stickers absolute bottom-full left-3 z-20 mb-2 w-[min(21rem,calc(100%-1.5rem))] rounded-2xl border border-amber-400/40 p-2.5 shadow-2xl ${superficie}`} aria-label="Stickers de Uriel">
+        <p className="mb-2 px-1 text-xs font-black text-amber-600 dark:text-amber-300">Stickers de Uriel <span className={`font-medium ${secundaria}`}>· toca uno para enviarlo</span></p>
+        <div className="grid grid-cols-3 gap-2">{STICKERS_URIEL.map((sticker) => <button key={sticker.id} type="button" onClick={() => void enviarSticker(sticker.id)} disabled={enviando || espera > 0 || silenciado} aria-label={`Enviar sticker de Uriel: ${sticker.frase}`} className="min-w-0 rounded-xl text-center focus-visible:outline-2 focus-visible:outline-amber-400 disabled:cursor-wait disabled:opacity-50"><UrielSticker id={sticker.id} compacto /></button>)}</div>
+      </div>}
       {(editarId || espera > 0 || Array.from(texto).length >= 350) && <div className="mt-1 flex items-center justify-between gap-2 px-2">
         {(editarId || espera > 0) && <p className={`text-[10px] ${secundaria}`}>{editarId ? 'Editando mensaje' : `Puedes enviar otro mensaje en ${espera} s`}</p>}
         {Array.from(texto).length >= 350 && <p className={`text-[11px] font-bold ${Array.from(texto).length >= 390 ? 'text-amber-500' : secundaria}`}>{Array.from(texto).length} / {MAX_CARACTERES}</p>}
@@ -740,7 +767,7 @@ export function ChatClub({ club, ocuparPantalla = false }) {
         role="menu"
         aria-label="Acciones del mensaje"
       >
-        {Number(mensajeMenu.id_autor) === miId && <button type="button" role="menuitem" onClick={() => iniciarEdicion(mensajeMenu)}><Icono nombre="edit" className="h-4 w-4" />Editar</button>}
+        {Number(mensajeMenu.id_autor) === miId && !leerStickerUriel(mensajeMenu.contenido) && <button type="button" role="menuitem" onClick={() => iniciarEdicion(mensajeMenu)}><Icono nombre="edit" className="h-4 w-4" />Editar</button>}
         {(Number(mensajeMenu.id_autor) === miId || esResponsable) && <button type="button" role="menuitem" onClick={() => borrarMensaje(mensajeMenu.id_mensaje)} className="chat-club__menu-acciones--eliminar"><Icono nombre="trash" className="h-4 w-4" />Eliminar</button>}
         {esResponsable && <button type="button" role="menuitem" onClick={() => alternarFijado(mensajeMenu)}><Icono nombre="star" className="h-4 w-4" />{mensajeMenu.fijado ? 'Desfijar mensaje' : 'Fijar mensaje'}</button>}
       </div>,

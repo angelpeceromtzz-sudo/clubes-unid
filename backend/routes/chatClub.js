@@ -3,6 +3,7 @@ import pool from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { esIdEntero, validarParamsEnteros } from '../lib/validarId.js';
 import { limitadorChatLectura, limitadorChatPresencia } from '../lib/rateLimits.js';
+import { buscarStickerUriel, contenidoStickerUriel, leerStickerUriel } from '../../shared/stickersUriel.js';
 
 const router = Router();
 const MAX_CARACTERES = 400;
@@ -183,8 +184,13 @@ router.post('/clubes/:idClub/mensajes', async (req, res) => {
   try {
     const idClub = Number(req.params.idClub);
     const textoOriginal = typeof req.body?.contenido === 'string' ? req.body.contenido.trim() : '';
-    if (!textoOriginal) { return res.status(400).json({ error: 'Escribe un mensaje antes de enviarlo' }); }
-    if (cantidadCaracteres(textoOriginal) > MAX_CARACTERES) { return res.status(400).json({ error: 'El mensaje supera el límite de 400 caracteres' }); }
+    const stickerSolicitado = req.body?.sticker;
+    const sticker = stickerSolicitado === undefined ? null : buscarStickerUriel(stickerSolicitado);
+    if (stickerSolicitado !== undefined && !sticker) { return res.status(400).json({ error: 'Sticker de Uriel no disponible' }); }
+    if (sticker && (textoOriginal || req.body?.menciones?.length)) { return res.status(400).json({ error: 'Envía el sticker por separado' }); }
+    if (!sticker && !textoOriginal) { return res.status(400).json({ error: 'Escribe un mensaje antes de enviarlo' }); }
+    if (!sticker && leerStickerUriel(textoOriginal)) { return res.status(400).json({ error: 'Elige el sticker desde la colección de Uriel' }); }
+    if (!sticker && cantidadCaracteres(textoOriginal) > MAX_CARACTERES) { return res.status(400).json({ error: 'El mensaje supera el límite de 400 caracteres' }); }
     const menciones = await validarMenciones(client, idClub, req.body?.menciones || []);
     if (menciones.error) { return res.status(400).json({ error: menciones.error }); }
     const club = await consultarClub(client, idClub, req.user.id);
@@ -208,7 +214,7 @@ router.post('/clubes/:idClub/mensajes', async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(429).json({ error: `Espera ${espera} segundos antes de enviar otro mensaje`, espera_segundos: espera });
     }
-    const contenido = censurarContenido(textoOriginal);
+    const contenido = sticker ? contenidoStickerUriel(sticker.id) : censurarContenido(textoOriginal);
     const mensaje = (await client.query(`INSERT INTO club_chat_mensajes (id_club,id_autor,contenido)
       VALUES ($1,$2,$3) RETURNING id_mensaje, id_club, id_autor, contenido, creado_en, editado_en, eliminado`, [idClub, req.user.id, contenido])).rows[0];
     await registrarMenciones(client, mensaje.id_mensaje, menciones.ids);
@@ -219,7 +225,7 @@ router.post('/clubes/:idClub/mensajes', async (req, res) => {
           SELECT 1 FROM inscripciones i WHERE i.id_club=c.id_club AND i.id_usuario=u.id_usuario AND i.id_estatus_inscripcion=1
         )) AND NOT EXISTS (SELECT 1 FROM club_chat_presencia p WHERE p.id_club=c.id_club AND p.id_usuario=u.id_usuario
           AND p.ultima_actividad>NOW()-INTERVAL '45 seconds')`, [idClub, req.user.id])).rows;
-    const extracto = contenido.length > 120 ? `${contenido.slice(0, 117)}…` : contenido;
+    const extracto = sticker ? `Sticker de Uriel: ${sticker.frase}` : contenido.length > 120 ? `${contenido.slice(0, 117)}…` : contenido;
     for (const { id_usuario: destinatario } of destinatarios) {
       const esMencion = menciones.ids.includes(destinatario);
       const notificacion = (await client.query(`INSERT INTO notificaciones (id_emisor,titulo,mensaje,audiencia,id_club,id_destinatario)
@@ -244,15 +250,17 @@ router.put('/clubes/:idClub/mensajes/:idMensaje', async (req, res) => {
   try {
     const texto = typeof req.body?.contenido === 'string' ? req.body.contenido.trim() : '';
     if (!texto || cantidadCaracteres(texto) > MAX_CARACTERES) { return res.status(400).json({ error: 'El mensaje debe tener entre 1 y 400 caracteres' }); }
+    if (leerStickerUriel(texto)) { return res.status(400).json({ error: 'Los stickers no se editan como texto' }); }
     await client.query('BEGIN');
     const club = await consultarClub(client, req.params.idClub, req.user.id);
     if (club.error) throw Object.assign(new Error(club.error), { status: club.status });
     // Edición y borrado bloquean la misma fila: una eliminación concurrente
     // queda visible al terminar la espera y nunca puede sobrescribirse después.
-    const mensaje = (await client.query('SELECT id_autor, eliminado FROM club_chat_mensajes WHERE id_mensaje=$1 AND id_club=$2 FOR UPDATE', [req.params.idMensaje, req.params.idClub])).rows[0];
+    const mensaje = (await client.query('SELECT id_autor, eliminado, contenido FROM club_chat_mensajes WHERE id_mensaje=$1 AND id_club=$2 FOR UPDATE', [req.params.idMensaje, req.params.idClub])).rows[0];
     if (!mensaje) throw Object.assign(new Error('Mensaje no encontrado'), { status: 404 });
     if (mensaje.id_autor !== req.user.id) throw Object.assign(new Error('Solo puedes editar tus propios mensajes'), { status: 403 });
     if (mensaje.eliminado) throw Object.assign(new Error('Este mensaje ya fue eliminado'), { status: 409 });
+    if (leerStickerUriel(mensaje.contenido)) throw Object.assign(new Error('Los stickers no se editan como texto'), { status: 409 });
     const menciones = await validarMenciones(client, Number(req.params.idClub), req.body?.menciones || []);
     if (menciones.error) throw Object.assign(new Error(menciones.error), { status: 400 });
     const actualizado = (await client.query(`UPDATE club_chat_mensajes SET contenido=$1,editado_en=NOW()

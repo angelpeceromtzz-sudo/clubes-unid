@@ -1,0 +1,64 @@
+.uriel-sticker {
+  position: relative;
+  display: inline-flex;
+  min-width: 8.25rem;
+  max-width: 10rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .15rem;
+  overflow: hidden;
+  border: 1px solid #f3cf73;
+  border-radius: 1.45rem 1.45rem 1.45rem .55rem;
+  background: radial-gradient(circle at 50% 30%, #fffdf5 0, #fff4cf 66%, #f2dcff 100%);
+  box-shadow: 0 6px 20px #28104118, inset 0 0 0 2px #fff9;
+  padding: .5rem .6rem .6rem;
+  color: #281041;
+  vertical-align: middle;
+}
+.uriel-sticker img {
+  display: block;
+  width: 6.2rem;
+  height: 6.5rem;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 2px #2810411c);
+}
+.uriel-sticker figcaption {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-size: .82rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+}
+.uriel-sticker__destello {
+  position: absolute;
+  top: .35rem;
+  right: .75rem;
+  color: #9d72cd;
+  font-size: 1.15rem;
+}
+.uriel-sticker--compacto {
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  gap: 0;
+  border-radius: 1rem;
+  padding: .3rem;
+}
+.uriel-sticker--compacto img { width: 3.75rem; height: 3.95rem; }
+.uriel-sticker--compacto figcaption { font-size: .66rem; }
+.uriel-sticker--compacto .uriel-sticker__destello { right: .45rem; font-size: .85rem; }
+.dark .uriel-sticker {
+  border-color: #a97824;
+  background: radial-gradient(circle at 50% 25%, #35304a, #211d35 72%, #3b2854);
+  box-shadow: 0 6px 20px #0005, inset 0 0 0 1px #fbbf2426;
+  color: #fff6dc;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .uriel-sticker--compacto { transition: transform .15s ease, box-shadow .15s ease; }
+  button:hover > .uriel-sticker--compacto, button:focus-visible > .uriel-sticker--compacto { transform: translateY(-2px); box-shadow: 0 10px 20px #28104130; }
+}

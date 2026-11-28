@@ -32,6 +32,7 @@
 .chat-club__composer-bar { min-height: 3.25rem; box-shadow: 0 8px 24px #0002; transition: border-color 150ms ease, box-shadow 150ms ease; }
 .chat-club__composer-bar:focus-within { border-color: #fbbf24; box-shadow: 0 8px 28px #0003, 0 0 0 2px #fbbf2426; }
 .chat-club__sugerencias { max-height: 13rem; }
+.chat-club__stickers { max-height: min(25rem, 48dvh); overflow-y: auto; overscroll-behavior: contain; }
 .chat-club__menu-acciones { position: fixed; z-index: 130; display: flex; width: min(14rem, calc(100vw - 1rem)); max-height: calc(100dvh - 1rem); flex-direction: column; overflow-y: auto; border: 1px solid #ffffff18; border-radius: 0.9rem; padding: 0.35rem; box-shadow: 0 16px 40px #0007; backdrop-filter: blur(12px); }
 .chat-club__menu-acciones--oscuro { color: #f8fafc; background: #111827f5; }
 .chat-club__menu-acciones--claro { color: #0f172a; background: #fffF; border-color: #cbd5e1; }

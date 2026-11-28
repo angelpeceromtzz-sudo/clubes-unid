@@ -111,6 +111,7 @@ export const api = {
   actualizarPresenciaChat: chatClubService.actualizarPresenciaChat,
   marcarChatClubLeido: chatClubService.marcarChatClubLeido,
   enviarMensajeChat: chatClubService.enviarMensajeChat,
+  enviarStickerChat: chatClubService.enviarStickerChat,
   editarMensajeChat: chatClubService.editarMensajeChat,
   eliminarMensajeChat: chatClubService.eliminarMensajeChat,
   alternarReaccionChat: chatClubService.alternarReaccionChat,

@@ -9,6 +9,9 @@ export const chatClubService = {
   enviarMensajeChat: (idClub, contenido, menciones) => request(`/chat-clubes/clubes/${idClub}/mensajes`, {
     method: 'POST', body: JSON.stringify({ contenido, menciones }),
   }),
+  enviarStickerChat: (idClub, sticker) => request(`/chat-clubes/clubes/${idClub}/mensajes`, {
+    method: 'POST', body: JSON.stringify({ sticker }),
+  }),
   editarMensajeChat: (idClub, idMensaje, contenido, menciones) => request(`/chat-clubes/clubes/${idClub}/mensajes/${idMensaje}`, {
     method: 'PUT', body: JSON.stringify({ contenido, menciones }),
   }),
